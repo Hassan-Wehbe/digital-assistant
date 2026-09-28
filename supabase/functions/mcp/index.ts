@@ -21,12 +21,21 @@ import { registerUpdateItem } from "./tools/update_item.ts";
 import { registerGetItem } from "./tools/get_item.ts";
 import { registerSearchItems } from "./tools/search_items.ts";
 import { registerLinkItems } from "./tools/link_items.ts";
+import { registerSaveSecret } from "./tools/save_secret.ts";
+import { registerFindSecret } from "./tools/find_secret.ts";
+import { registerGetSecret } from "./tools/get_secret.ts";
+import { registerUpdateSecret } from "./tools/update_secret.ts";
+import { registerDeleteSecret } from "./tools/delete_secret.ts";
 
 const INSTRUCTIONS = `This is the user's personal knowledge store, organized into spaces.
 Save what the user asks you to remember with save_item (pick or create a fitting space; ask if unsure).
 Answer questions from it with search_items, then get_item for the full text.
 When a new item replaces an older one, save it and link_items(new, old, "supersedes").
-Do not store passwords, API keys or other credentials here: the secure vault is not available yet.`;
+Passwords, API keys, Wi-Fi passwords, recovery codes and other credentials go in the encrypted vault,
+never in items: save_secret, find_secret, get_secret, update_secret, delete_secret.
+The vault tools return links to a vault page where the user types or reads the value; you never see it.
+Never ask the user to type a secret into the chat and never repeat one. If they paste one anyway,
+do not store it: tell them it is exposed and should be changed, and offer save_secret for the new value.`;
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -68,7 +77,7 @@ function unauthorized(detail: string): Response {
 
 function buildServer(ctx: ToolContext): McpServer {
   const server = new McpServer(
-    { name: "digital-assistant", version: "0.1.0" },
+    { name: "digital-assistant", version: "0.2.0" },
     { instructions: INSTRUCTIONS },
   );
   for (const register of [
@@ -79,6 +88,11 @@ function buildServer(ctx: ToolContext): McpServer {
     registerGetItem,
     registerSearchItems,
     registerLinkItems,
+    registerSaveSecret,
+    registerFindSecret,
+    registerGetSecret,
+    registerUpdateSecret,
+    registerDeleteSecret,
   ]) {
     register(server, ctx);
   }

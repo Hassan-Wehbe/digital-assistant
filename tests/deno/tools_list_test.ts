@@ -1,5 +1,5 @@
 // Protocol smoke test: the server initializes and advertises exactly the
-// milestone-1 tools with valid input schemas. No database is touched.
+// milestone-1 and vault tools with valid input schemas. No database is touched.
 import { assertEquals } from "jsr:@std/assert@1";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
@@ -11,12 +11,20 @@ import { registerUpdateItem } from "../../supabase/functions/mcp/tools/update_it
 import { registerGetItem } from "../../supabase/functions/mcp/tools/get_item.ts";
 import { registerSearchItems } from "../../supabase/functions/mcp/tools/search_items.ts";
 import { registerLinkItems } from "../../supabase/functions/mcp/tools/link_items.ts";
+import { registerSaveSecret } from "../../supabase/functions/mcp/tools/save_secret.ts";
+import { registerFindSecret } from "../../supabase/functions/mcp/tools/find_secret.ts";
+import { registerGetSecret } from "../../supabase/functions/mcp/tools/get_secret.ts";
+import { registerUpdateSecret } from "../../supabase/functions/mcp/tools/update_secret.ts";
+import { registerDeleteSecret } from "../../supabase/functions/mcp/tools/delete_secret.ts";
 
 async function rpc(body: unknown) {
   const server = new McpServer({ name: "test", version: "0" });
   const ctx = { db: {} as SupabaseClient, userId: "u", accessToken: "t" };
   for (const r of [registerListSpaces, registerCreateSpace, registerSaveItem, registerUpdateItem,
-                   registerGetItem, registerSearchItems, registerLinkItems]) r(server, ctx);
+                   registerGetItem, registerSearchItems, registerLinkItems, registerSaveSecret,
+                   registerFindSecret, registerGetSecret, registerUpdateSecret, registerDeleteSecret]) {
+    r(server, ctx);
+  }
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,
@@ -32,11 +40,12 @@ async function rpc(body: unknown) {
   return await res.json();
 }
 
-Deno.test("tools/list advertises the seven milestone-1 tools", async () => {
+Deno.test("tools/list advertises the seven milestone-1 tools and the five vault tools", async () => {
   const out = await rpc({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} });
   const names = out.result.tools.map((t: { name: string }) => t.name).sort();
   assertEquals(names, [
-    "create_space", "get_item", "link_items", "list_spaces", "save_item", "search_items", "update_item",
+    "create_space", "delete_secret", "find_secret", "get_item", "get_secret", "link_items", "list_spaces",
+    "save_item", "save_secret", "search_items", "update_item", "update_secret",
   ]);
   const save = out.result.tools.find((t: { name: string }) => t.name === "save_item");
   assertEquals(save.inputSchema.required.sort(), ["body", "item_type", "space", "title"]);

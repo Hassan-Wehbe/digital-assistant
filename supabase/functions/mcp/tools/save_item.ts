@@ -11,7 +11,7 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken }) => {
       description:
         "Store a new piece of knowledge (a design, recipe, note, how-to, ...) in a space. " +
         "The text is indexed for search. Never use this for passwords, API keys or other " +
-        "credentials: those belong in the vault, which is not available yet.",
+        "credentials: those belong in the vault (save_secret).",
       inputSchema: {
         space: z.string().describe("Space name, path (Work/Gartner) or id"),
         title: z.string().trim().min(1).max(300),
