@@ -43,8 +43,11 @@ If it happens anyway, change that password.
 
 GitHub Pages already publishes this branch's `/docs` folder (milestone 1, step 5).
 Open <https://hassan-wehbe.github.io/digital-assistant/vault/>. You should see
-**"Digital Assistant vault"** with two links. If you get a 404, wait two minutes (Pages
-is still publishing) and reload.
+**"Digital Assistant vault"** with two links. If you get a 404, check GitHub →
+**Settings** → **Pages**: the source must be branch `claude/festive-fermat-fg6i75`, folder
+**`/docs`** (not `/ (root)`). With `/ (root)` the pages end up under `…/docs/vault/` and
+neither the vault links nor the connector sign-in page (`…/oauth/consent`) work. After
+changing it, wait two minutes and reload.
 
 ## Step 2. Protect the branch the pages come from (recommended, 3 minutes)
 
