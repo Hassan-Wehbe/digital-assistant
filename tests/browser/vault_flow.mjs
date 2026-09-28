@@ -12,6 +12,8 @@
 // set to the SHA-256 SPKI hash of the sandbox proxy's CA only).
 const { chromium } = await import(process.env.PLAYWRIGHT ?? "playwright");
 const LOCAL = "http://127.0.0.1:8765/digital-assistant/vault";
+const B = process.env.SUPABASE_URL ?? "https://motvckmpusxiuelpwqxy.supabase.co";
+const KEY = process.env.SUPABASE_PUBLISHABLE_KEY ?? "sb_publishable_fUOMLFoWl6Avh7NqvhKBNQ_swuHkZGd";
 const { E2E_EMAIL: EMAIL, E2E_PASSWORD: PW } = process.env;
 const PASS1 = "flow test passphrase " + Math.random().toString(36).slice(2);
 const PASS2 = "second flow passphrase " + Math.random().toString(36).slice(2);
@@ -24,10 +26,10 @@ await ctx.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "htt
 const page = await ctx.newPage();
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
-// The expected "link already used" refusal comes back as HTTP 500 (P0002; see
-// docs/phase1-m2-setup.md, follow-ups), which the browser logs; ignore only that.
+// The expected "link already used" refusal comes back as HTTP 410 (PT410), which
+// the browser logs; ignore only that.
 page.on("console", (m) => {
-  if (m.type() === "error" && !m.text().includes("status of 500")) errors.push(m.text());
+  if (m.type() === "error" && !m.text().includes("status of 410")) errors.push(m.text());
 });
 const local = (link) => link.replace("https://hassan-wehbe.github.io/digital-assistant/vault", LOCAL);
 

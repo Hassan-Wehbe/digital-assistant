@@ -7,8 +7,8 @@ Read this, then `CLAUDE.md` and `docs/design.md`, before changing anything.
 
 | Piece | Where | State |
 |---|---|---|
-| Database | Supabase project `digital-assistant`, ref `motvckmpusxiuelpwqxy` | migrations `initial_schema`, `knowledge_path`, `vault` applied |
-| MCP server | Edge Function `mcp` (`supabase/functions/mcp/`), `https://motvckmpusxiuelpwqxy.supabase.co/functions/v1/mcp` | version 3, 12 tools (13 with `set_assistant_name` once deployed) |
+| Database | Supabase project `digital-assistant`, ref `motvckmpusxiuelpwqxy` | migrations `initial_schema`, `knowledge_path`, `vault`, `cleanup_followups`, `assistant_name` applied |
+| MCP server | Edge Function `mcp` (`supabase/functions/mcp/`), `https://motvckmpusxiuelpwqxy.supabase.co/functions/v1/mcp` | version 4 (server 0.3.0), 13 tools |
 | Sign-in page | `docs/oauth/consent.html` → `https://hassan-wehbe.github.io/digital-assistant/oauth/consent` | used by the Claude connector (OAuth 2.1 via Supabase Auth) |
 | Vault pages | `docs/vault/` → `https://hassan-wehbe.github.io/digital-assistant/vault/` | setup, enter, reveal, recover |
 | Claude connector | "Digital Assistant" custom connector in the owner's Claude account | connected and in use (spaces Logins, Recipes exist) |
@@ -59,7 +59,7 @@ edit an applied one).
 - **Deploying `mcp`** with the connector's `deploy_edge_function`: pass every file under
   `supabase/functions/mcp/` (not `deno.lock`), `verify_jwt: false`, and
   `import_map_path: "deno.json"` (without it the deploy fails on a stale import-map path).
-- **After editing anything in `docs/vault/`:** `node scripts/vault-sri.mjs` (updates the SRI
+- **After editing anything in `docs/vault/` or `docs/oauth/`:** `node scripts/vault-sri.mjs` (updates the SRI
   hashes); `tests/deno/vault_pages_test.ts` fails if you forget.
 - **End-to-end / browser tests** (`tests/e2e/vault_e2e.ts`, `tests/browser/vault_flow.mjs`)
   need a throwaway user: create it with SQL in `auth.users` + `auth.identities`
@@ -79,12 +79,15 @@ edit an applied one).
 
 ## Open follow-ups (small)
 
-- Expired/used vault links are refused with SQL error `P0002`, which the API returns as
-  HTTP 500; switch to a 4xx (small migration).
-- `docs/oauth/consent.html` still loads supabase-js from jsDelivr; reuse the vendored copy.
-- CLAUDE.md says migrations go in `db/migrations/`; they live in `supabase/migrations/`.
-- Advisor notes: `owns_*` helpers callable by signed-in users; FK indexes and
-  `(select auth.uid())` in policies (performance, not urgent).
+- Done (applied 2026-09-28) in `20260929090000_cleanup_followups.sql` and the sign-in page cleanup: dead vault
+  links answer HTTP 410 (PT410) instead of 500, RLS policies use `(select auth.uid())`,
+  foreign keys are indexed, `docs/oauth/` loads only same-origin code (vendored
+  supabase-js, strict CSP, SRI via `node scripts/vault-sri.mjs`), CLAUDE.md names
+  `supabase/migrations/` as the source of truth.
+- Advisor items left on purpose: `owns_*` and vault functions "callable by signed-in
+  users" (they only answer for the caller; RLS needs them), token tables with RLS and
+  no policies, "multiple permissive policies" (owner + share policies), unused indexes
+  (the data set is still tiny). Leaked-password protection is a paid-plan Auth setting.
 
 ## Roadmap (docs/design.md §6)
 

@@ -16,8 +16,10 @@ settings screen, approve a deploy).
 - **Assistant interface:** an MCP server exposing a small set of tools, connected
   to the Claude app as a custom connector. The MCP server is the product; any
   agent (Claude, Hermes, a custom UI) can sit on top of it later.
-- **Schema:** `db/schema.sql` is the source of truth for phase 1. Changes go in
-  new numbered migration files under `db/migrations/`, never by editing applied SQL.
+- **Schema:** the migrations in `supabase/migrations/` are the source of truth. Changes
+  go in a new timestamped migration file there, never by editing applied SQL.
+  `db/schema.sql` is a readable overview of the tables; when it and a migration
+  disagree, the migration wins.
 
 ## Non-negotiable rules
 
