@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { chunkAndEmbed } from "../lib/embed.ts";
+import { type Chunk, chunkAndEmbed, hasPending, scheduleEmbedPending } from "../lib/embed.ts";
 import { loadSpaces, resolveSpace } from "../lib/spaces.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
-export const registerUpdateItem: RegisterTool = (server, { db }) => {
+export const registerUpdateItem: RegisterTool = (server, { db, accessToken }) => {
   server.registerTool(
     "update_item",
     {
@@ -28,7 +28,7 @@ export const registerUpdateItem: RegisterTool = (server, { db }) => {
         const targetSpace = args.space ? resolveSpace(await loadSpaces(db), args.space) : null;
 
         // Text changed: re-chunk the new current version (only it is searchable).
-        let chunks = null;
+        let chunks: Chunk[] | null = null;
         if (args.title !== undefined || args.body !== undefined || args.summary !== undefined) {
           const { data: current, error } = await db.rpc("get_item", { p_item_id: args.item_id });
           if (error) throw dbError("Could not load the item", error);
@@ -53,6 +53,7 @@ export const registerUpdateItem: RegisterTool = (server, { db }) => {
           p_chunks: chunks,
         });
         if (error) throw dbError("Could not update the item", error);
+        if (hasPending(chunks)) scheduleEmbedPending(accessToken);
         return ok({ id: args.item_id, updated: true, reindexed: chunks !== null });
       }),
   );

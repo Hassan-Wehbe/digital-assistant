@@ -14,7 +14,7 @@ import { registerLinkItems } from "../../supabase/functions/mcp/tools/link_items
 
 async function rpc(body: unknown) {
   const server = new McpServer({ name: "test", version: "0" });
-  const ctx = { db: {} as SupabaseClient, userId: "u" };
+  const ctx = { db: {} as SupabaseClient, userId: "u", accessToken: "t" };
   for (const r of [registerListSpaces, registerCreateSpace, registerSaveItem, registerUpdateItem,
                    registerGetItem, registerSearchItems, registerLinkItems]) r(server, ctx);
   const transport = new WebStandardStreamableHTTPServerTransport({

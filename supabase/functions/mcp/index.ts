@@ -2,6 +2,8 @@
 //
 //   POST /functions/v1/mcp                                      MCP requests (Bearer token required)
 //   GET  /functions/v1/mcp/.well-known/oauth-protected-resource  OAuth discovery (public)
+//   POST /functions/v1/mcp/embed-pending                        embed the caller's pending chunks
+//                                                               (called by the server itself)
 //
 // Login: MCP clients such as the Claude app discover Supabase Auth's OAuth 2.1
 // server from the metadata below, sign the user in through the consent page,
@@ -10,6 +12,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { supabaseUrl, userClient, verifyAccessToken } from "./lib/db.ts";
+import { embedPending, scheduleEmbedPending } from "./lib/embed.ts";
 import type { ToolContext } from "./tools/_shared.ts";
 import { registerListSpaces } from "./tools/list_spaces.ts";
 import { registerCreateSpace } from "./tools/create_space.ts";
@@ -94,8 +97,17 @@ Deno.serve(async (req: Request) => {
   const userId = await verifyAccessToken(token);
   if (!userId) return unauthorized("invalid or expired token");
 
+  const db = userClient(token);
+
+  // Background indexing for long items: one batch per request, then hand off.
+  if (req.method === "POST" && pathname.endsWith("/embed-pending")) {
+    const result = await embedPending(db);
+    if (result.remaining > 0) scheduleEmbedPending(token);
+    return Response.json(result, { status: 202, headers: CORS });
+  }
+
   // Stateless: a fresh server and transport per request, bound to this user.
-  const server = buildServer({ db: userClient(token), userId });
+  const server = buildServer({ db, userId, accessToken: token });
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,

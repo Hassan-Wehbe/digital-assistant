@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export interface ToolContext {
   db: SupabaseClient;
   userId: string;
+  accessToken: string; // to schedule background embedding as the same user
 }
 
 export type RegisterTool = (server: McpServer, ctx: ToolContext) => void;

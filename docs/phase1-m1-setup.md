@@ -5,6 +5,9 @@ What is already done (by Claude Code, 2026-09-28):
 - Database: migrations `20260928120000_initial_schema` and `20260928120100_knowledge_path`
   applied to project `digital-assistant` (ref `motvckmpusxiuelpwqxy`).
 - SQL tests passed on the project (40 checks, all rolled back; see `tests/sql/`).
+- End-to-end test passed against the deployed server with a throwaway user
+  (save, meaning + keyword + tag search, restricted exclusion, edit history,
+  long items); the user and its data were deleted afterwards.
 - MCP server deployed as Edge Function `mcp`:
   `https://motvckmpusxiuelpwqxy.supabase.co/functions/v1/mcp`
 - Sign-in / consent page written: `docs/oauth/consent.html` (served by GitHub Pages, step 5).
@@ -41,10 +44,7 @@ to allow it.)
 - **Allow Dynamic Client Registration**: on (the Claude app registers itself this way).
 - Save.
 
-Check: **Project Settings** → **JWT Keys**. If the current signing key is the
-legacy **HS256 (shared secret)**, start the migration to the new asymmetric
-(ECC) key there. The OAuth server needs asymmetric keys when a client asks for
-OpenID tokens. If it already shows an ECC or RSA key, nothing to do.
+(JWT signing keys: already asymmetric ES256 on this project, nothing to do.)
 
 ## 5. Publish the sign-in page (GitHub Pages)
 
@@ -109,7 +109,8 @@ Do not store passwords or keys yet: the vault (encrypted secrets) is the next mi
 `tests/sql/` (database rules) run through the Supabase connector: ask Claude Code to
 "run the SQL tests in tests/sql against the project". With a database connection
 string in `DATABASE_URL` (Project Settings → Database), `tests/sql/run.sh` runs
-them with psql. `deno test --config supabase/functions/mcp/deno.json tests/deno`
+them with psql. `tests/e2e/e2e.py` exercises the deployed server with a throwaway
+user (see the file header). `deno test --config supabase/functions/mcp/deno.json tests/deno`
 runs the server unit tests.
 
 ## Known follow-ups (not blocking)
@@ -121,6 +122,9 @@ runs the server unit tests.
   `(select auth.uid())` in policies. Irrelevant at personal scale; one small migration later.
 - Supabase grants new tables to `anon` by default: every future migration that
   creates a table must revoke `anon` (as `20260928120100_knowledge_path.sql` does).
-- Edge Functions on the free plan have a short CPU budget per request; very long
-  items (tens of chunks) may hit it while embedding. Items are capped at ~40,000
-  characters for now.
+- Edge Functions on the free plan allow ~2 s CPU per request, and embedding costs
+  ~0.1-0.3 s per chunk. A save embeds up to 4 chunks itself; longer items are
+  finished in the background, 5 chunks per request (`/embed-pending`), usually
+  within seconds. Items are capped at ~40,000 characters.
+- Search always returns the closest items even when nothing is really relevant
+  (there is no similarity cut-off yet); Claude judges relevance from the snippets.

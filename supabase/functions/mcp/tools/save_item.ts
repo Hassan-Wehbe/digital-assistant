@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { chunkAndEmbed } from "../lib/embed.ts";
+import { chunkAndEmbed, hasPending, scheduleEmbedPending } from "../lib/embed.ts";
 import { loadSpaces, resolveSpace } from "../lib/spaces.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
-export const registerSaveItem: RegisterTool = (server, { db }) => {
+export const registerSaveItem: RegisterTool = (server, { db, accessToken }) => {
   server.registerTool(
     "save_item",
     {
@@ -37,7 +37,15 @@ export const registerSaveItem: RegisterTool = (server, { db }) => {
           p_chunks: chunks,
         });
         if (error) throw dbError("Could not save the item", error);
-        return ok({ id: data, space: target.path, restricted_space: target.is_restricted, chunks: chunks.length });
+        const pending = hasPending(chunks);
+        if (pending) scheduleEmbedPending(accessToken);
+        return ok({
+          id: data,
+          space: target.path,
+          restricted_space: target.is_restricted,
+          chunks: chunks.length,
+          search_index: pending ? "keyword search now; meaning search within a few seconds" : "ready",
+        });
       }),
   );
 };
