@@ -1,36 +1,34 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-09-30: attachments step 1 built (not yet applied or deployed); before that
-PRs #1-#6 (phase 1, cleanup, assistant name "Wilma", attachments plan).
+Last updated 2026-09-28: attachments step 1 built and live (PR #7); before that PRs #1-#6
+(phase 1, cleanup, assistant name "Wilma", attachments plan).
 Read this, then `CLAUDE.md` and `docs/design.md`, before changing anything.
 
-## Current task: attachments, step 1 (built, waiting for the owner)
+## Latest work: attachments, step 1 (live)
 
-Built on branch `claude/zen-faraday-m5kjwc` as `docs/phase2-attachments-plan.md` describes
+Built in PR #7 as `docs/phase2-attachments-plan.md` describes
 (see its "As built" section). Owner's decisions (2026-09-28): pictures `.jpg` / `.jpeg` / `.png`
 and Visio (`.vsdx` text read on the upload page, `.vsd` stored only); **no AI keys** (Claude
 writes picture descriptions in the chat); every upload starts in the chat with a space and
 context; upload from phone or PC through a one-time link.
 
-Remaining steps, each only with the owner's go-ahead:
+Done with the owner's go-ahead (2026-09-28): migration `attachments` applied (checked first in
+a rolled-back dry run: `tests/sql/06_attachments.sql`, 47 checks), `mcp` v5 deployed (server
+0.4.0, 17 tools), PR merged (GitHub Pages publishes `docs/files/upload.html`).
 
-1. Apply migration `20260930090000_attachments.sql` (dry-run checked: `tests/sql/06_attachments.sql`,
-   47 checks, run inside a rolled-back transaction).
-2. Deploy `mcp` (server 0.4.0, 17 tools): the new files are `lib/attachments.ts` and
-   `tools/attach_file.ts`, `get_attachment_link.ts`, `describe_attachment.ts`, `delete_attachment.ts`.
-3. Merge the PR, so GitHub Pages publishes `docs/files/upload.html` (the links point there).
-4. Run `tests/browser/attachments_flow.mjs` with a throwaway user; then the owner tries
-   "Wilma, attach this photo to …" in a new chat.
+Still open: run `tests/browser/attachments_flow.mjs` against the live project with a throwaway
+user (ask the owner first), and the owner tries "Wilma, attach this photo to …" in a new chat
+(reconnect the connector if the new tools do not show up).
 
 ## What exists and is live
 
 | Piece | Where | State |
 |---|---|---|
-| Database | Supabase project `digital-assistant`, ref `motvckmpusxiuelpwqxy` | migrations `initial_schema`, `knowledge_path`, `vault`, `cleanup_followups`, `assistant_name` applied |
-| MCP server | Edge Function `mcp` (`supabase/functions/mcp/`), `https://motvckmpusxiuelpwqxy.supabase.co/functions/v1/mcp` | version 4 (server 0.3.0), 13 tools |
+| Database | Supabase project `digital-assistant`, ref `motvckmpusxiuelpwqxy` | migrations `initial_schema`, `knowledge_path`, `vault`, `cleanup_followups`, `assistant_name`, `attachments` applied; Storage bucket `attachments` |
+| MCP server | Edge Function `mcp` (`supabase/functions/mcp/`), `https://motvckmpusxiuelpwqxy.supabase.co/functions/v1/mcp` | version 5 (server 0.4.0), 17 tools |
 | Sign-in page | `docs/oauth/consent.html` → `https://hassan-wehbe.github.io/digital-assistant/oauth/consent` | used by the Claude connector (OAuth 2.1 via Supabase Auth) |
 | Vault pages | `docs/vault/` → `https://hassan-wehbe.github.io/digital-assistant/vault/` | setup, enter, reveal, recover |
-| Upload page | `docs/files/upload.html` → `https://hassan-wehbe.github.io/digital-assistant/files/upload` | built, live after merge |
+| Upload page | `docs/files/upload.html` → `https://hassan-wehbe.github.io/digital-assistant/files/upload` | live |
 | Claude connector | "Digital Assistant" custom connector in the owner's Claude account | connected and in use (spaces Logins, Recipes exist) |
 
 GitHub Pages publishes the **`/docs` folder of `main`** (not the repo root: with root, every
@@ -39,8 +37,7 @@ URL gains `/docs/` and both the connector sign-in and vault links 404).
 Tools: `list_spaces`, `create_space`, `save_item`, `update_item`, `get_item`, `search_items`,
 `link_items` (knowledge, M1); `save_secret`, `find_secret`, `get_secret`, `update_secret`,
 `delete_secret` (vault, M2); `set_assistant_name` (invocation name, default Wilma; design.md D17).
-Built, not deployed yet: `attach_file`, `get_attachment_link`, `describe_attachment`,
-`delete_attachment` (attachments step 1).
+Attachments (step 1): `attach_file`, `get_attachment_link`, `describe_attachment`, `delete_attachment`.
 
 ## Key design decisions (details in the docs named)
 

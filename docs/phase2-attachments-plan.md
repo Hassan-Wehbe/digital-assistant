@@ -1,7 +1,7 @@
 # Phase 2, step 1: attachments (plan)
 
-Status: built on branch `claude/zen-faraday-m5kjwc` (see "As built" at the end); the migration
-and the Edge Function deploy wait for the owner's go-ahead. Read first: `CLAUDE.md`, `docs/design.md` (§2 tools, D9, roadmap
+Status: built and live (PR #7, 2026-09-28): migration `attachments` applied, `mcp` v5 deployed,
+upload page published with the merge. See "As built" at the end. Read first: `CLAUDE.md`, `docs/design.md` (§2 tools, D9, roadmap
 phase 2), `docs/phase1-m2-vault-plan.md` (the link-and-page pattern reused here).
 
 ## Decisions (owner, 2026-09-28)
