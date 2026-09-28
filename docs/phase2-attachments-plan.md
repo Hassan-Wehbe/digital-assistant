@@ -12,19 +12,28 @@ phase 2), `docs/phase1-m2-vault-plan.md` (the link-and-page pattern reused here)
    call any AI service. Visio text is read from the file itself, which needs no AI.
 3. **Upload from phone or PC.** The upload page works in any browser; the owner signs in
    there with the same account as the vault pages.
+4. **Every upload starts in the conversation, with context.** The owner tells Wilma where the
+   file belongs (an existing item, or a space plus what it is). There is no upload without a
+   space and a reason; if either is missing, Wilma asks before making a link.
 
 ## How it works
 
 Chat tools carry text, not files, so files travel the way vault secrets do: a tool
 returns a one-time link and the file goes from the owner's browser straight to storage.
 
-**Attach** ("Wilma, attach this diagram to my Teams routing design"):
+**Attach** ("Wilma, attach this diagram to my Teams routing design", or "Wilma, save this
+whiteboard photo to Work/Gartner, it's the Teams routing design"):
 
-1. Claude calls `attach_file` with the item and, when the picture is in the chat, a
-   **description** it writes (what is shown, labels, any text in the image).
+1. Claude calls `attach_file` with **either** an existing item **or** a space plus a title
+   and note (the server then creates the item first, as `save_item` would). When the picture
+   is in the chat, Claude adds a **description** it writes (what is shown, labels, any text
+   in the image). Without a space or item, the tool is not called: Wilma asks first.
 2. The server records a one-time **upload request** (15 minutes, stored as a hash like
    vault tokens) and returns an **upload link** `…/files/upload#t=…`.
-3. The owner opens the link on phone or PC and picks one or more files.
+3. The owner opens the link on phone or PC and picks one or more files. The Claude app
+   cannot pass the picture itself to the server, so a picture already shown in the chat is
+   picked once more here (phone photo picker or PC file dialog). A front end of our own
+   (phase 3: Telegram, voice, web) can send the file directly and skip this step.
 4. The page checks each file (type from its first bytes, not just the name; size limit),
    reads the text out of a Visio `.vsdx`, and uploads the file to a **private Storage
    bucket** under the owner's folder.
@@ -38,9 +47,6 @@ by keyword and by meaning. Results point to the item that owns the attachment.
 
 **Open:** `get_item` lists an item's attachments. `get_attachment_link` returns a
 short-lived (10 minute) download link for the owner to open. Claude does not open it.
-
-**Describe later:** `describe_attachment` sets or replaces the description, for a
-picture uploaded straight from the phone and shown to Claude afterwards.
 
 **Remove:** `delete_attachment` deletes the file and its search text (the owner confirms
 first). Items keep their soft delete; purging an item removes its files.
@@ -90,8 +96,9 @@ first). Items keep their soft delete; purging an item removes its files.
    (token hash, item, description, expiry, used); functions to create a request (MCP),
    read and complete it (upload page), and set a description; `search_items` keyword
    search extended to attachment text; `get_item` attachment list extended.
-2. **MCP tools:** `attach_file`, `get_attachment_link`, `describe_attachment`,
-   `delete_attachment`; instructions updated ("Wilma, attach this…").
+2. **MCP tools:** `attach_file` (existing item, or new item in a named space),
+   `get_attachment_link`, `delete_attachment`; instructions updated ("Wilma, attach this…",
+   and ask for the space and context when they are missing).
 3. **Upload page** `docs/files/upload.html`: same hardening as the vault pages (strict
    CSP, same-origin code only, integrity hashes, frame check); drag-and-drop on PC,
    camera/photo picker on phone; progress and a clear result ("2 files attached to
@@ -108,6 +115,5 @@ Live steps (migration, Edge Function deploy) are applied only with the owner's g
 
 ## Later (not in this step)
 
-- Starting an upload from the page itself, without a chat ("new item from these files").
 - TIFF (convert to PNG in the browser), audio and video transcripts (needs a
   speech-to-text key), automatic picture descriptions (needs an AI key).
