@@ -50,5 +50,7 @@ settings screen, approve a deploy).
 - Table names are singular snake_case (`space`, `item`, `item_chunk`).
 - Every access to a secret (create, reveal, update, delete) writes a
   `secret_access_log` row.
+- Supabase grants new tables and functions to `anon` by default: every migration
+  that creates one revokes `anon` and grants only what `authenticated` needs.
 - Write tests for: RLS isolation between two users, restricted-space exclusion,
   secret payload never appearing in tool output, revision on edit.

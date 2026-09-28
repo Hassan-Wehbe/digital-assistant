@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self'; connect-src https://motvckmpusxiuelpwqxy.supabase.co; base-uri 'none'; form-action 'none'">
+  <title>Set up your vault</title>
+  <link rel="stylesheet" href="vault.css" integrity="sha384-tHvFDGaW8LdFSJTcKnd8JJmP77TgS3f5t2SndNBu//lzKpG/SF0BLpy6kZu8xp9B">
+  <script src="vendor/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok"></script>
+  <link rel="modulepreload" href="../oauth/config.js" integrity="sha384-tckR0YVWc/lyRMtHEWFlyrxg0ZC4AOhWm1kfxHt0TsK7zPgiBFsDl7jqCaEjhHWQ">
+  <link rel="modulepreload" href="vendor/libsodium-sumo.mjs" integrity="sha384-6CExmTBhGBkeU97K/q0KEN9A/d/n9q/T7WdippDhSFGAAlIneqtVzaJfmm6+LUMb">
+  <link rel="modulepreload" href="vendor/libsodium-wrappers.mjs" integrity="sha384-Ure8NooPSc0DiuY0mTMBNtSIgIaxz/eFxwaKJI/PChqRbmj80CIZ4fNY5e6DXL7K">
+  <link rel="modulepreload" href="crypto.js" integrity="sha384-pFUSdghKfEgqe/AeueMKDsFLljCw6WUlbdrpeeSNal7L3X8D+1G589aa4ULao9cy">
+  <link rel="modulepreload" href="app.js" integrity="sha384-sEHKNjLRRO63V8TZAD/lIv1Xxn+7Bo9zwtTi5loLhqbYxG9YgR19Y3N9YO1qrE1u">
+  <script type="module" src="setup.js" integrity="sha384-mcK5bh9vuQ9qTejto/zUO22HYRKTUMFpysGknzKWogWeYJYPoMY+RQR6tvvCyoJ9"></script>
+</head>
+<body>
+<main>
+  <h1>Set up your vault</h1>
+  <p id="status" class="muted">Loading…</p>
+
+  <form id="login" hidden>
+    <p>Sign in with your Digital Assistant account.</p>
+    <label for="email">Email</label>
+    <input id="email" type="email" autocomplete="username" required>
+    <label for="password">Account password</label>
+    <input id="password" type="password" autocomplete="current-password" required>
+    <div class="row"><button class="primary" type="submit">Sign in</button></div>
+  </form>
+
+  <form id="choose" hidden>
+    <p>Your passwords and keys are encrypted <strong>in this browser</strong> before they are
+       stored. To read them you need an <strong>unlock passphrase</strong>. Nobody else has it:
+       not the database, not the assistant, not Claude.</p>
+    <p class="warn">Use a <strong>new</strong> passphrase, different from your account password.
+       A few unrelated words work well (at least 12 characters). Keep it in your password manager.</p>
+    <label for="pass1">Unlock passphrase</label>
+    <div class="field"><input id="pass1" type="password" autocomplete="off" minlength="12" required></div>
+    <label for="pass2">Type it again</label>
+    <input id="pass2" type="password" autocomplete="off" required>
+    <label class="check"><input id="understand" type="checkbox" required>
+      <span>I understand: if I lose both this passphrase and the recovery key (next step),
+            my stored secrets cannot be recovered by anyone.</span></label>
+    <div class="row"><button class="primary" type="submit">Create my vault keys</button></div>
+  </form>
+
+  <form id="recovery" hidden>
+    <div id="print-area">
+      <h2>Your recovery key</h2>
+      <p class="print-only">Digital Assistant vault recovery key for <span id="print-who"></span>,
+         created <span id="print-date"></span>. Keep it somewhere safe and private.</p>
+      <p class="key" id="recovery-key"></p>
+    </div>
+    <p>This is shown <strong>only once</strong>. It unlocks your vault if you forget the passphrase.
+       Save it now: in your password manager (as a separate entry) or print it and store the paper safely.</p>
+    <div class="row">
+      <button type="button" id="copy-key">Copy</button>
+      <button type="button" id="print-key">Print</button>
+    </div>
+    <label for="confirm-key">To confirm you saved it, paste or type the recovery key here</label>
+    <input id="confirm-key" autocomplete="off" autocapitalize="characters" spellcheck="false" required>
+    <div class="row"><button class="primary" type="submit">Finish setup</button></div>
+  </form>
+
+  <section id="done" hidden>
+    <p class="ok"><strong>Your vault is ready.</strong></p>
+    <p>Go back to Claude and ask it to save a password, for example:
+       <em>"Store my Gartner sandbox login in Work."</em> It will give you a link to a page like this
+       one, where you type the password. You can close this tab.</p>
+  </section>
+
+  <section id="already" hidden>
+    <p>Your vault is already set up.</p>
+    <p>Forgot your passphrase, or want to change it? <a href="recover">Recover or change the passphrase</a>.</p>
+  </section>
+
+  <p id="account" class="muted" hidden>Signed in as <span id="who"></span> · <a href="#" id="signout">Sign out</a></p>
+</main>
+</body>
+</html>
