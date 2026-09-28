@@ -54,7 +54,7 @@ const PAGE_CALL_FLOW = `<PageContents><Shapes>
 <Shape ID='3' Type='Shape'><Text>overflow &lt;30s&gt;</Text></Shape>
 <Shape ID='4' Type='Shape'><Text>SBC</Text></Shape>
 </Shapes></PageContents>`;
-const PAGE_DR = `<PageContents><Shapes><Shape ID='1'><Text>Kestrel DR site &#8211; caf&#xE9;</Text></Shape></Shapes></PageContents>`;
+const PAGE_DR = `<PageContents><Shapes><Shape ID='0'><Text/></Shape><Shape ID='1'><Text>Kestrel DR site &#8211; caf&#xE9;</Text></Shape></Shapes></PageContents>`;
 
 async function vsdx(extra: Array<[string, string, boolean?]> = []) {
   return await zip([
@@ -131,6 +131,8 @@ Deno.test("file types come from the first bytes and must match the extension", (
   assert(!checkFile("a.docx", ZIP, 10).ok, "other types");
   assert(!checkFile("a.tiff", new Uint8Array([0x49, 0x49, 0x2a, 0]), 10).ok, "TIFF comes later");
   assert(!checkFile("a.png", PNG, MAX_BYTES + 1).ok, "over 20 MB");
+  assert(!checkFile("x".repeat(197) + ".png", PNG, 10).ok, "name over 200 characters");
+  assert(checkFile("x".repeat(196) + ".png", PNG, 10).ok, "name of 200 characters");
   assertEquals(typeFromName("noext"), null);
 });
 

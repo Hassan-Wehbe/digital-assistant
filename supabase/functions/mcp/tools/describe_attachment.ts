@@ -7,10 +7,10 @@ export const registerDescribeAttachment: RegisterTool = (server, { db, accessTok
   server.registerTool(
     "describe_attachment",
     {
-      title: "Describe an attached picture",
+      title: "Describe an attachment",
       description:
-        "Set or replace the description of an attached picture, so it can be found by search: what " +
-        "it shows, labels, text in the image. Use it when the picture is in this chat but was " +
+        "Set or replace the description of an attached picture or diagram, so it can be found by " +
+        "search: what it shows, labels, text in the image. Use it when the picture is in this chat but was " +
         "attached without a description (or the user corrects one). Replaces the previous " +
         "description. " + NO_CREDENTIALS_IN_DESCRIPTIONS,
       inputSchema: {

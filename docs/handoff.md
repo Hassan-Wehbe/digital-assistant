@@ -15,7 +15,7 @@ context; upload from phone or PC through a one-time link.
 Remaining steps, each only with the owner's go-ahead:
 
 1. Apply migration `20260930090000_attachments.sql` (dry-run checked: `tests/sql/06_attachments.sql`,
-   44 checks, run inside a rolled-back transaction).
+   47 checks, run inside a rolled-back transaction).
 2. Deploy `mcp` (server 0.4.0, 17 tools): the new files are `lib/attachments.ts` and
    `tools/attach_file.ts`, `get_attachment_link.ts`, `describe_attachment.ts`, `delete_attachment.ts`.
 3. Merge the PR, so GitHub Pages publishes `docs/files/upload.html` (the links point there).

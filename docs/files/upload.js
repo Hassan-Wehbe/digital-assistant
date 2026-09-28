@@ -65,9 +65,11 @@ async function accessToken() {
 
 const token = linkToken();
 let request = null;
-/** Picked files: { id, file, type, mime, text, caption (input), bar, note, row } */
+/** Picked files: { id (page-local), file, type, mime, text, caption (input), bar, note, row, attachmentId } */
 let picked = [];
 let uploading = false;
+/** Attachment ids the link reserved; Storage accepts uploads only to these. Each is used once. */
+let freeIds = [];
 
 // ---------- picking ----------
 
@@ -97,6 +99,7 @@ function refresh() {
 }
 
 async function addFiles(files) {
+  if (!request || uploading) return;
   const max = request.max_files ?? 10;
   for (const file of files) {
     if (picked.length >= max) {
@@ -207,7 +210,13 @@ async function upload() {
     for (const [i, p] of picked.entries()) {
       status(`Uploading ${i + 1} of ${picked.length}: ${p.file.name}…`);
       p.bar.hidden = false;
-      const path = `${request.user_id}/${p.id}/${storageName(p.file.name)}`;
+      // A fresh reserved id per attempt, so a retry never collides with an earlier upload.
+      p.attachmentId = freeIds.shift();
+      if (!p.attachmentId) {
+        failed.push(`${p.file.name}: too many attempts on this link`);
+        continue;
+      }
+      const path = `${request.user_id}/${p.attachmentId}/${storageName(p.file.name)}`;
       try {
         await put(path, p, jwt);
         p.bar.value = 100;
@@ -224,26 +233,30 @@ async function upload() {
     }
 
     status("Saving…");
-    let result;
-    try {
-      result = await rpc("complete_attachment_upload", {
-        p_token: token,
-        p_files: done.map(({ p }) => ({
-          attachment_id: p.id,
-          filename: p.file.name,
-          storage_name: storageName(p.file.name),
-          caption: p.caption.value.trim() || null,
-          extracted_text: p.text || null,
-        })),
-        // Hidden list (0 or 1 picture): the server gives the description to the only picture.
-        // "None of these": an id no file has, so the description is not applied.
-        p_description_for: $("desc-for-box").hidden ? null
-          : ($("desc-for").value || "00000000-0000-0000-0000-000000000000"),
-      });
-    } catch (err) {
-      // Not recorded: take the uploaded files back out of Storage.
-      await db.storage.from(BUCKET).remove(done.map((d) => d.path)).catch(() => {});
-      throw err;
+    const descIndex = picked.findIndex((p) => p.id === $("desc-for").value);
+    const { data: result, error } = await db.rpc("complete_attachment_upload", {
+      p_token: token,
+      p_files: done.map(({ p }) => ({
+        attachment_id: p.attachmentId,
+        filename: p.file.name,
+        storage_name: storageName(p.file.name),
+        caption: p.caption.value.trim() || null,
+        extracted_text: p.text || null,
+      })),
+      // Hidden list (0 or 1 picture): the server gives the description to the only picture.
+      // "None of these": an id no file has, so the description is not applied.
+      p_description_for: $("desc-for-box").hidden ? null
+        : (picked[descIndex]?.attachmentId ?? "00000000-0000-0000-0000-000000000000"),
+    });
+    if (error) {
+      if (!error.code) {
+        // No answer from the database (network): the files may have been recorded. Keep them.
+        throw new Error("Could not confirm the upload (network problem). Ask the assistant to show " +
+          "the item before trying again: the files may already be attached.");
+      }
+      // The database refused: take the uploaded files back out of Storage.
+      const { error: rmErr } = await db.storage.from(BUCKET).remove(done.map((d) => d.path));
+      throw new Error(error.message + (rmErr ? " (Some uploaded files could not be removed again.)" : ""));
     }
 
     // Meaning search: ask the MCP server to embed the new text (keyword search already works).
@@ -289,6 +302,7 @@ async function start() {
   $("m-item").textContent = request.item_title;
   $("m-space").textContent = request.space;
   $("m-expires").textContent = `${minutesLeft(request.expires_at)} more`;
+  freeIds = [...(request.upload_ids ?? [])];
   if (request.description) {
     $("m-desc").textContent = request.description;
     $("desc-box").hidden = false;

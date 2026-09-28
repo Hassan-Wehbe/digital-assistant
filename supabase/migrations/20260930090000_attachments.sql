@@ -7,10 +7,11 @@
 --   * Storage: one private bucket, `attachments`, 20 MB per file, pictures
 --     (PNG, JPEG) and Visio (.vsdx, .vsd) only. Object path
 --     <user id>/<attachment id>/<file name>. A user reads and deletes only under
---     their own folder, and uploads only while one of their upload links is open
---     and only from a browser sign-in (not the Claude connector's token).
+--     their own folder, and uploads only to an attachment id reserved by one of
+--     their open upload links, from a browser sign-in (not the connector's token).
 --   * attachment_upload_request: the link (15 minutes, single use, SHA-256 of
---     the token stored), the item it attaches to and Claude's description.
+--     the token stored), the item it attaches to, Claude's description, and the
+--     attachment ids it reserves (uploads may only use those).
 --   * attachment rows are written only by the functions below. Their searchable
 --     text (file name, caption, Claude's description, Visio text) is chunked
 --     here with embedding = null; the upload page then asks the MCP server's
@@ -38,6 +39,7 @@ create table attachment_upload_request (
   user_id         uuid not null references app_user (id) on delete cascade,
   item_id         uuid not null references item (id) on delete cascade,
   description     text,             -- Claude's description of the picture shown in the chat
+  upload_ids      uuid[] not null,  -- attachment ids reserved for this link; uploads may use only these
   expires_at      timestamptz not null default now() + interval '15 minutes',
   used_at         timestamptz,
   files_attached  int,
@@ -73,18 +75,22 @@ on conflict (id) do update set
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 
--- Does the caller have an open upload link, in a browser session? Used by the
--- Storage insert policy, so a leaked connector token cannot upload files.
-create or replace function _attachment_upload_open() returns boolean
+-- May the caller upload into folder <user>/<p_folder>/? Only in a browser session
+-- (a leaked connector token cannot upload), and only for an attachment id reserved
+-- by one of the caller's open upload links. So uploads are bounded by the link and
+-- every uploaded file can be traced to its link. Used by the Storage insert policy
+-- (not meant to be called directly; it answers only about the caller's own links).
+create or replace function _attachment_upload_allowed(p_folder text) returns boolean
 language sql stable security definer set search_path = '' as $$
   select auth.uid() is not null
      and (auth.jwt() ->> 'client_id') is null
      and exists (
        select 1 from public.attachment_upload_request q
-       where q.user_id = auth.uid() and q.used_at is null and q.expires_at > now());
+       where q.user_id = auth.uid() and q.used_at is null and q.expires_at > now()
+         and p_folder = any (q.upload_ids::text[]));
 $$;
-revoke execute on function _attachment_upload_open() from public, anon;
-grant execute on function _attachment_upload_open() to authenticated;
+revoke execute on function _attachment_upload_allowed(text) from public, anon;
+grant execute on function _attachment_upload_allowed(text) to authenticated;
 
 create policy attachments_insert_own on storage.objects
   for insert to authenticated
@@ -92,7 +98,7 @@ create policy attachments_insert_own on storage.objects
     bucket_id = 'attachments'
     and (storage.foldername(name))[1] = (select auth.uid())::text
     and array_length(storage.foldername(name), 1) = 2
-    and (select public._attachment_upload_open()));
+    and public._attachment_upload_allowed((storage.foldername(name))[2]));
 
 create policy attachments_select_own on storage.objects
   for select to authenticated
@@ -118,7 +124,7 @@ declare
   v_cut  int;
   v_sp   int;
 begin
-  for v_line in select btrim(l) from regexp_split_to_table(coalesce(p_text, ''), E'\n') l loop
+  for v_line in select btrim(l) from regexp_split_to_table(coalesce(p_text, ''), E'\r?\n|\r') l loop
     continue when v_line = '';
     if v_cur = '' and length(v_line) <= p_max then
       v_cur := v_line;
@@ -218,8 +224,10 @@ begin
   end if;
   perform public._attachment_sweep(v_uid);
 
-  insert into public.attachment_upload_request (token_hash, user_id, item_id, description)
-  values (public._vault_token_hash(v_token), v_uid, p_item_id, nullif(btrim(p_description), ''))
+  -- 30 ids: up to 10 files, with room for retries (the page never reuses an id after an attempt).
+  insert into public.attachment_upload_request (token_hash, user_id, item_id, description, upload_ids)
+  values (public._vault_token_hash(v_token), v_uid, p_item_id, nullif(btrim(p_description), ''),
+          array(select gen_random_uuid() from generate_series(1, 30)))
   returning * into r;
   return jsonb_build_object('token', v_token, 'expires_at', r.expires_at);
 end;
@@ -232,7 +240,8 @@ declare
   v_uid uuid := public._vault_require_browser_session();
   r     record;
 begin
-  select q.used_at, q.expires_at, q.description, i.id as item_id, i.title, sp.name as space_name
+  select q.used_at, q.expires_at, q.description, q.upload_ids, i.id as item_id, i.title,
+         sp.name as space_name
     into r
   from public.attachment_upload_request q
   join public.item i on i.id = q.item_id and i.deleted_at is null
@@ -245,7 +254,7 @@ begin
   return jsonb_build_object(
     'user_id', v_uid, 'item_id', r.item_id, 'item_title', r.title, 'space', r.space_name,
     'description', r.description, 'expires_at', r.expires_at,
-    'max_files', 10, 'max_bytes', 20971520);
+    'upload_ids', to_jsonb(r.upload_ids), 'max_files', 10, 'max_bytes', 20971520);
 end;
 $$;
 
@@ -255,8 +264,9 @@ $$;
 --   p_description_for: which file Claude's description belongs to (null: the
 --   only picture, if there is exactly one).
 -- Each file must already be in Storage at <caller>/<attachment_id>/<storage_name>,
--- with the content type that matches its extension. Size and type are taken from
--- Storage's record, not from the page.
+-- with the content type that matches its extension. Size and content type are taken
+-- from Storage's record of the upload (the type is the one the page declared, limited
+-- by the bucket to the four allowed; the bytes themselves are checked on the page).
 create or replace function complete_attachment_upload(p_token text, p_files jsonb,
                                                       p_description_for uuid default null)
 returns jsonb
@@ -309,7 +319,10 @@ begin
     v_name  := btrim(f ->> 'filename');
     v_store := f ->> 'storage_name';
     v_mime  := public._attachment_mime(v_name);
-    if v_id is null or v_name is null or v_name = '' or length(v_name) > 200 or v_name ~ '[/\\[:cntrl:]]' then
+    if v_id is null or not v_id = any (r.upload_ids) then
+      raise exception 'attachment_id must be one of the ids reserved for this link' using errcode = '22023';
+    end if;
+    if v_name is null or v_name = '' or length(v_name) > 200 or v_name ~ '[/\\[:cntrl:]]' then
       raise exception 'each file needs an attachment_id and a file name (1-200 characters, no slashes)'
         using errcode = '22023';
     end if;

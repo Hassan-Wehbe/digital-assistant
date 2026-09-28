@@ -281,8 +281,9 @@ create policy secret_log_insert on secret_access_log
 -- Upload links (20260930090000_attachments.sql). Same pattern as the vault links.
 -- =========================================================
 -- attachment_upload_request: token_hash, user_id, item_id -> item, description (Claude's),
---   expires_at (15 min), used_at, files_attached
+--   upload_ids uuid[] (30 attachment ids reserved for the link), expires_at (15 min), used_at,
+--   files_attached
 -- Storage bucket `attachments`: private, 20 MB per file, image/png, image/jpeg,
 --   application/vnd.ms-visio.drawing (.vsdx), application/vnd.visio (.vsd). Policies on
---   storage.objects: read/delete own folder; upload own folder only while an upload link is
---   open and only from a browser session (not the connector's token).
+--   storage.objects: read/delete own folder; upload only to an id reserved by an open upload
+--   link, and only from a browser session (not the connector's token).

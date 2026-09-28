@@ -47,6 +47,7 @@ const CONTAINER = { png: "png", jpeg: "jpeg", vsdx: "zip", vsd: "ole" };
 export function checkFile(name, head, size = 0) {
   const type = typeFromName(name);
   if (!type) return { ok: false, error: "Only pictures (.jpg, .jpeg, .png) and Visio files (.vsdx, .vsd) can be attached." };
+  if (name.length > 200) return { ok: false, error: "The file name is too long (over 200 characters); rename it first." };
   if (size > MAX_BYTES) return { ok: false, error: "This file is larger than 20 MB." };
   if (size === 0 && head.length === 0) return { ok: false, error: "This file is empty." };
   if (sniff(head) !== CONTAINER[type]) {
@@ -145,7 +146,7 @@ const attr = (attrs, name) => new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']
 /** The text of every shape and connector on one page's XML, in document order. */
 export function pageText(xml) {
   const lines = [];
-  for (const m of xml.matchAll(/<Text\b[^>]*>([\s\S]*?)<\/Text>/g)) {
+  for (const m of xml.matchAll(/<Text(?:\s[^>]*[^/>])?>([\s\S]*?)<\/Text>/g)) {
     const text = decodeXmlText(m[1].replace(/<[^>]*>/g, ""));
     for (const line of text.split(/[\r\n\u2028\u2029]+/)) {
       const t = line.replace(/[\s\u00a0]+/g, " ").trim();

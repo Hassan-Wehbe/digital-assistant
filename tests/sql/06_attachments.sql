@@ -43,7 +43,7 @@ select pg_temp.check('chunker: long text split into <=1000-char chunks, words ke
    from _chunk_text((select string_agg('word' || g, ' ') from generate_series(1, 300) g)
                     || E'\n' || repeat('x', 1500)) with ordinality t(c, o)));
 select pg_temp.check('chunker: short lines are joined into one chunk',
-  (select count(*) = 1 and bool_and(c = E'a\nb\nc') from _chunk_text(E'a\n\n b \nc') c));
+  (select count(*) = 1 and bool_and(c = E'a\nb\nc') from _chunk_text(E'a\n\n b \r\nc') c));
 
 -- ---------- user A (MCP): spaces, items, an upload link ----------
 select pg_temp.as_user('00000000-0000-4000-a000-00000000000a', true);
@@ -74,6 +74,21 @@ insert into _v values ('t1', pg_temp.get('r1')::jsonb ->> 'token'),
                       ('t2', pg_temp.get('r2')::jsonb ->> 'token'),
                       ('t_exp', pg_temp.get('r_exp')::jsonb ->> 'token');
 
+-- The attachment ids each link reserved (read as the owner; the page gets them from
+-- get_attachment_upload_request).
+reset role;
+insert into _v select 'png',  upload_ids[1]::text from attachment_upload_request where token_hash = _vault_token_hash(pg_temp.get('t1'));
+insert into _v select 'vsdx', upload_ids[2]::text from attachment_upload_request where token_hash = _vault_token_hash(pg_temp.get('t1'));
+insert into _v select 'vsd',  upload_ids[3]::text from attachment_upload_request where token_hash = _vault_token_hash(pg_temp.get('t1'));
+insert into _v select 'spare', upload_ids[4]::text from attachment_upload_request where token_hash = _vault_token_hash(pg_temp.get('t1'));
+insert into _v select 'priv', upload_ids[1]::text from attachment_upload_request where token_hash = _vault_token_hash(pg_temp.get('t2'));
+select pg_temp.check('each link reserves 30 distinct attachment ids',
+  (select bool_and(cardinality(upload_ids) = 30
+                   and (select count(distinct u) from unnest(upload_ids) u) = 30)
+   from attachment_upload_request));
+select pg_temp.as_user('00000000-0000-4000-a000-00000000000a', true);
+set local role authenticated;
+
 select pg_temp.check('upload link token is 43 URL-safe characters',
   (select pg_temp.get('t1') ~ '^[A-Za-z0-9_-]{43}$'));
 
@@ -87,7 +102,7 @@ end $$;
 
 do $$
 begin
-  perform pg_temp.upload('00000000-0000-4000-a000-00000000000a/' || gen_random_uuid() || '/x.png', 'image/png');
+  perform pg_temp.upload('00000000-0000-4000-a000-00000000000a/' || pg_temp.get('spare') || '/x.png', 'image/png');
   perform pg_temp.check('the connector token cannot upload, even with an open link', false, 'upload accepted');
 exception when others then
   perform pg_temp.check('the connector token cannot upload, even with an open link', sqlstate = '42501', sqlerrm);
@@ -119,14 +134,20 @@ select pg_temp.check('the page reads the request: item, space, description',
       and r ->> 'description' like 'Whiteboard photo:%'
       and r ->> 'user_id' = '00000000-0000-4000-a000-00000000000a'
       and (r ->> 'max_bytes')::int = 20971520
+      and r -> 'upload_ids' ? pg_temp.get('png')
    from get_attachment_upload_request(pg_temp.get('t1')) r));
-
-insert into _v values ('png', gen_random_uuid()::text), ('vsdx', gen_random_uuid()::text),
-                      ('vsd', gen_random_uuid()::text), ('priv', gen_random_uuid()::text);
 
 do $$
 begin
-  perform pg_temp.upload('00000000-0000-4000-a000-00000000000b/' || gen_random_uuid() || '/x.png', 'image/png');
+  perform pg_temp.upload('00000000-0000-4000-a000-00000000000a/' || gen_random_uuid() || '/x.png', 'image/png');
+  perform pg_temp.check('uploads may use only ids reserved by an open link', false, 'upload accepted');
+exception when others then
+  perform pg_temp.check('uploads may use only ids reserved by an open link', sqlstate = '42501', sqlerrm);
+end $$;
+
+do $$
+begin
+  perform pg_temp.upload('00000000-0000-4000-a000-00000000000b/' || pg_temp.get('spare') || '/x.png', 'image/png');
   perform pg_temp.check('A cannot upload into B''s folder', false, 'upload accepted');
 exception when others then
   perform pg_temp.check('A cannot upload into B''s folder', sqlstate = '42501', sqlerrm);
@@ -150,10 +171,19 @@ select pg_temp.check('A can upload into their own folder while the link is open'
 do $$
 begin
   perform complete_attachment_upload(pg_temp.get('t1'), jsonb_build_array(
-    jsonb_build_object('attachment_id', gen_random_uuid(), 'filename', 'ghost.png', 'storage_name', 'ghost.png')));
+    jsonb_build_object('attachment_id', pg_temp.get('spare'), 'filename', 'ghost.png', 'storage_name', 'ghost.png')));
   perform pg_temp.check('completion refuses a file that is not in storage', false, 'accepted');
 exception when others then
   perform pg_temp.check('completion refuses a file that is not in storage', sqlstate = 'PT404', sqlerrm);
+end $$;
+do $$
+begin
+  perform complete_attachment_upload(pg_temp.get('t1'), jsonb_build_array(
+    jsonb_build_object('attachment_id', pg_temp.get('priv'), 'filename', 'secret-plan.vsdx',
+                       'storage_name', 'secret-plan.vsdx')));
+  perform pg_temp.check('completion refuses an id reserved by another link', false, 'accepted');
+exception when others then
+  perform pg_temp.check('completion refuses an id reserved by another link', sqlerrm like '%reserved%', sqlerrm);
 end $$;
 do $$
 begin

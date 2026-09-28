@@ -73,7 +73,10 @@ export const registerAttachFile: RegisterTool = (server, { db, accessToken, assi
           p_item_id: item.id,
           p_description: description || null,
         });
-        if (error) throw dbError("Could not create the upload link", error);
+        if (error) {
+          const made = item.created ? ` The new item "${item.title}" (id ${item.id}) was created; reuse it with item_id.` : "";
+          throw new Error(`${dbError("Could not create the upload link", error).message}.${made}`);
+        }
         return ok({
           status: "waiting_for_upload",
           upload_link: uploadLink(data.token),

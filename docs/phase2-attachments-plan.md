@@ -131,19 +131,23 @@ What the build added or decided where the plan left room:
 - **One extra tool, `describe_attachment`:** the plan's migration has a "set a description"
   function but no tool used it. It sets or replaces a picture's description (for example, the
   picture is shown in the chat after the upload). Drop it if not wanted; nothing else depends on it.
-- **Who may upload:** the Storage insert policy allows a user's own folder
-  (`<user id>/<attachment id>/<name>`) only while one of their upload links is open, and only
-  from a browser sign-in: the Claude connector's token (it carries `client_id`) cannot upload,
-  read the upload request, or complete it. Read and delete: own folder only. No update policy,
-  so a file is never overwritten.
+- **Who may upload:** each upload link reserves 30 attachment ids (up to 10 files, with room
+  for retries; the page never reuses an id after an attempt). The Storage insert policy allows
+  `<user id>/<attachment id>/<name>` only for an id reserved by one of the user's open links,
+  and only from a browser sign-in: the Claude connector's token (it carries `client_id`) cannot
+  upload, read the upload request, or complete it. Read and delete: own folder only. No update
+  policy, so a file is never overwritten.
 - **Attachment rows are written only by the database functions** (`insert/update/delete` revoked
   from `authenticated`). `complete_attachment_upload` checks each file is really in Storage at
-  the expected path and takes **size and type from Storage's own record**, not from the page;
-  the type must match the file extension, and Visio text is accepted for `.vsdx` only (max
+  the expected path, with an id reserved by this link, and takes **size and type from Storage's
+  record** of the upload (the type is the one the page declared, limited by the bucket to the
+  four allowed; the bytes themselves are checked on the page); the type must match the extension, and Visio text is accepted for `.vsdx` only (max
   40,000 characters, like an item).
 - **One link, one batch:** up to 10 files are uploaded, then recorded in a single call that
   uses up the link. Files that failed to upload are listed on the page; trying them again needs
-  a new link. If recording fails, the page removes the files it just uploaded.
+  a new link. If the database refuses to record them, the page removes the files it just
+  uploaded; if the answer is lost (network), it keeps them and tells the owner to check the
+  item first, since they may already be attached.
 - **Claude's description** goes to the only picture of the batch; with several pictures the page
   asks which one it describes ("None of these" drops it).
 - **Search text** per attachment: `File: <name>`, caption, description, Visio text. It is split
@@ -156,6 +160,15 @@ What the build added or decided where the plan left room:
 - **get_item** lists per attachment: id, file name, type, size, caption, description, the first
   4,000 characters of Visio text, and when it was added. The storage path is never shown to
   the model.
-- **Loose ends, on purpose:** a file uploaded but never recorded (tab closed mid-way) stays in
-  the owner's folder, unlisted and unsearchable; a cleanup job can come later. There is no item
-  purge yet; when one is added it must delete the item's Storage objects too.
+- **Loose ends, on purpose:**
+  - A file uploaded but never recorded (tab closed mid-way) stays in the owner's folder,
+    unlisted and unsearchable. At most 30 per link, and its id is in the link's reserved list,
+    so a later cleanup job can find it.
+  - If `attach_file` creates a new item and then fails to create the link, the item stays;
+    the error names it and its id, so Claude retries with `item_id` instead of making another.
+  - There is no item purge yet; when one is added it must delete the item's Storage objects too.
+  - Keyword search now builds the text of each candidate item (plus its attachments) per query
+    instead of using the `item_fts_idx` index. Fine for a personal store; revisit (a stored,
+    indexed search column) if searches get slow.
+  - Visio text inherited from masters (stencil shapes with built-in labels) is not read; only
+    text typed on the page's shapes and connectors, plus page names.
