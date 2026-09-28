@@ -8,7 +8,7 @@ Read this, then `CLAUDE.md` and `docs/design.md`, before changing anything.
 | Piece | Where | State |
 |---|---|---|
 | Database | Supabase project `digital-assistant`, ref `motvckmpusxiuelpwqxy` | migrations `initial_schema`, `knowledge_path`, `vault` applied |
-| MCP server | Edge Function `mcp` (`supabase/functions/mcp/`), `https://motvckmpusxiuelpwqxy.supabase.co/functions/v1/mcp` | version 3, 12 tools |
+| MCP server | Edge Function `mcp` (`supabase/functions/mcp/`), `https://motvckmpusxiuelpwqxy.supabase.co/functions/v1/mcp` | version 3, 12 tools (13 with `set_assistant_name` once deployed) |
 | Sign-in page | `docs/oauth/consent.html` → `https://hassan-wehbe.github.io/digital-assistant/oauth/consent` | used by the Claude connector (OAuth 2.1 via Supabase Auth) |
 | Vault pages | `docs/vault/` → `https://hassan-wehbe.github.io/digital-assistant/vault/` | setup, enter, reveal, recover |
 | Claude connector | "Digital Assistant" custom connector in the owner's Claude account | connected and in use (spaces Logins, Recipes exist) |
@@ -18,7 +18,7 @@ URL gains `/docs/` and both the connector sign-in and vault links 404).
 
 Tools: `list_spaces`, `create_space`, `save_item`, `update_item`, `get_item`, `search_items`,
 `link_items` (knowledge, M1); `save_secret`, `find_secret`, `get_secret`, `update_secret`,
-`delete_secret` (vault, M2).
+`delete_secret` (vault, M2); `set_assistant_name` (invocation name, default Wilma; design.md D17).
 
 ## Key design decisions (details in the docs named)
 

@@ -20,6 +20,8 @@ create table app_user (
   -- Added by 20260928170000_vault.sql (zero-knowledge vault, docs/phase1-m2-vault-plan.md):
   --   vault_salt bytea, kdf_params jsonb (Argon2id settings),
   --   recovery_wrapped_private_key bytea, vault_key_version int
+  -- Added by 20260929100000_assistant_name.sql: assistant_name text not null
+  --   default 'Wilma' (what the owner calls the assistant; design.md D17)
   created_at           timestamptz not null default now()
 );
 

@@ -7,6 +7,7 @@ export interface ToolContext {
   db: SupabaseClient;
   userId: string;
   accessToken: string; // to schedule background embedding as the same user
+  assistantName: string; // what the user calls the assistant (lib/assistant.ts)
 }
 
 export type RegisterTool = (server: McpServer, ctx: ToolContext) => void;

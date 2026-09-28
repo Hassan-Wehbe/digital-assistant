@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { embed } from "../lib/embed.ts";
 import { loadSpaces, resolveSpace } from "../lib/spaces.ts";
+import { addressedAs } from "../lib/assistant.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
-export const registerSearchItems: RegisterTool = (server, { db }) => {
+export const registerSearchItems: RegisterTool = (server, { db, assistantName }) => {
   server.registerTool(
     "search_items",
     {
@@ -11,7 +12,8 @@ export const registerSearchItems: RegisterTool = (server, { db }) => {
       description:
         "Find items by meaning and keywords, optionally filtered by tags, space and type. " +
         "With no query, lists the most recently updated items matching the filters. " +
-        "Returns snippets; call get_item for the full text. Restricted spaces are never searched.",
+        "Returns snippets; call get_item for the full text. Restricted spaces are never searched." +
+        addressedAs(assistantName, "what did I note about the Gartner sandbox?"),
       inputSchema: {
         query: z.string().max(500).optional().describe("What to look for, in plain words"),
         tags: z.array(z.string()).max(10).optional().describe("Items must have all of these tags"),
