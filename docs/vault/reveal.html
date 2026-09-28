@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self'; connect-src https://motvckmpusxiuelpwqxy.supabase.co; base-uri 'none'; form-action 'none'">
+  <title>Reveal a secret</title>
+  <link rel="stylesheet" href="vault.css" integrity="sha384-tHvFDGaW8LdFSJTcKnd8JJmP77TgS3f5t2SndNBu//lzKpG/SF0BLpy6kZu8xp9B">
+  <script src="vendor/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok"></script>
+  <link rel="modulepreload" href="../oauth/config.js" integrity="sha384-tckR0YVWc/lyRMtHEWFlyrxg0ZC4AOhWm1kfxHt0TsK7zPgiBFsDl7jqCaEjhHWQ">
+  <link rel="modulepreload" href="vendor/libsodium-sumo.mjs" integrity="sha384-6CExmTBhGBkeU97K/q0KEN9A/d/n9q/T7WdippDhSFGAAlIneqtVzaJfmm6+LUMb">
+  <link rel="modulepreload" href="vendor/libsodium-wrappers.mjs" integrity="sha384-Ure8NooPSc0DiuY0mTMBNtSIgIaxz/eFxwaKJI/PChqRbmj80CIZ4fNY5e6DXL7K">
+  <link rel="modulepreload" href="crypto.js" integrity="sha384-mvmV3phWN53VPLklG56H0aAUwta1DDo167TO+5apL3T35Fmc2+T57coa4kYh7Bq2">
+  <link rel="modulepreload" href="app.js" integrity="sha384-sEHKNjLRRO63V8TZAD/lIv1Xxn+7Bo9zwtTi5loLhqbYxG9YgR19Y3N9YO1qrE1u">
+  <script type="module" src="reveal.js" integrity="sha384-8wt3ujDLp1RjSQg3ndYmLuAskXjamv5ONs4NmmMk1SNZZg8BcYeS3WD/lSTup1hc"></script>
+</head>
+<body>
+<main>
+  <h1>Reveal a secret</h1>
+  <p id="status" class="muted">Loading…</p>
+
+  <form id="login" hidden>
+    <p>Sign in with your Digital Assistant account.</p>
+    <label for="email">Email</label>
+    <input id="email" type="email" autocomplete="username" required>
+    <label for="password">Account password</label>
+    <input id="password" type="password" autocomplete="current-password" required>
+    <div class="row"><button class="primary" type="submit">Sign in</button></div>
+  </form>
+
+  <form id="unlock" hidden autocomplete="off">
+    <dl>
+      <dt>Name</dt><dd id="m-name"></dd>
+      <dt>Type</dt><dd id="m-type"></dd>
+      <dt>Space</dt><dd id="m-space"></dd>
+      <dt>Website</dt><dd id="m-url"></dd>
+      <dt>Link valid</dt><dd id="m-expires"></dd>
+    </dl>
+    <label for="passphrase">Vault unlock passphrase</label>
+    <div class="field"><input id="passphrase" type="password" autocomplete="off" required></div>
+    <p class="muted">Not your account password. <a href="recover">Forgot it?</a></p>
+    <div class="row"><button class="primary" type="submit">Unlock and show</button></div>
+  </form>
+
+  <section id="shown" hidden>
+    <p><strong id="s-name"></strong> <span class="muted" id="s-url"></span></p>
+    <div id="values"></div>
+    <p class="muted" id="countdown"></p>
+    <div class="row"><button type="button" id="hide-now">Hide now</button></div>
+  </section>
+
+  <section id="hidden-done" hidden>
+    <p>Hidden. This link has been used; ask the assistant for a new one to see it again.</p>
+  </section>
+
+  <p id="account" class="muted" hidden>Signed in as <span id="who"></span> · <a href="#" id="signout">Sign out</a></p>
+</main>
+</body>
+</html>
