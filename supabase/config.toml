@@ -1,0 +1,9 @@
+# Supabase CLI config. Only the settings this repo relies on; everything else
+# uses the CLI defaults. Project: digital-assistant (ref motvckmpusxiuelpwqxy).
+project_id = "digital-assistant"
+
+[functions.mcp]
+# The MCP server checks the caller's Supabase access token itself, so it can
+# answer unauthenticated OAuth discovery requests (401 + WWW-Authenticate)
+# the way MCP clients such as the Claude app expect.
+verify_jwt = false
