@@ -1,7 +1,8 @@
 -- Digital Assistant: phase 1 schema for Supabase (Postgres 15+).
--- Source of truth for the initial migration. See docs/design.md for reasoning.
--- Applied as supabase/migrations/20260928120000_initial_schema.sql; later changes
--- go in new migration files, and this file is kept in sync as a readable reference.
+-- Readable overview; see docs/design.md for reasoning. It started as the initial
+-- migration (supabase/migrations/20260928120000_initial_schema.sql). Later changes
+-- live in newer migration files, which are the source of truth: exact current
+-- policies, functions and indexes are there, not necessarily here.
 
 -- Supabase keeps extensions in the `extensions` schema (on the default search_path).
 create extension if not exists vector with schema extensions;

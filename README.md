@@ -7,7 +7,8 @@ phone or desktop through natural language.
 - `docs/handoff.md`: current state and how to keep building (start here in a new session)
 - `CLAUDE.md`: rules Claude Code follows in this repo
 - `docs/design.md`: architecture, decisions and roadmap
-- `db/schema.sql`: phase 1 database schema (Supabase Postgres + pgvector, with Row Level Security)
+- `supabase/migrations/`: the database schema, as applied (Supabase Postgres + pgvector, Row Level Security)
+- `db/schema.sql`: readable overview of the tables
 - `docs/claude-code-kickoff.md`: the prompt that starts the first build session
 - `docs/phase1-m1-plan.md` / `docs/phase1-m1-setup.md`: milestone 1 plan, and setup + first use
 - `docs/phase1-m2-vault-plan.md` / `docs/phase1-m2-setup.md`: vault plan, and setup + first password

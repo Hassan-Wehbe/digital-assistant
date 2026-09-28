@@ -1,5 +1,5 @@
-// Rewrite the Subresource Integrity hashes in docs/vault/*.html.
-// Run after changing any vault page script, the stylesheet or a vendored file:
+// Rewrite the Subresource Integrity hashes in docs/vault/*.html and docs/oauth/*.html.
+// Run after changing any page script, stylesheet or vendored file:
 //   node scripts/vault-sri.mjs          (rewrite)
 //   node scripts/vault-sri.mjs --check  (exit 1 if any hash is stale)
 import { createHash } from "node:crypto";
@@ -7,13 +7,15 @@ import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const dir = resolve(dirname(fileURLToPath(import.meta.url)), "../docs/vault");
+const docs = resolve(dirname(fileURLToPath(import.meta.url)), "../docs");
 const check = process.argv.includes("--check");
 const TAG = /((?:src|href)="([^"]+)"[^>]*?\sintegrity=")([^"]*)(")/g;
 let stale = 0;
 
-for (const name of readdirSync(dir).filter((f) => f.endsWith(".html"))) {
-  const path = join(dir, name);
+for (const name of ["vault", "oauth"].flatMap((d) =>
+  readdirSync(join(docs, d)).filter((f) => f.endsWith(".html")).map((f) => join(d, f)))) {
+  const path = join(docs, name);
+  const dir = dirname(path);
   const html = readFileSync(path, "utf8");
   const out = html.replace(TAG, (_m, pre, ref, old, post) => {
     const hash = "sha384-" + createHash("sha384").update(readFileSync(resolve(dir, ref))).digest("base64");
