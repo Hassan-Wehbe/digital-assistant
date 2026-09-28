@@ -24,10 +24,10 @@ await ctx.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "htt
 const page = await ctx.newPage();
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
-// The expected "link already used" refusal comes back as HTTP 500 (P0002; see
-// docs/phase1-m2-setup.md, follow-ups), which the browser logs; ignore only that.
+// The expected "link already used" refusal comes back as HTTP 410 (PT410), which
+// the browser logs; ignore only that.
 page.on("console", (m) => {
-  if (m.type() === "error" && !m.text().includes("status of 500")) errors.push(m.text());
+  if (m.type() === "error" && !m.text().includes("status of 410")) errors.push(m.text());
 });
 const local = (link) => link.replace("https://hassan-wehbe.github.io/digital-assistant/vault", LOCAL);
 

@@ -195,20 +195,14 @@ The same page, with **I know my passphrase**, is how you change the passphrase l
 
 ## Known follow-ups (not blocking)
 
-- Expired/used links are refused correctly, but the API reports that as HTTP 500
-  (error code `P0002`) instead of a 4xx. Cosmetic: the page shows the right message.
-  A small migration can switch it to a 4xx.
-- Supabase's security advisor lists the vault functions as "callable by signed-in users".
-  That is intended: each one checks who is calling (owner only; vault-page functions
-  also refuse the connector's token). The two link-token tables have RLS on with no
+- Supabase's security advisor lists the vault functions and the `owns_*` helpers as
+  "callable by signed-in users". That is intended: each vault function checks who is
+  calling (owner only; vault-page functions also refuse the connector's token), and the
+  `owns_*` helpers only answer "do *I* own this id?" (the RLS policies need to call them). The two link-token tables have RLS on with no
   policies, also intended (only those functions read them).
 - Supabase Auth **leaked password protection** (checks your *account* password against
   known breaches) is off. Optional, and only on paid Supabase plans; the advisor's link
   (<https://supabase.com/docs/guides/auth/password-security>) shows where to switch it on.
-- The sign-in/consent page (`docs/oauth/`, milestone 1) still loads supabase-js from a
-  CDN; it could use the vendored copy in `docs/vault/vendor/` like the vault pages.
-- CLAUDE.md says migrations go in `db/migrations/`; since milestone 1 they live in
-  `supabase/migrations/` (the Supabase CLI location). Worth aligning the wording.
 - Later milestones: unlocking restricted spaces per session, emergency access, rotation
   reminders (`secret.expires_at`).
 - When this branch is merged: switch GitHub Pages to `main` (same `/docs` folder; links

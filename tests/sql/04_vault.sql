@@ -189,21 +189,21 @@ begin
   perform complete_secret_entry(pg_temp.get('e1')::jsonb ->> 'token', pg_temp.b64(repeat('ba', 80)));
   perform pg_temp.check('an entry link works only once', false, 'reused');
 exception when others then
-  perform pg_temp.check('an entry link works only once', sqlerrm like 'this link has expired%', sqlerrm);
+  perform pg_temp.check('an entry link works only once', sqlstate = 'PT410' and sqlerrm like 'this link has expired%', sqlerrm);
 end $$;
 do $$
 begin
   perform get_secret_entry_request(pg_temp.get('e_exp')::jsonb ->> 'token');
   perform pg_temp.check('an expired entry link is refused', false, 'accepted');
 exception when others then
-  perform pg_temp.check('an expired entry link is refused', sqlerrm like 'this link has expired%', sqlerrm);
+  perform pg_temp.check('an expired entry link is refused', sqlstate = 'PT410' and sqlerrm like 'this link has expired%', sqlerrm);
 end $$;
 do $$
 begin
   perform get_secret_entry_request('not-a-real-token');
   perform pg_temp.check('an unknown entry token is refused', false, 'accepted');
 exception when others then
-  perform pg_temp.check('an unknown entry token is refused', sqlerrm like 'this link has expired%', sqlerrm);
+  perform pg_temp.check('an unknown entry token is refused', sqlstate = 'PT410' and sqlerrm like 'this link has expired%', sqlerrm);
 end $$;
 
 do $$
@@ -294,14 +294,14 @@ begin
   perform reveal_secret(pg_temp.get('r1')::jsonb ->> 'token');
   perform pg_temp.check('a reveal link works only once', false, 'reused');
 exception when others then
-  perform pg_temp.check('a reveal link works only once', sqlerrm like 'this link has expired%', sqlerrm);
+  perform pg_temp.check('a reveal link works only once', sqlstate = 'PT410' and sqlerrm like 'this link has expired%', sqlerrm);
 end $$;
 do $$
 begin
   perform reveal_secret(pg_temp.get('r_exp')::jsonb ->> 'token');
   perform pg_temp.check('an expired reveal link is refused', false, 'accepted');
 exception when others then
-  perform pg_temp.check('an expired reveal link is refused', sqlerrm like 'this link has expired%', sqlerrm);
+  perform pg_temp.check('an expired reveal link is refused', sqlstate = 'PT410' and sqlerrm like 'this link has expired%', sqlerrm);
 end $$;
 select pg_temp.check('reveal sets last_accessed_at',
   (select last_accessed_at is not null from secret where id = pg_temp.get('s1')::uuid));
@@ -364,14 +364,14 @@ begin
   perform reveal_secret(pg_temp.get('r_b')::jsonb ->> 'token');
   perform pg_temp.check('B cannot use A''s reveal link even with the token', false, 'allowed');
 exception when others then
-  perform pg_temp.check('B cannot use A''s reveal link even with the token', sqlerrm like 'this link has expired%', sqlerrm);
+  perform pg_temp.check('B cannot use A''s reveal link even with the token', sqlstate = 'PT410' and sqlerrm like 'this link has expired%', sqlerrm);
 end $$;
 do $$
 begin
   perform complete_secret_entry(pg_temp.get('e_b')::jsonb ->> 'token', pg_temp.b64(repeat('00', 80)));
   perform pg_temp.check('B cannot use A''s entry link even with the token', false, 'allowed');
 exception when others then
-  perform pg_temp.check('B cannot use A''s entry link even with the token', sqlerrm like 'this link has expired%', sqlerrm);
+  perform pg_temp.check('B cannot use A''s entry link even with the token', sqlstate = 'PT410' and sqlerrm like 'this link has expired%', sqlerrm);
 end $$;
 do $$
 begin

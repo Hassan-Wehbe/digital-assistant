@@ -59,7 +59,7 @@ edit an applied one).
 - **Deploying `mcp`** with the connector's `deploy_edge_function`: pass every file under
   `supabase/functions/mcp/` (not `deno.lock`), `verify_jwt: false`, and
   `import_map_path: "deno.json"` (without it the deploy fails on a stale import-map path).
-- **After editing anything in `docs/vault/`:** `node scripts/vault-sri.mjs` (updates the SRI
+- **After editing anything in `docs/vault/` or `docs/oauth/`:** `node scripts/vault-sri.mjs` (updates the SRI
   hashes); `tests/deno/vault_pages_test.ts` fails if you forget.
 - **End-to-end / browser tests** (`tests/e2e/vault_e2e.ts`, `tests/browser/vault_flow.mjs`)
   need a throwaway user: create it with SQL in `auth.users` + `auth.identities`
@@ -79,12 +79,15 @@ edit an applied one).
 
 ## Open follow-ups (small)
 
-- Expired/used vault links are refused with SQL error `P0002`, which the API returns as
-  HTTP 500; switch to a 4xx (small migration).
-- `docs/oauth/consent.html` still loads supabase-js from jsDelivr; reuse the vendored copy.
-- CLAUDE.md says migrations go in `db/migrations/`; they live in `supabase/migrations/`.
-- Advisor notes: `owns_*` helpers callable by signed-in users; FK indexes and
-  `(select auth.uid())` in policies (performance, not urgent).
+- Done in `20260929090000_cleanup_followups.sql` and the sign-in page cleanup: dead vault
+  links answer HTTP 410 (PT410) instead of 500, RLS policies use `(select auth.uid())`,
+  foreign keys are indexed, `docs/oauth/` loads only same-origin code (vendored
+  supabase-js, strict CSP, SRI via `node scripts/vault-sri.mjs`), CLAUDE.md names
+  `supabase/migrations/` as the source of truth.
+- Advisor items left on purpose: `owns_*` and vault functions "callable by signed-in
+  users" (they only answer for the caller; RLS needs them), token tables with RLS and
+  no policies, "multiple permissive policies" (owner + share policies), unused indexes
+  (the data set is still tiny). Leaked-password protection is a paid-plan Auth setting.
 
 ## Roadmap (docs/design.md §6)
 

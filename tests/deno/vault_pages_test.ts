@@ -1,13 +1,16 @@
-// Static checks on the vault pages (docs/vault/): the hardening the plan asks
-// for stays in place as the pages change.
+// Static checks on the vault pages (docs/vault/) and the sign-in page
+// (docs/oauth/): the hardening the plan asks for stays in place as the pages change.
 import { assert, assertEquals } from "jsr:@std/assert@1";
 import { crypto } from "jsr:@std/crypto@1";
 import { encodeBase64 } from "jsr:@std/encoding@1/base64";
 import { dirname, fromFileUrl, join, resolve } from "jsr:@std/path@1";
 
-const DIR = resolve(dirname(fromFileUrl(import.meta.url)), "../../docs/vault");
-const PAGES = ["setup.html", "enter.html", "reveal.html", "recover.html", "index.html"];
-const SCRIPTS = ["app.js", "crypto.js", "setup.js", "enter.js", "reveal.js", "recover.js"];
+const DOCS = resolve(dirname(fromFileUrl(import.meta.url)), "../../docs");
+const DIR = join(DOCS, "vault");
+const PAGES = ["vault/setup.html", "vault/enter.html", "vault/reveal.html", "vault/recover.html",
+               "vault/index.html", "oauth/consent.html"];
+const SCRIPTS = ["vault/app.js", "vault/crypto.js", "vault/setup.js", "vault/enter.js", "vault/reveal.js",
+                 "vault/recover.js", "oauth/consent.js"];
 
 async function sha384(path: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-384", await Deno.readFile(path));
@@ -20,7 +23,8 @@ function csp(html: string): string {
 
 for (const page of PAGES) {
   Deno.test(`${page}: strict CSP, local scripts only, integrity hashes current`, async () => {
-    const html = await Deno.readTextFile(join(DIR, page));
+    const html = await Deno.readTextFile(join(DOCS, page));
+    const base = dirname(join(DOCS, page));
     const policy = csp(html);
     assert(policy.includes("default-src 'none'"), "default-src 'none'");
     assert(!policy.includes("unsafe-inline") && !/unsafe-eval(?!\S)/.test(policy.replace("'wasm-unsafe-eval'", "")),
@@ -46,7 +50,7 @@ for (const page of PAGES) {
       const ref = attrs.match(/(?:src|href)="([^"]+)"/)?.[1];
       if (!ref) continue;
       const integrity = attrs.match(/integrity="([^"]+)"/)?.[1];
-      assertEquals(integrity, await sha384(resolve(DIR, ref)), `integrity of ${ref} (run node scripts/vault-sri.mjs)`);
+      assertEquals(integrity, await sha384(resolve(base, ref)), `integrity of ${ref} (run node scripts/vault-sri.mjs)`);
     }
   });
 }
@@ -63,11 +67,12 @@ Deno.test("each page preloads (with integrity) every module its script imports",
     }
     return out;
   };
-  for (const page of PAGES.filter((p) => p !== "index.html")) {
-    const html = await Deno.readTextFile(join(DIR, page));
+  for (const page of PAGES.filter((p) => p !== "vault/index.html")) {
+    const html = await Deno.readTextFile(join(DOCS, page));
+    const base = dirname(join(DOCS, page));
     const entry = html.match(/<script type="module" src="([^"]+)"/)![1];
-    const preloaded = new Set([...html.matchAll(/rel="modulepreload" href="([^"]+)"/g)].map((m) => resolve(DIR, m[1])));
-    for (const dep of new Set(await importsOf(resolve(DIR, entry)))) {
+    const preloaded = new Set([...html.matchAll(/rel="modulepreload" href="([^"]+)"/g)].map((m) => resolve(base, m[1])));
+    for (const dep of new Set(await importsOf(resolve(base, entry)))) {
       assert(preloaded.has(dep), `${page}: ${dep} is imported but not preloaded with integrity`);
     }
   }
@@ -75,7 +80,7 @@ Deno.test("each page preloads (with integrity) every module its script imports",
 
 Deno.test("page scripts never use innerHTML, eval, or browser storage", async () => {
   for (const f of SCRIPTS) {
-    const src = await Deno.readTextFile(join(DIR, f));
+    const src = await Deno.readTextFile(join(DOCS, f));
     for (const banned of ["innerHTML", "outerHTML", "insertAdjacentHTML", "document.write", "eval(",
                           "new Function", "localStorage", "sessionStorage", "indexedDB", "console.log"]) {
       assert(!src.includes(banned), `${f} uses ${banned}`);

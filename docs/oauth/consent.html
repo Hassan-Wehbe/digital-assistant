@@ -4,36 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src https://motvckmpusxiuelpwqxy.supabase.co; base-uri 'none'; form-action 'none'">
   <title>Digital Assistant sign-in</title>
-  <style>
-    :root { --bg:#f6f7f9; --card:#fff; --text:#1c1f24; --muted:#5d6570; --line:#dde1e6;
-            --accent:#2754c5; --accent-text:#fff; --danger:#b3261e; }
-    @media (prefers-color-scheme: dark) {
-      :root { --bg:#121417; --card:#1b1e23; --text:#e8eaed; --muted:#9aa2ad; --line:#2e333a;
-              --accent:#7aa2ff; --accent-text:#0b1020; --danger:#ff8a80; }
-    }
-    * { box-sizing: border-box; }
-    body { margin:0; min-height:100vh; display:grid; place-items:center; padding:16px;
-           background:var(--bg); color:var(--text); font:16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-    main { width:100%; max-width:420px; background:var(--card); border:1px solid var(--line);
-           border-radius:12px; padding:24px; }
-    h1 { font-size:1.25rem; margin:0 0 4px; }
-    p { margin:8px 0; }
-    .muted { color:var(--muted); font-size:.9rem; }
-    label { display:block; margin:12px 0 4px; font-weight:600; font-size:.9rem; }
-    input { width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:8px;
-            background:transparent; color:inherit; font:inherit; }
-    button { font:inherit; padding:10px 16px; border-radius:8px; border:1px solid var(--line);
-             background:transparent; color:inherit; cursor:pointer; }
-    button.primary { background:var(--accent); color:var(--accent-text); border-color:var(--accent); font-weight:600; }
-    .row { display:flex; gap:8px; margin-top:20px; }
-    .row button { flex:1; }
-    dl { margin:16px 0 0; display:grid; grid-template-columns:auto 1fr; gap:6px 12px; font-size:.9rem; }
-    dt { color:var(--muted); }
-    dd { margin:0; overflow-wrap:anywhere; }
-    .error { color:var(--danger); }
-    [hidden] { display:none !important; }
-  </style>
+  <link rel="stylesheet" href="consent.css" integrity="sha384-6dIYNJOd1HBtMCMATwmP36RUgETQFtDbc/em/lJbXyDFRqxaYjvCd2uojb4pe90M">
+  <script src="../vault/vendor/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok"></script>
+  <link rel="modulepreload" href="config.js" integrity="sha384-tckR0YVWc/lyRMtHEWFlyrxg0ZC4AOhWm1kfxHt0TsK7zPgiBFsDl7jqCaEjhHWQ">
+  <script type="module" src="consent.js" integrity="sha384-cESEWj/ndFRsEy/0eiZ7inlMj59pDKapMQUCFwJYk9ThOi5m4MfbGCvmvLf4/klt"></script>
 </head>
 <body>
 <main>
@@ -65,78 +42,5 @@
   </section>
 </main>
 
-<script type="module">
-  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/+esm";
-  import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "./config.js";
-
-  const $ = (id) => document.getElementById(id);
-  const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
-  const authorizationId = new URLSearchParams(location.search).get("authorization_id");
-
-  // Everything shown from the request uses textContent, never innerHTML:
-  // client names are chosen by whoever registers the client.
-  function show(section, message, isError = false) {
-    for (const id of ["login", "consent"]) $(id).hidden = id !== section;
-    $("status").textContent = message ?? "";
-    $("status").hidden = !message;
-    $("status").className = isError ? "error" : "muted";
-  }
-
-  async function loadRequest() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return show("login");
-
-    const { data, error } = await supabase.auth.oauth.getAuthorizationDetails(authorizationId);
-    if (error) return show(null, `This sign-in request can't be used: ${error.message}`, true);
-    if (!("authorization_id" in data)) {
-      // Already approved before: go straight back to the app.
-      show(null, "Already approved. Returning to the app…");
-      location.assign(data.redirect_url);
-      return;
-    }
-    $("client-name").textContent = data.client?.name || "An app";
-    $("user-email").textContent = data.user?.email ?? session.user.email ?? "";
-    $("redirect").textContent = data.redirect_uri;
-    $("scopes").textContent = data.scope?.trim() || "(none)";
-    show("consent");
-  }
-
-  async function decide(approve) {
-    $("approve").disabled = $("deny").disabled = true;
-    const fn = approve ? "approveAuthorization" : "denyAuthorization";
-    const { data, error } = await supabase.auth.oauth[fn](authorizationId, { skipBrowserRedirect: true });
-    if (error) {
-      $("approve").disabled = $("deny").disabled = false;
-      return show("consent", error.message, true);
-    }
-    show(null, approve ? "Approved. Returning to the app…" : "Denied. Returning to the app…");
-    location.assign(data.redirect_url);
-  }
-
-  $("login").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    show("login", "Signing in…");
-    const { error } = await supabase.auth.signInWithPassword({
-      email: $("email").value.trim(),
-      password: $("password").value,
-    });
-    $("password").value = "";
-    if (error) return show("login", error.message, true);
-    await loadRequest();
-  });
-  $("approve").addEventListener("click", () => decide(true));
-  $("deny").addEventListener("click", () => decide(false));
-  $("signout").addEventListener("click", async (e) => {
-    e.preventDefault();
-    await supabase.auth.signOut();
-    show("login");
-  });
-
-  if (!authorizationId) {
-    show(null, "Open this page from the app you are connecting (it adds an authorization_id to the link).", true);
-  } else {
-    loadRequest().catch((err) => show(null, `Something went wrong: ${err.message}`, true));
-  }
-</script>
 </body>
 </html>
