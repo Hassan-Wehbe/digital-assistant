@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { loadSpaces, resolveSpace } from "../lib/spaces.ts";
 import { describeSecret, entryLink, NEVER_VALUES, requireVault, SECRET_TYPES } from "../lib/vault.ts";
+import { addressedAs } from "../lib/assistant.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
-export const registerSaveSecret: RegisterTool = (server, { db }) => {
+export const registerSaveSecret: RegisterTool = (server, { db, assistantName }) => {
   server.registerTool(
     "save_secret",
     {
@@ -14,7 +15,8 @@ export const registerSaveSecret: RegisterTool = (server, { db }) => {
         "(valid 15 minutes). Give the user the link; they type the value on that page, where it " +
         "is encrypted in their browser. You never see it. " + NEVER_VALUES + " If the user already " +
         "pasted a secret into the chat, do not store it anywhere: tell them it has been exposed " +
-        "and should be changed (rotated), then offer this link for the new value.",
+        "and should be changed (rotated), then offer this link for the new value." +
+        addressedAs(assistantName, "save my Wi-Fi password"),
       inputSchema: {
         space: z.string().describe("Space name, path (Work/Gartner) or id"),
         name: z.string().trim().min(1).max(200).describe("What it is, e.g. \"Gartner sandbox login\""),

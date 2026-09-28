@@ -49,6 +49,7 @@ the MCP server, which the owner controls.
 | `get_secret` | Returns metadata + a short-lived reveal link. **Never the plaintext.** |
 | `update_secret` | Rename / change url; optional link to type a new value |
 | `delete_secret` | Hard delete (the access log keeps a record) |
+| `set_assistant_name` | Change the name the user calls the assistant (default Wilma, D17) |
 
 ## 3. Decisions and reasons
 
@@ -70,6 +71,7 @@ the MCP server, which the owner controls.
 | D14 | **Item sharing** (`item_share`) with view/edit and optional expiry; structurally cannot reference secrets | Share a recipe or design with someone without granting space access. |
 | D15 | Supabase free tier for phase 1, all in the cloud | No local setup; one account gives Postgres + pgvector, Storage and Auth. Open source, so self-hosting stays possible. Free projects pause after 7 days of inactivity; Pro ($25/mo) removes that. |
 | D16 | Build with Claude Code on the web against this GitHub repo | Owner prefers cloud setup; repo is the single source of truth. |
+| D17 | The assistant has an **invocation name**, default **Wilma** (`app_user.assistant_name`); the product, connector and MCP server stay "Digital Assistant" | The name is how the owner calls it: "Wilma, save this recipe" in any chat app, "Hey Wilma" by voice. No MCP server can force a tool call, so the name goes where every client's model looks: the server instructions and the descriptions of the main tools (save, search, save/get secret). Only a message *addressed* to the name counts, not a mention in content. One stored value serves every front end (chat, Telegram, voice wake word). Kept to a plain name (letters, spaces, `' . -`, 1-30 chars) because it is copied into text the model reads. |
 
 ## 4. Data model
 
@@ -116,6 +118,8 @@ Either way: libsodium / Web Crypto primitives only, no home-grown crypto,
    searchable), reveal page with passphrase unlock, emergency access flow.
 3. **Phase 3:** voice input (Whisper), Hermes on a small cloud server for
    Telegram/WhatsApp access, reminders (`expires_at`, follow-ups), item sharing UI.
+   Voice listens for a wake word built from `assistant_name` ("Hey Wilma"), e.g. a
+   custom openWakeWord model; renaming the assistant means training a new wake word.
 
 ## 7. Open questions
 

@@ -56,7 +56,7 @@ function fakeDb(calls: string[]) {
 
 async function call(method: string, params: unknown, calls: string[] = []) {
   const server = new McpServer({ name: "test", version: "0" });
-  const ctx = { db: fakeDb(calls), userId: "u", accessToken: "t" };
+  const ctx = { db: fakeDb(calls), userId: "u", accessToken: "t", assistantName: "Wilma" };
   for (const r of [registerSaveSecret, registerFindSecret, registerGetSecret, registerUpdateSecret,
                    registerDeleteSecret]) r(server, ctx);
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });

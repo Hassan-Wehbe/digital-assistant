@@ -11,6 +11,7 @@
 // then runs as that user, so Row Level Security applies to every query.
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
+import { loadAssistantName, serverInstructions } from "./lib/assistant.ts";
 import { supabaseUrl, userClient, verifyAccessToken } from "./lib/db.ts";
 import { embedPending, scheduleEmbedPending } from "./lib/embed.ts";
 import type { ToolContext } from "./tools/_shared.ts";
@@ -26,16 +27,7 @@ import { registerFindSecret } from "./tools/find_secret.ts";
 import { registerGetSecret } from "./tools/get_secret.ts";
 import { registerUpdateSecret } from "./tools/update_secret.ts";
 import { registerDeleteSecret } from "./tools/delete_secret.ts";
-
-const INSTRUCTIONS = `This is the user's personal knowledge store, organized into spaces.
-Save what the user asks you to remember with save_item (pick or create a fitting space; ask if unsure).
-Answer questions from it with search_items, then get_item for the full text.
-When a new item replaces an older one, save it and link_items(new, old, "supersedes").
-Passwords, API keys, Wi-Fi passwords, recovery codes and other credentials go in the encrypted vault,
-never in items: save_secret, find_secret, get_secret, update_secret, delete_secret.
-The vault tools return links to a vault page where the user types or reads the value; you never see it.
-Never ask the user to type a secret into the chat and never repeat one. If they paste one anyway,
-do not store it: tell them it is exposed and should be changed, and offer save_secret for the new value.`;
+import { registerSetAssistantName } from "./tools/set_assistant_name.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -77,8 +69,8 @@ function unauthorized(detail: string): Response {
 
 function buildServer(ctx: ToolContext): McpServer {
   const server = new McpServer(
-    { name: "digital-assistant", version: "0.2.0" },
-    { instructions: INSTRUCTIONS },
+    { name: "digital-assistant", version: "0.3.0" },
+    { instructions: serverInstructions(ctx.assistantName) },
   );
   for (const register of [
     registerListSpaces,
@@ -93,6 +85,7 @@ function buildServer(ctx: ToolContext): McpServer {
     registerGetSecret,
     registerUpdateSecret,
     registerDeleteSecret,
+    registerSetAssistantName,
   ]) {
     register(server, ctx);
   }
@@ -121,7 +114,8 @@ Deno.serve(async (req: Request) => {
   }
 
   // Stateless: a fresh server and transport per request, bound to this user.
-  const server = buildServer({ db, userId, accessToken: token });
+  const assistantName = await loadAssistantName(db, userId);
+  const server = buildServer({ db, userId, accessToken: token, assistantName });
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,
