@@ -12,6 +12,8 @@
 // set to the SHA-256 SPKI hash of the sandbox proxy's CA only).
 const { chromium } = await import(process.env.PLAYWRIGHT ?? "playwright");
 const LOCAL = "http://127.0.0.1:8765/digital-assistant/vault";
+const B = process.env.SUPABASE_URL ?? "https://motvckmpusxiuelpwqxy.supabase.co";
+const KEY = process.env.SUPABASE_PUBLISHABLE_KEY ?? "sb_publishable_fUOMLFoWl6Avh7NqvhKBNQ_swuHkZGd";
 const { E2E_EMAIL: EMAIL, E2E_PASSWORD: PW } = process.env;
 const PASS1 = "flow test passphrase " + Math.random().toString(36).slice(2);
 const PASS2 = "second flow passphrase " + Math.random().toString(36).slice(2);

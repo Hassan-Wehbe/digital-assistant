@@ -7,7 +7,7 @@ Read this, then `CLAUDE.md` and `docs/design.md`, before changing anything.
 
 | Piece | Where | State |
 |---|---|---|
-| Database | Supabase project `digital-assistant`, ref `motvckmpusxiuelpwqxy` | migrations `initial_schema`, `knowledge_path`, `vault` applied |
+| Database | Supabase project `digital-assistant`, ref `motvckmpusxiuelpwqxy` | migrations `initial_schema`, `knowledge_path`, `vault`, `cleanup_followups` applied |
 | MCP server | Edge Function `mcp` (`supabase/functions/mcp/`), `https://motvckmpusxiuelpwqxy.supabase.co/functions/v1/mcp` | version 3, 12 tools |
 | Sign-in page | `docs/oauth/consent.html` → `https://hassan-wehbe.github.io/digital-assistant/oauth/consent` | used by the Claude connector (OAuth 2.1 via Supabase Auth) |
 | Vault pages | `docs/vault/` → `https://hassan-wehbe.github.io/digital-assistant/vault/` | setup, enter, reveal, recover |
@@ -79,7 +79,7 @@ edit an applied one).
 
 ## Open follow-ups (small)
 
-- Done in `20260929090000_cleanup_followups.sql` and the sign-in page cleanup: dead vault
+- Done (applied 2026-09-28) in `20260929090000_cleanup_followups.sql` and the sign-in page cleanup: dead vault
   links answer HTTP 410 (PT410) instead of 500, RLS policies use `(select auth.uid())`,
   foreign keys are indexed, `docs/oauth/` loads only same-origin code (vendored
   supabase-js, strict CSP, SRI via `node scripts/vault-sri.mjs`), CLAUDE.md names
