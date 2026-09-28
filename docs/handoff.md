@@ -1,7 +1,27 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-09-28, after phase 1 milestones 1 and 2 were merged into `main` (PR #1).
+Last updated 2026-09-28, after PRs #1-#4 (phase 1, cleanup, assistant name "Wilma").
 Read this, then `CLAUDE.md` and `docs/design.md`, before changing anything.
+
+## Next task: attachments, step 1
+
+Build `docs/phase2-attachments-plan.md` as written. The owner's decisions (2026-09-28):
+
+- File types now: pictures `.jpg` / `.jpeg` / `.png`, and Visio. `.vsdx` text is extracted on
+  the upload page (browser `DecompressionStream`, no third-party code); `.vsd` is stored only.
+- **No AI keys.** Picture descriptions come from Claude in the chat (it sees the picture) and
+  are passed to `attach_file`. The server calls no AI service.
+- **Every upload starts in the conversation with a space and context**: an existing item, or
+  a space plus title/note (a new item is created). If either is missing, Wilma asks first;
+  there is no context-free upload page.
+- Upload from phone or PC through a one-time link, like the vault pages. The owner picks the
+  file again on the page (the Claude app cannot pass file bytes to MCP tools).
+- Tools: `attach_file`, `get_attachment_link`, `delete_attachment`. 20 MB per file, private
+  bucket, per-user folder, Storage RLS; keyword search extended to attachment text.
+- Later: TIFF, audio/video transcripts (speech-to-text key), automatic picture descriptions.
+
+Work on a new branch, open a PR, and ask the owner before applying the migration, deploying
+or merging.
 
 ## What exists and is live
 
@@ -51,7 +71,7 @@ edit an applied one).
 - **Branches:** `main` is protected (pull request required, no force push). Work on a branch,
   open a PR, merge when the owner agrees.
 - **Deno** is not preinstalled: `npm i -g deno`, then set `DENO_CERT=/root/.ccr/ca-bundle.crt`.
-  Unit tests: `deno test -A --config supabase/functions/mcp/deno.json tests/deno` (31 tests).
+  Unit tests: `deno test -A --config supabase/functions/mcp/deno.json tests/deno` (39 tests).
 - **SQL tests** run through the Supabase connector (`execute_sql`), each wrapped in
   `begin; … rollback;` (`tests/sql/run.sh --print NN` builds the script). To check a new
   migration *before* applying it, prepend the migration to a test inside the same rolled-back
@@ -73,9 +93,14 @@ edit an applied one).
 
 ## Owner status
 
-- Connector connected and in use. Vault setup: check with the owner (setup page:
-  `/vault/setup`); recommend they test the recovery key once on `/vault/recover`.
-- `main` protection ruleset and Pages-from-`main`: set by the owner after PR #1.
+- Connector connected and in use. Vault set up (checked 2026-09-28); recommend they test
+  the recovery key once on `/vault/recover`.
+- `main` is protected; GitHub Pages builds from `main`, folder `/docs` (confirmed 2026-09-28,
+  build #7 onward).
+- Assistant name: Wilma (default), live since `mcp` v4. The owner should try "Wilma, …" in a
+  new chat; if it is not picked up, disconnect and reconnect the connector.
+- The old branch `claude/festive-fermat-fg6i75` is fully merged; the owner deletes it on
+  GitHub (Claude Code sessions cannot delete other branches: HTTP 403).
 
 ## Open follow-ups (small)
 
@@ -92,7 +117,8 @@ edit an applied one).
 ## Roadmap (docs/design.md §6)
 
 - Restricted-space session unlock (make restricted spaces reachable when named and unlocked).
-- Attachments (Storage) with vision-generated descriptions, so diagrams become searchable.
+- Attachments: step 1 is the next task (above); later TIFF, audio/video transcripts, automatic
+  picture descriptions.
 - Emergency access for a trusted person (dormant grant + waiting period; private key sealed
   to the grantee).
 - Item sharing (view/edit, expiry); reminders (`secret.expires_at`, follow-ups).

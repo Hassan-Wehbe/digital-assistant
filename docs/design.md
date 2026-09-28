@@ -114,8 +114,8 @@ Either way: libsodium / Web Crypto primitives only, no home-grown crypto,
 
 1. **Phase 1:** schema in Supabase, MCP server with the tools above (typed input
    only), connected to the Claude app. Knowledge path first, vault second.
-2. **Phase 2:** attachments with vision-generated descriptions (diagrams become
-   searchable), reveal page with passphrase unlock, emergency access flow.
+2. **Phase 2:** attachments (step 1: pictures and Visio, descriptions written in the
+   chat, `docs/phase2-attachments-plan.md`; later automatic vision descriptions), reveal page with passphrase unlock, emergency access flow.
 3. **Phase 3:** voice input (Whisper), Hermes on a small cloud server for
    Telegram/WhatsApp access, reminders (`expires_at`, follow-ups), item sharing UI.
    Voice listens for a wake word built from `assistant_name` ("Hey Wilma"), e.g. a
