@@ -116,6 +116,6 @@ Either way: libsodium / Web Crypto primitives only, no home-grown crypto,
 
 ## 7. Open questions
 
-- Encryption phase 1: option A or B (section 5).
+- ~~Encryption phase 1~~: option B, zero-knowledge, with a separate unlock passphrase and a recovery key (decided 2026-09-28, see `docs/phase1-m2-vault-plan.md`).
 - ~~Where the MCP server is hosted~~: Supabase Edge Functions (decided 2026-09-28, see `docs/phase1-m1-plan.md`).
 - ~~Embedding model~~: built-in `gte-small`, 384 dimensions (decided 2026-09-28).
