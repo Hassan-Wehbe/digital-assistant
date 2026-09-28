@@ -4,6 +4,12 @@ Last updated 2026-09-28: attachments step 1 built and live (PR #7); before that 
 (phase 1, cleanup, assistant name "Wilma", attachments plan).
 Read this, then `CLAUDE.md` and `docs/design.md`, before changing anything.
 
+## Next task: phase 3 mobile app (plan waiting for the owner)
+
+`docs/phase3-mobile-app-plan.md`: Expo (React Native) app, Android first, iOS after, one
+codebase; PC/Mac as a web page. Milestones A0-A5 and B; A1-A4 need no AI key and no database
+change. Start A0 only after the owner answers the plan's "Decisions for the owner".
+
 ## Latest work: attachments, step 1 (live)
 
 Built in PR #7 as `docs/phase2-attachments-plan.md` describes

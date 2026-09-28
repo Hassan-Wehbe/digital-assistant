@@ -13,6 +13,7 @@ phone or desktop through natural language.
 - `docs/phase1-m1-plan.md` / `docs/phase1-m1-setup.md`: milestone 1 plan, and setup + first use
 - `docs/phase1-m2-vault-plan.md` / `docs/phase1-m2-setup.md`: vault plan, and setup + first password
 - `docs/phase2-attachments-plan.md`: attachments step 1 (pictures and Visio): plan and as-built notes
+- `docs/phase3-mobile-app-plan.md`: the Wilma mobile app (Android first, then iOS), the next build
 - `docs/oauth/`, `docs/vault/`, `docs/files/`: sign-in page, vault pages and upload page (GitHub Pages)
 - `supabase/`: migrations and the MCP server (Edge Function `mcp`)
 - `tests/`: SQL tests (run via the Supabase connector or `tests/sql/run.sh`), Deno unit tests,

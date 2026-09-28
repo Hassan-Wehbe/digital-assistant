@@ -125,8 +125,10 @@ Either way: libsodium / Web Crypto primitives only, no home-grown crypto,
    only), connected to the Claude app. Knowledge path first, vault second.
 2. **Phase 2:** attachments (step 1 built: pictures and Visio, descriptions written in the
    chat, `docs/phase2-attachments-plan.md`; later TIFF, transcripts, automatic vision descriptions), reveal page with passphrase unlock, emergency access flow.
-3. **Phase 3:** voice input (Whisper), Hermes on a small cloud server for
-   Telegram/WhatsApp access, reminders (`expires_at`, follow-ups), item sharing UI.
+3. **Phase 3:** own app first (`docs/phase3-mobile-app-plan.md`: Expo/React Native, Android
+   then iOS from one codebase, PC/Mac as a web page, optional desktop app later), voice input,
+   Hermes on a small cloud server for Telegram/WhatsApp access, reminders (`expires_at`,
+   follow-ups), item sharing UI.
    Voice listens for a wake word built from `assistant_name` ("Hey Wilma"), e.g. a
    custom openWakeWord model; renaming the assistant means training a new wake word.
 
