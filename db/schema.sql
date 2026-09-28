@@ -103,8 +103,13 @@ create table attachment (
   storage_key            text not null,       -- Supabase Storage object path
   original_filename      text not null,
   mime_type              text not null,
-  extracted_description  text,                -- vision/OCR text so diagrams are searchable
+  extracted_description  text,                -- picture description written by Claude in the chat
   created_at             timestamptz not null default now()
+  -- Added by 20260930090000_attachments.sql (docs/phase2-attachments-plan.md):
+  --   size_bytes bigint (from Storage), caption text (owner, upload page),
+  --   extracted_text text (.vsdx text read on the upload page).
+  -- Written only by the attachment functions; storage_key is
+  -- <user id>/<attachment id>/<file name> in the private bucket `attachments`.
 );
 
 create table item_chunk (
@@ -271,3 +276,14 @@ create policy secret_log_insert on secret_access_log
 -- secret_entry_request: token_hash, user_id, space_id, secret_id (pre-allocated),
 --   is_update, secret_type, name, url, expires_at (15 min), used_at
 -- secret_reveal_token:  token_hash, user_id, secret_id -> secret, expires_at (10 min), used_at
+
+-- =========================================================
+-- Upload links (20260930090000_attachments.sql). Same pattern as the vault links.
+-- =========================================================
+-- attachment_upload_request: token_hash, user_id, item_id -> item, description (Claude's),
+--   upload_ids uuid[] (30 attachment ids reserved for the link), expires_at (15 min), used_at,
+--   files_attached
+-- Storage bucket `attachments`: private, 20 MB per file, image/png, image/jpeg,
+--   application/vnd.ms-visio.drawing (.vsdx), application/vnd.visio (.vsd). Policies on
+--   storage.objects: read/delete own folder; upload only to an id reserved by an open upload
+--   link, and only from a browser session (not the connector's token).

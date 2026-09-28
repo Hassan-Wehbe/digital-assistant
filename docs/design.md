@@ -51,6 +51,15 @@ the MCP server, which the owner controls.
 | `delete_secret` | Hard delete (the access log keeps a record) |
 | `set_assistant_name` | Change the name the user calls the assistant (default Wilma, D17) |
 
+### Phase 2 tools (attachments step 1, `docs/phase2-attachments-plan.md`)
+
+| Tool | Purpose |
+|---|---|
+| `attach_file` | Returns a one-time upload link for pictures / Visio; needs an existing item, or a space plus title (creates the item). Takes Claude's description of a picture shown in the chat |
+| `get_attachment_link` | Short-lived (10 min) download link for the owner |
+| `describe_attachment` | Set or replace a picture's description (re-indexed for search) |
+| `delete_attachment` | Delete a file and its search text (after the owner confirms) |
+
 ## 3. Decisions and reasons
 
 | # | Decision | Reason |
@@ -114,8 +123,8 @@ Either way: libsodium / Web Crypto primitives only, no home-grown crypto,
 
 1. **Phase 1:** schema in Supabase, MCP server with the tools above (typed input
    only), connected to the Claude app. Knowledge path first, vault second.
-2. **Phase 2:** attachments (step 1: pictures and Visio, descriptions written in the
-   chat, `docs/phase2-attachments-plan.md`; later automatic vision descriptions), reveal page with passphrase unlock, emergency access flow.
+2. **Phase 2:** attachments (step 1 built: pictures and Visio, descriptions written in the
+   chat, `docs/phase2-attachments-plan.md`; later TIFF, transcripts, automatic vision descriptions), reveal page with passphrase unlock, emergency access flow.
 3. **Phase 3:** voice input (Whisper), Hermes on a small cloud server for
    Telegram/WhatsApp access, reminders (`expires_at`, follow-ups), item sharing UI.
    Voice listens for a wake word built from `assistant_name` ("Hey Wilma"), e.g. a

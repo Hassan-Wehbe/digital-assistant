@@ -1,5 +1,6 @@
-// Static checks on the vault pages (docs/vault/) and the sign-in page
-// (docs/oauth/): the hardening the plan asks for stays in place as the pages change.
+// Static checks on the vault pages (docs/vault/), the sign-in page (docs/oauth/)
+// and the upload page (docs/files/): the hardening the plan asks for stays in
+// place as the pages change.
 import { assert, assertEquals } from "jsr:@std/assert@1";
 import { crypto } from "jsr:@std/crypto@1";
 import { encodeBase64 } from "jsr:@std/encoding@1/base64";
@@ -8,9 +9,9 @@ import { dirname, fromFileUrl, join, resolve } from "jsr:@std/path@1";
 const DOCS = resolve(dirname(fromFileUrl(import.meta.url)), "../../docs");
 const DIR = join(DOCS, "vault");
 const PAGES = ["vault/setup.html", "vault/enter.html", "vault/reveal.html", "vault/recover.html",
-               "vault/index.html", "oauth/consent.html"];
+               "vault/index.html", "oauth/consent.html", "files/upload.html"];
 const SCRIPTS = ["vault/app.js", "vault/crypto.js", "vault/setup.js", "vault/enter.js", "vault/reveal.js",
-                 "vault/recover.js", "oauth/consent.js"];
+                 "vault/recover.js", "oauth/consent.js", "files/upload.js", "files/filetypes.js"];
 
 async function sha384(path: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-384", await Deno.readFile(path));

@@ -34,7 +34,16 @@ Passwords, API keys, Wi-Fi passwords, recovery codes and other credentials go in
 never in items: save_secret, find_secret, get_secret, update_secret, delete_secret.
 The vault tools return links to a vault page where the user types or reads the value; you never see it.
 Never ask the user to type a secret into the chat and never repeat one. If they paste one anyway,
-do not store it: tell them it is exposed and should be changed, and offer save_secret for the new value.`;
+do not store it: tell them it is exposed and should be changed, and offer save_secret for the new value.
+
+Pictures (.jpg, .jpeg, .png) and Visio diagrams (.vsdx, .vsd) can be attached to items ("${name}, attach
+this diagram to my Teams routing design", "${name}, save this whiteboard photo to Work, it's the routing
+design"). Every upload needs a place and a reason: an existing item, or a space plus what the file is.
+If either is missing, ask before calling attach_file. It returns an upload link where the user picks the
+file on their phone or PC (the chat cannot pass files on). If the picture is in the chat, pass a
+description of what it shows; never copy a password, key or code visible in it. get_item lists an item's
+attachments; get_attachment_link gives the user a download link (do not open it yourself);
+delete_attachment only after the user confirms.`;
 }
 
 /** One sentence appended to a tool description: how the user asks for it by name. */

@@ -3,7 +3,8 @@
 //   POST /functions/v1/mcp                                      MCP requests (Bearer token required)
 //   GET  /functions/v1/mcp/.well-known/oauth-protected-resource  OAuth discovery (public)
 //   POST /functions/v1/mcp/embed-pending                        embed the caller's pending chunks
-//                                                               (called by the server itself)
+//                                                               (called by the server itself, and by
+//                                                               the upload page after attaching files)
 //
 // Login: MCP clients such as the Claude app discover Supabase Auth's OAuth 2.1
 // server from the metadata below, sign the user in through the consent page,
@@ -28,6 +29,10 @@ import { registerGetSecret } from "./tools/get_secret.ts";
 import { registerUpdateSecret } from "./tools/update_secret.ts";
 import { registerDeleteSecret } from "./tools/delete_secret.ts";
 import { registerSetAssistantName } from "./tools/set_assistant_name.ts";
+import { registerAttachFile } from "./tools/attach_file.ts";
+import { registerGetAttachmentLink } from "./tools/get_attachment_link.ts";
+import { registerDescribeAttachment } from "./tools/describe_attachment.ts";
+import { registerDeleteAttachment } from "./tools/delete_attachment.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -69,7 +74,7 @@ function unauthorized(detail: string): Response {
 
 function buildServer(ctx: ToolContext): McpServer {
   const server = new McpServer(
-    { name: "digital-assistant", version: "0.3.0" },
+    { name: "digital-assistant", version: "0.4.0" },
     { instructions: serverInstructions(ctx.assistantName) },
   );
   for (const register of [
@@ -86,6 +91,10 @@ function buildServer(ctx: ToolContext): McpServer {
     registerUpdateSecret,
     registerDeleteSecret,
     registerSetAssistantName,
+    registerAttachFile,
+    registerGetAttachmentLink,
+    registerDescribeAttachment,
+    registerDeleteAttachment,
   ]) {
     register(server, ctx);
   }

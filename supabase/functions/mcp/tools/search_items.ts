@@ -11,6 +11,8 @@ export const registerSearchItems: RegisterTool = (server, { db, assistantName })
       title: "Search items",
       description:
         "Find items by meaning and keywords, optionally filtered by tags, space and type. " +
+        "Also matches attached files (file names, captions, picture descriptions, Visio text); " +
+        "results are the items that hold them. " +
         "With no query, lists the most recently updated items matching the filters. " +
         "Returns snippets; call get_item for the full text. Restricted spaces are never searched." +
         addressedAs(assistantName, "what did I note about the Gartner sandbox?"),

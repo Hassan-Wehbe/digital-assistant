@@ -8,7 +8,8 @@ export const registerGetItem: RegisterTool = (server, { db }) => {
     {
       title: "Get an item",
       description:
-        "Fetch one item by id with its full text, tags, attachments and linked items " +
+        "Fetch one item by id with its full text, tags, attachments (ids, file names, descriptions, " +
+        "Visio text) and linked items " +
         "(supersedes / related). Use after search_items to read a result in full.",
       inputSchema: { item_id: z.string().uuid() },
       annotations: { readOnlyHint: true },
