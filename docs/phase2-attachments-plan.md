@@ -1,6 +1,7 @@
 # Phase 2, step 1: attachments (plan)
 
-Status: plan, not built. Read first: `CLAUDE.md`, `docs/design.md` (§2 tools, D9, roadmap
+Status: built on branch `claude/zen-faraday-m5kjwc` (see "As built" at the end); the migration
+and the Edge Function deploy wait for the owner's go-ahead. Read first: `CLAUDE.md`, `docs/design.md` (§2 tools, D9, roadmap
 phase 2), `docs/phase1-m2-vault-plan.md` (the link-and-page pattern reused here).
 
 ## Decisions (owner, 2026-09-28)
@@ -117,3 +118,44 @@ Live steps (migration, Edge Function deploy) are applied only with the owner's g
 
 - TIFF (convert to PNG in the browser), audio and video transcripts (needs a
   speech-to-text key), automatic picture descriptions (needs an AI key).
+
+## As built (2026-09-30)
+
+What the build added or decided where the plan left room:
+
+- **Files:** migration `supabase/migrations/20260930090000_attachments.sql`; MCP tools in
+  `supabase/functions/mcp/tools/` (`attach_file`, `get_attachment_link`, `delete_attachment`,
+  `describe_attachment`) with helpers in `lib/attachments.ts`; upload page `docs/files/upload.html`
+  + `upload.js`, file checks and Visio reader `docs/files/filetypes.js` (no DOM, shared with the
+  Deno tests). Server version 0.4.0, 17 tools.
+- **One extra tool, `describe_attachment`:** the plan's migration has a "set a description"
+  function but no tool used it. It sets or replaces a picture's description (for example, the
+  picture is shown in the chat after the upload). Drop it if not wanted; nothing else depends on it.
+- **Who may upload:** the Storage insert policy allows a user's own folder
+  (`<user id>/<attachment id>/<name>`) only while one of their upload links is open, and only
+  from a browser sign-in: the Claude connector's token (it carries `client_id`) cannot upload,
+  read the upload request, or complete it. Read and delete: own folder only. No update policy,
+  so a file is never overwritten.
+- **Attachment rows are written only by the database functions** (`insert/update/delete` revoked
+  from `authenticated`). `complete_attachment_upload` checks each file is really in Storage at
+  the expected path and takes **size and type from Storage's own record**, not from the page;
+  the type must match the file extension, and Visio text is accepted for `.vsdx` only (max
+  40,000 characters, like an item).
+- **One link, one batch:** up to 10 files are uploaded, then recorded in a single call that
+  uses up the link. Files that failed to upload are listed on the page; trying them again needs
+  a new link. If recording fails, the page removes the files it just uploaded.
+- **Claude's description** goes to the only picture of the batch; with several pictures the page
+  asks which one it describes ("None of these" drops it).
+- **Search text** per attachment: `File: <name>`, caption, description, Visio text. It is split
+  into chunks in SQL (`_chunk_text`, 1,000 characters, whole lines) with embeddings left pending;
+  the page then calls the MCP server's `/embed-pending`, the same background indexing long items
+  use. Keyword search works at once; meaning search within seconds. `search_items` keyword
+  search now reads item text plus attachment text (file names also with `. _ -` as spaces).
+- **Storage names:** the path uses a safe form of the file name (letters, digits, `. _ -`); the
+  original name is kept in `original_filename` and used for downloads.
+- **get_item** lists per attachment: id, file name, type, size, caption, description, the first
+  4,000 characters of Visio text, and when it was added. The storage path is never shown to
+  the model.
+- **Loose ends, on purpose:** a file uploaded but never recorded (tab closed mid-way) stays in
+  the owner's folder, unlisted and unsearchable; a cleanup job can come later. There is no item
+  purge yet; when one is added it must delete the item's Storage objects too.

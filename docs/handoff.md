@@ -1,27 +1,26 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-09-28, after PRs #1-#4 (phase 1, cleanup, assistant name "Wilma").
+Last updated 2026-09-30: attachments step 1 built (not yet applied or deployed); before that
+PRs #1-#6 (phase 1, cleanup, assistant name "Wilma", attachments plan).
 Read this, then `CLAUDE.md` and `docs/design.md`, before changing anything.
 
-## Next task: attachments, step 1
+## Current task: attachments, step 1 (built, waiting for the owner)
 
-Build `docs/phase2-attachments-plan.md` as written. The owner's decisions (2026-09-28):
+Built on branch `claude/zen-faraday-m5kjwc` as `docs/phase2-attachments-plan.md` describes
+(see its "As built" section). Owner's decisions (2026-09-28): pictures `.jpg` / `.jpeg` / `.png`
+and Visio (`.vsdx` text read on the upload page, `.vsd` stored only); **no AI keys** (Claude
+writes picture descriptions in the chat); every upload starts in the chat with a space and
+context; upload from phone or PC through a one-time link.
 
-- File types now: pictures `.jpg` / `.jpeg` / `.png`, and Visio. `.vsdx` text is extracted on
-  the upload page (browser `DecompressionStream`, no third-party code); `.vsd` is stored only.
-- **No AI keys.** Picture descriptions come from Claude in the chat (it sees the picture) and
-  are passed to `attach_file`. The server calls no AI service.
-- **Every upload starts in the conversation with a space and context**: an existing item, or
-  a space plus title/note (a new item is created). If either is missing, Wilma asks first;
-  there is no context-free upload page.
-- Upload from phone or PC through a one-time link, like the vault pages. The owner picks the
-  file again on the page (the Claude app cannot pass file bytes to MCP tools).
-- Tools: `attach_file`, `get_attachment_link`, `delete_attachment`. 20 MB per file, private
-  bucket, per-user folder, Storage RLS; keyword search extended to attachment text.
-- Later: TIFF, audio/video transcripts (speech-to-text key), automatic picture descriptions.
+Remaining steps, each only with the owner's go-ahead:
 
-Work on a new branch, open a PR, and ask the owner before applying the migration, deploying
-or merging.
+1. Apply migration `20260930090000_attachments.sql` (dry-run checked: `tests/sql/06_attachments.sql`,
+   44 checks, run inside a rolled-back transaction).
+2. Deploy `mcp` (server 0.4.0, 17 tools): the new files are `lib/attachments.ts` and
+   `tools/attach_file.ts`, `get_attachment_link.ts`, `describe_attachment.ts`, `delete_attachment.ts`.
+3. Merge the PR, so GitHub Pages publishes `docs/files/upload.html` (the links point there).
+4. Run `tests/browser/attachments_flow.mjs` with a throwaway user; then the owner tries
+   "Wilma, attach this photo to …" in a new chat.
 
 ## What exists and is live
 
@@ -31,6 +30,7 @@ or merging.
 | MCP server | Edge Function `mcp` (`supabase/functions/mcp/`), `https://motvckmpusxiuelpwqxy.supabase.co/functions/v1/mcp` | version 4 (server 0.3.0), 13 tools |
 | Sign-in page | `docs/oauth/consent.html` → `https://hassan-wehbe.github.io/digital-assistant/oauth/consent` | used by the Claude connector (OAuth 2.1 via Supabase Auth) |
 | Vault pages | `docs/vault/` → `https://hassan-wehbe.github.io/digital-assistant/vault/` | setup, enter, reveal, recover |
+| Upload page | `docs/files/upload.html` → `https://hassan-wehbe.github.io/digital-assistant/files/upload` | built, live after merge |
 | Claude connector | "Digital Assistant" custom connector in the owner's Claude account | connected and in use (spaces Logins, Recipes exist) |
 
 GitHub Pages publishes the **`/docs` folder of `main`** (not the repo root: with root, every
@@ -39,6 +39,8 @@ URL gains `/docs/` and both the connector sign-in and vault links 404).
 Tools: `list_spaces`, `create_space`, `save_item`, `update_item`, `get_item`, `search_items`,
 `link_items` (knowledge, M1); `save_secret`, `find_secret`, `get_secret`, `update_secret`,
 `delete_secret` (vault, M2); `set_assistant_name` (invocation name, default Wilma; design.md D17).
+Built, not deployed yet: `attach_file`, `get_attachment_link`, `describe_attachment`,
+`delete_attachment` (attachments step 1).
 
 ## Key design decisions (details in the docs named)
 
@@ -71,7 +73,7 @@ edit an applied one).
 - **Branches:** `main` is protected (pull request required, no force push). Work on a branch,
   open a PR, merge when the owner agrees.
 - **Deno** is not preinstalled: `npm i -g deno`, then set `DENO_CERT=/root/.ccr/ca-bundle.crt`.
-  Unit tests: `deno test -A --config supabase/functions/mcp/deno.json tests/deno` (39 tests).
+  Unit tests: `deno test -A --config supabase/functions/mcp/deno.json tests/deno` (56 tests).
 - **SQL tests** run through the Supabase connector (`execute_sql`), each wrapped in
   `begin; … rollback;` (`tests/sql/run.sh --print NN` builds the script). To check a new
   migration *before* applying it, prepend the migration to a test inside the same rolled-back
@@ -79,8 +81,11 @@ edit an applied one).
 - **Deploying `mcp`** with the connector's `deploy_edge_function`: pass every file under
   `supabase/functions/mcp/` (not `deno.lock`), `verify_jwt: false`, and
   `import_map_path: "deno.json"` (without it the deploy fails on a stale import-map path).
-- **After editing anything in `docs/vault/` or `docs/oauth/`:** `node scripts/vault-sri.mjs` (updates the SRI
-  hashes); `tests/deno/vault_pages_test.ts` fails if you forget.
+- **After editing anything in `docs/vault/`, `docs/oauth/` or `docs/files/`:** `node scripts/vault-sri.mjs`
+  (updates the SRI hashes); `tests/deno/vault_pages_test.ts` fails if you forget.
+- **Attachments:** Storage uploads in SQL tests are simulated by inserting the `storage.objects`
+  row as the user (the Storage policies apply). A test that deletes and then checks must use two
+  statements (one statement sees the snapshot from before the delete).
 - **End-to-end / browser tests** (`tests/e2e/vault_e2e.ts`, `tests/browser/vault_flow.mjs`)
   need a throwaway user: create it with SQL in `auth.users` + `auth.identities`
   (email `…@example.invalid`, random password), run, then `delete from auth.users` for it.
@@ -117,8 +122,8 @@ edit an applied one).
 ## Roadmap (docs/design.md §6)
 
 - Restricted-space session unlock (make restricted spaces reachable when named and unlocked).
-- Attachments: step 1 is the next task (above); later TIFF, audio/video transcripts, automatic
-  picture descriptions.
+- Attachments: step 1 built (above); later TIFF, audio/video transcripts, automatic picture
+  descriptions, a cleanup for files uploaded but never recorded, and item purge (must delete files).
 - Emergency access for a trusted person (dormant grant + waiting period; private key sealed
   to the grantee).
 - Item sharing (view/edit, expiry); reminders (`secret.expires_at`, follow-ups).

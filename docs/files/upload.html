@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src https://motvckmpusxiuelpwqxy.supabase.co; base-uri 'none'; form-action 'none'">
+  <title>Attach files</title>
+  <link rel="stylesheet" href="../vault/vault.css" integrity="sha384-tHvFDGaW8LdFSJTcKnd8JJmP77TgS3f5t2SndNBu//lzKpG/SF0BLpy6kZu8xp9B">
+  <link rel="stylesheet" href="files.css" integrity="sha384-QAHbSJWblVtRgitlG7gwaC+h2F1iUeJhx8PrjmZM3oqPH/vGwGz7gJ+zcFG9ewTf">
+  <script src="../vault/vendor/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok"></script>
+  <link rel="modulepreload" href="../oauth/config.js" integrity="sha384-tckR0YVWc/lyRMtHEWFlyrxg0ZC4AOhWm1kfxHt0TsK7zPgiBFsDl7jqCaEjhHWQ">
+  <link rel="modulepreload" href="filetypes.js" integrity="sha384-Hf2Du6SJJ6Zm3VeMrWRsAyRppoziG7RosmGpZmjLyvC9FhzoAjeP8oUjSgCzbAjL">
+  <script type="module" src="upload.js" integrity="sha384-Q/UtLeWa7/AKyqd/2BztUR4pBusalPSqTPN/NyhshSqCgBPiQ8vY1uavvbLqZI7t"></script>
+</head>
+<body>
+<main>
+  <h1>Attach files</h1>
+  <p id="status" class="muted">Loading…</p>
+
+  <form id="login" hidden>
+    <p>Sign in with your Digital Assistant account.</p>
+    <label for="email">Email</label>
+    <input id="email" type="email" autocomplete="username" required>
+    <label for="password">Account password</label>
+    <input id="password" type="password" autocomplete="current-password" required>
+    <div class="row"><button class="primary" type="submit">Sign in</button></div>
+  </form>
+
+  <form id="pick" hidden>
+    <dl>
+      <dt>Attach to</dt><dd id="m-item"></dd>
+      <dt>Space</dt><dd id="m-space"></dd>
+      <dt>Link valid</dt><dd id="m-expires"></dd>
+    </dl>
+    <section id="desc-box" hidden>
+      <h2>Description from the chat</h2>
+      <p id="m-desc" class="desc"></p>
+      <div id="desc-for-box" hidden>
+        <label for="desc-for">This description is for</label>
+        <select id="desc-for"></select>
+      </div>
+    </section>
+
+    <label class="drop" id="drop" for="files">
+      <strong>Choose files</strong> or take a photo
+      <span class="muted drop-hint">On a computer you can also drag files here.
+        Pictures (.jpg, .png) and Visio (.vsdx, .vsd), up to 20 MB each, 10 at a time.</span>
+      <input id="files" class="visually-hidden" type="file" multiple>
+    </label>
+
+    <div id="list"></div>
+
+    <p class="warn">Passwords, keys and codes belong in the vault, not in files. If a picture shows one,
+      ask the assistant to save it with <em>save secret</em> instead.</p>
+    <div class="row"><button class="primary" type="submit" id="upload" disabled>Upload</button></div>
+  </form>
+
+  <section id="done" hidden>
+    <p class="ok"><strong id="done-summary"></strong></p>
+    <ul id="done-list"></ul>
+    <p id="done-failed" class="error" hidden></p>
+    <p>You can close this tab and tell the assistant you're done.</p>
+  </section>
+
+  <p id="account" class="muted" hidden>Signed in as <span id="who"></span> · <a href="#" id="signout">Sign out</a></p>
+</main>
+</body>
+</html>
