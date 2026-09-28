@@ -97,6 +97,9 @@ Deno.test("recovery key format: 11 groups of 5, forgiving input, typo detection"
   const i = 7;
   const typo = recoveryKey.slice(0, i) + (recoveryKey[i] === "A" ? "B" : "A") + recoveryKey.slice(i + 1);
   assertEquals(code(() => parseRecoveryKey(typo)), "recovery_typo");
+  // ...including the last character, which also carries 3 unused padding bits
+  const last = recoveryKey.slice(0, -1) + (recoveryKey.endsWith("A") ? "B" : "A");
+  assertEquals(code(() => parseRecoveryKey(last)), "recovery_typo");
   assertEquals(code(() => parseRecoveryKey("not a key")), "recovery_format");
   // a valid key from another vault does not open this one
   const other = createVault(PASS, FAST).recoveryKey;

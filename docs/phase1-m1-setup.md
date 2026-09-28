@@ -92,7 +92,7 @@ The phone app uses the same connector once it is added on the web.
   Then: "Search for dentist." It should find nothing: restricted spaces are never searched.
 - "What spaces do I have?"
 
-Do not store passwords or keys yet: the vault (encrypted secrets) is the next milestone.
+Passwords and keys go in the vault (milestone 2): set it up with `docs/phase1-m2-setup.md`.
 
 ## If something goes wrong
 

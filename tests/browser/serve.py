@@ -1,4 +1,5 @@
-# Serve docs/ like GitHub Pages: under /digital-assistant/, extensionless -> .html
+# Serve docs/ like GitHub Pages (under /digital-assistant/, extensionless URLs -> .html)
+# for tests/browser/vault_flow.mjs:  python3 tests/browser/serve.py docs
 import http.server, os, sys
 ROOT = sys.argv[1]
 class H(http.server.SimpleHTTPRequestHandler):

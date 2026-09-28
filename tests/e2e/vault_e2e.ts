@@ -59,8 +59,9 @@ async function page(fn: string, args: Record<string, unknown> = {}) {
     headers: { apikey: KEY, authorization: `Bearer ${token}`, "content-type": "application/json" },
     body: JSON.stringify(args),
   });
-  const body = await res.json();
-  if (!res.ok) throw new Error(`${fn}: ${body.message ?? res.status}`);
+  const text = await res.text(); // functions returning void answer 204 with no body
+  const body = text ? JSON.parse(text) : null;
+  if (!res.ok) throw new Error(`${fn}: ${body?.message ?? res.status}`);
   return body;
 }
 const tokenOf = (link: string) => new URL(link).hash.replace(/^#t=/, "");

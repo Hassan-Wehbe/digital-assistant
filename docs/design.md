@@ -44,9 +44,11 @@ the MCP server, which the owner controls.
 | `search_items` | Semantic + keyword + tag search, scoped by space; excludes restricted spaces unless named and unlocked |
 | `get_item` | Fetch one item with attachments and links |
 | `link_items` | Record `supersedes` / `related` between items |
-| `save_secret` | Store a typed secret, encrypted |
+| `save_secret` | Start storing a typed secret: returns a link where the user types it; encrypted in the browser |
 | `find_secret` | Match a secret by name/url/type; returns metadata only |
 | `get_secret` | Returns metadata + a short-lived reveal link. **Never the plaintext.** |
+| `update_secret` | Rename / change url; optional link to type a new value |
+| `delete_secret` | Hard delete (the access log keeps a record) |
 
 ## 3. Decisions and reasons
 
@@ -95,7 +97,8 @@ operator cannot read secrets. Emergency access stores the data key wrapped with
 the trusted person's public key (`emergency_access.wrapped_key`), usable only
 once access is granted. Reveal happens client-side on the reveal page.
 
-**Phase 1 (to decide with the owner before building the vault):**
+**Phase 1: option B was chosen and built (milestone 2, 2026-09-28).** Details
+and as-built notes: `docs/phase1-m2-vault-plan.md`. The options as considered:
 
 - Option A — server-side envelope encryption: per-user data key, wrapped by a
   master key held in Supabase secrets. Simpler; the operator could technically

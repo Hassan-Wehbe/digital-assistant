@@ -110,7 +110,9 @@ export function parseRecoveryKey(text) {
       "That doesn't look like a recovery key. It has 11 groups of 5 letters and digits.");
   }
   const key = bytes.subarray(0, 32);
-  if (!sodium.memcmp(checksum(key), bytes.subarray(32))) {
+  // The last character also carries 3 unused bits; only the canonical spelling
+  // is accepted, so every changed character is reported as a typo.
+  if (!sodium.memcmp(checksum(key), bytes.subarray(32)) || base32Encode(bytes) !== clean) {
     throw new VaultError("recovery_typo", "The recovery key has a typo. Check it and try again.");
   }
   return Uint8Array.from(key);

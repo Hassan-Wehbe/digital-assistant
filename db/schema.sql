@@ -15,8 +15,11 @@ create table app_user (
   id                   uuid primary key references auth.users (id) on delete cascade,
   email                text not null unique,
   display_name         text,
-  public_key           bytea,            -- for emergency-access key wrapping
+  public_key           bytea,            -- X25519 vault public key (secrets are sealed to it)
   wrapped_private_key  bytea,            -- encrypted with the user's unlock key; never plaintext
+  -- Added by 20260928170000_vault.sql (zero-knowledge vault, docs/phase1-m2-vault-plan.md):
+  --   vault_salt bytea, kdf_params jsonb (Argon2id settings),
+  --   recovery_wrapped_private_key bytea, vault_key_version int
   created_at           timestamptz not null default now()
 );
 
@@ -160,6 +163,9 @@ create table secret (
 );
 create index secret_space_idx on secret (space_id);
 
+-- 20260928170000_vault.sql: secret_id has no foreign key (the log outlives a
+-- deleted secret) and a secret_name snapshot column is added; users can only
+-- read their own rows, the vault functions write them.
 create table secret_access_log (
   id           uuid primary key default gen_random_uuid(),
   secret_id    uuid not null references secret (id) on delete cascade,
@@ -254,3 +260,11 @@ create policy secret_log_owner_read on secret_access_log
     select 1 from secret s where s.id = secret_id and owns_space(s.space_id)));
 create policy secret_log_insert on secret_access_log
   for insert with check (user_id = auth.uid());
+
+-- =========================================================
+-- Vault links (20260928170000_vault.sql). Single-use, short-lived, stored as
+-- SHA-256 hashes; reachable only through the vault functions (RLS on, no policies).
+-- =========================================================
+-- secret_entry_request: token_hash, user_id, space_id, secret_id (pre-allocated),
+--   is_update, secret_type, name, url, expires_at (15 min), used_at
+-- secret_reveal_token:  token_hash, user_id, secret_id -> secret, expires_at (10 min), used_at

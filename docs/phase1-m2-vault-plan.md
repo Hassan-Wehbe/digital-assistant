@@ -1,6 +1,7 @@
 # Phase 1, milestone 2: the vault (plan)
 
-Status: planned 2026-09-28, owner decisions recorded below. Build in a new session.
+Status: built and deployed 2026-09-28 (migration `vault`, Edge Function `mcp` v3).
+Owner setup and first password: `docs/phase1-m2-setup.md`. Differences from this plan: "As built" at the end.
 Read first: `CLAUDE.md` (rules 1–4, 6), `docs/design.md` §5, `docs/phase1-m1-plan.md`.
 
 ## Decisions (owner, 2026-09-28)
@@ -113,3 +114,42 @@ Tool descriptions tell the model never to request or accept secret values.
 3. Vault pages (setup, enter, reveal, recover) + browser check.
 4. MCP tools + deploy (ask owner first) + e2e.
 5. Owner tutorial: set up the vault, save and reveal the first password.
+
+## As built (differences from the plan, and why)
+
+- **Libraries are vendored, not loaded from a CDN.** libsodium 0.8.4 (sumo, ES module
+  build) and supabase-js 2.117.2 are copied into `docs/vault/vendor/` (versions and npm
+  hashes in its README) and served by GitHub Pages with the pages. So the CSP is
+  `script-src 'self' 'wasm-unsafe-eval'` with no third-party host at all; every script and
+  module still carries an SRI hash (`node scripts/vault-sri.mjs` rewrites them,
+  `tests/deno/vault_pages_test.ts` checks them).
+- **Link tokens travel in the URL fragment** (`enter#t=…`, `reveal#t=…`), which browsers
+  never send to a server (not to GitHub Pages, not in a Referer).
+- **Vault-page functions refuse OAuth-client tokens.** `get_vault_keys`, `setup_vault`,
+  `rewrap_vault_passphrase`, `get_secret_entry_request`, `complete_secret_entry`,
+  `get_reveal_request` and `reveal_secret` raise if the JWT has a `client_id` claim (the
+  Claude connector's token has one; the owner's own sign-in on the page does not). A
+  leaked connector token cannot fetch ciphertext or replace keys.
+- **Keys cannot be swapped.** `setup_vault` works once; afterwards only the
+  passphrase-wrapped private key can be replaced (`rewrap_vault_passphrase`). Unlocking
+  checks that the unwrapped private key matches the stored public key.
+- **Reveal unlocks first.** The reveal page checks the passphrase before it uses the
+  single-use link (`get_reveal_request` peeks without using it), so a typo costs nothing.
+- **Plaintext format:** `{"v":1,"secret_id","type","fields":{…}}`, padded to 256-byte
+  blocks before sealing so the ciphertext length does not reveal the password length.
+- **Recovery key:** 32 random bytes + 2-byte checksum, base32, 11 groups of 5 characters;
+  typos are detected. The recovery wrapping key is `crypto_kdf_derive_from_key(id 1,
+  "DAvault1")`. Passphrases are Unicode-normalized (NFKC), at least 12 characters.
+- **Access log outlives the secret:** `secret_access_log.secret_id` has no foreign key and
+  keeps a `secret_name` snapshot, so a delete is logged too. Users can read their log but
+  not write it; only the vault functions do. Channels: `web` (vault page), `mcp` (tools).
+- **`payload_enc` and the wrapped keys are not selectable** by `authenticated` (column
+  grants); all vault writes go through functions.
+- **Restricted spaces:** `find_secret` and `get_secret` by name never see them;
+  `get_secret` by id works, as `get_item` does in M1. Saving into them works.
+- **Page files:** `docs/vault/` = `setup`, `enter`, `reveal`, `recover`, `index`, shared
+  `app.js`, `crypto.js`, `vault.css`. `recover` also changes a known passphrase.
+- **Tests:** `tests/sql/04_vault.sql` (64 checks), `tests/deno/vault_crypto_test.ts`,
+  `vault_pages_test.ts`, `vault_tools_test.ts`; the end-to-end test is
+  `tests/e2e/vault_e2e.ts` (Deno, so it can use the pages' `crypto.js`) instead of
+  extending `e2e.py`; `tests/browser/vault_flow.mjs` drives the real pages in Chromium.
