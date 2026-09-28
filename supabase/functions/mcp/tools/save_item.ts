@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { chunkAndEmbed, hasPending, scheduleEmbedPending } from "../lib/embed.ts";
 import { loadSpaces, resolveSpace } from "../lib/spaces.ts";
+import { addressedAs } from "../lib/assistant.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
-export const registerSaveItem: RegisterTool = (server, { db, accessToken }) => {
+export const registerSaveItem: RegisterTool = (server, { db, accessToken, assistantName }) => {
   server.registerTool(
     "save_item",
     {
@@ -11,7 +12,8 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken }) => {
       description:
         "Store a new piece of knowledge (a design, recipe, note, how-to, ...) in a space. " +
         "The text is indexed for search. Never use this for passwords, API keys or other " +
-        "credentials: those belong in the vault (save_secret).",
+        "credentials: those belong in the vault (save_secret)." +
+        addressedAs(assistantName, "save this recipe"),
       inputSchema: {
         space: z.string().describe("Space name, path (Work/Gartner) or id"),
         title: z.string().trim().min(1).max(300),

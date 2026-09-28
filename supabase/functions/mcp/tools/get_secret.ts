@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { loadSpaces } from "../lib/spaces.ts";
 import { describeSecret, NEVER_VALUES, revealLink, secretById } from "../lib/vault.ts";
+import { addressedAs } from "../lib/assistant.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
-export const registerGetSecret: RegisterTool = (server, { db }) => {
+export const registerGetSecret: RegisterTool = (server, { db, assistantName }) => {
   server.registerTool(
     "get_secret",
     {
@@ -12,7 +13,8 @@ export const registerGetSecret: RegisterTool = (server, { db }) => {
         "When the user wants to see a stored credential: returns its metadata and a one-time " +
         "reveal link (valid 10 minutes, single use). Give the user the link; they unlock it with " +
         "their vault passphrase and the value is shown only on that page. The value is never " +
-        "returned to you. " + NEVER_VALUES + " Pass secret_id (from find_secret) or an exact-ish name.",
+        "returned to you. " + NEVER_VALUES + " Pass secret_id (from find_secret) or an exact-ish name." +
+        addressedAs(assistantName, "what's my Wi-Fi password?"),
       inputSchema: {
         secret_id: z.string().uuid().optional(),
         name: z.string().trim().min(1).max(200).optional().describe("Used when secret_id is not given"),
