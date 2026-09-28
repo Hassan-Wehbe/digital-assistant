@@ -117,5 +117,5 @@ Either way: libsodium / Web Crypto primitives only, no home-grown crypto,
 ## 7. Open questions
 
 - Encryption phase 1: option A or B (section 5).
-- Where the MCP server is hosted: Supabase Edge Functions vs a small container host.
-- Embedding model: built-in `gte-small` vs an API model.
+- ~~Where the MCP server is hosted~~: Supabase Edge Functions (decided 2026-09-28, see `docs/phase1-m1-plan.md`).
+- ~~Embedding model~~: built-in `gte-small`, 384 dimensions (decided 2026-09-28).
