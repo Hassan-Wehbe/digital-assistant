@@ -1,26 +1,73 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-09-28: attachments step 1 built and live (PR #7); before that PRs #1-#6
-(phase 1, cleanup, assistant name "Wilma", attachments plan).
+Last updated 2026-09-29: mobile app milestone A0 merged (PR #9); before that PR #8 (mobile app
+plan), PR #7 (attachments step 1, live), PRs #1-#6 (phase 1, cleanup, assistant name "Wilma").
 Read this, then `CLAUDE.md` and `docs/design.md`, before changing anything.
 
-## Current task: phase 3 mobile app
+## Current task: phase 3 mobile app, next milestone A1
 
-`docs/phase3-mobile-app-plan.md` (decisions recorded there): Expo (React Native) app `app/`,
-Android first, iOS after, one codebase; package id `com.zaf.wilma`; personal Play account;
-public listing later, testing tracks first; chat by text and voice at A5 (the owner creates
-the Anthropic API key then). A0 (project setup) is built: `app/README.md`; the owner's part is
-`docs/phase3-mobile-app-setup.md` (Expo account and project id, `EXPO_TOKEN` GitHub secret,
-Play account). Next: A1 (sign in, spaces, search, items).
+Plan and decisions: `docs/phase3-mobile-app-plan.md`. Summary of the owner's decisions
+(2026-09-29): Expo (React Native) app in `app/`; Android first, iOS after, one codebase;
+package / bundle id **`com.zaf.wilma`** (permanent after the first Play upload; nothing
+uploaded yet); personal Google Play account for now (company account and app transfer
+later if the app proves worth it); build for a public listing but release to testing tracks
+first; chat with Wilma by text and voice at A5 (the owner creates the Anthropic API key
+then, in the Claude Console, and pastes it into Supabase secrets themselves); voice through
+the phone's built-in speech recognition and text-to-speech (no extra key).
 
-Working on `app/` in this sandbox: `docs.expo.dev` is blocked by the network policy (read the
-bundled package docs and `app/AGENTS.md`, and verify with `npx expo config`, `npm run check`,
-`npx expo export --platform android`, `npx expo prebuild --platform android --no-install` then
-delete `android/`; prebuild also rewrites the `android`/`ios` scripts in package.json, restore
-them). `expo-doctor`'s two online checks fail here; CI (`.github/workflows/app-checks.yml`) runs
-them. Builds: `.github/workflows/app-build.yml` (manual, needs `EXPO_TOKEN`).
+**A0 (project setup) is done** (PR #9): Expo SDK 57 / React Native 0.86 / TypeScript /
+Expo Router; placeholder icons (`app/scripts/placeholder-icons.mjs`); Android permissions
+limited to internet and vibration; `app/eas.json` profiles development / preview (.apk) /
+production (.aab, remote build numbers, submit to the Play internal track as a draft);
+CI `.github/workflows/app-checks.yml` (lint, type-check, jest, expo-doctor) and the manual
+`.github/workflows/app-build.yml` ("Run workflow", profile preview or production).
 
-## Latest work: attachments, step 1 (live)
+Owner setup status (`docs/phase3-mobile-app-setup.md`):
+- Expo account `zafnut` (owns the project), project `wilma`, id
+  `f51dc24a-fef9-4f2a-8602-3fbe2e2c5deb` (in `app/app.json`). Done.
+- `EXPO_TOKEN` GitHub secret: a robot-user token (Developer role). Done.
+- First build: the first `app build` run (2026-09-29, GitHub run 36617755550) stopped before
+  building because `app.json` named the owner `zaflabout` while the project belongs to
+  `zafnut` ("Owner of project identified by extra.eas.projectId ... does not match owner").
+  Fixed in the handoff PR (owner `zafnut`). After it merges, run **Actions -> app build ->
+  Run workflow (preview)** again; the owner installs the result from expo.dev -> wilma ->
+  Builds (QR code on the phone). The first Android build also creates the app's signing key
+  on Expo (non-interactive mode; if EAS refuses to generate it, the log says so and the
+  owner runs one build interactively or creates the keystore on expo.dev).
+- Google Play personal developer account ($25, identity check): not confirmed yet; needed
+  only for the first Play upload (end of A4).
+
+**Next: A1** (plan: sign in, list spaces, search, open an item with its attachments, download
+link). Notes for building it:
+- Sign in with supabase-js (email + password, like the vault pages); keep the session in
+  secure storage (`expo-secure-store` has a small per-value size limit, so the usual pattern
+  is an encryption key in secure storage and the encrypted session elsewhere; check the
+  current Supabase/Expo guidance in the package docs).
+- Call Wilma's tools on the existing MCP server (`MCP_URL` in `app/src/lib/config.ts`) with
+  the user's access token (JSON-RPC `tools/call`; the MCP TypeScript SDK client also works).
+  No database change is needed: the app's session has no `client_id`, so it is treated like
+  the vault pages.
+- One PR per milestone; ask the owner before merging.
+
+Working on `app/` in this sandbox:
+- `docs.expo.dev` is blocked by the network policy (the owner may add it to the environment's
+  allowed domains). Read the bundled package docs and `app/AGENTS.md`; add packages with
+  `EXPO_OFFLINE=1 npx expo install <pkg>` (SDK-matched versions) from `app/`.
+- Verify with `npm run check`, `npx expo config --type public`, `npx expo export --platform
+  android`, and `npx expo prebuild --platform android --no-install` (then delete `android/`
+  and restore the `android`/`ios` scripts in `package.json`, which prebuild rewrites).
+- `expo-doctor`'s two online checks fail here; CI runs them. The build workflow can only be
+  started for workflows already on `main` (GitHub returns 404 for a branch-only workflow).
+
+## Open items from earlier (small, owner's call)
+
+- Offered, not decided: Wilma asks "just the contents, or keep the photo too?" when a
+  picture is shared without saying where it goes (a server-instructions change + redeploy).
+- `tests/browser/attachments_flow.mjs` has not been run against the live project (needs a
+  throwaway user; ask the owner first).
+- The owner may delete merged branches on GitHub (Claude Code sessions cannot).
+
+## Earlier work: attachments, step 1 (live)
 
 Built in PR #7 as `docs/phase2-attachments-plan.md` describes
 (see its "As built" section). Owner's decisions (2026-09-28): pictures `.jpg` / `.jpeg` / `.png`
