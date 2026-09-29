@@ -1,6 +1,7 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-09-29: mobile app milestone A0 merged (PR #9); before that PR #8 (mobile app
+Last updated 2026-09-29: mobile app milestone A1 (read) built on branch `claude/mobile-app-a1`,
+PR open, not merged; A0 merged (PR #9) and the fixed-owner handoff (PR #10); before that PR #8 (mobile app
 plan), PR #7 (attachments step 1, live), PRs #1-#6 (phase 1, cleanup, assistant name "Wilma").
 Read this, then `CLAUDE.md` and `docs/design.md`, before changing anything.
 
@@ -37,8 +38,13 @@ Owner setup status (`docs/phase3-mobile-app-setup.md`):
 - Google Play personal developer account ($25, identity check): not confirmed yet; needed
   only for the first Play upload (end of A4).
 
-**Next: A1** (plan: sign in, list spaces, search, open an item with its attachments, download
-link). Notes for building it:
+**A1 (read) is built** (PR for `claude/mobile-app-a1`; see "A1 as built" in the plan and
+`app/README.md`). Not yet tried on a phone: after it merges, run **app build (preview)** and
+the owner signs in on the phone (`docs/phase3-mobile-app-setup.md` step 4). Not run against
+the live project with a throwaway user (would need the owner's OK, like the other e2e tests).
+
+**Next: A2** (save a note; attach from camera, gallery, files, share menu). Notes kept from A1
+planning:
 - Sign in with supabase-js (email + password, like the vault pages); keep the session in
   secure storage (`expo-secure-store` has a small per-value size limit, so the usual pattern
   is an encryption key in secure storage and the encrypted session elsewhere; check the
