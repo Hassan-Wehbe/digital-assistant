@@ -7,7 +7,7 @@ Read this, then `CLAUDE.md` and `docs/design.md`, before changing anything.
 ## Current task: phase 3 mobile app
 
 `docs/phase3-mobile-app-plan.md` (decisions recorded there): Expo (React Native) app `app/`,
-Android first, iOS after, one codebase; package id `com.hmw.wilma`; personal Play account;
+Android first, iOS after, one codebase; package id `com.zaf.wilma`; personal Play account;
 public listing later, testing tracks first; chat by text and voice at A5 (the owner creates
 the Anthropic API key then). A0 (project setup) is built: `app/README.md`; the owner's part is
 `docs/phase3-mobile-app-setup.md` (Expo account and project id, `EXPO_TOKEN` GitHub secret,

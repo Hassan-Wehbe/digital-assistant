@@ -8,11 +8,11 @@
     "scheme": "wilma",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "bundleIdentifier": "com.hmw.wilma",
+      "bundleIdentifier": "com.zaf.wilma",
       "supportsTablet": true
     },
     "android": {
-      "package": "com.hmw.wilma",
+      "package": "com.zaf.wilma",
       "adaptiveIcon": {
         "backgroundColor": "#2754C5",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

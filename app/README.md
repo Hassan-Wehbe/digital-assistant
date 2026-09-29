@@ -3,7 +3,7 @@
 Expo (React Native, TypeScript) app for Android first, then iOS, from one codebase.
 Plan: `../docs/phase3-mobile-app-plan.md`. Owner setup: `../docs/phase3-mobile-app-setup.md`.
 
-- App name **Wilma**, package / bundle id **`com.hmw.wilma`** (permanent after the first
+- App name **Wilma**, package / bundle id **`com.zaf.wilma`** (permanent after the first
   Google Play upload).
 - Screens live in `src/app/` (Expo Router: every file is a screen). Other code in
   `src/lib/`, `src/constants/`.
