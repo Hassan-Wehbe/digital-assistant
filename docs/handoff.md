@@ -43,6 +43,14 @@ Owner setup status (`docs/phase3-mobile-app-setup.md`):
 the owner signs in on the phone (`docs/phase3-mobile-app-setup.md` step 4). Not run against
 the live project with a throwaway user (would need the owner's OK, like the other e2e tests).
 
+**Phone test of A1 (2026-09-29):** installed and signed in, but the home screen showed "Please
+sign in again": on Android, expo-crypto's `AESSealedData.fromCombined` accepts only bytes (the
+docs and iOS also accept a base64 string), so reading the saved session failed and the app
+discarded it. Fixed in `claude/mobile-app-a1-fix` (decode base64 in JS first; trim zero padding
+after decrypting; a missing session now returns to the sign-in screen). Lesson: expo native
+APIs can differ by platform from their docs; check `node_modules/<pkg>/android` and `ios`
+sources when a call takes "string or bytes".
+
 **Next: A2** (save a note; attach from camera, gallery, files, share menu). Notes kept from A1
 planning:
 - Sign in with supabase-js (email + password, like the vault pages); keep the session in

@@ -1,7 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
 
-import { encryptedStorage, keyName, utf8Bytes, utf8Text, type Cipher, type KeyStore } from './sessionStorage';
+import { base64Bytes, encryptedStorage, keyName, utf8Bytes, utf8Text, type Cipher, type KeyStore } from './sessionStorage';
 
 // Node's AES-256-GCM, laid out like expo-crypto's "combined" form: nonce + ciphertext + tag.
 const nodeCipher: Cipher = {
@@ -109,5 +109,22 @@ describe('utf8', () => {
       expect(Buffer.from(utf8Bytes(s)).equals(Buffer.from(s, 'utf8'))).toBe(true);
       expect(utf8Text(Uint8Array.from(Buffer.from(s, 'utf8')))).toBe(s);
     }
+  });
+});
+
+describe('base64Bytes', () => {
+  it('matches the standard decoding for every length', () => {
+    for (let len = 0; len < 70; len++) {
+      const raw = randomBytes(len);
+      const b64 = raw.toString('base64');
+      expect(Buffer.from(base64Bytes(b64)).equals(raw)).toBe(true);
+      expect(Buffer.from(base64Bytes(b64.replace(/=+$/, ''))).equals(raw)).toBe(true);
+    }
+  });
+
+  it('ignores line breaks', () => {
+    const raw = randomBytes(100);
+    const wrapped = raw.toString('base64').replace(/(.{76})/g, '$1\n');
+    expect(Buffer.from(base64Bytes(wrapped)).equals(raw)).toBe(true);
   });
 });

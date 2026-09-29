@@ -19,7 +19,12 @@ const AuthContext = createContext<AuthState | null>(null);
 
 const wilma = wilmaClient({
   url: MCP_URL,
-  token: async () => (await supabase.auth.getSession()).data.session?.access_token ?? null,
+  token: async () => {
+    const token = (await supabase.auth.getSession()).data.session?.access_token ?? null;
+    // The saved session is gone or unreadable: go back to the sign-in screen.
+    if (!token) await supabase.auth.signOut({ scope: 'local' });
+    return token;
+  },
   refresh: async () => {
     const { data, error } = await supabase.auth.refreshSession();
     // No connection: keep the session and let the call fail with "could not reach".
