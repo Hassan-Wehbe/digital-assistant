@@ -1,0 +1,38 @@
+# Start an Android build of the mobile app on Expo's build servers (EAS).
+# Run it from GitHub: Actions -> "app build" -> Run workflow, and pick a profile:
+#   preview     an .apk you can install on your own phone
+#   production  the .aab package Google Play wants (the build number goes up by itself)
+# Needs the repository secret EXPO_TOKEN (an Expo access token the owner creates on
+# expo.dev and pastes into GitHub's secret settings; never into chat or the repo).
+# The build runs on Expo's servers; follow it and download it on expo.dev.
+name: app build
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "Build profile"
+        type: choice
+        options: [preview, production]
+        default: preview
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: npm ci
+      - run: npm run check
+      - run: eas build --platform android --profile ${{ inputs.profile }} --non-interactive --no-wait

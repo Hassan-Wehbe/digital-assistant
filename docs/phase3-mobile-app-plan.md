@@ -1,6 +1,7 @@
 # Phase 3, step 1: the Wilma mobile app (plan)
 
-Status: plan, not built. Owner direction (2026-09-28): a real app, **publishable on Android
+Status: A0 (project setup) built, see `app/README.md` and `docs/phase3-mobile-app-setup.md`;
+A1 onward not started. Owner direction (2026-09-28): a real app, **publishable on Android
 first and iOS after, from one codebase with minimal changes**. PC and Mac use a web page (no
 install); an installed desktop app with background "Hey Wilma" may come later from the same
 code. Read first: `CLAUDE.md`, `docs/design.md`, `docs/phase2-attachments-plan.md`.

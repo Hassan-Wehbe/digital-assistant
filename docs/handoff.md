@@ -4,11 +4,21 @@ Last updated 2026-09-28: attachments step 1 built and live (PR #7); before that 
 (phase 1, cleanup, assistant name "Wilma", attachments plan).
 Read this, then `CLAUDE.md` and `docs/design.md`, before changing anything.
 
-## Next task: phase 3 mobile app (plan waiting for the owner)
+## Current task: phase 3 mobile app
 
-`docs/phase3-mobile-app-plan.md`: Expo (React Native) app, Android first, iOS after, one
-codebase; PC/Mac as a web page. Milestones A0-A5 and B; A1-A4 need no AI key and no database
-change. Start A0 only after the owner answers the plan's "Decisions for the owner".
+`docs/phase3-mobile-app-plan.md` (decisions recorded there): Expo (React Native) app `app/`,
+Android first, iOS after, one codebase; package id `com.hmw.wilma`; personal Play account;
+public listing later, testing tracks first; chat by text and voice at A5 (the owner creates
+the Anthropic API key then). A0 (project setup) is built: `app/README.md`; the owner's part is
+`docs/phase3-mobile-app-setup.md` (Expo account and project id, `EXPO_TOKEN` GitHub secret,
+Play account). Next: A1 (sign in, spaces, search, items).
+
+Working on `app/` in this sandbox: `docs.expo.dev` is blocked by the network policy (read the
+bundled package docs and `app/AGENTS.md`, and verify with `npx expo config`, `npm run check`,
+`npx expo export --platform android`, `npx expo prebuild --platform android --no-install` then
+delete `android/`; prebuild also rewrites the `android`/`ios` scripts in package.json, restore
+them). `expo-doctor`'s two online checks fail here; CI (`.github/workflows/app-checks.yml`) runs
+them. Builds: `.github/workflows/app-build.yml` (manual, needs `EXPO_TOKEN`).
 
 ## Latest work: attachments, step 1 (live)
 
