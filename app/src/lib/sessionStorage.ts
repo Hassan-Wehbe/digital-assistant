@@ -93,3 +93,23 @@ export function utf8Text(bytes: Uint8Array): string {
   }
   return s;
 }
+
+const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+/** Standard base64 (with or without padding or line breaks) to bytes. */
+export function base64Bytes(text: string): Uint8Array {
+  const clean = text.replace(/[^A-Za-z0-9+/]/g, '');
+  const out = new Uint8Array(Math.floor((clean.length * 3) / 4));
+  let bits = 0;
+  let value = 0;
+  let n = 0;
+  for (const ch of clean) {
+    value = (value << 6) | B64.indexOf(ch);
+    bits += 6;
+    if (bits >= 8) {
+      bits -= 8;
+      out[n++] = (value >> bits) & 0xff;
+    }
+  }
+  return out.subarray(0, n);
+}

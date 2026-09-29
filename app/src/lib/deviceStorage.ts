@@ -3,7 +3,7 @@ import { aesDecryptAsync, aesEncryptAsync, AESEncryptionKey, AESSealedData } fro
 import * as SecureStore from 'expo-secure-store';
 import kv from 'expo-sqlite/kv-store';
 
-import { encryptedStorage, utf8Bytes, utf8Text, type KeyStore } from './sessionStorage';
+import { base64Bytes, encryptedStorage, utf8Bytes, utf8Text, type KeyStore } from './sessionStorage';
 
 // Kept on this device only: not synced to other devices or copied into backups.
 const KEYCHAIN = { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY };
@@ -31,10 +31,13 @@ export const deviceSessionStorage = encryptedStorage(secureKeys, localData, {
     return sealed.combined('base64');
   },
   async decrypt(key, sealed) {
+    // Pass bytes, not the base64 text: on Android, fromCombined accepts only bytes
+    // (a string fails there, although the docs and the iOS version accept one).
     const bytes = await aesDecryptAsync(
-      AESSealedData.fromCombined(sealed),
+      AESSealedData.fromCombined(base64Bytes(sealed)),
       await AESEncryptionKey.import(key, 'base64'),
     );
-    return utf8Text(bytes);
+    // Android sizes the output buffer from an estimate; drop any zero padding at the end.
+    return utf8Text(new Uint8Array(bytes)).replace(/\0+$/, '');
   },
 });
