@@ -2,6 +2,7 @@
   "expo": {
     "name": "Wilma",
     "slug": "wilma",
+    "owner": "zaflabout",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -42,6 +43,11 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "f51dc24a-fef9-4f2a-8602-3fbe2e2c5deb"
+      }
     }
   }
 }

@@ -11,6 +11,9 @@ chat, an issue or the repository; each goes only into the website it belongs to.
    `1a2b3c4d-...`) and tell Claude it together with your **Expo username**. These two are
    not secret; they go into `app/app.json` so builds know which project they belong to.
 
+Done 2026-09-29: Expo username `zaflabout`, project `wilma`, id
+`f51dc24a-fef9-4f2a-8602-3fbe2e2c5deb` (in `app/app.json`).
+
 ## 2. Build token for GitHub (lets the "app build" button start builds)
 
 1. On expo.dev: your avatar -> **Account settings -> Access tokens -> Create token**.
