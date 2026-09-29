@@ -23,11 +23,17 @@ CI `.github/workflows/app-checks.yml` (lint, type-check, jest, expo-doctor) and 
 `.github/workflows/app-build.yml` ("Run workflow", profile preview or production).
 
 Owner setup status (`docs/phase3-mobile-app-setup.md`):
-- Expo account `zaflabout`, project `wilma`, id `f51dc24a-fef9-4f2a-8602-3fbe2e2c5deb`
-  (in `app/app.json`). Done.
+- Expo account `zafnut` (owns the project), project `wilma`, id
+  `f51dc24a-fef9-4f2a-8602-3fbe2e2c5deb` (in `app/app.json`). Done.
 - `EXPO_TOKEN` GitHub secret: a robot-user token (Developer role). Done.
-- First preview build started 2026-09-29 from `app build` (GitHub run 36617755550); see
-  "First build" below for its result. The owner installs it from expo.dev -> wilma -> Builds.
+- First build: the first `app build` run (2026-09-29, GitHub run 36617755550) stopped before
+  building because `app.json` named the owner `zaflabout` while the project belongs to
+  `zafnut` ("Owner of project identified by extra.eas.projectId ... does not match owner").
+  Fixed in the handoff PR (owner `zafnut`). After it merges, run **Actions -> app build ->
+  Run workflow (preview)** again; the owner installs the result from expo.dev -> wilma ->
+  Builds (QR code on the phone). The first Android build also creates the app's signing key
+  on Expo (non-interactive mode; if EAS refuses to generate it, the log says so and the
+  owner runs one build interactively or creates the keystore on expo.dev).
 - Google Play personal developer account ($25, identity check): not confirmed yet; needed
   only for the first Play upload (end of A4).
 
