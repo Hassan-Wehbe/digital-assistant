@@ -110,14 +110,15 @@ Made by the owner (2026-09-29):
   12 testers for 14 days), then production. Moving between tracks, or unpublishing, is
   possible at any time with the same app.
 
+- **Google Play account: personal** for now, to find out whether the app is worth it
+  before going further. A personal account cannot be converted; if a company comes later,
+  open an organization account and transfer the app (same package id, users, reviews and
+  ratings). The 12-testers/14-days closed test applies once, before the first public release.
+
 Still open:
 
-1. **Google Play account type:** *personal* (quick, $25, owner's name shown as seller, the
-   12-testers/14-days rule) or *organization* (for a company: needs a free D-U-N-S number,
-   takes a few days, shows the company). Moving an app between accounts later is possible
-   but is extra paperwork.
-2. **AI key for chat (A5):** yes or not yet. A1-A4 work without it.
-3. **Accounts:** the owner creates the Expo account and the Play developer account when A0
+1. **AI key for chat (A5):** yes or not yet. A1-A4 work without it.
+2. **Accounts:** the owner creates the Expo account and the Play developer account when A0
    starts (never paste passwords or keys into the chat).
 
 For later (commercial, not blocking A0-A4): in-app subscriptions must use Google Play Billing
