@@ -19,7 +19,7 @@ export default function Home() {
 
   const { data, error, loading, reload } = useLoad<Row[]>(`home:${query}`, async () =>
     query
-      ? (await wilma.search({ query, limit: 25 })).map((item) => ({ kind: 'item', item }))
+      ? (await wilma.search({ query, limit: 25, close_matches_only: true })).map((item) => ({ kind: 'item', item }))
       : (await wilma.listSpaces()).map((space) => ({ kind: 'space', space })),
   );
 
