@@ -84,8 +84,7 @@ Each is one PR, tested, and approved by the owner before the next.
   the account from inside the app (both stores). Needed only if sign-ups open.
 - **Privacy:** a privacy policy page, Google's data-safety form and Apple's privacy labels
   (what is collected: account email, saved content, files; nothing sold or shared).
-- **Package id** (for example `com.hassanwehbe.wilma`) cannot change after the first
-  upload. Choose it once.
+- **Package id** `com.hmw.wilma` cannot change after the first upload.
 
 ## Rules that still hold
 
@@ -97,11 +96,31 @@ Each is one PR, tested, and approved by the owner before the next.
 - Every upload still starts with a place and a reason: the app asks for the space or item
   before uploading.
 
-## Decisions for the owner
+## Decisions
 
-1. **App name and package id** (the store name can change later; the package id cannot).
-2. **Personal or public?** Testing tracks only (just you and people you name), or a public
-   listing later (reopens sign-ups, adds account deletion and a demo account for reviewers).
-3. **AI key for chat (A5):** yes or not yet. A1-A4 work without it.
-4. **Accounts:** create the Expo account and the Google Play developer account when A0
-   starts (you sign up yourself; never paste passwords or keys into the chat).
+Made by the owner (2026-09-29):
+
+- **Package id: `com.hmw.wilma`** (lowercase; permanent after the first Play upload). If Google
+  reports it taken at the first upload, choose another before anything is published (for
+  example `com.hmwehbe.wilma`). The display name ("Wilma") is separate and can change.
+- **Goal: a public, commercial listing.** Build for public from the start (privacy policy
+  page, in-app account deletion, a sign-up screen kept switched off, a reviewer demo
+  account), but release only to testing tracks until the owner decides to go public:
+  internal testing first, then closed testing (a new personal Play account needs at least
+  12 testers for 14 days), then production. Moving between tracks, or unpublishing, is
+  possible at any time with the same app.
+
+Still open:
+
+1. **Google Play account type:** *personal* (quick, $25, owner's name shown as seller, the
+   12-testers/14-days rule) or *organization* (for a company: needs a free D-U-N-S number,
+   takes a few days, shows the company). Moving an app between accounts later is possible
+   but is extra paperwork.
+2. **AI key for chat (A5):** yes or not yet. A1-A4 work without it.
+3. **Accounts:** the owner creates the Expo account and the Play developer account when A0
+   starts (never paste passwords or keys into the chat).
+
+For later (commercial, not blocking A0-A4): in-app subscriptions must use Google Play Billing
+and Apple in-app purchase (store fee 15% on the first $1M a year); a paid Supabase plan once
+real users arrive (the free plan pauses inactive projects); per-user AI costs; terms of use;
+a trademark check on the name "Wilma".
