@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "Wilma",
+    "slug": "wilma",
+    "owner": "zaflabout",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "wilma",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "com.zaf.wilma",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.zaf.wilma",
+      "adaptiveIcon": {
+        "backgroundColor": "#2754C5",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#2754C5",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 120
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "f51dc24a-fef9-4f2a-8602-3fbe2e2c5deb"
+      }
+    }
+  }
+}

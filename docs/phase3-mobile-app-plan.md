@@ -1,6 +1,7 @@
 # Phase 3, step 1: the Wilma mobile app (plan)
 
-Status: plan, not built. Owner direction (2026-09-28): a real app, **publishable on Android
+Status: A0 (project setup) built, see `app/README.md` and `docs/phase3-mobile-app-setup.md`;
+A1 onward not started. Owner direction (2026-09-28): a real app, **publishable on Android
 first and iOS after, from one codebase with minimal changes**. PC and Mac use a web page (no
 install); an installed desktop app with background "Hey Wilma" may come later from the same
 code. Read first: `CLAUDE.md`, `docs/design.md`, `docs/phase2-attachments-plan.md`.
@@ -84,7 +85,7 @@ Each is one PR, tested, and approved by the owner before the next.
   the account from inside the app (both stores). Needed only if sign-ups open.
 - **Privacy:** a privacy policy page, Google's data-safety form and Apple's privacy labels
   (what is collected: account email, saved content, files; nothing sold or shared).
-- **Package id** `com.hmw.wilma` cannot change after the first upload.
+- **Package id** `com.zaf.wilma` cannot change after the first upload.
 
 ## Rules that still hold
 
@@ -100,9 +101,9 @@ Each is one PR, tested, and approved by the owner before the next.
 
 Made by the owner (2026-09-29):
 
-- **Package id: `com.hmw.wilma`** (lowercase; permanent after the first Play upload). If Google
+- **Package id: `com.zaf.wilma`** (chosen 2026-09-29, replacing `com.hmw.wilma` before any upload; lowercase; permanent after the first Play upload). If Google
   reports it taken at the first upload, choose another before anything is published (for
-  example `com.hmwehbe.wilma`). The display name ("Wilma") is separate and can change.
+  example `com.zafwilma.app`). The display name ("Wilma") is separate and can change.
 - **Goal: a public, commercial listing.** Build for public from the start (privacy policy
   page, in-app account deletion, a sign-up screen kept switched off, a reviewer demo
   account), but release only to testing tracks until the owner decides to go public:
