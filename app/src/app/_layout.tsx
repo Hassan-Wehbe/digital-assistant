@@ -11,11 +11,10 @@ import { AuthProvider, useAuth } from '@/lib/auth';
 SplashScreen.preventAutoHideAsync();
 
 function Screens() {
-  const { session, loading } = useAuth();
+  const { signedIn, loading } = useAuth();
   useEffect(() => {
     if (!loading) SplashScreen.hideAsync();
   }, [loading]);
-  const signedIn = !!session;
   // Signed out, only the sign-in screen exists; signed in, it does not.
   return (
     <Stack>

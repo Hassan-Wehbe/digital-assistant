@@ -65,6 +65,9 @@ Each is one PR, tested, and approved by the owner before the next.
   calls only `list_spaces`, `search_items`, `get_item`, `get_attachment_link`
   (`app/src/lib/wilma.ts`, plain JSON-RPC `tools/call`, one token refresh and retry on 401).
   Restricted spaces are listed with a lock and not opened. No database or server change.
+  After the owner's phone test: an Android fix for reading the saved session (#12); the
+  home search asks for close matches only (migration `search_cutoff`, MCP 0.4.1); sign-in
+  form stays above the keyboard; offline moments no longer sign you out.
 - **A2 Save and attach.** Save a note; attach from camera, gallery, files and the Android
   share menu (the same checks as the upload page: type from the first bytes, 20 MB, Visio
   text read on the phone).

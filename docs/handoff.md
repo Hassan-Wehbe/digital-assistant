@@ -51,6 +51,22 @@ after decrypting; a missing session now returns to the sign-in screen). Lesson: 
 APIs can differ by platform from their docs; check `node_modules/<pkg>/android` and `ios`
 sources when a call takes "string or bytes".
 
+**A1 polish (owner's requests after the phone test, branch `claude/app-a1-polish`):**
+- Weak search matches show "Nothing found": migration `search_cutoff` adds an optional
+  `p_max_distance` to `search_items` (semantic chunks further than that cosine distance are
+  left out; keyword matches stay); the MCP tool takes `close_matches_only` (distance 0.2, i.e.
+  similarity 0.8, the usual gte-small cutoff; only one item existed, so it could not be
+  calibrated on real data: tune `CLOSE_MATCH_MAX_DISTANCE` in `tools/search_items.ts` if good
+  matches go missing). The Claude connector's searches are unchanged (no cutoff by default).
+  Dry runs passed (`tests/sql/07_search_cutoff.sql`, and 02 against the new function).
+  **Rollout order:** apply the migration, then deploy `mcp` (server 0.4.1), then build the app
+  (the new MCP code needs the new function; the old code works with it).
+- Sign-in screen: form at the top, `KeyboardAvoidingView` with `padding` on Android too.
+- Staying signed in: sessions already survive app updates (same package and signing key);
+  now a refresh that fails for lack of a connection no longer signs out
+  (`src/lib/sessionToken.ts`), opening the app offline keeps you signed in, and signing out
+  offline still forgets the session on the phone.
+
 **Next: A2** (save a note; attach from camera, gallery, files, share menu). Notes kept from A1
 planning:
 - Sign in with supabase-js (email + password, like the vault pages); keep the session in

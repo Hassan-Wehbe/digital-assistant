@@ -1,6 +1,6 @@
 // Sign in with the same email and password as the vault pages and the Claude connector.
-import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput } from 'react-native';
+import { useRef, useState } from 'react';
+import { KeyboardAvoidingView, ScrollView, Text, TextInput } from 'react-native';
 
 import { Button, Card, Muted, styles, useColors } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth';
 export default function SignIn() {
   const c = useColors();
   const { signIn } = useAuth();
+  const passwordRef = useRef<TextInput>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -28,8 +29,12 @@ export default function SignIn() {
 
   const input = [styles.input, { color: c.text, borderColor: c.line, backgroundColor: c.card }];
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.background }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={[styles.list, { flexGrow: 1, justifyContent: 'center' }]} keyboardShouldPersistTaps="handled">
+    // The form sits at the top so the keyboard never covers it; 'padding' also on Android,
+    // where the app draws edge to edge and the window is not resized for the keyboard.
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: c.background }}
+      behavior="padding">
+      <ScrollView contentContainerStyle={[styles.list, { paddingTop: 24 }]} keyboardShouldPersistTaps="handled">
         <Card style={{ gap: 12 }}>
           <Text style={[styles.title, { color: c.text, fontSize: 22 }]}>{"Hi, I'm Wilma."}</Text>
           <Muted>Sign in with the account you use for Wilma in the Claude app.</Muted>
@@ -41,12 +46,17 @@ export default function SignIn() {
             autoComplete="email"
             keyboardType="email-address"
             textContentType="username"
+            returnKeyType="next"
+            onSubmitEditing={() => passwordRef.current?.focus()}
+            submitBehavior="submit"
             value={email}
             onChangeText={setEmail}
             editable={!busy}
           />
           <TextInput
+            ref={passwordRef}
             style={input}
+            returnKeyType="go"
             placeholder="Password"
             placeholderTextColor={c.muted}
             secureTextEntry
