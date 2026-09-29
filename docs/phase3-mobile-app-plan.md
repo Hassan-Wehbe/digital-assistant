@@ -61,13 +61,13 @@ Each is one PR, tested, and approved by the owner before the next.
   vault; optional fingerprint/face lock for opening the app (never stores the passphrase).
 - **A4 Android release.** Privacy policy page (on the existing GitHub Pages site), Play
   Store listing, data-safety form, and a first release to a testing track (below).
-- **A5 Chat with Wilma** (only after the API-key decision). New Edge Function `chat`: the
+- **A5 Chat with Wilma, typed and by voice** (the owner creates the API key at this point). New Edge Function `chat`: the
   app sends the conversation, the function calls the Claude API, which uses the same MCP
   tools. The key lives only in Supabase secrets. Pictures go to Claude (for the
   description) and to Storage (the file) in the same step.
 - **B iOS.** Same code. Owner: Apple Developer account ($99 a year). iOS build through EAS,
   iOS permission texts and share extension settings, TestFlight, then App Store review.
-- **Later:** voice (speech-to-text choice pending), notifications/reminders, PC/Mac web
+- **Later:** "Hey Wilma" wake word, notifications/reminders, PC/Mac web
   page from the same code, optional desktop app (Tauri) with background "Hey Wilma".
 
 ## Publishing: what the stores require
@@ -115,10 +115,18 @@ Made by the owner (2026-09-29):
   open an organization account and transfer the app (same package id, users, reviews and
   ratings). The 12-testers/14-days closed test applies once, before the first public release.
 
+- **Chat with Wilma, typed and by voice: yes**, at A5. The owner creates the Anthropic API
+  key only then: a Claude Console account (separate from the Claude subscription), prepaid
+  pay-as-you-go credit with a monthly spend limit, and the key pasted by the owner into
+  Supabase secrets (never into chat, the app or the repo). No cost before A5 except the $25
+  Play fee. Rough estimate to verify once chat works: a few cents per typed message with the
+  default model; cost tuning (model choice, prompt caching) after measuring real use.
+- **Voice uses the phone's built-in speech recognition and text-to-speech** (free, no extra
+  key); a paid speech-to-text service only if the built-in one is not good enough.
+
 Still open:
 
-1. **AI key for chat (A5):** yes or not yet. A1-A4 work without it.
-2. **Accounts:** the owner creates the Expo account and the Play developer account when A0
+1. **Accounts:** the owner creates the Expo account and the Play developer account when A0
    starts (never paste passwords or keys into the chat).
 
 For later (commercial, not blocking A0-A4): in-app subscriptions must use Google Play Billing
