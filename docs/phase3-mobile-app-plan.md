@@ -1,7 +1,7 @@
 # Phase 3, step 1: the Wilma mobile app (plan)
 
 Status: A0 (project setup) built, see `app/README.md` and `docs/phase3-mobile-app-setup.md`;
-A1 onward not started. Owner direction (2026-09-28): a real app, **publishable on Android
+A1 (read) built, see "A1 as built" below; A2 onward not started. Owner direction (2026-09-28): a real app, **publishable on Android
 first and iOS after, from one codebase with minimal changes**. PC and Mac use a web page (no
 install); an installed desktop app with background "Hey Wilma" may come later from the same
 code. Read first: `CLAUDE.md`, `docs/design.md`, `docs/phase2-attachments-plan.md`.
@@ -55,6 +55,16 @@ Each is one PR, tested, and approved by the owner before the next.
   developer account ($25 once).
 - **A1 Read.** Sign in, list spaces, search, open an item with its attachments, download
   link for an attachment.
+  **A1 as built:** sign-in with supabase-js (email + password); the session is encrypted with
+  AES-256-GCM (`expo-crypto`) and kept in the app's local store (`expo-sqlite` key-value
+  store), with the key in the phone's keystore (`expo-secure-store`, this device only, left
+  out of backups); SecureStore alone holds only small values. Screens (Expo Router, signed-out
+  users see only sign-in): home (spaces, search), space (its items via `search_items` with the
+  space), item (`get_item`: text, tags, attachments, linked items), download
+  (`get_attachment_link`, opened in the phone's browser, never stored or logged). The app
+  calls only `list_spaces`, `search_items`, `get_item`, `get_attachment_link`
+  (`app/src/lib/wilma.ts`, plain JSON-RPC `tools/call`, one token refresh and retry on 401).
+  Restricted spaces are listed with a lock and not opened. No database or server change.
 - **A2 Save and attach.** Save a note; attach from camera, gallery, files and the Android
   share menu (the same checks as the upload page: type from the first bytes, 20 MB, Visio
   text read on the phone).

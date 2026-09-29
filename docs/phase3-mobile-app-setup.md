@@ -46,5 +46,14 @@ the first build reported the owner mismatch), project `wilma`, id
 4. The first build also creates the app's signing key, which Expo stores for you. It is
    needed for every future update, so do not delete the project's credentials on expo.dev.
 
-For milestone A0 the app shows only a welcome screen with its version. Sign-in and search
-come in A1.
+From milestone A1 the app opens on a sign-in screen. Use the same email and password as
+for Wilma in the Claude app (you type them on the phone, never into a chat). Then:
+
+- **Spaces:** tap one to see its items. Restricted spaces show a lock and do not open yet.
+- **Search:** type in the box at the top and press search. Restricted spaces are never searched.
+- **An item:** its full text, tags, linked items and attachments. **Download** asks Wilma for a
+  fresh 10-minute link and opens it in the phone's browser, which saves the file.
+- **Sign out** is at the bottom of the home screen.
+
+A new build is needed to see A1 on the phone (step 4.1 again, after the A1 pull request is
+merged); the A0 build cannot update itself.
