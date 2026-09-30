@@ -1,7 +1,7 @@
 # Phase 3, step 1: the Wilma mobile app (plan)
 
 Status: A0 (project setup) built, see `app/README.md` and `docs/phase3-mobile-app-setup.md`;
-A1 (read), A2a, A2b and A3a built (confirmed on the phone), A3b built (not yet on the phone), see the "as built" notes below; A3c next. Owner direction (2026-09-28): a real app, **publishable on Android
+A1 (read), A2a, A2b, A3a and A3b built and confirmed on the phone, see the "as built" notes below; A3c next (vault setup/recovery/passphrase, plus creating spaces). Owner direction (2026-09-28): a real app, **publishable on Android
 first and iOS after, from one codebase with minimal changes**. PC and Mac use a web page (no
 install); an installed desktop app with background "Hey Wilma" may come later from the same
 code. Read first: `CLAUDE.md`, `docs/design.md`, `docs/phase2-attachments-plan.md`.
@@ -122,7 +122,7 @@ Each is one PR, tested, and approved by the owner before the next.
   Owner's decisions (2026-09-30): passphrase once, then fingerprint; open 5 minutes (locks
   after a minute away from the app); values hidden until Show, hidden again after 30 s,
   clipboard cleared after 30 s; everything in the app (split into A3a unlock and reveal,
-  A3b save / change / delete, A3c set up / recover / change passphrase).
+  A3b save / change / delete, A3c set up / recover / change passphrase, plus spaces, below).
   **A3a as built:** `src/lib/vaultCrypto.ts` is the web format (`docs/vault/crypto.js`).
   The first two builds (PRs #18, #20) **crashed at start-up**: `expo-screen-capture` registers a
   screen-capture callback when the app starts, which on Android 14+ needs
@@ -153,7 +153,29 @@ Each is one PR, tested, and approved by the owner before the next.
   `is_update`), "Rename or change the website" (`update_secret` name/url), "Delete"
   (`delete_secret` after a confirm dialog). Change, rename and delete need the vault
   unlocked, so an open phone cannot overwrite or delete secrets. The entry screen blocks
-  screenshots. No database, server or native change.
+  screenshots. No database, server or native change. **Confirmed on the phone** (build
+  9c98f335 of `main` at 1bbf8e3, 2026-09-30: "seems everything works").
+  **A3c plan (next):**
+  - *Vault setup* (the vault screen's "not set up" card, today a link to the web page):
+    choose a passphrase (twice, at least 12 characters), `crypto.createVault` ->
+    `setup_vault` (accepts the app's sign-in, like the vault pages), then show the recovery
+    key once with a "I have written it down" step; never copied to the clipboard, never logged,
+    screenshots blocked.
+  - *Recover with the recovery key* (forgotten passphrase): `crypto.unlockWithRecoveryKey`,
+    then choose a new passphrase -> `crypto.rewrapPassphrase` -> `rewrap_vault_passphrase`.
+  - *Change the passphrase* (unlocked): `rewrapPassphrase` -> `rewrap_vault_passphrase`; the
+    fingerprint copy keeps working (it holds the private key, which does not change).
+  - *Spaces in the app (owner's request, 2026-09-30):* **create a space** from the home screen
+    (name, optional parent space, optional description, "restricted" switch with a plain
+    explanation that restricted spaces never appear in search or in the app's vault list),
+    using the existing MCP tool `create_space` (add it to `APP_TOOLS` + test; names cannot
+    contain "/"). **Delete a space** already exists (space screen, "Delete space": only an
+    empty space; the server names what is still inside, including vault passwords and the
+    recycle bin); A3c only makes it easy to find and checks the message reads well. The home
+    screen's "Ask Wilma in the Claude app to create one" text goes.
+  - The crypto functions already exist and are tested against the web code; no database or
+    server change expected. Suggested order: spaces first (small, separate PR), then setup,
+    then recovery and passphrase change.
 - **A4 Android release.** Privacy policy page (on the existing GitHub Pages site), Play
   Store listing, data-safety form, and a first release to a testing track (below).
 - **A5 One conversational box, typed and by voice** (the owner creates the API key at this
