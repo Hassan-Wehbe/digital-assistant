@@ -23,6 +23,9 @@ export const APP_TOOLS = [
   'delete_space',
   'find_secret',
   'get_secret',
+  'save_secret',
+  'update_secret',
+  'delete_secret',
 ] as const;
 export type AppTool = (typeof APP_TOOLS)[number];
 
@@ -106,6 +109,19 @@ export interface RevealLink {
   secret: SecretMeta;
   reveal_link: string;
   expires_at: string;
+}
+
+/** A one-time link where a value is entered (sealed on the phone, never sent to Wilma). */
+export interface EntryLink {
+  entry_link: string;
+  expires_at: string;
+}
+
+export interface NewSecret {
+  space: string;
+  name: string;
+  secret_type: string;
+  url?: string;
 }
 
 export interface BinItem {
@@ -217,6 +233,21 @@ export function wilmaClient({ url, token, refresh, fetch: f = fetch }: ClientOpt
     findSecrets: async (opts: { query?: string; limit?: number } = {}) =>
       (await call<{ results: SecretMeta[] }>('find_secret', { limit: 50, ...opts })).results,
     revealLink: (secretId: string) => call<RevealLink>('get_secret', { secret_id: secretId }),
+    /** Starts a new secret: metadata only. It exists once its value arrives through the entry link. */
+    saveSecret: ({ space, name, secret_type, url }: NewSecret) =>
+      call<EntryLink & { secret: { id: string; name: string; secret_type: string; space: string } }>('save_secret', {
+        space,
+        name,
+        secret_type,
+        ...(url ? { url } : {}),
+      }),
+    /** An entry link for a new value of an existing secret. */
+    newValueLink: (secretId: string) => call<EntryLink & { secret: SecretMeta }>('update_secret', { secret_id: secretId, new_value: true }),
+    /** Rename, or change the website (an empty url removes it). */
+    updateSecret: (secretId: string, change: { name?: string; url?: string }) =>
+      call<{ secret: SecretMeta }>('update_secret', { secret_id: secretId, ...change }),
+    /** Deletes for good (the access log keeps a record that it existed). */
+    deleteSecret: (secretId: string) => call<{ deleted: boolean; id: string; name: string }>('delete_secret', { secret_id: secretId }),
   };
 }
 

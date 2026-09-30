@@ -41,6 +41,7 @@ function Screens() {
         <Stack.Screen name="share" options={{ title: 'Share to Wilma' }} />
         <Stack.Screen name="vault/index" options={{ title: 'Vault' }} />
         <Stack.Screen name="vault/[id]" options={{ title: 'Secret' }} />
+        <Stack.Screen name="vault/enter" options={{ title: 'Save a secret' }} />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="sign-in" options={{ title: 'Sign in' }} />

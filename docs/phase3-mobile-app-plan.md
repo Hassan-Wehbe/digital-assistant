@@ -1,7 +1,7 @@
 # Phase 3, step 1: the Wilma mobile app (plan)
 
 Status: A0 (project setup) built, see `app/README.md` and `docs/phase3-mobile-app-setup.md`;
-A1 (read), A2a, A2b and A3a built, see the "as built" notes below; A3b onward not started. Owner direction (2026-09-28): a real app, **publishable on Android
+A1 (read), A2a, A2b, A3a and A3b built, see the "as built" notes below; A3c onward not started. Owner direction (2026-09-28): a real app, **publishable on Android
 first and iOS after, from one codebase with minimal changes**. PC and Mac use a web page (no
 install); an installed desktop app with background "Hey Wilma" may come later from the same
 code. Read first: `CLAUDE.md`, `docs/design.md`, `docs/phase2-attachments-plan.md`.
@@ -138,6 +138,20 @@ Each is one PR, tested, and approved by the owner before the next.
   expo-secure-store with `requireAuthentication` (Android keystore, invalidated when
   fingerprints change), deleted on sign-out. The secret screen blocks screenshots. No
   database or server change; reveals are logged with channel `web` like the reveal page.
+  **A3b as built:** "Save a new secret" (vault list) opens `app/vault/enter.tsx`: space
+  (restricted spaces left out, since the app never lists their secrets), name, kind, website,
+  then the fields of `SECRET_FIELDS` (`SecretFieldsForm`, passwords hidden until Show, no
+  autocorrect or suggestions). `vaultFlow.saveNewSecret`: fields checked first (as
+  `enter.js`: single-line values exact, text boxes trimmed at the end, empty left out), then
+  `save_secret` (metadata) -> `get_secret_entry_request` -> seal on the phone ->
+  `complete_secret_entry`; it stops before sending anything if the link is for another
+  secret, kind or entry type, or its public key is not the vault's. Same name in the same
+  space asks first. Saving works while the vault is locked (public key only); on the secret
+  screen, unlocked: "Change the value" (`update_secret` new_value, same steps with
+  `is_update`), "Rename or change the website" (`update_secret` name/url), "Delete"
+  (`delete_secret` after a confirm dialog). Change, rename and delete need the vault
+  unlocked, so an open phone cannot overwrite or delete secrets. The entry screen blocks
+  screenshots. No database, server or native change.
 - **A4 Android release.** Privacy policy page (on the existing GitHub Pages site), Play
   Store listing, data-safety form, and a first release to a testing track (below).
 - **A5 One conversational box, typed and by voice** (the owner creates the API key at this
