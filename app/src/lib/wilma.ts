@@ -12,6 +12,12 @@ export const APP_TOOLS = [
   'get_attachment_link',
   'save_item',
   'attach_file',
+  'delete_attachment',
+  'delete_item',
+  'list_deleted_items',
+  'restore_item',
+  'purge_item',
+  'delete_space',
 ] as const;
 export type AppTool = (typeof APP_TOOLS)[number];
 
@@ -78,6 +84,15 @@ export interface UploadLink {
   upload_link: string;
   expires_at: string;
   item: { id: string; title: string; space?: string; created: boolean };
+}
+
+export interface BinItem {
+  id: string;
+  title: string;
+  item_type: string;
+  space: string | undefined;
+  deleted_at: string;
+  attachments: number;
 }
 
 export interface AttachmentLink {
@@ -168,6 +183,14 @@ export function wilmaClient({ url, token, refresh, fetch: f = fetch }: ClientOpt
     /** A one-time upload link for an existing item, or for a new one (space + title + note). */
     uploadLink: (target: { item_id: string } | { space: string; title: string; note?: string }) =>
       call<UploadLink>('attach_file', target),
+    // Deleting. Notes go to the recycle bin first; purge deletes a binned note for good.
+    deleteAttachment: (id: string) => call<{ deleted: boolean }>('delete_attachment', { attachment_id: id }),
+    deleteItem: (id: string) => call<{ in_recycle_bin: boolean }>('delete_item', { item_id: id }),
+    recycleBin: async () => (await call<{ items: BinItem[] }>('list_deleted_items', { limit: 200 })).items,
+    restoreItem: (id: string) => call<{ restored: boolean }>('restore_item', { item_id: id }),
+    purgeItem: (id: string) => call<{ purged: boolean }>('purge_item', { item_id: id }),
+    /** Only an empty space can be deleted; otherwise the error says what is still inside. */
+    deleteSpace: (id: string) => call<{ deleted: boolean }>('delete_space', { space: id }),
   };
 }
 

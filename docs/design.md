@@ -60,6 +60,16 @@ the MCP server, which the owner controls.
 | `describe_attachment` | Set or replace a picture's description (re-indexed for search) |
 | `delete_attachment` | Delete a file and its search text (after the owner confirms) |
 
+### Deleting (migration `recycle_bin`, owner's decisions 2026-09-30)
+
+| Tool | Purpose |
+|---|---|
+| `delete_item` | Move an item to the recycle bin (soft delete, rule 8): hidden from search, `get_item` and the app |
+| `list_deleted_items` | The recycle bin, most recent first (restricted spaces left out, rule 3) |
+| `restore_item` | Bring an item back from the bin |
+| `purge_item` | Delete a binned item for good; the server removes its Storage files first, then the rows |
+| `delete_space` | Delete an **empty** space only (no items, not even binned; no sub-spaces; no vault secrets). The foreign keys cascade, so this check is what keeps a space delete from taking notes or secrets with it |
+
 ## 3. Decisions and reasons
 
 | # | Decision | Reason |

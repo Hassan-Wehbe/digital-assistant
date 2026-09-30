@@ -43,7 +43,11 @@ If either is missing, ask before calling attach_file. It returns an upload link 
 file on their phone or PC (the chat cannot pass files on). If the picture is in the chat, pass a
 description of what it shows; never copy a password, key or code visible in it. get_item lists an item's
 attachments; get_attachment_link gives the user a download link (do not open it yourself);
-delete_attachment only after the user confirms.`;
+delete_attachment only after the user confirms.
+
+Deleting: delete_item moves an item to the recycle bin (list_deleted_items, restore_item); purge_item
+deletes a binned item for good, with its files; delete_space deletes only an empty space. Delete only
+what the user clearly asked to delete, and confirm anything permanent first.`;
 }
 
 /** One sentence appended to a tool description: how the user asks for it by name. */

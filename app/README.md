@@ -18,8 +18,9 @@ Plan: `../docs/phase3-mobile-app-plan.md`. Owner setup: `../docs/phase3-mobile-a
 | `src/app/_layout.tsx` | Signed out: only `sign-in` exists. Signed in: `index` (spaces, search), `space/[id]`, `item/[id]`. |
 | `src/lib/supabase.ts` | Supabase sign-in (email + password, same account as the Claude connector and vault pages). |
 | `src/lib/sessionStorage.ts`, `deviceStorage.ts` | The session is encrypted (AES-256-GCM); the key is in the phone's keystore (this device only, not in backups), the ciphertext in the app's local store. |
-| `src/lib/wilma.ts` | Calls Wilma's tools on the MCP server with the user's token: `list_spaces`, `search_items`, `get_item`, `get_attachment_link`, `save_item`, `attach_file` only. |
+| `src/lib/wilma.ts` | Calls Wilma's tools on the MCP server with the user's token: `list_spaces`, `search_items`, `get_item`, `get_attachment_link`, `save_item`, `attach_file`, and the delete tools (`delete_attachment`, `delete_item`, `list_deleted_items`, `restore_item`, `purge_item`, `delete_space`). No vault tools. |
 | `src/app/new-item.tsx`, `attach.tsx` | New note (optionally with files); add files to an item. |
+| `src/app/bin.tsx` | Recycle bin: restore a deleted note or delete it for good. Delete note / file / space buttons ask first. |
 | `src/lib/upload.ts`, `picked.ts`, `filetypes.ts`, `deviceFiles.ts` | The upload page's steps and file rules, done by the app: one-time link from `attach_file`, files streamed to Storage, recorded with `complete_attachment_upload`. `filetypes.test.ts` checks the rules match `docs/files/filetypes.js`. |
 
 Restricted spaces are shown with a lock and are not opened or searched. The app has no

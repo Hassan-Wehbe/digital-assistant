@@ -1,9 +1,9 @@
 // One item in full: text, tags, attachments (with a download button) and linked items.
-import { Link, router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { Link, router, Stack, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
 import { Linking, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 
-import { Button, Card, ErrorBox, Loading, Muted, styles, useColors, useLoad } from '@/components/ui';
+import { Button, Card, confirm, ErrorBox, Loading, Muted, styles, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { fileSize, type Attachment } from '@/lib/wilma';
 
@@ -14,16 +14,7 @@ export default function ItemScreen() {
   const { data: item, error, loading, reload } = useLoad(`item:${id}`, () => wilma.getItem(id));
 
   // Coming back from "Add photos or files": show the new attachments.
-  const firstFocus = useRef(true);
-  useFocusEffect(
-    useCallback(() => {
-      if (firstFocus.current) {
-        firstFocus.current = false;
-        return;
-      }
-      reload();
-    }, [reload]),
-  );
+  useReloadOnReturn(reload);
 
   if (!item) {
     return (
@@ -67,7 +58,7 @@ export default function ItemScreen() {
           <>
             <Text style={[styles.title, { color: c.text }]}>Attachments</Text>
             {item.attachments.map((a) => (
-              <AttachmentCard key={a.id} attachment={a} />
+              <AttachmentCard key={a.id} attachment={a} onDeleted={reload} />
             ))}
           </>
         )}
@@ -76,6 +67,7 @@ export default function ItemScreen() {
           kind="plain"
           onPress={() => router.push({ pathname: '/attach', params: { itemId: item.id, title: item.title } })}
         />
+        <DeleteNote id={item.id} title={item.title} />
 
         {item.links.length > 0 && (
           <>
@@ -102,7 +94,40 @@ function linkLabel(direction: 'outgoing' | 'incoming', relation: string): string
   return 'Related';
 }
 
-function AttachmentCard({ attachment: a }: { attachment: Attachment }) {
+// Moves the note to the recycle bin (restorable from the home screen's Recycle bin).
+function DeleteNote({ id, title }: { id: string; title: string }) {
+  const c = useColors();
+  const { wilma } = useAuth();
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  const remove = async () => {
+    const ok = await confirm(
+      'Delete this note?',
+      `“${title}” moves to the recycle bin, with its files. You can restore it from the Recycle bin on the home screen.`,
+      'Delete',
+    );
+    if (!ok) return;
+    setBusy(true);
+    setProblem(null);
+    try {
+      await wilma.deleteItem(id);
+      router.back();
+    } catch (e) {
+      setProblem(e instanceof Error ? e.message : String(e));
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      {problem ? <Text style={{ color: c.danger, fontSize: 15 }}>{problem}</Text> : null}
+      <Button title={busy ? 'Deleting…' : 'Delete note'} kind="danger" onPress={remove} disabled={busy} />
+    </>
+  );
+}
+
+function AttachmentCard({ attachment: a, onDeleted }: { attachment: Attachment; onDeleted: () => void }) {
   const c = useColors();
   const { wilma } = useAuth();
   const [busy, setBusy] = useState(false);
@@ -123,6 +148,21 @@ function AttachmentCard({ attachment: a }: { attachment: Attachment }) {
     }
   };
 
+  // Files are deleted for good (the note's recycle bin is for whole notes).
+  const remove = async () => {
+    const ok = await confirm('Delete this file?', `“${a.filename}” will be deleted for good. This cannot be undone.`, 'Delete');
+    if (!ok) return;
+    setBusy(true);
+    setProblem(null);
+    try {
+      await wilma.deleteAttachment(a.id);
+      onDeleted();
+    } catch (e) {
+      setProblem(e instanceof Error ? e.message : String(e));
+      setBusy(false);
+    }
+  };
+
   return (
     <Card>
       <Text style={[styles.title, { color: c.text }]}>{a.filename}</Text>
@@ -139,7 +179,14 @@ function AttachmentCard({ attachment: a }: { attachment: Attachment }) {
         </Text>
       ) : null}
       {problem ? <Text style={{ color: c.danger, fontSize: 15 }}>{problem}</Text> : null}
-      <Button title={busy ? 'Getting the link…' : 'Download'} kind="plain" onPress={download} disabled={busy} />
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <View style={{ flex: 1 }}>
+          <Button title={busy ? 'Please wait…' : 'Download'} kind="plain" onPress={download} disabled={busy} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Button title="Delete file" kind="danger" onPress={remove} disabled={busy} />
+        </View>
+      </View>
     </Card>
   );
 }

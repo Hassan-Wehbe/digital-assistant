@@ -109,12 +109,14 @@ describe('wilma client', () => {
   });
 
   it('uses only the knowledge tools (no vault tools in this version)', () => {
-    expect([...APP_TOOLS].sort()).toEqual(
-      ['attach_file', 'get_attachment_link', 'get_item', 'list_spaces', 'save_item', 'search_items'],
-    );
+    expect([...APP_TOOLS].sort()).toEqual([
+      'attach_file', 'delete_attachment', 'delete_item', 'delete_space', 'get_attachment_link', 'get_item',
+      'list_deleted_items', 'list_spaces', 'purge_item', 'restore_item', 'save_item', 'search_items',
+    ]);
     expect(APP_TOOLS.some((t) => /secret/.test(t))).toBe(false);
     expect(Object.keys(setup([]).client).sort()).toEqual(
-      ['attachmentLink', 'getItem', 'listSpaces', 'saveItem', 'search', 'uploadLink'],
+      ['attachmentLink', 'deleteAttachment', 'deleteItem', 'deleteSpace', 'getItem', 'listSpaces', 'purgeItem',
+        'recycleBin', 'restoreItem', 'saveItem', 'search', 'uploadLink'],
     );
   });
 
@@ -133,6 +135,32 @@ describe('wilma client', () => {
       { name: 'attach_file', arguments: { item_id: 'i9' } },
       { name: 'attach_file', arguments: { space: 's1', title: 'Board', note: 'Tuesday' } },
     ]);
+  });
+});
+
+describe('deleting', () => {
+  it('sends each delete to the right tool', async () => {
+    const answers = [{ deleted: true }, { in_recycle_bin: true }, { items: [] }, { restored: true }, { purged: true }, { deleted: true }];
+    const { client, fetch } = setup(answers.map((a) => reply(200, toolResult(a))));
+    await client.deleteAttachment('a1');
+    await client.deleteItem('i1');
+    await client.recycleBin();
+    await client.restoreItem('i1');
+    await client.purgeItem('i1');
+    await client.deleteSpace('s1');
+    expect(fetch.mock.calls.map(([, init]) => JSON.parse(init.body as string).params)).toEqual([
+      { name: 'delete_attachment', arguments: { attachment_id: 'a1' } },
+      { name: 'delete_item', arguments: { item_id: 'i1' } },
+      { name: 'list_deleted_items', arguments: { limit: 200 } },
+      { name: 'restore_item', arguments: { item_id: 'i1' } },
+      { name: 'purge_item', arguments: { item_id: 'i1' } },
+      { name: 'delete_space', arguments: { space: 's1' } },
+    ]);
+  });
+
+  it("shows the server's reason when a space is not empty", async () => {
+    const { client } = setup([reply(200, toolResult('Could not delete the space: "Recipes" is not empty: it still holds 2 notes.', true))]);
+    await expect(client.deleteSpace('s1')).rejects.toThrow('it still holds 2 notes');
   });
 });
 
