@@ -108,16 +108,29 @@ describe('wilma client', () => {
     await expect(garbled.client.listSpaces()).rejects.toThrow('could not read');
   });
 
-  it('uses only the knowledge tools (no vault tools in this version)', () => {
+  it('uses the knowledge tools and only the vault tools that return names and links', () => {
     expect([...APP_TOOLS].sort()).toEqual([
-      'attach_file', 'delete_attachment', 'delete_item', 'delete_space', 'get_attachment_link', 'get_item',
-      'list_deleted_items', 'list_spaces', 'purge_item', 'restore_item', 'save_item', 'search_items',
+      'attach_file', 'delete_attachment', 'delete_item', 'delete_space', 'find_secret', 'get_attachment_link', 'get_item',
+      'get_secret', 'list_deleted_items', 'list_spaces', 'purge_item', 'restore_item', 'save_item', 'search_items',
     ]);
-    expect(APP_TOOLS.some((t) => /secret/.test(t))).toBe(false);
     expect(Object.keys(setup([]).client).sort()).toEqual(
-      ['attachmentLink', 'deleteAttachment', 'deleteItem', 'deleteSpace', 'getItem', 'listSpaces', 'purgeItem',
-        'recycleBin', 'restoreItem', 'saveItem', 'search', 'uploadLink'],
+      ['attachmentLink', 'deleteAttachment', 'deleteItem', 'deleteSpace', 'findSecrets', 'getItem', 'listSpaces', 'purgeItem',
+        'recycleBin', 'restoreItem', 'revealLink', 'saveItem', 'search', 'uploadLink'],
     );
+  });
+
+  it('asks for secrets by id and lists them with a limit', async () => {
+    const { client, fetch } = setup([
+      reply(200, toolResult({ results: [{ id: 's1', name: 'Router', secret_type: 'wifi' }] })),
+      reply(200, toolResult({ secret: { id: 's1' }, reveal_link: 'https://x/vault/reveal#t=abc', expires_at: 'soon' })),
+    ]);
+    expect((await client.findSecrets())[0].name).toBe('Router');
+    expect((await client.revealLink('s1')).reveal_link).toContain('#t=');
+    const args = fetch.mock.calls.map((c) => JSON.parse(String((c[1] as RequestInit).body)).params);
+    expect(args).toEqual([
+      { name: 'find_secret', arguments: { limit: 50 } },
+      { name: 'get_secret', arguments: { secret_id: 's1' } },
+    ]);
   });
 
   it('saves a note and asks for upload links with the right arguments', async () => {

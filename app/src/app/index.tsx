@@ -51,6 +51,7 @@ export default function Home() {
   const footer = (
     <View style={{ gap: 8, marginTop: 16 }}>
       <Muted>Signed in as {session?.user.email ?? 'you'}</Muted>
+      <Button title="Vault" kind="plain" onPress={() => router.push('/vault')} />
       <Button title="Recycle bin" kind="plain" onPress={() => router.push('/bin')} />
       <Button title="Sign out" kind="plain" onPress={signOut} />
       <Muted>{versionLabel(Application.nativeApplicationVersion, Application.nativeBuildVersion)}</Muted>

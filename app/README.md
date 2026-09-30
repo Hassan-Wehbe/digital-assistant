@@ -11,7 +11,7 @@ Plan: `../docs/phase3-mobile-app-plan.md`. Owner setup: `../docs/phase3-mobile-a
   put a service-role key, an AI key or any other secret in the app.
 - `AGENTS.md` is Expo's guidance for AI coding assistants (kept from the template).
 
-## How it works (milestones A1, A2a, A2b)
+## How it works (milestones A1, A2a, A2b, A3a)
 
 | File | What it does |
 |---|---|
@@ -22,10 +22,12 @@ Plan: `../docs/phase3-mobile-app-plan.md`. Owner setup: `../docs/phase3-mobile-a
 | `src/app/new-item.tsx`, `attach.tsx`, `src/lib/saveNote.ts` | New note (optionally with files); add files to an item. |
 | `src/app/share.tsx`, `src/lib/shareIntake.tsx`, `shared.ts` | Share -> Wilma from other apps (`expo-share-intent`): photos, Visio files, text or a link become a new note, or the files go to an existing note. Shared files are copied into the app's cache first. Signed out, sign-in comes first. Android only for now (`disableIOS` in `app.json` until phase B). |
 | `src/app/bin.tsx` | Recycle bin: restore a deleted note or delete it for good. Delete note / file / space buttons ask first. |
+| `src/lib/vault.tsx`, `vaultCrypto.ts`, `vaultFlow.ts`, `src/app/vault/` | Vault: unlock with the vault passphrase (then the fingerprint), list secrets by name, reveal one (decrypted on the phone, same format as the web vault pages). Locks after 5 minutes or a minute away. |
 | `src/lib/upload.ts`, `picked.ts`, `filetypes.ts`, `deviceFiles.ts` | The upload page's steps and file rules, done by the app: one-time link from `attach_file`, files streamed to Storage, recorded with `complete_attachment_upload`. `filetypes.test.ts` checks the rules match `docs/files/filetypes.js`. |
 
-Restricted spaces are shown with a lock and are not opened or searched. The app has no
-vault tools yet (A3); secret values never pass through it.
+Restricted spaces are shown with a lock and are not opened or searched (secrets in them are
+not listed either). Secret values never pass through Wilma's tools: they are decrypted on
+the phone, with the passphrase or the fingerprint-protected key, and never logged.
 
 ## Commands (from this folder)
 
@@ -56,3 +58,5 @@ take a photo). Blocked in `app.json`: the storage permissions (Android's photo p
 none), "draw over other apps", and the microphone the image picker would add for videos.
 Other permissions are added only with the features that need them. Share to Wilma (A2b)
 adds no permission: Android lets the app read what you share (JPEG, PNG, Visio, text).
+The vault's fingerprint unlock adds Android's "use biometrics" permission (no question
+asked); the screenshot blocker's photo and screenshot-detection permissions are blocked.

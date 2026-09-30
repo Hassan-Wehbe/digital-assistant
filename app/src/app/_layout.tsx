@@ -6,6 +6,7 @@ import { useColorScheme } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { ShareProvider, useShare } from '@/lib/shareIntake';
+import { VaultProvider } from '@/lib/vault';
 
 // Keep the splash screen up until the saved session has been read, so the sign-in
 // screen does not flash before the home screen.
@@ -38,6 +39,8 @@ function Screens() {
         <Stack.Screen name="attach" options={{ title: 'Add photos or files' }} />
         <Stack.Screen name="bin" options={{ title: 'Recycle bin' }} />
         <Stack.Screen name="share" options={{ title: 'Share to Wilma' }} />
+        <Stack.Screen name="vault/index" options={{ title: 'Vault' }} />
+        <Stack.Screen name="vault/[id]" options={{ title: 'Secret' }} />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="sign-in" options={{ title: 'Sign in' }} />
@@ -52,7 +55,9 @@ export default function RootLayout() {
     <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
       <ShareProvider>
         <AuthProvider>
-          <Screens />
+          <VaultProvider>
+            <Screens />
+          </VaultProvider>
         </AuthProvider>
       </ShareProvider>
       <StatusBar style="auto" />

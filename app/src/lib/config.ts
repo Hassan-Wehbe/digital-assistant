@@ -8,6 +8,9 @@ export const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_fUOMLFoWl6Avh7NqvhKBNQ_s
 /** Wilma's tools: the existing MCP server (supabase/functions/mcp/). */
 export const MCP_URL = `${SUPABASE_URL}/functions/v1/mcp`;
 
+/** The web vault pages (setup until the app can set up the vault itself). */
+export const VAULT_PAGES_URL = 'https://hassan-wehbe.github.io/digital-assistant/vault';
+
 /** "Version 0.1.0 (build 1)" for the about line; either part may be missing. */
 export function versionLabel(version?: string | null, build?: string | number | null): string {
   if (!version) return 'Version unknown';
