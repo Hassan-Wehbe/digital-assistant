@@ -1,62 +1,104 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-09-30 (end of the session that built A1, A1 polish, A2a and the recycle bin).
-Read this, then `CLAUDE.md`, `docs/design.md` and `docs/phase3-mobile-app-plan.md`, before
-changing anything. The owner is returning to development: explain steps plainly, keep PRs
-small, say clearly when they must act, never ask for passwords, tokens or keys in chat.
+Last updated 2026-09-30 evening (end of the session that built A2b "Share to Wilma" and A3a
+vault unlock and reveal). Read this, then `CLAUDE.md`, `docs/design.md` and
+`docs/phase3-mobile-app-plan.md`, before changing anything. The owner is returning to
+development: explain steps plainly, keep PRs small, say clearly when they must act, never ask
+for passwords, tokens or keys in chat.
 
-## Where things stand (2026-09-30)
+## Where things stand (2026-09-30 evening)
 
 | Piece | State |
 |---|---|
-| Database | migrations up to `recycle_bin` applied (see the table further down) |
-| MCP server `mcp` | **version 7, server 0.5.0, 22 tools** (adds `delete_item`, `list_deleted_items`, `restore_item`, `purge_item`, `delete_space`) |
-| Mobile app (Expo, `app/`) | A0, A1, A1 polish, A2a and delete/recycle bin merged to `main` (PRs #9, #11, #12, #13, #14, #15) |
-| Latest app build | preview build of `main` at 5e072ec (PR #15), handed to Expo 2026-09-30 12:22 UTC: https://expo.dev/accounts/zafnut/projects/wilma/builds/a4c23016-77b7-47d2-bcf0-5cb3c058fa76 . **Not yet confirmed on the phone**: ask the owner how the delete buttons and Recycle bin behaved. |
+| Database | migrations up to `recycle_bin` applied (unchanged this session) |
+| MCP server `mcp` | version 7, server 0.5.0, 22 tools (unchanged this session) |
+| Mobile app (Expo, `app/`) | merged to `main` up to PR #21: A0-A2a, delete/recycle bin, **A2b Share to Wilma (#17)**, **A3a vault unlock and reveal (#18, #20, #21)** |
+| Latest app build | preview build of `main` at 232f0c9 (PR #21): https://expo.dev/accounts/zafnut/projects/wilma/builds/669fe922-9e26-4e01-b65e-30d7f78ae42e . **Owner confirmed on the phone: it opens, vault unlock (passphrase, then fingerprint) and reveal work, "looking solid".** |
+| Supabase | checked 2026-09-30 19:35 UTC: ACTIVE_HEALTHY; auth, storage, `mcp` (401 without a token) all answer |
 
-What the app does now: sign in (session encrypted on the phone, survives updates and offline
-moments); spaces, search (close matches only), items with attachments and downloads; new note
-with optional photos/Visio files (camera, gallery, files); add files to an item; delete note
-(to the recycle bin), delete file, delete an empty space; recycle bin (restore, delete for good,
-empty). Owner confirmed on the phone: A1 (after fix #12), A1 polish, A2a (adding pictures works).
+What the app does now: everything before (sign in, spaces, search, items, attachments, new
+note with photos/Visio, delete, recycle bin), plus **Share to Wilma** from other Android apps
+(photos, Visio, text or a link -> new note or add to an existing note; confirmed by the owner)
+and the **vault**: list secrets by name, unlock with the vault passphrase then the fingerprint,
+reveal (values hidden until Show, hidden again after 30 s, clipboard cleared after 30 s,
+screenshots blocked on the secret screen), lock after 5 minutes or a minute away.
 
-## Next task: A2b "Share to Wilma"
+## Next task: A3b "save, change, delete secrets in the app"
 
-From Photos, Files, Chrome etc.: Share -> Wilma -> pick a space (or an existing note), title,
-caption -> Save. Plan notes:
-- Needs a share-intent config plugin (Android intent filters for `image/jpeg`, `image/png`,
-  and generic files for Visio; later iOS share extension). Check what exists for Expo SDK 57
-  (e.g. `expo-share-intent`) by reading the package in `node_modules` (docs.expo.dev is
-  blocked here) and prefer a maintained one; it adds native code, so a new build is required.
-- Reuse A2a: `src/lib/picked.ts` (checks), `src/lib/upload.ts` (upload steps),
-  `src/components/AttachmentPicker.tsx` ideas, `new-item.tsx` (space picker, save flow).
-  Shared content arrives as `content://` URIs: copy to the app cache first (expo-file-system)
-  so `File.upload` and the checks work; keep the same 20 MB / type rules.
-- If the app is signed out when something is shared, show sign-in first, then continue.
-- Keep Android permissions minimal; check the merged manifest with prebuild (see below).
-- One PR; no database or server change expected.
+Owner's decisions for the vault (2026-09-30): passphrase once then fingerprint; open 5 minutes;
+values hidden until Show; **everything in the app**, split into A3a (done), A3b (this), A3c (set
+up the vault, recover with the recovery key, change the passphrase). Plan for A3b:
+- Save: `save_secret(space, name, secret_type, url?)` (MCP) returns `entry_link` (`.../enter#t=`),
+  `secret.id`; the app then calls `get_secret_entry_request(p_token)` (gives `public_key`,
+  `secret_id`, `secret_type`, `is_update`) and `complete_secret_entry(p_token, p_payload_enc)` with
+  `crypto.sealSecret(public_key, secret_id, secret_type, fields)`, like `docs/vault/enter.js`.
+  Saving needs only the public key, not an unlocked vault.
+- Change a value: `update_secret(secret_id, new_value: true)` returns an entry link, same
+  completion (is_update). Name/url changes: `update_secret(secret_id, name?, url?)`.
+- Delete: `delete_secret(secret_id)` (hard delete, logged), with a confirm dialog.
+- Field forms per type from `SECRET_FIELDS` in `src/lib/vaultCrypto.ts` (password fields masked
+  with Show; single-line values kept exactly as typed, textareas trimmed at the end, empty fields
+  left out, like enter.js). Add the three tools to `APP_TOOLS` in `src/lib/wilma.ts` (+ test).
+- Keep testable logic in `src/lib/vaultFlow.ts` (like `revealSecret`), UI in `src/app/vault/`.
+  Entry screens should also block screenshots (`usePreventScreenCapture`).
+- No database or server change expected. New build required only if native code changes
+  (A3b should be JavaScript only, but builds are still how the owner gets it).
 
-After A2b: A3 vault in the app (plan in `docs/phase3-mobile-app-plan.md`; owner questions
-to settle then: fingerprint unlock, how long it stays unlocked, tap-to-show), A4 Play release,
-A5 chat and voice.
+After A3b: A3c (set up / recover / change passphrase in the app; `crypto.createVault`,
+`unlockWithRecoveryKey`, `rewrapPassphrase` already exist and are tested against the web code;
+SQL `setup_vault`, `rewrap_vault_passphrase`), then A4 Play release, A5 chat and voice.
 
 ## Owner status and open items
 
 - Owner signs in to the app with **hassan.wehbe@gmail.com** (the only account in the project).
 - Expo account `zafnut`, project `wilma` (id `f51dc24a-fef9-4f2a-8602-3fbe2e2c5deb`),
   `EXPO_TOKEN` GitHub secret set. Builds: GitHub **Actions -> app build -> Run workflow
-  (preview)** on `main` (Claude can start it with the GitHub tools); the free Expo queue often
-  takes an hour or more. The owner installs from the expo.dev build page.
+  (preview)** on `main` (Claude starts it with the GitHub tools after the owner says "merge and
+  build"); the free Expo queue often takes an hour or more. The owner installs from the
+  expo.dev build page.
+- Branches the owner may delete on GitHub (sessions cannot): `claude/revert-a3a` (unused
+  backup), `claude/vault-crash-fix`, `claude/fix-startup-crash-screen-capture`,
+  `claude/a3a-vault-unlock-reveal`, `claude/a2b-share-to-wilma`, `claude/handoff-2026-09-30`.
 - Google Play personal developer account: not confirmed yet (needed at A4).
-- Search cutoff (`CLOSE_MATCH_MAX_DISTANCE = 0.2`) was not calibrated on real data (only one
-  item existed); loosen it if the owner reports missing results.
-- The recycle bin never empties itself (owner's choice); a future cleanup job could purge
-  after N days if the owner wants.
+- Search cutoff (`CLOSE_MATCH_MAX_DISTANCE = 0.2`) was not calibrated on real data; loosen it
+  if the owner reports missing results.
+- The recycle bin never empties itself (owner's choice).
 - `tests/browser/attachments_flow.mjs` still not run against the live project (needs a
   throwaway user; ask first).
-- The owner may delete merged branches on GitHub (sessions cannot).
+
+## Lessons from this session (read before adding native packages)
+
+- **The start-up crash (A3a builds #18 and #20):** `expo-screen-capture` registers
+  `Activity.registerScreenCaptureCallback` in its module's `OnCreate`, i.e. when the app starts;
+  on Android 14+ that throws without `DETECT_SCREEN_CAPTURE`, which `app.json` had put in
+  `blockedPermissions`. Fixed in #21 (permission no longer blocked; `src/lib/appConfig.test.ts`
+  guards it). **Before blocking a permission a library declares, read its Android code for what
+  runs at start-up** (`OnCreate`, `OnActivityEntersForeground`): Expo modules are created when
+  the app starts, not when first used.
+- The first diagnosis (react-native-libsodium) was a guess and cost a build; PR #20 replaced it
+  anyway (still an improvement): the vault uses `src/lib/sodiumLite.ts` (noble-sodium + @noble in
+  plain JavaScript, Argon2id native in `react-native-quick-crypto`, a Nitro module), loaded on
+  first vault use. `expo-doctor` flags "untested on New Architecture" packages; React Native 0.86
+  runs only the New Architecture, so prefer Expo modules, Nitro or TurboModule packages.
+- When the owner reports a crash, ask *when* it happens (at launch, on a screen, on an action),
+  then look for code that runs at that moment; list what changed since the last working build.
+  An adb logcat from the owner's computer would show the exception if guessing fails.
+- The vault crypto is tested three ways: `sodiumLite.test.ts` (each function vs libsodium
+  0.8.4), `vaultCrypto.test.ts` (the app's vault on sodiumLite vs the web `docs/vault/crypto.js`,
+  both directions), `vaultFlow.test.ts` (lock rules, reveal steps). Jest maps the web vault's
+  vendored libsodium to the `libsodium-wrappers-sumo` dev dependency and transforms `@noble`
+  and `@serenity-kit` (ESM).
+- Prebuild rewrites `package.json` scripts: copy `package.json` aside before
+  `npx expo prebuild` and copy it back after (a `git checkout package.json` also throws away new
+  dependencies not yet committed). Then `rm -rf android`.
+- `npm run check` has 105 tests.
 
 ## History of this phase (details in the plan's "as built" notes)
+
+- **A2b Share to Wilma** (PR #17): `expo-share-intent` (Android only; iOS extension off until
+  phase B), own listener `src/lib/shareIntake.tsx` (the package's hook drops content:// links),
+  files copied to the cache, one save flow `src/lib/saveNote.ts`. Confirmed on the phone.
+- **A3a vault unlock and reveal** (PRs #18, #20, #21): see "Lessons from this session" above.
 
 - **A1 read** (PR #11) + **Android session fix** (PR #12): on Android, expo-crypto's
   `AESSealedData.fromCombined` accepts only bytes (docs and iOS also accept base64), so the
