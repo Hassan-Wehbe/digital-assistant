@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { FlatList, RefreshControl, Text, TextInput, View } from 'react-native';
 
 import { ItemRow, SpaceRow } from '@/components/rows';
-import { Button, ErrorBox, Loading, Muted, styles, useColors, useLoad } from '@/components/ui';
+import { Button, ErrorBox, Loading, Muted, styles, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { versionLabel } from '@/lib/config';
 import type { SearchResult, Space } from '@/lib/wilma';
@@ -23,6 +23,8 @@ export default function Home() {
       ? (await wilma.search({ query, limit: 25, close_matches_only: true })).map((item) => ({ kind: 'item', item }))
       : (await wilma.listSpaces()).map((space) => ({ kind: 'space', space })),
   );
+
+  useReloadOnReturn(reload);
 
   const header = (
     <View style={{ gap: 12 }}>
@@ -49,6 +51,7 @@ export default function Home() {
   const footer = (
     <View style={{ gap: 8, marginTop: 16 }}>
       <Muted>Signed in as {session?.user.email ?? 'you'}</Muted>
+      <Button title="Recycle bin" kind="plain" onPress={() => router.push('/bin')} />
       <Button title="Sign out" kind="plain" onPress={signOut} />
       <Muted>{versionLabel(Application.nativeApplicationVersion, Application.nativeBuildVersion)}</Muted>
     </View>

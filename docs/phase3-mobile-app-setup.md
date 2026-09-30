@@ -63,5 +63,13 @@ From A2a:
 - **Add photos or files** on any item adds more to it.
 - The first time you take a photo, Android asks whether Wilma may use the camera.
 
+Deleting (after the recycle bin update):
+
+- **Delete note** (on a note): it moves to the **Recycle bin** (home screen, near Sign out),
+  where you can **Restore** it or **Delete for good**. Its files go only when it is deleted for good.
+- **Delete file** (on a file): deleted for good at once, after you confirm.
+- **Delete space** (at the bottom of a space): only when the space is empty; otherwise the app
+  says what is still inside.
+
 A new build is needed to see A1 on the phone (step 4.1 again, after the A1 pull request is
 merged); the A0 build cannot update itself.

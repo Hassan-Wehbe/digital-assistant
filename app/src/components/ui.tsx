@@ -1,7 +1,9 @@
 // Small building blocks shared by the screens.
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   StyleSheet,
   Text,
@@ -55,6 +57,20 @@ export function useLoad<T>(key: string, load: () => Promise<T>) {
   };
 }
 
+/** Load again when the screen is shown again (coming back after adding or deleting something). */
+export function useReloadOnReturn(reload: () => void) {
+  const first = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (first.current) {
+        first.current = false;
+        return;
+      }
+      reload();
+    }, [reload]),
+  );
+}
+
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   const c = useColors();
   return <View style={[styles.card, { backgroundColor: c.card, borderColor: c.line }, style]}>{children}</View>;
@@ -69,10 +85,11 @@ export function Button({
   title: string;
   onPress: () => void;
   disabled?: boolean;
-  kind?: 'primary' | 'plain';
+  kind?: 'primary' | 'plain' | 'danger';
 }) {
   const c = useColors();
   const primary = kind === 'primary';
+  const color = primary ? '#ffffff' : kind === 'danger' ? c.danger : c.accent;
   return (
     <Pressable
       accessibilityRole="button"
@@ -83,8 +100,18 @@ export function Button({
         primary ? { backgroundColor: c.accent } : { borderColor: c.line, borderWidth: 1 },
         (pressed || disabled) && { opacity: 0.6 },
       ]}>
-      <Text style={[styles.buttonText, { color: primary ? '#ffffff' : c.accent }]}>{title}</Text>
+      <Text style={[styles.buttonText, { color }]}>{title}</Text>
     </Pressable>
+  );
+}
+
+/** Ask before doing something destructive; resolves true only if the user confirms. */
+export function confirm(title: string, message: string, action: string): Promise<boolean> {
+  return new Promise((resolve) =>
+    Alert.alert(title, message, [
+      { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+      { text: action, style: 'destructive', onPress: () => resolve(true) },
+    ], { cancelable: true, onDismiss: () => resolve(false) }),
   );
 }
 

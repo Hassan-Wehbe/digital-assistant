@@ -33,6 +33,9 @@ import { registerAttachFile } from "./tools/attach_file.ts";
 import { registerGetAttachmentLink } from "./tools/get_attachment_link.ts";
 import { registerDescribeAttachment } from "./tools/describe_attachment.ts";
 import { registerDeleteAttachment } from "./tools/delete_attachment.ts";
+import { registerDeleteItem } from "./tools/delete_item.ts";
+import { registerListDeletedItems, registerPurgeItem, registerRestoreItem } from "./tools/recycle_bin.ts";
+import { registerDeleteSpace } from "./tools/delete_space.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -74,7 +77,7 @@ function unauthorized(detail: string): Response {
 
 function buildServer(ctx: ToolContext): McpServer {
   const server = new McpServer(
-    { name: "digital-assistant", version: "0.4.1" },
+    { name: "digital-assistant", version: "0.5.0" },
     { instructions: serverInstructions(ctx.assistantName) },
   );
   for (const register of [
@@ -95,6 +98,11 @@ function buildServer(ctx: ToolContext): McpServer {
     registerGetAttachmentLink,
     registerDescribeAttachment,
     registerDeleteAttachment,
+    registerDeleteItem,
+    registerListDeletedItems,
+    registerRestoreItem,
+    registerPurgeItem,
+    registerDeleteSpace,
   ]) {
     register(server, ctx);
   }

@@ -24,6 +24,7 @@ function Screens() {
         <Stack.Screen name="item/[id]" options={{ title: 'Item' }} />
         <Stack.Screen name="new-item" options={{ title: 'New note' }} />
         <Stack.Screen name="attach" options={{ title: 'Add photos or files' }} />
+        <Stack.Screen name="bin" options={{ title: 'Recycle bin' }} />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="sign-in" options={{ title: 'Sign in' }} />

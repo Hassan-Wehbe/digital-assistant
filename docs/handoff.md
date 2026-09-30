@@ -68,6 +68,15 @@ sources when a call takes "string or bytes".
   (`src/lib/sessionToken.ts`), opening the app offline keeps you signed in, and signing out
   offline still forgets the session on the phone.
 
+**Delete and recycle bin (owner's request after testing A2a, branch `claude/delete-and-recycle-bin`):**
+decisions: a deleted note goes to a recycle bin (see, restore, delete for good); a space can be
+deleted only when empty. Migration `recycle_bin` (functions `delete_item`, `restore_item`,
+`list_deleted_items`, `deleted_item_files`, `purge_item`, `delete_space`; dry run
+`tests/sql/08_recycle_bin.sql` passed 22/22), five MCP tools (server 0.5.0, 22 tools; the server
+instructions tell Claude to confirm anything permanent), and in the app: Delete note, Delete file,
+Delete space, Recycle bin (home screen). **Rollout order:** apply the migration, deploy `mcp`,
+then build the app. Not purged automatically: the bin keeps notes until the owner empties it.
+
 **A2 is split in two (owner agreed 2026-09-30):**
 - **A2a (branch `claude/app-a2a-save-attach`):** save a note, attach pictures and Visio files
   from the camera, the gallery and the phone's files. No database or server change: the app

@@ -21,6 +21,11 @@ import { registerAttachFile } from "../../supabase/functions/mcp/tools/attach_fi
 import { registerGetAttachmentLink } from "../../supabase/functions/mcp/tools/get_attachment_link.ts";
 import { registerDescribeAttachment } from "../../supabase/functions/mcp/tools/describe_attachment.ts";
 import { registerDeleteAttachment } from "../../supabase/functions/mcp/tools/delete_attachment.ts";
+import { registerDeleteItem } from "../../supabase/functions/mcp/tools/delete_item.ts";
+import {
+  registerListDeletedItems, registerPurgeItem, registerRestoreItem,
+} from "../../supabase/functions/mcp/tools/recycle_bin.ts";
+import { registerDeleteSpace } from "../../supabase/functions/mcp/tools/delete_space.ts";
 
 async function rpc(body: unknown) {
   const server = new McpServer({ name: "test", version: "0" });
@@ -29,7 +34,8 @@ async function rpc(body: unknown) {
                    registerGetItem, registerSearchItems, registerLinkItems, registerSaveSecret,
                    registerFindSecret, registerGetSecret, registerUpdateSecret, registerDeleteSecret,
                    registerSetAssistantName, registerAttachFile, registerGetAttachmentLink,
-                   registerDescribeAttachment, registerDeleteAttachment]) {
+                   registerDescribeAttachment, registerDeleteAttachment, registerDeleteItem,
+                   registerListDeletedItems, registerRestoreItem, registerPurgeItem, registerDeleteSpace]) {
     r(server, ctx);
   }
   const transport = new WebStandardStreamableHTTPServerTransport({
@@ -51,8 +57,9 @@ Deno.test("tools/list advertises the milestone-1, vault, settings and attachment
   const out = await rpc({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} });
   const names = out.result.tools.map((t: { name: string }) => t.name).sort();
   assertEquals(names, [
-    "attach_file", "create_space", "delete_attachment", "delete_secret", "describe_attachment", "find_secret",
-    "get_attachment_link", "get_item", "get_secret", "link_items", "list_spaces", "save_item", "save_secret",
+    "attach_file", "create_space", "delete_attachment", "delete_item", "delete_secret", "delete_space",
+    "describe_attachment", "find_secret", "get_attachment_link", "get_item", "get_secret", "link_items",
+    "list_deleted_items", "list_spaces", "purge_item", "restore_item", "save_item", "save_secret",
     "search_items", "set_assistant_name", "update_item", "update_secret",
   ]);
   const save = out.result.tools.find((t: { name: string }) => t.name === "save_item");
