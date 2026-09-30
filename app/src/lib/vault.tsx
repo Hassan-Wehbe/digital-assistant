@@ -18,7 +18,19 @@ import { useAuth } from './auth';
 import { supabase } from './supabase';
 import { sodiumLite } from './sodiumLite';
 import { forgetKeys, vaultCrypto, VaultError, type VaultCrypto, type VaultKeys, type VaultRecord } from './vaultCrypto';
-import { changeSecretValue, revealSecret, saveNewSecret, shouldLock, UNLOCK_MS, type Revealed } from './vaultFlow';
+import {
+  changePassphrase as changePassphraseFlow,
+  changeSecretValue,
+  finishSetup as finishSetupFlow,
+  recoverVault,
+  revealSecret,
+  saveNewSecret,
+  shouldLock,
+  startSetup as startSetupFlow,
+  UNLOCK_MS,
+  type PendingSetup,
+  type Revealed,
+} from './vaultFlow';
 import type { NewSecret } from './wilma';
 
 // The vault's cryptography is loaded the first time the vault is used, never when the
@@ -74,6 +86,15 @@ interface VaultState {
   changeValue(secret: { id: string; type: string }, values: Record<string, string>): Promise<{ id: string; name: string }>;
   updateDetails(secretId: string, change: { name?: string; url?: string }): Promise<void>;
   remove(secretId: string): Promise<void>;
+  /** Setup, step 1: new keys kept in memory; returns the recovery key to show once. */
+  startSetup(passphrase: string, again: string): Promise<string>;
+  /** Setup, step 2: the recovery key typed back; stores the wrapped keys and opens the vault. */
+  finishSetup(typedRecoveryKey: string): Promise<void>;
+  cancelSetup(): void;
+  /** New passphrase; the current one is needed even when unlocked. Opens the vault. */
+  changePassphrase(current: string, passphrase: string, again: string): Promise<void>;
+  /** Forgotten passphrase: the recovery key and a new passphrase. Opens the vault. */
+  recover(recoveryKey: string, passphrase: string, again: string): Promise<void>;
 }
 
 const VaultContext = createContext<VaultState | null>(null);
@@ -289,6 +310,63 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     [wilma, openKeys],
   );
 
+  // Setup keeps the new keys here (never in screen state) until the recovery key is confirmed.
+  const pending = useRef<PendingSetup | null>(null);
+  const cancelSetup = useCallback(() => {
+    forgetKeys(pending.current?.keys);
+    pending.current = null;
+  }, []);
+
+  const startSetup = useCallback(
+    async (passphrase: string, again: string) => {
+      await nextFrame();
+      const crypto = await loadCrypto();
+      cancelSetup();
+      pending.current = startSetupFlow(crypto, passphrase, again);
+      return pending.current.recoveryKey;
+    },
+    [cancelSetup],
+  );
+
+  const finishSetup = useCallback(
+    async (typedRecoveryKey: string) => {
+      const p = pending.current;
+      if (!p) throw new VaultError('not_ready', 'Start the setup again.');
+      const k = await finishSetupFlow({ rpc }, await loadCrypto(), p, typedRecoveryKey);
+      pending.current = null;
+      await refresh();
+      opened(k);
+    },
+    [refresh, opened],
+  );
+
+  const changePassphrase = useCallback(
+    async (current: string, passphrase: string, again: string) => {
+      const r = needRecord();
+      await nextFrame();
+      const k = await changePassphraseFlow({ rpc }, await loadCrypto(), r, current, passphrase, again);
+      await refresh();
+      opened(k);
+    },
+    [refresh, opened],
+  );
+
+  const recover = useCallback(
+    async (recoveryKey: string, passphrase: string, again: string) => {
+      const r = needRecord();
+      await nextFrame();
+      const k = await recoverVault({ rpc }, await loadCrypto(), r, recoveryKey, passphrase, again);
+      await refresh();
+      opened(k);
+    },
+    [refresh, opened],
+  );
+
+  // Setup keys left behind (the screen was closed) are dropped on sign-out.
+  useEffect(() => {
+    if (!signedIn) cancelSetup();
+  }, [signedIn, cancelSetup]);
+
   const value = useMemo<VaultState>(
     () => ({
       status,
@@ -306,6 +384,11 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       changeValue,
       updateDetails,
       remove,
+      startSetup,
+      finishSetup,
+      cancelSetup,
+      changePassphrase,
+      recover,
     }),
     [
       status,
@@ -323,6 +406,11 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       changeValue,
       updateDetails,
       remove,
+      startSetup,
+      finishSetup,
+      cancelSetup,
+      changePassphrase,
+      recover,
     ],
   );
   return <VaultContext.Provider value={value}>{children}</VaultContext.Provider>;
