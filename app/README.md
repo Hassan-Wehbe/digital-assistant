@@ -59,4 +59,7 @@ none), "draw over other apps", and the microphone the image picker would add for
 Other permissions are added only with the features that need them. Share to Wilma (A2b)
 adds no permission: Android lets the app read what you share (JPEG, PNG, Visio, text).
 The vault's fingerprint unlock adds Android's "use biometrics" permission (no question
-asked); the screenshot blocker's photo and screenshot-detection permissions are blocked.
+asked). The screenshot blocker (expo-screen-capture) needs "detect screen capture" on
+Android 14+ (granted at install, never asked, no access to photos or files): blocking it
+crashes the app at launch, and `src/lib/appConfig.test.ts` guards that. Its photo permission
+(READ_MEDIA_IMAGES) stays blocked.
