@@ -10,12 +10,11 @@
 //   secret payload  crypto_box_seal(padded JSON, public key)     (stored)
 //                   JSON = {"v":1,"secret_id","type","fields":{...}}
 //
-// libsodium does the cryptography (react-native-libsodium on the phone,
-// libsodium-wrappers-sumo in the tests). That phone library lacks four helpers the
-// web code uses; they are written here and checked against libsodium in the tests:
-// pad/unpad (ISO/IEC 7816-4, as sodium_pad), memcmp (constant time), memzero, and
-// the "private key belongs to this public key" check (a sealed-box round trip
-// instead of crypto_scalarmult_base).
+// The libsodium functions come from sodiumLite.ts on the phone (noble + native Argon2id)
+// and from libsodium-wrappers-sumo in the tests. The web code also uses pad/unpad,
+// memcmp, memzero and crypto_scalarmult_base; the first four are written here and checked
+// against libsodium in the tests, and "this private key belongs to this public key" is
+// checked with a sealed-box round trip.
 //
 // The passphrase, recovery key, private key and secret values stay in memory on
 // the phone; never log them or put them in an error message.

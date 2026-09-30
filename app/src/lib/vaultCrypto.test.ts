@@ -1,11 +1,14 @@
 /* eslint-disable import/no-named-as-default-member -- libsodium's functions are used from its default export, as on the web */
-// The app's vault code against the web vault's (docs/vault/crypto.js), both on
-// libsodium-wrappers-sumo 0.8.4 (the version the web pages ship): each must open
-// what the other made, so secrets move freely between the phone and the web.
+// The app's vault code, on sodiumLite as on the phone (with noble's Argon2id standing in
+// for the phone's native one), against the web vault's (docs/vault/crypto.js) on
+// libsodium-wrappers-sumo 0.8.4 (the version the web pages ship): each must open what the
+// other made, so secrets move freely between the phone and the web.
 import { beforeAll, describe, expect, it } from '@jest/globals';
+import { argon2id } from '@noble/hashes/argon2.js';
 import sodium from 'libsodium-wrappers-sumo';
 
 import * as web from '../../../docs/vault/crypto.js';
+import { sodiumLite } from './sodiumLite';
 import { displayRows, KDF_DEFAULT, memcmp, pad, SECRET_FIELDS, unpad, vaultCrypto, VaultError, type KdfParams, type VaultCrypto } from './vaultCrypto';
 
 // Real Argon2id settings (the stored ones), but lighter memory keeps the tests quick;
@@ -20,7 +23,12 @@ let app: VaultCrypto;
 beforeAll(async () => {
   await sodium.ready;
   await web.ready();
-  app = vaultCrypto(sodium);
+  app = vaultCrypto(
+    sodiumLite(
+      (password, salt, p) => argon2id(password, salt, { t: p.passes, m: p.memoryKiB, p: 1, dkLen: p.tagLength }),
+      (n) => sodium.randombytes_buf(n),
+    ),
+  );
 });
 
 const code = (f: () => unknown) => {

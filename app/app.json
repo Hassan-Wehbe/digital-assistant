@@ -80,7 +80,7 @@
           "disableIOS": true
         }
       ],
-      "react-native-libsodium"
+      "react-native-quick-crypto"
     ],
     "experiments": {
       "typedRoutes": true,
