@@ -9,7 +9,8 @@ import { dirname, fromFileUrl, join, resolve } from "jsr:@std/path@1";
 const DOCS = resolve(dirname(fromFileUrl(import.meta.url)), "../../docs");
 const DIR = join(DOCS, "vault");
 const PAGES = ["vault/setup.html", "vault/enter.html", "vault/reveal.html", "vault/recover.html",
-               "vault/index.html", "oauth/consent.html", "files/upload.html"];
+               "vault/index.html", "oauth/consent.html", "files/upload.html",
+               "legal/privacy.html", "legal/delete-account.html"];
 const SCRIPTS = ["vault/app.js", "vault/crypto.js", "vault/setup.js", "vault/enter.js", "vault/reveal.js",
                  "vault/recover.js", "oauth/consent.js", "files/upload.js", "files/filetypes.js"];
 
@@ -68,7 +69,7 @@ Deno.test("each page preloads (with integrity) every module its script imports",
     }
     return out;
   };
-  for (const page of PAGES.filter((p) => p !== "vault/index.html")) {
+  for (const page of PAGES.filter((p) => p !== "vault/index.html" && !p.startsWith("legal/"))) {
     const html = await Deno.readTextFile(join(DOCS, page));
     const base = dirname(join(DOCS, page));
     const entry = html.match(/<script type="module" src="([^"]+)"/)![1];
