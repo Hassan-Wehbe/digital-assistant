@@ -110,15 +110,29 @@ describe('wilma client', () => {
 
   it('uses the knowledge tools and only the vault tools that return names and links', () => {
     expect([...APP_TOOLS].sort()).toEqual([
-      'attach_file', 'delete_attachment', 'delete_item', 'delete_secret', 'delete_space', 'find_secret', 'get_attachment_link',
-      'get_item', 'get_secret', 'list_deleted_items', 'list_spaces', 'purge_item', 'restore_item', 'save_item', 'save_secret',
+      'attach_file', 'create_space', 'delete_attachment', 'delete_item', 'delete_secret', 'delete_space', 'find_secret',
+      'get_attachment_link', 'get_item', 'get_secret', 'list_deleted_items', 'list_spaces', 'purge_item', 'restore_item', 'save_item', 'save_secret',
       'search_items', 'update_secret',
     ]);
     expect(Object.keys(setup([]).client).sort()).toEqual(
-      ['attachmentLink', 'deleteAttachment', 'deleteItem', 'deleteSecret', 'deleteSpace', 'findSecrets', 'getItem', 'listSpaces',
+      ['attachmentLink', 'createSpace', 'deleteAttachment', 'deleteItem', 'deleteSecret', 'deleteSpace', 'findSecrets', 'getItem', 'listSpaces',
         'newValueLink', 'purgeItem', 'recycleBin', 'restoreItem', 'revealLink', 'saveItem', 'saveSecret', 'search', 'updateSecret',
         'uploadLink'],
     );
+  });
+
+  it('creates a space with only the fields given', async () => {
+    const { client, fetch } = setup([
+      reply(200, toolResult({ id: 's9', path: 'Recipes', restricted: false })),
+      reply(200, toolResult({ id: 's10', path: 'Work/Gartner', restricted: true })),
+    ]);
+    expect((await client.createSpace({ name: 'Recipes' })).path).toBe('Recipes');
+    await client.createSpace({ name: 'Gartner', parent: 's1', description: 'Client work', restricted: true });
+    const params = fetch.mock.calls.map(([, init]) => JSON.parse(init.body as string).params);
+    expect(params).toEqual([
+      { name: 'create_space', arguments: { name: 'Recipes' } },
+      { name: 'create_space', arguments: { name: 'Gartner', parent: 's1', description: 'Client work', restricted: true } },
+    ]);
   });
 
   it('saves, changes and deletes secrets with metadata only (never a value)', async () => {

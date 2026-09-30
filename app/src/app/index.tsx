@@ -2,7 +2,7 @@
 import * as Application from 'expo-application';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { FlatList, RefreshControl, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, Text, TextInput, View } from 'react-native';
 
 import { ItemRow, SpaceRow } from '@/components/rows';
 import { Button, ErrorBox, Loading, Muted, styles, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
@@ -43,7 +43,16 @@ export default function Home() {
         clearButtonMode="while-editing"
         autoCapitalize="none"
       />
-      <Text style={[styles.title, { color: c.text }]}>{query ? `Results for “${query}”` : 'Spaces'}</Text>
+      {query ? (
+        <Text style={[styles.title, { color: c.text }]}>{`Results for “${query}”`}</Text>
+      ) : (
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Text style={[styles.title, { color: c.text }]}>Spaces</Text>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/new-space')} hitSlop={8}>
+            <Text style={{ color: c.accent, fontSize: 16, fontWeight: '600' }}>+ New space</Text>
+          </Pressable>
+        </View>
+      )}
       {error ? <ErrorBox message={error} onRetry={reload} /> : null}
     </View>
   );
@@ -61,7 +70,7 @@ export default function Home() {
   const empty = loading ? (
     <Loading />
   ) : error ? null : (
-    <Muted>{query ? 'Nothing found.' : 'No spaces yet. Ask Wilma in the Claude app to create one.'}</Muted>
+    <Muted>{query ? 'Nothing found.' : 'No spaces yet. Tap “+ New space” to create one.'}</Muted>
   );
 
   return (
