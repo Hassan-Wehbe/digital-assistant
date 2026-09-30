@@ -6,6 +6,33 @@ first and iOS after, from one codebase with minimal changes**. PC and Mac use a 
 install); an installed desktop app with background "Hey Wilma" may come later from the same
 code. Read first: `CLAUDE.md`, `docs/design.md`, `docs/phase2-attachments-plan.md`.
 
+## The experience: one Wilma, no modes (owner's direction, 2026-09-30)
+
+**Value proposition:** you tell Wilma what you want, in your own words, typed or spoken, and
+it happens. If you have to decide *how* to ask ("is this a search or a chat?", "which screen
+does this go on?"), the assistant has failed. Everything below serves that.
+
+- **One box, and a microphone.** The box at the top of the home screen *is* Wilma. Anything
+  goes: "soup", "what's the cottage Wi-Fi password", "save this photo to Recipes, it's
+  grandma's lentil soup", "delete the old one". There is no search mode, chat mode or
+  button to choose between them.
+- **Something useful at once, the answer right after.** Matching notes appear instantly (the
+  existing search, free and private) while Wilma works out whether a real answer or an action
+  is needed; if so, its reply appears under the matches a moment later. Never a blank wait.
+- **Actions just happen, with a safety net.** Saving, attaching, moving happen directly and
+  show the result. Anything destructive asks first (and deleted notes go to the recycle bin);
+  passwords are only ever shown in the vault on the phone, never in the conversation.
+- **It keeps the thread.** "Delete the old one" works because Wilma knows what was just shown.
+- **The same Wilma everywhere:** the box, voice, the Share menu, and later "Hey Wilma",
+  Telegram and the PC/Mac web page all feed the same conversation and the same tools.
+- **The routing is invisible.** Behind the box a router decides, per message, what is needed.
+  It is a speed and cost optimisation the user never sees (details under A5); when in doubt it
+  goes to Wilma, because getting it right matters more than saving a cent.
+- **No surprise bills.** A monthly AI budget the owner sets (for example $5 or $10), with a
+  quiet warning near the limit; searches and browsing never count against it.
+- **Browsing stays.** Spaces, notes, attachments and the recycle bin remain one tap away for
+  when the owner wants to look around rather than ask.
+
 ## What the app adds over the Claude app
 
 The Claude app already reaches Wilma on every platform. The app is for what it cannot do:
@@ -14,7 +41,8 @@ The Claude app already reaches Wilma on every platform. The app is for what it c
   any other app), with no upload link and no picking the file twice.
 - The vault inside the app: save and reveal secrets with the same passphrase, no browser tab.
 - Browse spaces and items, not only ask about them.
-- Later: chat with Wilma in the app, voice, notifications (reminders).
+- The one box (A5): ask, save and act in plain words or by voice, without choosing a mode.
+- Later: notifications (reminders).
 
 ## Technology
 
@@ -109,10 +137,32 @@ Each is one PR, tested, and approved by the owner before the next.
   logged with channel `web` like the reveal page.
 - **A4 Android release.** Privacy policy page (on the existing GitHub Pages site), Play
   Store listing, data-safety form, and a first release to a testing track (below).
-- **A5 Chat with Wilma, typed and by voice** (the owner creates the API key at this point). New Edge Function `chat`: the
-  app sends the conversation, the function calls the Claude API, which uses the same MCP
-  tools. The key lives only in Supabase secrets. Pictures go to Claude (for the
-  description) and to Storage (the file) in the same step.
+- **A5 One conversational box, typed and by voice** (the owner creates the API key at this
+  point). Design: "The experience" at the top of this plan. Pieces:
+  - **The box** replaces the home search field: text or microphone (the phone's built-in
+    speech recognition; spoken replies with its text-to-speech, optional). Results and
+    Wilma's replies appear as one thread under it; spaces stay below for browsing.
+  - **Router, on the phone, invisible.** Rules first (instant, free): a lone keyword or short
+    phrase shows search results only; a question ("what / how / when / did I ... ?", a
+    question mark) or a command ("save / add / attach / move / delete / remind ...") goes to
+    Wilma; a follow-up in an ongoing thread goes to Wilma. Unclear cases: a small, cheap Claude
+    model classifies (lookup / question / action), a fraction of a cent. Search results always
+    show at once; if they are weak (nothing close) Wilma is asked automatically. When in doubt,
+    Wilma. The router learns nothing hidden: its rules live in the app code and are tested.
+  - **New Edge Function `chat`:** the app sends the thread; the function calls the Claude API
+    with the same MCP tools the Claude app uses (so every rule, including restricted spaces
+    and the vault's zero-knowledge design, holds unchanged). The API key lives only in
+    Supabase secrets. The model is chosen for cost and quality after measuring (default model
+    for answers and actions, a small model for routing and short replies), with prompt caching.
+  - **Safety net:** destructive tools ask for confirmation in the thread (a tap), deletes use
+    the recycle bin; a vault request opens the in-app vault (A3) instead of showing a value.
+  - **Budget:** a monthly limit the owner sets in the app (stored server-side and enforced in
+    `chat`), a warning near it, and a clear message if reached (search and browsing keep
+    working). The Console spend limit stays as a second safety line.
+  - **Pictures** shared or taken in the thread go to Claude (for the description) and to
+    Storage (the file) in the same step.
+  - Same thread later from the Share menu (A2b shares can carry a spoken or typed request),
+    "Hey Wilma", Telegram and the web page.
 - **B iOS.** Same code. Owner: Apple Developer account ($99 a year). iOS build through EAS,
   iOS permission texts and share extension settings, TestFlight, then App Store review.
 - **Later:** "Hey Wilma" wake word, notifications/reminders, PC/Mac web
@@ -171,6 +221,14 @@ Made by the owner (2026-09-29):
   default model; cost tuning (model choice, prompt caching) after measuring real use.
 - **Voice uses the phone's built-in speech recognition and text-to-speech** (free, no extra
   key); a paid speech-to-text service only if the built-in one is not good enough.
+
+Made by the owner (2026-09-30):
+
+- **Seamless experience is the value proposition:** one box (and a microphone) for
+  everything, no search/chat modes for the user to choose; an invisible router picks
+  instant search, Wilma's answer or an action, and when in doubt asks Wilma; destructive
+  actions confirm first; a monthly AI budget prevents surprise bills. See "The experience"
+  at the top and A5.
 
 Still open:
 
