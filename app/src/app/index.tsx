@@ -62,6 +62,7 @@ export default function Home() {
       <Muted>Signed in as {session?.user.email ?? 'you'}</Muted>
       <Button title="Vault" kind="plain" onPress={() => router.push('/vault')} />
       <Button title="Recycle bin" kind="plain" onPress={() => router.push('/bin')} />
+      <Button title="Change sign-in password" kind="plain" onPress={() => router.push('/account')} />
       <Button title="Sign out" kind="plain" onPress={signOut} />
       <Muted>{versionLabel(Application.nativeApplicationVersion, Application.nativeBuildVersion)}</Muted>
     </View>

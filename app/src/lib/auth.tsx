@@ -3,6 +3,7 @@ import { isAuthRetryableFetchError, type Session } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { MCP_URL } from './config';
+import { changePassword as changePasswordFlow } from './password';
 import { sessionToken } from './sessionToken';
 import { supabase } from './supabase';
 import { wilmaClient, type WilmaClient } from './wilma';
@@ -16,6 +17,8 @@ interface AuthState {
   wilma: WilmaClient;
   signIn(email: string, password: string): Promise<string | null>;
   signOut(): Promise<void>;
+  /** New sign-in password; the current one is checked first. */
+  changePassword(current: string, next: string, again: string): Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -76,6 +79,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!error) return null;
         // Supabase's messages are plain ("Invalid login credentials"); never echo the password.
         return error.message || 'Sign-in failed.';
+      },
+      async changePassword(current, next, again) {
+        await changePasswordFlow(
+          {
+            verify: async (email, password) => (await supabase.auth.signInWithPassword({ email, password })).error?.message ?? null,
+            update: async (password) => (await supabase.auth.updateUser({ password })).error?.message ?? null,
+          },
+          session?.user.email,
+          current,
+          next,
+          again,
+        );
       },
       async signOut() {
         // Ends the session on the server too; without a connection that fails, so the
