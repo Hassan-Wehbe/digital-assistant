@@ -18,7 +18,8 @@ import { useAuth } from './auth';
 import { supabase } from './supabase';
 import { sodiumLite } from './sodiumLite';
 import { forgetKeys, vaultCrypto, VaultError, type VaultCrypto, type VaultKeys, type VaultRecord } from './vaultCrypto';
-import { revealSecret, shouldLock, UNLOCK_MS, type Revealed } from './vaultFlow';
+import { changeSecretValue, revealSecret, saveNewSecret, shouldLock, UNLOCK_MS, type Revealed } from './vaultFlow';
+import type { NewSecret } from './wilma';
 
 // The vault's cryptography is loaded the first time the vault is used, never when the
 // app starts, so a problem in it can only affect the vault. Argon2id (64 MB) runs natively
@@ -66,6 +67,13 @@ interface VaultState {
   lock(): void;
   forgetFingerprint(): Promise<void>;
   reveal(secretId: string): Promise<Revealed>;
+  /** Save a new secret (sealed to the public key; works while locked). Never log `values`. */
+  save(input: NewSecret, values: Record<string, string>): Promise<{ id: string; name: string }>;
+  // Changing an existing secret needs the vault unlocked, so a phone left open cannot
+  // overwrite or delete secrets without the passphrase or fingerprint.
+  changeValue(secret: { id: string; type: string }, values: Record<string, string>): Promise<{ id: string; name: string }>;
+  updateDetails(secretId: string, change: { name?: string; url?: string }): Promise<void>;
+  remove(secretId: string): Promise<void>;
 }
 
 const VaultContext = createContext<VaultState | null>(null);
@@ -229,16 +237,56 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     if (userId) await forgetStored(userId);
   }, [userId, forgetStored]);
 
+  const openKeys = useCallback(() => {
+    const k = keys.current;
+    if (!k || shouldLock(unlockedAt.current, Date.now(), null)) {
+      lock();
+      throw new VaultError('locked', 'The vault locked. Unlock it again.');
+    }
+    return k;
+  }, [lock]);
+
   const reveal = useCallback(
     async (secretId: string) => {
-      const k = keys.current;
-      if (!k || shouldLock(unlockedAt.current, Date.now(), null)) {
-        lock();
-        throw new VaultError('locked', 'The vault locked. Unlock it again.');
-      }
+      const k = openKeys();
       return revealSecret({ revealLink: wilma.revealLink, rpc }, await loadCrypto(), k, secretId);
     },
-    [wilma, lock],
+    [wilma, openKeys],
+  );
+
+  const save = useCallback(
+    async (input: NewSecret, values: Record<string, string>) => {
+      await nextFrame();
+      const crypto = await loadCrypto();
+      return saveNewSecret({ saveSecret: wilma.saveSecret, rpc }, crypto, input, values, record.current?.public_key ?? null);
+    },
+    [wilma],
+  );
+
+  const changeValue = useCallback(
+    async (secret: { id: string; type: string }, values: Record<string, string>) => {
+      openKeys();
+      await nextFrame();
+      const crypto = await loadCrypto();
+      return changeSecretValue({ newValueLink: wilma.newValueLink, rpc }, crypto, secret, values, record.current?.public_key ?? null);
+    },
+    [wilma, openKeys],
+  );
+
+  const updateDetails = useCallback(
+    async (secretId: string, change: { name?: string; url?: string }) => {
+      openKeys();
+      await wilma.updateSecret(secretId, change);
+    },
+    [wilma, openKeys],
+  );
+
+  const remove = useCallback(
+    async (secretId: string) => {
+      openKeys();
+      await wilma.deleteSecret(secretId);
+    },
+    [wilma, openKeys],
   );
 
   const value = useMemo<VaultState>(
@@ -254,8 +302,28 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       lock,
       forgetFingerprint,
       reveal,
+      save,
+      changeValue,
+      updateDetails,
+      remove,
     }),
-    [status, problem, locksAt, fingerprint, fingerprintPossible, refresh, unlockWithPassphrase, unlockWithFingerprint, lock, forgetFingerprint, reveal],
+    [
+      status,
+      problem,
+      locksAt,
+      fingerprint,
+      fingerprintPossible,
+      refresh,
+      unlockWithPassphrase,
+      unlockWithFingerprint,
+      lock,
+      forgetFingerprint,
+      reveal,
+      save,
+      changeValue,
+      updateDetails,
+      remove,
+    ],
   );
   return <VaultContext.Provider value={value}>{children}</VaultContext.Provider>;
 }

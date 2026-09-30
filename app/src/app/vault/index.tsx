@@ -55,6 +55,7 @@ export default function VaultScreen() {
           <Button title="Lock now" kind="plain" onPress={vault.lock} />
         </Card>
       )}
+      <Button title="Save a new secret" onPress={() => router.push('/vault/enter')} />
       <TextInput
         style={[styles.input, { color: c.text, borderColor: c.line, backgroundColor: c.card }]}
         placeholder="Find a secret by name or website"
@@ -75,7 +76,7 @@ export default function VaultScreen() {
   const footer = (
     <View style={{ gap: 8, marginTop: 16 }}>
       {vault.fingerprint ? <Button title="Stop using fingerprint for the vault" kind="plain" onPress={vault.forgetFingerprint} /> : null}
-      <Muted>To save a new secret, ask Wilma in the Claude app for now; saving in the app comes next.</Muted>
+      <Muted>Open a secret to reveal it, give it a new value, rename it or delete it (unlock the vault first).</Muted>
     </View>
   );
 

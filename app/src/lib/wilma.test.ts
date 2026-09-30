@@ -110,13 +110,42 @@ describe('wilma client', () => {
 
   it('uses the knowledge tools and only the vault tools that return names and links', () => {
     expect([...APP_TOOLS].sort()).toEqual([
-      'attach_file', 'delete_attachment', 'delete_item', 'delete_space', 'find_secret', 'get_attachment_link', 'get_item',
-      'get_secret', 'list_deleted_items', 'list_spaces', 'purge_item', 'restore_item', 'save_item', 'search_items',
+      'attach_file', 'delete_attachment', 'delete_item', 'delete_secret', 'delete_space', 'find_secret', 'get_attachment_link',
+      'get_item', 'get_secret', 'list_deleted_items', 'list_spaces', 'purge_item', 'restore_item', 'save_item', 'save_secret',
+      'search_items', 'update_secret',
     ]);
     expect(Object.keys(setup([]).client).sort()).toEqual(
-      ['attachmentLink', 'deleteAttachment', 'deleteItem', 'deleteSpace', 'findSecrets', 'getItem', 'listSpaces', 'purgeItem',
-        'recycleBin', 'restoreItem', 'revealLink', 'saveItem', 'search', 'uploadLink'],
+      ['attachmentLink', 'deleteAttachment', 'deleteItem', 'deleteSecret', 'deleteSpace', 'findSecrets', 'getItem', 'listSpaces',
+        'newValueLink', 'purgeItem', 'recycleBin', 'restoreItem', 'revealLink', 'saveItem', 'saveSecret', 'search', 'updateSecret',
+        'uploadLink'],
     );
+  });
+
+  it('saves, changes and deletes secrets with metadata only (never a value)', async () => {
+    const entry = { entry_link: 'https://x/vault/enter#t=abc', expires_at: 'soon' };
+    const { client, fetch } = setup([
+      reply(200, toolResult({ ...entry, secret: { id: 's2' } })),
+      reply(200, toolResult({ ...entry, secret: { id: 's3' } })),
+      reply(200, toolResult({ ...entry, secret: { id: 's1' } })),
+      reply(200, toolResult({ secret: { id: 's1', name: 'Home router' } })),
+      reply(200, toolResult({ secret: { id: 's1' } })),
+      reply(200, toolResult({ deleted: true, id: 's1', name: 'Home router' })),
+    ]);
+    await client.saveSecret({ space: 'Logins', name: 'Router', secret_type: 'wifi', url: 'http://192.168.1.1' });
+    await client.saveSecret({ space: 'Logins', name: 'Bank', secret_type: 'login', url: '' });
+    await client.newValueLink('s1');
+    await client.updateSecret('s1', { name: 'Home router' });
+    await client.updateSecret('s1', { url: '' });
+    await client.deleteSecret('s1');
+    const params = fetch.mock.calls.map(([, init]) => JSON.parse(init.body as string).params);
+    expect(params).toEqual([
+      { name: 'save_secret', arguments: { space: 'Logins', name: 'Router', secret_type: 'wifi', url: 'http://192.168.1.1' } },
+      { name: 'save_secret', arguments: { space: 'Logins', name: 'Bank', secret_type: 'login' } },
+      { name: 'update_secret', arguments: { secret_id: 's1', new_value: true } },
+      { name: 'update_secret', arguments: { secret_id: 's1', name: 'Home router' } },
+      { name: 'update_secret', arguments: { secret_id: 's1', url: '' } },
+      { name: 'delete_secret', arguments: { secret_id: 's1' } },
+    ]);
   });
 
   it('asks for secrets by id and lists them with a limit', async () => {
