@@ -20,8 +20,9 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "blockedPermissions": [
-        "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.WRITE_EXTERNAL_STORAGE"
       ]
     },
@@ -40,7 +41,15 @@
         }
       ],
       "expo-secure-store",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Wilma uses the camera when you take a photo to attach to a note.",
+          "photosPermission": "Wilma opens your photos when you choose pictures to attach to a note.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

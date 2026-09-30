@@ -55,5 +55,13 @@ for Wilma in the Claude app (you type them on the phone, never into a chat). The
   fresh 10-minute link and opens it in the phone's browser, which saves the file.
 - **Sign out** is at the bottom of the home screen.
 
+From A2a:
+
+- **New note or photo** (home screen) or **New note here** (inside a space): pick the space,
+  give a title, write the note, and optionally add pictures or Visio files: **Take photo**,
+  **Choose pictures** or **Choose files**, with a caption for each. **Save**.
+- **Add photos or files** on any item adds more to it.
+- The first time you take a photo, Android asks whether Wilma may use the camera.
+
 A new build is needed to see A1 on the phone (step 4.1 again, after the A1 pull request is
 merged); the A0 build cannot update itself.

@@ -108,10 +108,31 @@ describe('wilma client', () => {
     await expect(garbled.client.listSpaces()).rejects.toThrow('could not read');
   });
 
-  it('uses only the read tools (no vault tools in this version)', () => {
-    expect([...APP_TOOLS].sort()).toEqual(['get_attachment_link', 'get_item', 'list_spaces', 'search_items']);
+  it('uses only the knowledge tools (no vault tools in this version)', () => {
+    expect([...APP_TOOLS].sort()).toEqual(
+      ['attach_file', 'get_attachment_link', 'get_item', 'list_spaces', 'save_item', 'search_items'],
+    );
     expect(APP_TOOLS.some((t) => /secret/.test(t))).toBe(false);
-    expect(Object.keys(setup([]).client).sort()).toEqual(['attachmentLink', 'getItem', 'listSpaces', 'search']);
+    expect(Object.keys(setup([]).client).sort()).toEqual(
+      ['attachmentLink', 'getItem', 'listSpaces', 'saveItem', 'search', 'uploadLink'],
+    );
+  });
+
+  it('saves a note and asks for upload links with the right arguments', async () => {
+    const { client, fetch } = setup([
+      reply(200, toolResult({ id: 'i9', space: 'Recipes' })),
+      reply(200, toolResult({ upload_link: 'https://x/upload#t=abc', expires_at: 'soon', item: { id: 'i9', title: 'Soup', created: false } })),
+      reply(200, toolResult({ upload_link: 'https://x/upload#t=def', expires_at: 'soon', item: { id: 'i10', title: 'Board', created: true } })),
+    ]);
+    await client.saveItem({ space: 's1', title: 'Soup', body: 'Lentils' });
+    await client.uploadLink({ item_id: 'i9' });
+    await client.uploadLink({ space: 's1', title: 'Board', note: 'Tuesday' });
+    const params = fetch.mock.calls.map(([, init]) => JSON.parse(init.body as string).params);
+    expect(params).toEqual([
+      { name: 'save_item', arguments: { space: 's1', title: 'Soup', body: 'Lentils', item_type: 'note' } },
+      { name: 'attach_file', arguments: { item_id: 'i9' } },
+      { name: 'attach_file', arguments: { space: 's1', title: 'Board', note: 'Tuesday' } },
+    ]);
   });
 });
 

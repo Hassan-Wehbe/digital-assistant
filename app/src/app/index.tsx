@@ -1,5 +1,6 @@
 // Home: search everything (restricted spaces are never searched), or browse by space.
 import * as Application from 'expo-application';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, RefreshControl, Text, TextInput, View } from 'react-native';
 
@@ -25,6 +26,7 @@ export default function Home() {
 
   const header = (
     <View style={{ gap: 12 }}>
+      <Button title="New note or photo" onPress={() => router.push('/new-item')} />
       <TextInput
         style={[styles.input, { color: c.text, borderColor: c.line, backgroundColor: c.card }]}
         placeholder="Search your notes, recipes, designs…"

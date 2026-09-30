@@ -1,6 +1,6 @@
 // One item in full: text, tags, attachments (with a download button) and linked items.
-import { Link, Stack, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { Link, router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
 import { Linking, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 
 import { Button, Card, ErrorBox, Loading, Muted, styles, useColors, useLoad } from '@/components/ui';
@@ -12,6 +12,18 @@ export default function ItemScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { wilma } = useAuth();
   const { data: item, error, loading, reload } = useLoad(`item:${id}`, () => wilma.getItem(id));
+
+  // Coming back from "Add photos or files": show the new attachments.
+  const firstFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (firstFocus.current) {
+        firstFocus.current = false;
+        return;
+      }
+      reload();
+    }, [reload]),
+  );
 
   if (!item) {
     return (
@@ -59,6 +71,11 @@ export default function ItemScreen() {
             ))}
           </>
         )}
+        <Button
+          title="Add photos or files"
+          kind="plain"
+          onPress={() => router.push({ pathname: '/attach', params: { itemId: item.id, title: item.title } })}
+        />
 
         {item.links.length > 0 && (
           <>

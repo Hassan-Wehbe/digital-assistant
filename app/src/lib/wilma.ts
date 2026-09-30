@@ -5,7 +5,14 @@
 // stateless and answers with JSON.
 
 /** The tools this version of the app uses. Vault tools are left out until A3. */
-export const APP_TOOLS = ['list_spaces', 'search_items', 'get_item', 'get_attachment_link'] as const;
+export const APP_TOOLS = [
+  'list_spaces',
+  'search_items',
+  'get_item',
+  'get_attachment_link',
+  'save_item',
+  'attach_file',
+] as const;
 export type AppTool = (typeof APP_TOOLS)[number];
 
 export interface Space {
@@ -58,6 +65,19 @@ export interface Item {
   attachments: Attachment[];
   links: ItemLink[];
   revision_count: number;
+}
+
+export interface NewItem {
+  space: string;
+  title: string;
+  body: string;
+  item_type?: string;
+}
+
+export interface UploadLink {
+  upload_link: string;
+  expires_at: string;
+  item: { id: string; title: string; space?: string; created: boolean };
 }
 
 export interface AttachmentLink {
@@ -143,6 +163,11 @@ export function wilmaClient({ url, token, refresh, fetch: f = fetch }: ClientOpt
       (await call<{ results: SearchResult[] }>('search_items', opts)).results,
     getItem: (id: string) => call<Item>('get_item', { item_id: id }),
     attachmentLink: (id: string) => call<AttachmentLink>('get_attachment_link', { attachment_id: id }),
+    saveItem: ({ space, title, body, item_type = 'note' }: NewItem) =>
+      call<{ id: string; space: string }>('save_item', { space, title, body, item_type }),
+    /** A one-time upload link for an existing item, or for a new one (space + title + note). */
+    uploadLink: (target: { item_id: string } | { space: string; title: string; note?: string }) =>
+      call<UploadLink>('attach_file', target),
   };
 }
 
