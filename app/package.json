@@ -66,5 +66,14 @@
     "moduleNameMapper": {
       "^\\./vendor/libsodium-wrappers\\.mjs$": "libsodium-wrappers-sumo"
     }
+  },
+  "expo": {
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "exclude": [
+          "react-native-libsodium"
+        ]
+      }
+    }
   }
 }

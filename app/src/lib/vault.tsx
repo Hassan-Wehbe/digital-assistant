@@ -21,6 +21,11 @@ import { revealSecret, shouldLock, UNLOCK_MS, type Revealed } from './vaultFlow'
 
 export const crypto = vaultCrypto(sodium as unknown as Sodium);
 
+// react-native-libsodium installs its functions when the app starts. It is listed as
+// "untested on the New Architecture" (it runs through React Native's compatibility layer),
+// so if they are missing the vault says so instead of failing half-way.
+const nativeReady = () => typeof (globalThis as { jsi_crypto_box_seal?: unknown }).jsi_crypto_box_seal === 'function';
+
 const keyItem = (userId: string) => `wilma.vault.key.${userId}`;
 const pubItem = (userId: string) => `wilma.vault.pub.${userId}`;
 const PROTECTED: SecureStore.SecureStoreOptions = { requireAuthentication: true };
@@ -91,6 +96,11 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     if (!userId) return;
     setProblem(null);
+    if (!nativeReady()) {
+      setProblem("The vault's encryption library did not load on this phone, so the vault cannot open here. The rest of Wilma works; use the vault pages in the browser for now.");
+      setStatus('error');
+      return;
+    }
     try {
       const r = await rpc('get_vault_keys');
       if (!r?.set_up) {
