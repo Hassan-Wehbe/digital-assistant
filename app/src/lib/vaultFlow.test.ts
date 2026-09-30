@@ -2,10 +2,15 @@
 import { beforeAll, describe, expect, it, jest } from '@jest/globals';
 import sodium from 'libsodium-wrappers-sumo';
 
-import { vaultCrypto, type VaultCrypto } from './vaultCrypto';
+import { memcmp, vaultCrypto, type VaultCrypto, type VaultRecord } from './vaultCrypto';
 import {
   AWAY_MS,
+  changePassphrase,
   changeSecretValue,
+  checkNewPassphrase,
+  finishSetup,
+  recoverVault,
+  startSetup,
   detailsChange,
   entryFields,
   revealSecret,
@@ -14,6 +19,7 @@ import {
   shouldLock,
   UNLOCK_MS,
   type ChangeDeps,
+  type KeysDeps,
   type RevealDeps,
   type SaveDeps,
 } from './vaultFlow';
@@ -212,5 +218,96 @@ describe('sameName', () => {
   it('finds a secret with the same name (any case) in the same space only', () => {
     const list = [meta('Bank', 'Logins'), meta('bank', 'Work'), meta('Bank card', 'Logins')];
     expect(sameName(list, ' BANK ', 'Logins').map((s) => s.id)).toEqual(['BankLogins']);
+  });
+});
+
+describe('setting up, recovering and changing the passphrase', () => {
+  const FAST = { alg: 'argon2id13', ops: 1, mem: 8192 * 1024 };
+  const PASS = 'correct horse battery staple';
+  const NEW = 'purple elephant quietly dancing';
+
+  function deps() {
+    const calls: [string, Record<string, unknown>][] = [];
+    const rpc = jest.fn<KeysDeps['rpc']>(async (fn, args) => {
+      calls.push([fn, args]);
+      return null;
+    });
+    return { deps: { rpc }, rpc, calls };
+  }
+  /** The vault record after a rewrap_vault_passphrase call. */
+  const rewrapped = (record: VaultRecord, args: Record<string, unknown>): VaultRecord => ({
+    ...record,
+    wrapped_private_key: args.p_wrapped_private_key as string,
+    vault_salt: args.p_vault_salt as string,
+    kdf_params: args.p_kdf_params as VaultRecord['kdf_params'],
+  });
+
+  it('asks for a long enough passphrase, typed the same twice', () => {
+    expect(() => checkNewPassphrase('short', 'short')).toThrow(/12 characters/);
+    expect(() => checkNewPassphrase(PASS, PASS + ' ')).toThrow(/different/);
+    expect(() => checkNewPassphrase(PASS, PASS)).not.toThrow();
+  });
+
+  it('sets up a vault that opens with the passphrase and with the recovery key', async () => {
+    const t = deps();
+    const pending = startSetup(crypto, PASS, PASS, FAST);
+    // Typed back loosely (lower case, spaces instead of dashes) is fine.
+    const keys = await finishSetup(t.deps, crypto, pending, pending.recoveryKey.toLowerCase().replace(/-/g, ' '));
+    expect(t.calls.map((c) => c[0])).toEqual(['setup_vault']);
+    const a = t.calls[0][1];
+    const record: VaultRecord = {
+      public_key: a.p_public_key as string,
+      wrapped_private_key: a.p_wrapped_private_key as string,
+      recovery_wrapped_private_key: a.p_recovery_wrapped_private_key as string,
+      vault_salt: a.p_vault_salt as string,
+      kdf_params: a.p_kdf_params as VaultRecord['kdf_params'],
+    };
+    expect(memcmp(crypto.unlockWithPassphrase(record, PASS).privateKey, keys.privateKey)).toBe(true);
+    expect(memcmp(crypto.unlockWithRecoveryKey(record, pending.recoveryKey).privateKey, keys.privateKey)).toBe(true);
+    // Only wrapped keys leave the phone.
+    const sent = JSON.stringify(t.calls);
+    expect(sent).not.toContain(PASS);
+    expect(sent).not.toContain(pending.recoveryKey);
+    expect(sent).not.toContain(crypto.toB64(keys.privateKey));
+  });
+
+  it('stores nothing when the recovery key typed back is wrong', async () => {
+    const t = deps();
+    const pending = startSetup(crypto, PASS, PASS, FAST);
+    const other = startSetup(crypto, PASS, PASS, FAST);
+    await expect(finishSetup(t.deps, crypto, pending, other.recoveryKey)).rejects.toThrow(/not the recovery key shown/);
+    await expect(finishSetup(t.deps, crypto, pending, 'ABCDE')).rejects.toThrow(/recovery key/);
+    expect(t.rpc).not.toHaveBeenCalled();
+  });
+
+  it('changes the passphrase only with the current one; the recovery key keeps working', async () => {
+    const v = crypto.createVault(PASS, FAST);
+    const wrong = deps();
+    await expect(changePassphrase(wrong.deps, crypto, v.record, 'not the passphrase', NEW, NEW, FAST)).rejects.toThrow(/not right/);
+    expect(wrong.rpc).not.toHaveBeenCalled();
+
+    const t = deps();
+    const keys = await changePassphrase(t.deps, crypto, v.record, PASS, NEW, NEW, FAST);
+    expect(t.calls.map((c) => c[0])).toEqual(['rewrap_vault_passphrase']);
+    const next = rewrapped(v.record, t.calls[0][1]);
+    expect(memcmp(crypto.unlockWithPassphrase(next, NEW).privateKey, keys.privateKey)).toBe(true);
+    expect(() => crypto.unlockWithPassphrase(next, PASS)).toThrow(/not right/);
+    expect(memcmp(crypto.unlockWithRecoveryKey(next, v.recoveryKey).privateKey, keys.privateKey)).toBe(true);
+    expect(JSON.stringify(t.calls)).not.toContain(NEW);
+  });
+
+  it('recovers with the recovery key and a new passphrase', async () => {
+    const v = crypto.createVault(PASS, FAST);
+    const other = crypto.createVault(PASS, FAST);
+    const wrong = deps();
+    await expect(recoverVault(wrong.deps, crypto, v.record, other.recoveryKey, NEW, NEW, FAST)).rejects.toThrow(/does not open this vault/);
+    await expect(recoverVault(wrong.deps, crypto, v.record, v.recoveryKey, NEW, 'typo', FAST)).rejects.toThrow(/different/);
+    expect(wrong.rpc).not.toHaveBeenCalled();
+
+    const t = deps();
+    const keys = await recoverVault(t.deps, crypto, v.record, v.recoveryKey, NEW, NEW, FAST);
+    const next = rewrapped(v.record, t.calls[0][1]);
+    expect(memcmp(crypto.unlockWithPassphrase(next, NEW).privateKey, keys.privateKey)).toBe(true);
+    expect(JSON.stringify(t.calls)).not.toContain(v.recoveryKey);
   });
 });

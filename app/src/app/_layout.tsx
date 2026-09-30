@@ -43,6 +43,8 @@ function Screens() {
         <Stack.Screen name="vault/index" options={{ title: 'Vault' }} />
         <Stack.Screen name="vault/[id]" options={{ title: 'Secret' }} />
         <Stack.Screen name="vault/enter" options={{ title: 'Save a secret' }} />
+        <Stack.Screen name="vault/setup" options={{ title: 'Set up the vault' }} />
+        <Stack.Screen name="vault/passphrase" options={{ title: 'Vault passphrase' }} />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="sign-in" options={{ title: 'Sign in' }} />

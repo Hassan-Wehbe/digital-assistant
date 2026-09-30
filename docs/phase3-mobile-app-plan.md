@@ -1,7 +1,7 @@
 # Phase 3, step 1: the Wilma mobile app (plan)
 
 Status: A0 (project setup) built, see `app/README.md` and `docs/phase3-mobile-app-setup.md`;
-A1 (read), A2a, A2b, A3a and A3b built and confirmed on the phone, see the "as built" notes below; A3c next (vault setup/recovery/passphrase, plus creating spaces). Owner direction (2026-09-28): a real app, **publishable on Android
+A1 (read), A2a, A2b, A3a and A3b built and confirmed on the phone; A3c (spaces, vault setup/recovery/passphrase) built, see the "as built" notes below; A4 next. Owner direction (2026-09-28): a real app, **publishable on Android
 first and iOS after, from one codebase with minimal changes**. PC and Mac use a web page (no
 install); an installed desktop app with background "Hey Wilma" may come later from the same
 code. Read first: `CLAUDE.md`, `docs/design.md`, `docs/phase2-attachments-plan.md`.
@@ -180,6 +180,18 @@ Each is one PR, tested, and approved by the owner before the next.
     space screen's title bar, and the "cannot delete, still holds ..." message shows at the top.
     Not included: opening or deleting restricted spaces in the app (they cannot be opened yet;
     that comes with the restricted-space unlock on the roadmap).
+    *Vault as built (PR "A3c vault"):* "Set up the vault" (vault screen, when not set up) opens
+    `app/vault/setup.tsx`: passphrase twice -> `vaultFlow.startSetup` (new keys kept in
+    `vault.tsx`, not in screen state) -> the recovery key shown once (not selectable, never
+    copied or sent) and typed back -> `finishSetup` -> `setup_vault`; the vault opens.
+    `app/vault/passphrase.tsx`: "Change the vault passphrase" (unlocked card) asks for the
+    **current passphrase even when unlocked** (so an open phone cannot lock the owner out),
+    "Forgot your passphrase?" (unlock card) takes the recovery key; both ->
+    `rewrapPassphrase` -> `rewrap_vault_passphrase`, then the vault opens. The fingerprint
+    copy keeps working (same private key). Both screens block screenshots. Tests in
+    `vaultFlow.test.ts`: the stored keys open with the new passphrase and the recovery key, the
+    old passphrase no longer does, nothing is sent when a check fails, and no passphrase,
+    recovery key or private key appears in what is sent.
   - The crypto functions already exist and are tested against the web code; no database or
     server change expected. Suggested order: spaces first (small, separate PR), then setup,
     then recovery and passphrase change.

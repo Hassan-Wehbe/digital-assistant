@@ -1,4 +1,5 @@
 // Unlock the vault: fingerprint when this phone keeps a key for it, else the passphrase.
+import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Text, TextInput } from 'react-native';
 
@@ -83,6 +84,14 @@ export function UnlockCard() {
       )}
       {error ? <Text style={{ color: c.danger, fontSize: 15 }}>{error}</Text> : null}
       {note ? <Muted>{note}</Muted> : null}
+      {showPassphrase ? (
+        <Button
+          title="Forgot your passphrase?"
+          kind="plain"
+          onPress={() => router.push({ pathname: '/vault/passphrase', params: { mode: 'recover' } })}
+          disabled={busy}
+        />
+      ) : null}
     </Card>
   );
 }

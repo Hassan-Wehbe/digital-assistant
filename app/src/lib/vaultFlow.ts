@@ -2,7 +2,20 @@
 // steps to reveal, save or change one secret. Pure logic (the phone parts are passed in),
 // so it is unit-tested; vault.tsx uses it.
 import { linkToken } from './upload';
-import { SECRET_FIELDS, VaultError, type SecretFields, type VaultCrypto, type VaultKeys } from './vaultCrypto';
+import {
+  forgetKeys,
+  KDF_DEFAULT,
+  memcmp,
+  memzero,
+  MIN_PASSPHRASE_LENGTH,
+  SECRET_FIELDS,
+  VaultError,
+  type KdfParams,
+  type SecretFields,
+  type VaultCrypto,
+  type VaultKeys,
+  type VaultRecord,
+} from './vaultCrypto';
 import type { EntryLink, NewSecret, RevealLink, SecretMeta } from './wilma';
 
 /** Owner's choice (2026-09-30): open for 5 minutes, locked after a minute away from the app. */
@@ -163,4 +176,105 @@ export function detailsChange(
 export function sameName(secrets: SecretMeta[], name: string, spacePath: string | undefined): SecretMeta[] {
   const n = name.trim().toLowerCase();
   return secrets.filter((s) => s.name.toLowerCase() === n && s.space === spacePath);
+}
+
+// ---------- setting up the vault, recovering it, changing the passphrase ----------
+// The same steps as the web pages (docs/vault/setup.js, recover.js). Only wrapped keys
+// reach the database; the passphrase, recovery key and private key stay on the phone.
+
+export interface KeysDeps {
+  rpc(fn: 'setup_vault' | 'rewrap_vault_passphrase', args: Record<string, unknown>): Promise<unknown>;
+}
+
+/** A new passphrase typed twice: long enough and the same both times. */
+export function checkNewPassphrase(passphrase: string, again: string): void {
+  if (passphrase.length < MIN_PASSPHRASE_LENGTH) {
+    throw new VaultError('weak_passphrase', `Use at least ${MIN_PASSPHRASE_LENGTH} characters (a few unrelated words work well).`);
+  }
+  if (passphrase !== again) throw new VaultError('mismatch', 'The two passphrases are different.');
+}
+
+export type PendingSetup = ReturnType<VaultCrypto['createVault']>;
+
+/** Step 1 of setup: new keys, in memory only until the recovery key has been written down. */
+export function startSetup(crypto: VaultCrypto, passphrase: string, again: string, params: KdfParams = KDF_DEFAULT): PendingSetup {
+  checkNewPassphrase(passphrase, again);
+  return crypto.createVault(passphrase, params);
+}
+
+/**
+ * Step 2: the recovery key typed back matches the one shown (any case, spaces or
+ * dashes), then setup_vault stores the wrapped keys. Returns the unlocked keys.
+ */
+export async function finishSetup(deps: KeysDeps, crypto: VaultCrypto, pending: PendingSetup, typedRecoveryKey: string): Promise<VaultKeys> {
+  const typed = crypto.parseRecoveryKey(typedRecoveryKey);
+  const shown = crypto.parseRecoveryKey(pending.recoveryKey);
+  const same = memcmp(typed, shown);
+  memzero(typed);
+  memzero(shown);
+  if (!same) throw new VaultError('recovery_mismatch', 'That is not the recovery key shown above. Check what you wrote down.');
+  const r = pending.record;
+  await deps.rpc('setup_vault', {
+    p_public_key: r.public_key,
+    p_wrapped_private_key: r.wrapped_private_key,
+    p_recovery_wrapped_private_key: r.recovery_wrapped_private_key,
+    p_vault_salt: r.vault_salt,
+    p_kdf_params: r.kdf_params,
+  });
+  return pending.keys;
+}
+
+async function storeNewPassphrase(deps: KeysDeps, crypto: VaultCrypto, keys: VaultKeys, passphrase: string, params: KdfParams) {
+  const next = crypto.rewrapPassphrase(keys, passphrase, params);
+  await deps.rpc('rewrap_vault_passphrase', {
+    p_wrapped_private_key: next.wrapped_private_key,
+    p_vault_salt: next.vault_salt,
+    p_kdf_params: next.kdf_params,
+  });
+}
+
+/**
+ * Change the passphrase: the current one is asked for even when the vault is unlocked, so
+ * someone holding an unlocked phone cannot lock the owner out. The key pair, the secrets
+ * and the recovery key stay as they are. Returns the unlocked keys.
+ */
+export async function changePassphrase(
+  deps: KeysDeps,
+  crypto: VaultCrypto,
+  record: VaultRecord,
+  current: string,
+  passphrase: string,
+  again: string,
+  params: KdfParams = KDF_DEFAULT,
+): Promise<VaultKeys> {
+  checkNewPassphrase(passphrase, again);
+  const keys = crypto.unlockWithPassphrase(record, current);
+  try {
+    await storeNewPassphrase(deps, crypto, keys, passphrase, params);
+  } catch (e) {
+    forgetKeys(keys);
+    throw e;
+  }
+  return keys;
+}
+
+/** Forgotten passphrase: open the vault with the recovery key and choose a new passphrase. */
+export async function recoverVault(
+  deps: KeysDeps,
+  crypto: VaultCrypto,
+  record: VaultRecord,
+  recoveryKey: string,
+  passphrase: string,
+  again: string,
+  params: KdfParams = KDF_DEFAULT,
+): Promise<VaultKeys> {
+  checkNewPassphrase(passphrase, again);
+  const keys = crypto.unlockWithRecoveryKey(record, recoveryKey);
+  try {
+    await storeNewPassphrase(deps, crypto, keys, passphrase, params);
+  } catch (e) {
+    forgetKeys(keys);
+    throw e;
+  }
+  return keys;
 }

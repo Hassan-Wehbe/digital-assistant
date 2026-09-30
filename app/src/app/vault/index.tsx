@@ -1,14 +1,12 @@
 // The vault: your secrets by name (never their values), and the lock.
 // Restricted spaces are never listed (find_secret leaves them out).
 import { router } from 'expo-router';
-import * as Linking from 'expo-linking';
 import { useState } from 'react';
 import { FlatList, Pressable, RefreshControl, Text, TextInput, View } from 'react-native';
 
 import { UnlockCard } from '@/components/UnlockCard';
 import { Button, Card, ErrorBox, Loading, Muted, styles, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
-import { VAULT_PAGES_URL } from '@/lib/config';
 import { useVault } from '@/lib/vault';
 import { TYPE_LABELS } from '@/lib/vaultCrypto';
 
@@ -36,9 +34,9 @@ export default function VaultScreen() {
       <View style={[styles.list, { flex: 1, backgroundColor: c.background }]}>
         <Card>
           <Text style={[styles.title, { color: c.text }]}>Your vault is not set up yet</Text>
-          <Muted>Set it up once on the vault page: you choose an unlock passphrase and keep a recovery key. Then come back here.</Muted>
-          <Button title="Open the vault setup page" onPress={() => Linking.openURL(`${VAULT_PAGES_URL}/setup`)} />
-          <Button title="I have set it up" kind="plain" onPress={vault.refresh} />
+          <Muted>Set it up once: you choose an unlock passphrase and write down a recovery key. It takes a minute.</Muted>
+          <Button title="Set up the vault" onPress={() => router.push('/vault/setup')} />
+          <Button title="I set it up on the web page" kind="plain" onPress={vault.refresh} />
         </Card>
       </View>
     );
@@ -53,6 +51,7 @@ export default function VaultScreen() {
           <Text style={[styles.title, { color: c.text }]}>🔓 Unlocked{vault.locksAt ? ` until ${time(vault.locksAt)}` : ''}</Text>
           <Muted>It locks by itself after 5 minutes, or when you are away from Wilma for a minute.</Muted>
           <Button title="Lock now" kind="plain" onPress={vault.lock} />
+          <Button title="Change the vault passphrase" kind="plain" onPress={() => router.push({ pathname: '/vault/passphrase', params: { mode: 'change' } })} />
         </Card>
       )}
       <Button title="Save a new secret" onPress={() => router.push('/vault/enter')} />
