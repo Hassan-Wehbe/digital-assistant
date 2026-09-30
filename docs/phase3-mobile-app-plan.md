@@ -1,7 +1,7 @@
 # Phase 3, step 1: the Wilma mobile app (plan)
 
 Status: A0 (project setup) built, see `app/README.md` and `docs/phase3-mobile-app-setup.md`;
-A1 (read), A2a, A2b, A3a and A3b built and confirmed on the phone; A3c (spaces, vault setup/recovery/passphrase) built, see the "as built" notes below; A4 next. Owner direction (2026-09-28): a real app, **publishable on Android
+A1 (read), A2a, A2b, A3a and A3b built and confirmed on the phone; A3c (spaces, vault setup/recovery/passphrase) built, see the "as built" notes below; A4 (Play internal testing) in progress. Owner direction (2026-09-28): a real app, **publishable on Android
 first and iOS after, from one codebase with minimal changes**. PC and Mac use a web page (no
 install); an installed desktop app with background "Hey Wilma" may come later from the same
 code. Read first: `CLAUDE.md`, `docs/design.md`, `docs/phase2-attachments-plan.md`.
@@ -197,6 +197,12 @@ Each is one PR, tested, and approved by the owner before the next.
     then recovery and passphrase change.
 - **A4 Android release.** Privacy policy page (on the existing GitHub Pages site), Play
   Store listing, data-safety form, and a first release to a testing track (below).
+  **Owner (2026-09-30):** Play developer account set up; test with the owner plus family and
+  friends (internal testing, each tester with their own Wilma account created by the owner,
+  sign-ups stay closed); public contact email zaftechlabs@gmail.com. Step-by-step guide with
+  every form answer: `docs/phase4-play-release.md`. Pages: `docs/legal/privacy.html`,
+  `docs/legal/delete-account.html`. Next in the app: "change sign-in password", so testers
+  can replace the temporary password the owner gives them.
 - **A5 One conversational box, typed and by voice** (the owner creates the API key at this
   point). Design: "The experience" at the top of this plan. Pieces:
   - **The box** replaces the home search field: text or microphone (the phone's built-in
