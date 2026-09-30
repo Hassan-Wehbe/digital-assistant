@@ -10,6 +10,7 @@
  */
 export const APP_TOOLS = [
   'list_spaces',
+  'create_space',
   'search_items',
   'get_item',
   'get_attachment_link',
@@ -34,6 +35,14 @@ export interface Space {
   path: string;
   description: string | null;
   restricted: boolean;
+}
+
+export interface NewSpace {
+  name: string;
+  /** Parent space id (the new space goes inside it). */
+  parent?: string;
+  description?: string;
+  restricted?: boolean;
 }
 
 export interface SearchResult {
@@ -211,6 +220,7 @@ export function wilmaClient({ url, token, refresh, fetch: f = fetch }: ClientOpt
 
   return {
     listSpaces: async () => (await call<{ spaces: Space[] }>('list_spaces')).spaces,
+    createSpace: (space: NewSpace) => call<{ id: string; path: string; restricted: boolean }>('create_space', space),
     // close_matches_only: loosely related items are left out ("password" no longer finds a recipe).
     search: async (opts: { query?: string; space?: string; limit?: number; close_matches_only?: boolean }) =>
       (await call<{ results: SearchResult[] }>('search_items', opts)).results,

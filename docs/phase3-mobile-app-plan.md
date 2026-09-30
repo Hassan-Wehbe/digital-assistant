@@ -173,6 +173,13 @@ Each is one PR, tested, and approved by the owner before the next.
     empty space; the server names what is still inside, including vault passwords and the
     recycle bin); A3c only makes it easy to find and checks the message reads well. The home
     screen's "Ask Wilma in the Claude app to create one" text goes.
+    *Spaces as built (PR "A3c spaces"):* "+ New space" next to "Spaces" on home, and "New space
+    inside this one" on a space, open `app/new-space.tsx` (name, description, optional parent
+    among the spaces the app can open, restricted switch off by default with a warning);
+    checks in `src/lib/spaces.ts` (tested) before `create_space`. "Delete" is now also in the
+    space screen's title bar, and the "cannot delete, still holds ..." message shows at the top.
+    Not included: opening or deleting restricted spaces in the app (they cannot be opened yet;
+    that comes with the restricted-space unlock on the roadmap).
   - The crypto functions already exist and are tested against the web code; no database or
     server change expected. Suggested order: spaces first (small, separate PR), then setup,
     then recovery and passphrase change.
