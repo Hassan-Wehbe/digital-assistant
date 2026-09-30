@@ -3,6 +3,9 @@
   "main": "expo-router/entry",
   "version": "0.1.0",
   "dependencies": {
+    "@noble/ciphers": "^2.4.0",
+    "@noble/hashes": "^2.4.0",
+    "@serenity-kit/noble-sodium": "^0.2.3",
     "@supabase/supabase-js": "^2.117.2",
     "expo": "~57.0.26",
     "expo-application": "~57.0.3",
@@ -27,7 +30,9 @@
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
     "react-native-gesture-handler": "~2.32.0",
-    "react-native-libsodium": "^1.7.0",
+    "react-native-nitro-modules": "^0.37.1",
+    "react-native-quick-base64": "^3.0.1",
+    "react-native-quick-crypto": "^1.1.7",
     "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
@@ -65,15 +70,11 @@
     ],
     "moduleNameMapper": {
       "^\\./vendor/libsodium-wrappers\\.mjs$": "libsodium-wrappers-sumo"
-    }
-  },
-  "expo": {
-    "doctor": {
-      "reactNativeDirectoryCheck": {
-        "exclude": [
-          "react-native-libsodium"
-        ]
-      }
-    }
+    },
+    "transformIgnorePatterns": [
+      "/node_modules/(?!(.pnpm|react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|@sentry/react-native|native-base|standard-navigation|@noble|@serenity-kit))",
+      "/node_modules/react-native-reanimated/plugin/",
+      "/node_modules/@react-native/babel-preset/"
+    ]
   }
 }

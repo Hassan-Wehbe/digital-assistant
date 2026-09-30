@@ -123,18 +123,21 @@ Each is one PR, tested, and approved by the owner before the next.
   after a minute away from the app); values hidden until Show, hidden again after 30 s,
   clipboard cleared after 30 s; everything in the app (split into A3a unlock and reveal,
   A3b save / change / delete, A3c set up / recover / change passphrase).
-  **A3a as built:** `src/lib/vaultCrypto.ts` is the web format (`docs/vault/crypto.js`) on
-  `react-native-libsodium` (native libsodium; the web build cannot run on the phone). That
-  library lacks pad/unpad, memcmp, memzero and `crypto_scalarmult_base`; the first three are
-  written in the app, and "does this private key belong to the public key" is checked with a
-  sealed-box round trip. `vaultCrypto.test.ts` runs the app code and the web `crypto.js` side
-  by side on libsodium-wrappers-sumo 0.8.4 (the version the pages ship): each opens what the
-  other made (vault, recovery key, secrets, passphrase change). Reveal: `get_secret` (one-time
-  link) -> `get_reveal_request` -> `reveal_secret` -> decrypt on the phone (`vaultFlow.ts`).
-  Fingerprint: the private key (never the passphrase) in expo-secure-store with
-  `requireAuthentication` (Android keystore, invalidated when fingerprints change), deleted on
-  sign-out. The secret screen blocks screenshots. No database or server change; reveals are
-  logged with channel `web` like the reveal page.
+  **A3a as built:** `src/lib/vaultCrypto.ts` is the web format (`docs/vault/crypto.js`).
+  First build (PR #18) used `react-native-libsodium`, which **crashed the app at start-up**
+  (untested on the New Architecture; it loaded when the app opened). Fixed by
+  `src/lib/sodiumLite.ts`: the same libsodium functions from `@serenity-kit/noble-sodium`
+  (sealed boxes) and `@noble` (secretbox, BLAKE2b, key derivation) in plain JavaScript, with
+  only Argon2id native (`react-native-quick-crypto`, a Nitro / New Architecture module). The
+  vault's crypto now loads on first use, never at app start. `sodiumLite.test.ts` checks every
+  function against libsodium-wrappers-sumo 0.8.4 (the web pages' version), and
+  `vaultCrypto.test.ts` runs the app's vault on sodiumLite against the web `crypto.js`: each
+  opens what the other made (vault, recovery key, secrets, passphrase change). Reveal:
+  `get_secret` (one-time link) -> `get_reveal_request` -> `reveal_secret` -> decrypt on the
+  phone (`vaultFlow.ts`). Fingerprint: the private key (never the passphrase) in
+  expo-secure-store with `requireAuthentication` (Android keystore, invalidated when
+  fingerprints change), deleted on sign-out. The secret screen blocks screenshots. No
+  database or server change; reveals are logged with channel `web` like the reveal page.
 - **A4 Android release.** Privacy policy page (on the existing GitHub Pages site), Play
   Store listing, data-safety form, and a first release to a testing track (below).
 - **A5 One conversational box, typed and by voice** (the owner creates the API key at this

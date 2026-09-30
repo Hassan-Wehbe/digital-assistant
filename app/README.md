@@ -22,7 +22,7 @@ Plan: `../docs/phase3-mobile-app-plan.md`. Owner setup: `../docs/phase3-mobile-a
 | `src/app/new-item.tsx`, `attach.tsx`, `src/lib/saveNote.ts` | New note (optionally with files); add files to an item. |
 | `src/app/share.tsx`, `src/lib/shareIntake.tsx`, `shared.ts` | Share -> Wilma from other apps (`expo-share-intent`): photos, Visio files, text or a link become a new note, or the files go to an existing note. Shared files are copied into the app's cache first. Signed out, sign-in comes first. Android only for now (`disableIOS` in `app.json` until phase B). |
 | `src/app/bin.tsx` | Recycle bin: restore a deleted note or delete it for good. Delete note / file / space buttons ask first. |
-| `src/lib/vault.tsx`, `vaultCrypto.ts`, `vaultFlow.ts`, `src/app/vault/` | Vault: unlock with the vault passphrase (then the fingerprint), list secrets by name, reveal one (decrypted on the phone, same format as the web vault pages). Locks after 5 minutes or a minute away. |
+| `src/lib/vault.tsx`, `vaultCrypto.ts`, `sodiumLite.ts`, `vaultFlow.ts`, `src/app/vault/` | Vault: unlock with the vault passphrase (then the fingerprint), list secrets by name, reveal one (decrypted on the phone, same format as the web vault pages). Locks after 5 minutes or a minute away. |
 | `src/lib/upload.ts`, `picked.ts`, `filetypes.ts`, `deviceFiles.ts` | The upload page's steps and file rules, done by the app: one-time link from `attach_file`, files streamed to Storage, recorded with `complete_attachment_upload`. `filetypes.test.ts` checks the rules match `docs/files/filetypes.js`. |
 
 Restricted spaces are shown with a lock and are not opened or searched (secrets in them are

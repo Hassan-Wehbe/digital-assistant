@@ -9,22 +9,40 @@
 // needed again. Signing out deletes it.
 //
 // Nothing here logs or reports a passphrase, key or value.
+import * as ExpoCrypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
-import sodium from 'react-native-libsodium';
 
 import { useAuth } from './auth';
 import { supabase } from './supabase';
-import { forgetKeys, vaultCrypto, VaultError, type Sodium, type VaultKeys, type VaultRecord } from './vaultCrypto';
+import { sodiumLite } from './sodiumLite';
+import { forgetKeys, vaultCrypto, VaultError, type VaultCrypto, type VaultKeys, type VaultRecord } from './vaultCrypto';
 import { revealSecret, shouldLock, UNLOCK_MS, type Revealed } from './vaultFlow';
 
-export const crypto = vaultCrypto(sodium as unknown as Sodium);
-
-// react-native-libsodium installs its functions when the app starts. It is listed as
-// "untested on the New Architecture" (it runs through React Native's compatibility layer),
-// so if they are missing the vault says so instead of failing half-way.
-const nativeReady = () => typeof (globalThis as { jsi_crypto_box_seal?: unknown }).jsi_crypto_box_seal === 'function';
+// The vault's cryptography is loaded the first time the vault is used, never when the
+// app starts, so a problem in it can only affect the vault. Argon2id (64 MB) runs natively
+// in react-native-quick-crypto (New Architecture module); the rest is plain JavaScript
+// (sodiumLite.ts). react-native-libsodium, used before, crashed the app at start-up.
+let loaded: VaultCrypto | null = null;
+async function loadCrypto(): Promise<VaultCrypto> {
+  if (loaded) return loaded;
+  try {
+    // The @noble libraries take randomness from crypto.getRandomValues, which React
+    // Native lacks; expo-crypto provides it (the phone's secure random source).
+    const g = globalThis as { crypto?: { getRandomValues?: unknown } };
+    if (typeof g.crypto?.getRandomValues !== 'function') {
+      g.crypto = { ...(g.crypto ?? {}), getRandomValues: ExpoCrypto.getRandomValues };
+    }
+    const { argon2Sync } = await import('react-native-quick-crypto');
+    const argon2id = (password: Uint8Array, salt: Uint8Array, p: { passes: number; memoryKiB: number; tagLength: number }) =>
+      new Uint8Array(argon2Sync('argon2id', { message: password, nonce: salt, parallelism: 1, tagLength: p.tagLength, memory: p.memoryKiB, passes: p.passes }));
+    loaded = vaultCrypto(sodiumLite(argon2id, (n) => ExpoCrypto.getRandomBytes(n)));
+    return loaded;
+  } catch {
+    throw new VaultError('no_crypto', "The vault's encryption could not start on this phone. The rest of Wilma works; use the vault pages in the browser for now.");
+  }
+}
 
 const keyItem = (userId: string) => `wilma.vault.key.${userId}`;
 const pubItem = (userId: string) => `wilma.vault.pub.${userId}`;
@@ -96,11 +114,6 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     if (!userId) return;
     setProblem(null);
-    if (!nativeReady()) {
-      setProblem("The vault's encryption library did not load on this phone, so the vault cannot open here. The rest of Wilma works; use the vault pages in the browser for now.");
-      setStatus('error');
-      return;
-    }
     try {
       const r = await rpc('get_vault_keys');
       if (!r?.set_up) {
@@ -174,6 +187,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     async (passphrase: string) => {
       const r = needRecord();
       await nextFrame();
+      const crypto = await loadCrypto();
       const k = crypto.unlockWithPassphrase(r, passphrase);
       opened(k);
       // Keep a fingerprint-protected copy of the key for next time.
@@ -202,7 +216,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     } catch {
       throw new VaultError('cancelled', 'Fingerprint unlock did not work. Try again, or use your passphrase.');
     }
-    const k = stored ? crypto.keysFromStored(r, stored) : null;
+    const k = stored ? (await loadCrypto()).keysFromStored(r, stored) : null;
     if (!k) {
       // Fingerprints changed (the phone threw the key away) or the vault changed.
       await forgetStored(userId);
@@ -222,7 +236,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         lock();
         throw new VaultError('locked', 'The vault locked. Unlock it again.');
       }
-      return revealSecret({ revealLink: wilma.revealLink, rpc }, crypto, k, secretId);
+      return revealSecret({ revealLink: wilma.revealLink, rpc }, await loadCrypto(), k, secretId);
     },
     [wilma, lock],
   );
