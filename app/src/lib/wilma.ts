@@ -4,7 +4,10 @@
 // for the Claude app. Plain JSON-RPC `tools/call` requests: the server is
 // stateless and answers with JSON.
 
-/** The tools this version of the app uses. Vault tools are left out until A3. */
+/**
+ * The tools this version of the app uses. The vault tools return metadata and one-time
+ * links only; values are decrypted on the phone (vault.tsx), never passed through Wilma.
+ */
 export const APP_TOOLS = [
   'list_spaces',
   'search_items',
@@ -18,6 +21,8 @@ export const APP_TOOLS = [
   'restore_item',
   'purge_item',
   'delete_space',
+  'find_secret',
+  'get_secret',
 ] as const;
 export type AppTool = (typeof APP_TOOLS)[number];
 
@@ -84,6 +89,23 @@ export interface UploadLink {
   upload_link: string;
   expires_at: string;
   item: { id: string; title: string; space?: string; created: boolean };
+}
+
+export interface SecretMeta {
+  id: string;
+  name: string;
+  url: string | null;
+  secret_type: string;
+  space: string | undefined;
+  created_at: string;
+  updated_at: string;
+  last_accessed_at: string | null;
+}
+
+export interface RevealLink {
+  secret: SecretMeta;
+  reveal_link: string;
+  expires_at: string;
 }
 
 export interface BinItem {
@@ -191,6 +213,10 @@ export function wilmaClient({ url, token, refresh, fetch: f = fetch }: ClientOpt
     purgeItem: (id: string) => call<{ purged: boolean }>('purge_item', { item_id: id }),
     /** Only an empty space can be deleted; otherwise the error says what is still inside. */
     deleteSpace: (id: string) => call<{ deleted: boolean }>('delete_space', { space: id }),
+    // Vault: names and one-time links only (restricted spaces are never listed).
+    findSecrets: async (opts: { query?: string; limit?: number } = {}) =>
+      (await call<{ results: SecretMeta[] }>('find_secret', { limit: 50, ...opts })).results,
+    revealLink: (secretId: string) => call<RevealLink>('get_secret', { secret_id: secretId }),
   };
 }
 

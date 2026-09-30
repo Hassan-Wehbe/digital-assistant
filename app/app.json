@@ -20,7 +20,9 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "blockedPermissions": [
+        "android.permission.DETECT_SCREEN_CAPTURE",
         "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES",
         "android.permission.RECORD_AUDIO",
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.WRITE_EXTERNAL_STORAGE"
@@ -40,7 +42,12 @@
           "imageWidth": 120
         }
       ],
-      "expo-secure-store",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "Wilma uses Face ID to unlock your vault."
+        }
+      ],
       "expo-sqlite",
       [
         "expo-image-picker",
@@ -72,7 +79,8 @@
           ],
           "disableIOS": true
         }
-      ]
+      ],
+      "react-native-libsodium"
     ],
     "experiments": {
       "typedRoutes": true,

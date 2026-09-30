@@ -1,7 +1,7 @@
 # Phase 3, step 1: the Wilma mobile app (plan)
 
 Status: A0 (project setup) built, see `app/README.md` and `docs/phase3-mobile-app-setup.md`;
-A1 (read), A2a and A2b built, see the "as built" notes below; A3 onward not started. Owner direction (2026-09-28): a real app, **publishable on Android
+A1 (read), A2a, A2b and A3a built, see the "as built" notes below; A3b onward not started. Owner direction (2026-09-28): a real app, **publishable on Android
 first and iOS after, from one codebase with minimal changes**. PC and Mac use a web page (no
 install); an installed desktop app with background "Hey Wilma" may come later from the same
 code. Read first: `CLAUDE.md`, `docs/design.md`, `docs/phase2-attachments-plan.md`.
@@ -91,6 +91,22 @@ Each is one PR, tested, and approved by the owner before the next.
   No database or server change.
 - **A3 Vault.** Save and reveal secrets in the app; compatibility tests against the web
   vault; optional fingerprint/face lock for opening the app (never stores the passphrase).
+  Owner's decisions (2026-09-30): passphrase once, then fingerprint; open 5 minutes (locks
+  after a minute away from the app); values hidden until Show, hidden again after 30 s,
+  clipboard cleared after 30 s; everything in the app (split into A3a unlock and reveal,
+  A3b save / change / delete, A3c set up / recover / change passphrase).
+  **A3a as built:** `src/lib/vaultCrypto.ts` is the web format (`docs/vault/crypto.js`) on
+  `react-native-libsodium` (native libsodium; the web build cannot run on the phone). That
+  library lacks pad/unpad, memcmp, memzero and `crypto_scalarmult_base`; the first three are
+  written in the app, and "does this private key belong to the public key" is checked with a
+  sealed-box round trip. `vaultCrypto.test.ts` runs the app code and the web `crypto.js` side
+  by side on libsodium-wrappers-sumo 0.8.4 (the version the pages ship): each opens what the
+  other made (vault, recovery key, secrets, passphrase change). Reveal: `get_secret` (one-time
+  link) -> `get_reveal_request` -> `reveal_secret` -> decrypt on the phone (`vaultFlow.ts`).
+  Fingerprint: the private key (never the passphrase) in expo-secure-store with
+  `requireAuthentication` (Android keystore, invalidated when fingerprints change), deleted on
+  sign-out. The secret screen blocks screenshots. No database or server change; reveals are
+  logged with channel `web` like the reveal page.
 - **A4 Android release.** Privacy policy page (on the existing GitHub Pages site), Play
   Store listing, data-safety form, and a first release to a testing track (below).
 - **A5 Chat with Wilma, typed and by voice** (the owner creates the API key at this point). New Edge Function `chat`: the
