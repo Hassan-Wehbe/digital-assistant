@@ -1,7 +1,7 @@
 # Phase 3, step 1: the Wilma mobile app (plan)
 
 Status: A0 (project setup) built, see `app/README.md` and `docs/phase3-mobile-app-setup.md`;
-A1 (read), A2a, A2b and A3a built, see the "as built" notes below; A3b onward not started. Owner direction (2026-09-28): a real app, **publishable on Android
+A1 (read), A2a, A2b and A3a built (confirmed on the phone), see the "as built" notes below; A3b next. Owner direction (2026-09-28): a real app, **publishable on Android
 first and iOS after, from one codebase with minimal changes**. PC and Mac use a web page (no
 install); an installed desktop app with background "Hey Wilma" may come later from the same
 code. Read first: `CLAUDE.md`, `docs/design.md`, `docs/phase2-attachments-plan.md`.
@@ -124,9 +124,11 @@ Each is one PR, tested, and approved by the owner before the next.
   clipboard cleared after 30 s; everything in the app (split into A3a unlock and reveal,
   A3b save / change / delete, A3c set up / recover / change passphrase).
   **A3a as built:** `src/lib/vaultCrypto.ts` is the web format (`docs/vault/crypto.js`).
-  First build (PR #18) used `react-native-libsodium`, which **crashed the app at start-up**
-  (untested on the New Architecture; it loaded when the app opened). Fixed by
-  `src/lib/sodiumLite.ts`: the same libsodium functions from `@serenity-kit/noble-sodium`
+  The first two builds (PRs #18, #20) **crashed at start-up**: `expo-screen-capture` registers a
+  screen-capture callback when the app starts, which on Android 14+ needs
+  `DETECT_SCREEN_CAPTURE`, and `app.json` blocked it (fixed in PR #21; guarded by
+  `src/lib/appConfig.test.ts`). PR #20 had first suspected `react-native-libsodium` (untested
+  on the New Architecture) and replaced it with `src/lib/sodiumLite.ts`: the same libsodium functions from `@serenity-kit/noble-sodium`
   (sealed boxes) and `@noble` (secretbox, BLAKE2b, key derivation) in plain JavaScript, with
   only Argon2id native (`react-native-quick-crypto`, a Nitro / New Architecture module). The
   vault's crypto now loads on first use, never at app start. `sodiumLite.test.ts` checks every
