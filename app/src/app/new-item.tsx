@@ -1,15 +1,15 @@
-// Save a new note in a space, optionally with pictures or Visio files.
-// Without files: save_item. With files: attach_file creates the note and gives an
-// upload link in one step, then the files go up (upload.ts).
+// Save a new note in a space, optionally with pictures or Visio files (saveNote.ts).
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, Text, TextInput } from 'react-native';
 
 import { AttachmentPicker } from '@/components/AttachmentPicker';
-import { Button, Card, ErrorBox, Loading, Muted, styles, useColors, useLoad } from '@/components/ui';
+import { SpaceChips } from '@/components/SpaceChips';
+import { Button, Card, Muted, styles, useColors, useLoad } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { deviceUploadDeps } from '@/lib/deviceFiles';
-import { uploadToLink, type PickedFile } from '@/lib/upload';
+import { saveNote } from '@/lib/saveNote';
+import type { PickedFile } from '@/lib/upload';
 
 export default function NewItem() {
   const c = useColors();
@@ -33,16 +33,20 @@ export default function NewItem() {
     setError(null);
     let itemId = createdId;
     try {
-      if (!files.length) {
-        if (!itemId) itemId = (await wilma.saveItem({ space, title: title.trim(), body })).id;
-      } else {
-        setStatus('Getting an upload link…');
-        const link = await wilma.uploadLink(itemId ? { item_id: itemId } : { space, title: title.trim(), note: body });
-        itemId = link.item.id;
-        setCreatedId(itemId);
-        await uploadToLink(link.upload_link, files, deviceUploadDeps, setStatus);
+      const target = itemId ? { itemId } : { space, title: title.trim(), body };
+      const out = await saveNote(wilma, target, files, deviceUploadDeps, {
+        onCreated: (id) => {
+          itemId = id;
+          setCreatedId(id);
+        },
+        onStatus: setStatus,
+      });
+      if (out.failed.length) {
+        // Keep only the files that did not make it, to try again on the same note.
+        setFiles(files.filter((f) => out.failed.every((line) => !line.startsWith(`${f.name}: `))));
+        throw new Error(`Not uploaded: ${out.failed.join('; ')}.`);
       }
-      router.replace({ pathname: '/item/[id]', params: { id: itemId! } });
+      router.replace({ pathname: '/item/[id]', params: { id: out.itemId } });
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       setError(itemId ? `${message} The note is saved; press Save to try the files again, or open it.` : message);
@@ -57,32 +61,14 @@ export default function NewItem() {
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.background }} behavior="padding">
       <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
         <Text style={[styles.title, { color: c.text }]}>Space</Text>
-        {spaces.error ? <ErrorBox message={spaces.error} onRetry={spaces.reload} /> : null}
-        {!spaces.data && !spaces.error ? <Loading /> : null}
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {(spaces.data ?? []).map((s) => {
-            const on = s.id === space;
-            return (
-              <Pressable
-                key={s.id}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: on }}
-                disabled={busy || !!createdId}
-                onPress={() => setSpace(s.id)}
-                style={{
-                  borderWidth: 1,
-                  borderRadius: 16,
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                  borderColor: on ? c.accent : c.line,
-                  backgroundColor: on ? c.accent : c.card,
-                }}>
-                <Text style={{ color: on ? '#ffffff' : c.text }}>{(s.restricted ? '🔒 ' : '') + s.path}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-        {spaces.data?.length === 0 ? <Muted>No spaces yet. Ask Wilma in the Claude app to create one.</Muted> : null}
+        <SpaceChips
+          spaces={spaces.data}
+          error={spaces.error}
+          onRetry={spaces.reload}
+          value={space}
+          onChange={setSpace}
+          disabled={busy || !!createdId}
+        />
 
         <TextInput
           style={input}

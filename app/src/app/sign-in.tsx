@@ -4,10 +4,12 @@ import { KeyboardAvoidingView, ScrollView, Text, TextInput } from 'react-native'
 
 import { Button, Card, Muted, styles, useColors } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { useShare } from '@/lib/shareIntake';
 
 export default function SignIn() {
   const c = useColors();
   const { signIn } = useAuth();
+  const { pending } = useShare();
   const passwordRef = useRef<TextInput>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -38,6 +40,7 @@ export default function SignIn() {
         <Card style={{ gap: 12 }}>
           <Text style={[styles.title, { color: c.text, fontSize: 22 }]}>{"Hi, I'm Wilma."}</Text>
           <Muted>Sign in with the account you use for Wilma in the Claude app.</Muted>
+          {pending ? <Muted>Sign in first; then you can save what you shared.</Muted> : null}
           <TextInput
             style={input}
             placeholder="Email"
