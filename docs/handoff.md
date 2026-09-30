@@ -1,106 +1,85 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-09-29: mobile app milestone A1 (read) built on branch `claude/mobile-app-a1`,
-PR open, not merged; A0 merged (PR #9) and the fixed-owner handoff (PR #10); before that PR #8 (mobile app
-plan), PR #7 (attachments step 1, live), PRs #1-#6 (phase 1, cleanup, assistant name "Wilma").
-Read this, then `CLAUDE.md` and `docs/design.md`, before changing anything.
+Last updated 2026-09-30 (end of the session that built A1, A1 polish, A2a and the recycle bin).
+Read this, then `CLAUDE.md`, `docs/design.md` and `docs/phase3-mobile-app-plan.md`, before
+changing anything. The owner is returning to development: explain steps plainly, keep PRs
+small, say clearly when they must act, never ask for passwords, tokens or keys in chat.
 
-## Current task: phase 3 mobile app, next milestone A1
+## Where things stand (2026-09-30)
 
-Plan and decisions: `docs/phase3-mobile-app-plan.md`. Summary of the owner's decisions
-(2026-09-29): Expo (React Native) app in `app/`; Android first, iOS after, one codebase;
-package / bundle id **`com.zaf.wilma`** (permanent after the first Play upload; nothing
-uploaded yet); personal Google Play account for now (company account and app transfer
-later if the app proves worth it); build for a public listing but release to testing tracks
-first; chat with Wilma by text and voice at A5 (the owner creates the Anthropic API key
-then, in the Claude Console, and pastes it into Supabase secrets themselves); voice through
-the phone's built-in speech recognition and text-to-speech (no extra key).
+| Piece | State |
+|---|---|
+| Database | migrations up to `recycle_bin` applied (see the table further down) |
+| MCP server `mcp` | **version 7, server 0.5.0, 22 tools** (adds `delete_item`, `list_deleted_items`, `restore_item`, `purge_item`, `delete_space`) |
+| Mobile app (Expo, `app/`) | A0, A1, A1 polish, A2a and delete/recycle bin merged to `main` (PRs #9, #11, #12, #13, #14, #15) |
+| Latest app build | preview build of `main` at 5e072ec (PR #15), handed to Expo 2026-09-30 12:22 UTC: https://expo.dev/accounts/zafnut/projects/wilma/builds/a4c23016-77b7-47d2-bcf0-5cb3c058fa76 . **Not yet confirmed on the phone**: ask the owner how the delete buttons and Recycle bin behaved. |
 
-**A0 (project setup) is done** (PR #9): Expo SDK 57 / React Native 0.86 / TypeScript /
-Expo Router; placeholder icons (`app/scripts/placeholder-icons.mjs`); Android permissions
-limited to internet and vibration; `app/eas.json` profiles development / preview (.apk) /
-production (.aab, remote build numbers, submit to the Play internal track as a draft);
-CI `.github/workflows/app-checks.yml` (lint, type-check, jest, expo-doctor) and the manual
-`.github/workflows/app-build.yml` ("Run workflow", profile preview or production).
+What the app does now: sign in (session encrypted on the phone, survives updates and offline
+moments); spaces, search (close matches only), items with attachments and downloads; new note
+with optional photos/Visio files (camera, gallery, files); add files to an item; delete note
+(to the recycle bin), delete file, delete an empty space; recycle bin (restore, delete for good,
+empty). Owner confirmed on the phone: A1 (after fix #12), A1 polish, A2a (adding pictures works).
 
-Owner setup status (`docs/phase3-mobile-app-setup.md`):
-- Expo account `zafnut` (owns the project), project `wilma`, id
-  `f51dc24a-fef9-4f2a-8602-3fbe2e2c5deb` (in `app/app.json`). Done.
-- `EXPO_TOKEN` GitHub secret: a robot-user token (Developer role). Done.
-- First build: the first `app build` run (2026-09-29, GitHub run 36617755550) stopped before
-  building because `app.json` named the owner `zaflabout` while the project belongs to
-  `zafnut` ("Owner of project identified by extra.eas.projectId ... does not match owner").
-  Fixed in the handoff PR (owner `zafnut`). After it merges, run **Actions -> app build ->
-  Run workflow (preview)** again; the owner installs the result from expo.dev -> wilma ->
-  Builds (QR code on the phone). The first Android build also creates the app's signing key
-  on Expo (non-interactive mode; if EAS refuses to generate it, the log says so and the
-  owner runs one build interactively or creates the keystore on expo.dev).
-- Google Play personal developer account ($25, identity check): not confirmed yet; needed
-  only for the first Play upload (end of A4).
+## Next task: A2b "Share to Wilma"
 
-**A1 (read) is built** (PR for `claude/mobile-app-a1`; see "A1 as built" in the plan and
-`app/README.md`). Not yet tried on a phone: after it merges, run **app build (preview)** and
-the owner signs in on the phone (`docs/phase3-mobile-app-setup.md` step 4). Not run against
-the live project with a throwaway user (would need the owner's OK, like the other e2e tests).
+From Photos, Files, Chrome etc.: Share -> Wilma -> pick a space (or an existing note), title,
+caption -> Save. Plan notes:
+- Needs a share-intent config plugin (Android intent filters for `image/jpeg`, `image/png`,
+  and generic files for Visio; later iOS share extension). Check what exists for Expo SDK 57
+  (e.g. `expo-share-intent`) by reading the package in `node_modules` (docs.expo.dev is
+  blocked here) and prefer a maintained one; it adds native code, so a new build is required.
+- Reuse A2a: `src/lib/picked.ts` (checks), `src/lib/upload.ts` (upload steps),
+  `src/components/AttachmentPicker.tsx` ideas, `new-item.tsx` (space picker, save flow).
+  Shared content arrives as `content://` URIs: copy to the app cache first (expo-file-system)
+  so `File.upload` and the checks work; keep the same 20 MB / type rules.
+- If the app is signed out when something is shared, show sign-in first, then continue.
+- Keep Android permissions minimal; check the merged manifest with prebuild (see below).
+- One PR; no database or server change expected.
 
-**Phone test of A1 (2026-09-29):** installed and signed in, but the home screen showed "Please
-sign in again": on Android, expo-crypto's `AESSealedData.fromCombined` accepts only bytes (the
-docs and iOS also accept a base64 string), so reading the saved session failed and the app
-discarded it. Fixed in `claude/mobile-app-a1-fix` (decode base64 in JS first; trim zero padding
-after decrypting; a missing session now returns to the sign-in screen). Lesson: expo native
-APIs can differ by platform from their docs; check `node_modules/<pkg>/android` and `ios`
-sources when a call takes "string or bytes".
+After A2b: A3 vault in the app (plan in `docs/phase3-mobile-app-plan.md`; owner questions
+to settle then: fingerprint unlock, how long it stays unlocked, tap-to-show), A4 Play release,
+A5 chat and voice.
 
-**A1 polish (owner's requests after the phone test, PR #13, merged and live 2026-09-30):**
-- Weak search matches show "Nothing found": migration `search_cutoff` adds an optional
-  `p_max_distance` to `search_items` (semantic chunks further than that cosine distance are
-  left out; keyword matches stay); the MCP tool takes `close_matches_only` (distance 0.2, i.e.
-  similarity 0.8, the usual gte-small cutoff; only one item existed, so it could not be
-  calibrated on real data: tune `CLOSE_MATCH_MAX_DISTANCE` in `tools/search_items.ts` if good
-  matches go missing). The Claude connector's searches are unchanged (no cutoff by default).
-  Dry runs passed (`tests/sql/07_search_cutoff.sql`, and 02 against the new function).
-  **Rolled out 2026-09-30 with the owner's OK, in this order:** migration `search_cutoff`
-  applied, `mcp` v6 deployed (server 0.4.1; the deployed files were compared with the repo:
-  identical), app preview build. The owner confirmed on the phone that it works.
-- Sign-in screen: form at the top, `KeyboardAvoidingView` with `padding` on Android too.
-- Staying signed in: sessions already survive app updates (same package and signing key);
-  now a refresh that fails for lack of a connection no longer signs out
-  (`src/lib/sessionToken.ts`), opening the app offline keeps you signed in, and signing out
-  offline still forgets the session on the phone.
+## Owner status and open items
 
-**Delete and recycle bin (owner's request after testing A2a, branch `claude/delete-and-recycle-bin`):**
-decisions: a deleted note goes to a recycle bin (see, restore, delete for good); a space can be
-deleted only when empty. Migration `recycle_bin` (functions `delete_item`, `restore_item`,
-`list_deleted_items`, `deleted_item_files`, `purge_item`, `delete_space`; dry run
-`tests/sql/08_recycle_bin.sql` passed 22/22), five MCP tools (server 0.5.0, 22 tools; the server
-instructions tell Claude to confirm anything permanent), and in the app: Delete note, Delete file,
-Delete space, Recycle bin (home screen). **Rollout order:** apply the migration, deploy `mcp`,
-then build the app. Not purged automatically: the bin keeps notes until the owner empties it.
+- Owner signs in to the app with **hassan.wehbe@gmail.com** (the only account in the project).
+- Expo account `zafnut`, project `wilma` (id `f51dc24a-fef9-4f2a-8602-3fbe2e2c5deb`),
+  `EXPO_TOKEN` GitHub secret set. Builds: GitHub **Actions -> app build -> Run workflow
+  (preview)** on `main` (Claude can start it with the GitHub tools); the free Expo queue often
+  takes an hour or more. The owner installs from the expo.dev build page.
+- Google Play personal developer account: not confirmed yet (needed at A4).
+- Search cutoff (`CLOSE_MATCH_MAX_DISTANCE = 0.2`) was not calibrated on real data (only one
+  item existed); loosen it if the owner reports missing results.
+- The recycle bin never empties itself (owner's choice); a future cleanup job could purge
+  after N days if the owner wants.
+- `tests/browser/attachments_flow.mjs` still not run against the live project (needs a
+  throwaway user; ask first).
+- The owner may delete merged branches on GitHub (sessions cannot).
 
-**A2 is split in two (owner agreed 2026-09-30):**
-- **A2a (branch `claude/app-a2a-save-attach`):** save a note, attach pictures and Visio files
-  from the camera, the gallery and the phone's files. No database or server change: the app
-  calls `save_item`, or `attach_file` (which also creates a new note) for a one-time upload
-  link, then does the upload page's steps itself (`src/lib/upload.ts`): reserved ids from
-  `get_attachment_upload_request`, files streamed to Storage (`expo-file-system` `File.upload`),
-  `complete_attachment_upload`, `/embed-pending`. File rules are a port of
-  `docs/files/filetypes.js` (`src/lib/filetypes.ts`, inflate with `fflate`); a test runs both on
-  the same files and they must agree. Android permissions: camera added (Android asks the first
-  time); the image picker's microphone permission is blocked; no storage permissions (Android's
-  photo picker needs none). HEIC/WebP pictures from the gallery are refused with an
-  explanation (the camera button always gives JPEG).
-- **A2b (next):** "Share to Wilma" from other apps (needs a share-intent config plugin).
+## History of this phase (details in the plan's "as built" notes)
 
-Notes kept from A1 planning:
-- Sign in with supabase-js (email + password, like the vault pages); keep the session in
-  secure storage (`expo-secure-store` has a small per-value size limit, so the usual pattern
-  is an encryption key in secure storage and the encrypted session elsewhere; check the
-  current Supabase/Expo guidance in the package docs).
-- Call Wilma's tools on the existing MCP server (`MCP_URL` in `app/src/lib/config.ts`) with
-  the user's access token (JSON-RPC `tools/call`; the MCP TypeScript SDK client also works).
-  No database change is needed: the app's session has no `client_id`, so it is treated like
-  the vault pages.
-- One PR per milestone; ask the owner before merging.
+- **A1 read** (PR #11) + **Android session fix** (PR #12): on Android, expo-crypto's
+  `AESSealedData.fromCombined` accepts only bytes (docs and iOS also accept base64), so the
+  saved session could not be read. Lesson: native Expo APIs can differ from their docs by
+  platform; read `node_modules/<pkg>/android` and `ios` when a call takes "string or bytes".
+- **A1 polish** (PR #13): migration `search_cutoff` (optional `p_max_distance` on
+  `search_items`; MCP `close_matches_only`, used by the app only), sign-in form above the
+  keyboard, offline moments no longer sign out (`src/lib/sessionToken.ts`).
+- **A2a** (PR #14): save notes and attach photos/Visio from the app; file rules ported from
+  `docs/files/filetypes.js` with a cross-check test; camera permission only (microphone and
+  storage blocked).
+- **Delete and recycle bin** (PR #15): owner's decisions: deleted notes go to a recycle bin
+  (restore / delete for good); only empty spaces can be deleted (the foreign keys cascade, so
+  the check is essential). Migration `recycle_bin` (dry run `tests/sql/08_recycle_bin.sql`
+  22/22), MCP tools listed above, app buttons and `app/src/app/bin.tsx`.
+
+## Plan and decisions (phase 3)
+
+`docs/phase3-mobile-app-plan.md`. Owner's decisions (2026-09-29): Expo (React Native) in
+`app/`; Android first, iOS after, one codebase; package / bundle id **`com.zaf.wilma`**
+(permanent after the first Play upload; nothing uploaded yet); personal Google Play account
+for now; testing tracks first; chat and voice at A5 (the owner creates the Anthropic API key
+then and puts it in Supabase secrets themselves); voice via the phone's built-in speech.
 
 Working on `app/` in this sandbox:
 - `docs.expo.dev` is blocked by the network policy (the owner may add it to the environment's
@@ -140,10 +119,11 @@ user (ask the owner first), and the owner tries "Wilma, attach this photo to …
 
 | Piece | Where | State |
 |---|---|---|
-| Database | Supabase project `digital-assistant`, ref `motvckmpusxiuelpwqxy` | migrations `initial_schema`, `knowledge_path`, `vault`, `cleanup_followups`, `assistant_name`, `attachments`, `search_cutoff` applied; Storage bucket `attachments` |
-| MCP server | Edge Function `mcp` (`supabase/functions/mcp/`), `https://motvckmpusxiuelpwqxy.supabase.co/functions/v1/mcp` | version 6 (server 0.4.1), 17 tools |
+| Database | Supabase project `digital-assistant`, ref `motvckmpusxiuelpwqxy` | migrations `initial_schema`, `knowledge_path`, `vault`, `cleanup_followups`, `assistant_name`, `attachments`, `search_cutoff`, `recycle_bin` applied; Storage bucket `attachments` |
+| MCP server | Edge Function `mcp` (`supabase/functions/mcp/`), `https://motvckmpusxiuelpwqxy.supabase.co/functions/v1/mcp` | version 7 (server 0.5.0), 22 tools |
 | Sign-in page | `docs/oauth/consent.html` → `https://hassan-wehbe.github.io/digital-assistant/oauth/consent` | used by the Claude connector (OAuth 2.1 via Supabase Auth) |
 | Vault pages | `docs/vault/` → `https://hassan-wehbe.github.io/digital-assistant/vault/` | setup, enter, reveal, recover |
+| Mobile app | `app/` (Expo), package `com.zaf.wilma`, Expo project `zafnut/wilma` | preview builds via GitHub Actions `app build`; latest build of PR #15 (see top) |
 | Upload page | `docs/files/upload.html` → `https://hassan-wehbe.github.io/digital-assistant/files/upload` | live |
 | Claude connector | "Digital Assistant" custom connector in the owner's Claude account | connected and in use (spaces Logins, Recipes exist) |
 
@@ -154,6 +134,7 @@ Tools: `list_spaces`, `create_space`, `save_item`, `update_item`, `get_item`, `s
 `link_items` (knowledge, M1); `save_secret`, `find_secret`, `get_secret`, `update_secret`,
 `delete_secret` (vault, M2); `set_assistant_name` (invocation name, default Wilma; design.md D17).
 Attachments (step 1): `attach_file`, `get_attachment_link`, `describe_attachment`, `delete_attachment`.
+Deleting (recycle bin): `delete_item`, `list_deleted_items`, `restore_item`, `purge_item`, `delete_space`.
 
 ## Key design decisions (details in the docs named)
 
@@ -186,14 +167,29 @@ edit an applied one).
 - **Branches:** `main` is protected (pull request required, no force push). Work on a branch,
   open a PR, merge when the owner agrees.
 - **Deno** is not preinstalled: `npm i -g deno`, then set `DENO_CERT=/root/.ccr/ca-bundle.crt`.
-  Unit tests: `deno test -A --config supabase/functions/mcp/deno.json tests/deno` (56 tests).
+  Unit tests: `deno test -A --config supabase/functions/mcp/deno.json tests/deno` (62 tests).
+  App: `cd app && npm ci && npm run check` (61 tests).
 - **SQL tests** run through the Supabase connector (`execute_sql`), each wrapped in
   `begin; … rollback;` (`tests/sql/run.sh --print NN` builds the script). To check a new
   migration *before* applying it, prepend the migration to a test inside the same rolled-back
-  transaction (dry run).
+  transaction (dry run). **In a dry run, setup statements that run as the superuser see the
+  owner's real rows** (e.g. a real "Recipes" space): always filter superuser lookups by the
+  test user's id (`owner_user_id = '00000000-0000-4000-a000-00000000000a'`).
 - **Deploying `mcp`** with the connector's `deploy_edge_function`: pass every file under
   `supabase/functions/mcp/` (not `deno.lock`), `verify_jwt: false`, and
   `import_map_path: "deno.json"` (without it the deploy fails on a stale import-map path).
+  The file contents are pasted into the call, so **verify after deploying**: `get_edge_function`
+  (its output is saved to a file; parse it with python) and compare every file with the repo
+  (all must be identical; `deno.json` is not listed back). Then `curl` the function without a
+  token: it must answer 401.
+- **Rollout order for a feature with a migration + server change + app:** apply the migration
+  (new functions/parameters are backward compatible), deploy `mcp`, then merge and build the
+  app. Ask the owner first ("merge and deploy").
+- **GitHub API quirks:** `merge_pull_request` can answer HTTP 500 for a clean PR; retry after a
+  minute (it worked on the second try on 2026-09-30). `expectedHeadSha` must be the full SHA.
+  To wait for a CI run or the build hand-off, poll the public API with curl in a Bash loop
+  (`/repos/Hassan-Wehbe/digital-assistant/actions/workflows/app-build.yml/runs?per_page=1`); the
+  expo.dev build link is in the job log (`get_job_logs`, last lines, "See logs: ...").
 - **After editing anything in `docs/vault/`, `docs/oauth/` or `docs/files/`:** `node scripts/vault-sri.mjs`
   (updates the SRI hashes); `tests/deno/vault_pages_test.ts` fails if you forget.
 - **Attachments:** Storage uploads in SQL tests are simulated by inserting the `storage.objects`
@@ -209,7 +205,7 @@ edit an applied one).
   `--ignore-certificate-errors-spki-list=<sha256 SPKI of /root/.ccr/agent-proxy-ca.crt>`.
   Serve pages locally with `python3 tests/browser/serve.py docs`.
 
-## Owner status
+## Owner status (earlier notes)
 
 - Connector connected and in use. Vault set up (checked 2026-09-28); recommend they test
   the recovery key once on `/vault/recover`.
