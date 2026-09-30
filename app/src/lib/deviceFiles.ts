@@ -1,12 +1,13 @@
 // The phone's camera, gallery and file picker, and sending files to Storage.
 // Checks live in picked.ts / filetypes.ts; the upload steps in upload.ts.
 import * as DocumentPicker from 'expo-document-picker';
-import { File, UploadType } from 'expo-file-system';
+import { File, Paths, UploadType } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 
 import { MCP_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from './config';
 import { MAX_FILES, PICKER_TYPES } from './filetypes';
 import { preparePicked, type RawPick } from './picked';
+import { sourceFor, type SharedFile } from './shared';
 import { supabase } from './supabase';
 import { BUCKET, type PickedFile, type UploadDeps } from './upload';
 
@@ -61,6 +62,48 @@ export async function pickFiles(): Promise<PickOutcome> {
   const result = await DocumentPicker.getDocumentAsync({ type: PICKER_TYPES, multiple: true, copyToCacheDirectory: true });
   if (result.canceled) return { files: [], errors: [] };
   return prepareAll(result.assets.map((a) => ({ uri: a.uri, name: a.name, mimeType: a.mimeType, size: a.size })));
+}
+
+/**
+ * Files shared from another app (Share -> Wilma), checked like picked ones. Each is read
+ * from a copy in the app's cache (made here from its content:// link when the share module
+ * has none there), because the link may stop working once the share is over and the upload
+ * needs a file. `cleanup` lists the cache copies to delete after saving.
+ */
+export async function prepareShared(shared: SharedFile[]): Promise<PickOutcome & { cleanup: string[] }> {
+  const raws: RawPick[] = [];
+  const cleanup: string[] = [];
+  const errors: string[] = [];
+  for (const [i, f] of shared.entries()) {
+    try {
+      const src = sourceFor(f, Paths.cache.uri);
+      let uri = src.uri;
+      if (src.how === 'copy') {
+        const safe = (f.name ?? 'shared').replace(/[^A-Za-z0-9._-]+/g, '_').slice(-80);
+        const dest = new File(Paths.cache, `shared-${Date.now()}-${i}-${safe}`);
+        await new File(src.uri).copy(dest);
+        uri = dest.uri;
+      }
+      if (src.how !== 'read') cleanup.push(uri);
+      raws.push({ uri, name: f.name, mimeType: f.mimeType, size: f.size });
+    } catch (e) {
+      errors.push(`${f.name ?? 'A shared file'}: could not be read (${e instanceof Error ? e.message : e}).`);
+    }
+  }
+  const out = await prepareAll(raws);
+  return { files: out.files, errors: [...errors, ...out.errors], cleanup };
+}
+
+/** Delete cache copies made for a share (never fails). */
+export function removeCopies(uris: string[]): void {
+  for (const uri of uris) {
+    try {
+      const f = new File(uri);
+      if (f.exists) f.delete();
+    } catch {
+      // the phone empties its cache on its own eventually
+    }
+  }
 }
 
 async function accessToken(): Promise<string> {

@@ -49,6 +49,29 @@
           "photosPermission": "Wilma opens your photos when you choose pictures to attach to a note.",
           "microphonePermission": false
         }
+      ],
+      [
+        "expo-share-intent",
+        {
+          "androidIntentFilters": [
+            "text/plain",
+            "image/jpeg",
+            "image/png",
+            "application/vnd.ms-visio.drawing",
+            "application/vnd.ms-visio.drawing.main+xml",
+            "application/vnd.visio",
+            "application/octet-stream"
+          ],
+          "androidMultiIntentFilters": [
+            "image/jpeg",
+            "image/png",
+            "application/vnd.ms-visio.drawing",
+            "application/vnd.ms-visio.drawing.main+xml",
+            "application/vnd.visio",
+            "application/octet-stream"
+          ],
+          "disableIOS": true
+        }
       ]
     ],
     "experiments": {

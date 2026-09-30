@@ -1,7 +1,7 @@
 # Phase 3, step 1: the Wilma mobile app (plan)
 
 Status: A0 (project setup) built, see `app/README.md` and `docs/phase3-mobile-app-setup.md`;
-A1 (read) built, see "A1 as built" below; A2 onward not started. Owner direction (2026-09-28): a real app, **publishable on Android
+A1 (read), A2a and A2b built, see the "as built" notes below; A3 onward not started. Owner direction (2026-09-28): a real app, **publishable on Android
 first and iOS after, from one codebase with minimal changes**. PC and Mac use a web page (no
 install); an installed desktop app with background "Hey Wilma" may come later from the same
 code. Read first: `CLAUDE.md`, `docs/design.md`, `docs/phase2-attachments-plan.md`.
@@ -69,7 +69,7 @@ Each is one PR, tested, and approved by the owner before the next.
   home search asks for close matches only (migration `search_cutoff`, MCP 0.4.1); sign-in
   form stays above the keyboard; offline moments no longer sign you out.
 - **A2 Save and attach** (split: **A2a** save and attach inside the app, built; **A2b** the
-  Android share menu, next). Save a note; attach from camera, gallery, files and the Android
+  Android share menu, built). Save a note; attach from camera, gallery, files and the Android
   share menu (the same checks as the upload page: type from the first bytes, 20 MB, Visio
   text read on the phone).
   **A2a as built:** "New note or photo" (home) and "New note here" (space) open a form: space,
@@ -78,6 +78,17 @@ Each is one PR, tested, and approved by the owner before the next.
   the upload link. "Add photos or files" on an item uses `attach_file` with the item id. The
   app then does what the upload page does (`app/src/lib/upload.ts`). If the note was created
   but the upload failed, Save retries the files on that same note. No database or server change.
+  **A2b as built:** Share -> Wilma from Photos, Files, Chrome etc. (Android). `expo-share-intent`
+  8 adds the share targets (single: text, JPEG, PNG, Visio types, `application/octet-stream`;
+  multiple: the same without text) and no permission. The app uses the module directly
+  (`src/lib/shareIntake.tsx`) rather than its hook, which drops Android's `content://` links
+  and forgets a share when the app goes to the background. Shared files are copied into the
+  app's cache (or the module's copy there is used), checked like picked files, and deleted
+  after saving or cancelling. The share screen (`src/app/share.tsx`): *New note* (space, title,
+  note; shared text or a link becomes the note) or *Add to a note* (space, then one of its
+  50 most recent notes, filter by title), captions per file. Signed out, sign-in comes first,
+  then the share screen opens. iOS share extension switched off (`disableIOS`) until phase B.
+  No database or server change.
 - **A3 Vault.** Save and reveal secrets in the app; compatibility tests against the web
   vault; optional fingerprint/face lock for opening the app (never stores the passphrase).
 - **A4 Android release.** Privacy policy page (on the existing GitHub Pages site), Play

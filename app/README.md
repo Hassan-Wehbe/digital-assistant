@@ -11,7 +11,7 @@ Plan: `../docs/phase3-mobile-app-plan.md`. Owner setup: `../docs/phase3-mobile-a
   put a service-role key, an AI key or any other secret in the app.
 - `AGENTS.md` is Expo's guidance for AI coding assistants (kept from the template).
 
-## How it works (milestones A1, A2a)
+## How it works (milestones A1, A2a, A2b)
 
 | File | What it does |
 |---|---|
@@ -19,7 +19,8 @@ Plan: `../docs/phase3-mobile-app-plan.md`. Owner setup: `../docs/phase3-mobile-a
 | `src/lib/supabase.ts` | Supabase sign-in (email + password, same account as the Claude connector and vault pages). |
 | `src/lib/sessionStorage.ts`, `deviceStorage.ts` | The session is encrypted (AES-256-GCM); the key is in the phone's keystore (this device only, not in backups), the ciphertext in the app's local store. |
 | `src/lib/wilma.ts` | Calls Wilma's tools on the MCP server with the user's token: `list_spaces`, `search_items`, `get_item`, `get_attachment_link`, `save_item`, `attach_file`, and the delete tools (`delete_attachment`, `delete_item`, `list_deleted_items`, `restore_item`, `purge_item`, `delete_space`). No vault tools. |
-| `src/app/new-item.tsx`, `attach.tsx` | New note (optionally with files); add files to an item. |
+| `src/app/new-item.tsx`, `attach.tsx`, `src/lib/saveNote.ts` | New note (optionally with files); add files to an item. |
+| `src/app/share.tsx`, `src/lib/shareIntake.tsx`, `shared.ts` | Share -> Wilma from other apps (`expo-share-intent`): photos, Visio files, text or a link become a new note, or the files go to an existing note. Shared files are copied into the app's cache first. Signed out, sign-in comes first. Android only for now (`disableIOS` in `app.json` until phase B). |
 | `src/app/bin.tsx` | Recycle bin: restore a deleted note or delete it for good. Delete note / file / space buttons ask first. |
 | `src/lib/upload.ts`, `picked.ts`, `filetypes.ts`, `deviceFiles.ts` | The upload page's steps and file rules, done by the app: one-time link from `attach_file`, files streamed to Storage, recorded with `complete_attachment_upload`. `filetypes.test.ts` checks the rules match `docs/files/filetypes.js`. |
 
@@ -53,4 +54,5 @@ repository secret). `ios/` and `android/` are generated at build time and are no
 Android asks for internet, vibration and the camera (A2a; Android asks the first time you
 take a photo). Blocked in `app.json`: the storage permissions (Android's photo picker needs
 none), "draw over other apps", and the microphone the image picker would add for videos.
-Other permissions are added only with the features that need them.
+Other permissions are added only with the features that need them. Share to Wilma (A2b)
+adds no permission: Android lets the app read what you share (JPEG, PNG, Visio, text).
