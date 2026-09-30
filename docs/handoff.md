@@ -51,7 +51,7 @@ after decrypting; a missing session now returns to the sign-in screen). Lesson: 
 APIs can differ by platform from their docs; check `node_modules/<pkg>/android` and `ios`
 sources when a call takes "string or bytes".
 
-**A1 polish (owner's requests after the phone test, branch `claude/app-a1-polish`):**
+**A1 polish (owner's requests after the phone test, PR #13, merged and live 2026-09-30):**
 - Weak search matches show "Nothing found": migration `search_cutoff` adds an optional
   `p_max_distance` to `search_items` (semantic chunks further than that cosine distance are
   left out; keyword matches stay); the MCP tool takes `close_matches_only` (distance 0.2, i.e.
@@ -59,16 +59,30 @@ sources when a call takes "string or bytes".
   calibrated on real data: tune `CLOSE_MATCH_MAX_DISTANCE` in `tools/search_items.ts` if good
   matches go missing). The Claude connector's searches are unchanged (no cutoff by default).
   Dry runs passed (`tests/sql/07_search_cutoff.sql`, and 02 against the new function).
-  **Rollout order:** apply the migration, then deploy `mcp` (server 0.4.1), then build the app
-  (the new MCP code needs the new function; the old code works with it).
+  **Rolled out 2026-09-30 with the owner's OK, in this order:** migration `search_cutoff`
+  applied, `mcp` v6 deployed (server 0.4.1; the deployed files were compared with the repo:
+  identical), app preview build. The owner confirmed on the phone that it works.
 - Sign-in screen: form at the top, `KeyboardAvoidingView` with `padding` on Android too.
 - Staying signed in: sessions already survive app updates (same package and signing key);
   now a refresh that fails for lack of a connection no longer signs out
   (`src/lib/sessionToken.ts`), opening the app offline keeps you signed in, and signing out
   offline still forgets the session on the phone.
 
-**Next: A2** (save a note; attach from camera, gallery, files, share menu). Notes kept from A1
-planning:
+**A2 is split in two (owner agreed 2026-09-30):**
+- **A2a (branch `claude/app-a2a-save-attach`):** save a note, attach pictures and Visio files
+  from the camera, the gallery and the phone's files. No database or server change: the app
+  calls `save_item`, or `attach_file` (which also creates a new note) for a one-time upload
+  link, then does the upload page's steps itself (`src/lib/upload.ts`): reserved ids from
+  `get_attachment_upload_request`, files streamed to Storage (`expo-file-system` `File.upload`),
+  `complete_attachment_upload`, `/embed-pending`. File rules are a port of
+  `docs/files/filetypes.js` (`src/lib/filetypes.ts`, inflate with `fflate`); a test runs both on
+  the same files and they must agree. Android permissions: camera added (Android asks the first
+  time); the image picker's microphone permission is blocked; no storage permissions (Android's
+  photo picker needs none). HEIC/WebP pictures from the gallery are refused with an
+  explanation (the camera button always gives JPEG).
+- **A2b (next):** "Share to Wilma" from other apps (needs a share-intent config plugin).
+
+Notes kept from A1 planning:
 - Sign in with supabase-js (email + password, like the vault pages); keep the session in
   secure storage (`expo-secure-store` has a small per-value size limit, so the usual pattern
   is an encryption key in secure storage and the encrypted session elsewhere; check the
@@ -117,8 +131,8 @@ user (ask the owner first), and the owner tries "Wilma, attach this photo to …
 
 | Piece | Where | State |
 |---|---|---|
-| Database | Supabase project `digital-assistant`, ref `motvckmpusxiuelpwqxy` | migrations `initial_schema`, `knowledge_path`, `vault`, `cleanup_followups`, `assistant_name`, `attachments` applied; Storage bucket `attachments` |
-| MCP server | Edge Function `mcp` (`supabase/functions/mcp/`), `https://motvckmpusxiuelpwqxy.supabase.co/functions/v1/mcp` | version 5 (server 0.4.0), 17 tools |
+| Database | Supabase project `digital-assistant`, ref `motvckmpusxiuelpwqxy` | migrations `initial_schema`, `knowledge_path`, `vault`, `cleanup_followups`, `assistant_name`, `attachments`, `search_cutoff` applied; Storage bucket `attachments` |
+| MCP server | Edge Function `mcp` (`supabase/functions/mcp/`), `https://motvckmpusxiuelpwqxy.supabase.co/functions/v1/mcp` | version 6 (server 0.4.1), 17 tools |
 | Sign-in page | `docs/oauth/consent.html` → `https://hassan-wehbe.github.io/digital-assistant/oauth/consent` | used by the Claude connector (OAuth 2.1 via Supabase Auth) |
 | Vault pages | `docs/vault/` → `https://hassan-wehbe.github.io/digital-assistant/vault/` | setup, enter, reveal, recover |
 | Upload page | `docs/files/upload.html` → `https://hassan-wehbe.github.io/digital-assistant/files/upload` | live |

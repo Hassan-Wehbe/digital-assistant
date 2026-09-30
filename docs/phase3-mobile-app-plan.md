@@ -68,9 +68,16 @@ Each is one PR, tested, and approved by the owner before the next.
   After the owner's phone test: an Android fix for reading the saved session (#12); the
   home search asks for close matches only (migration `search_cutoff`, MCP 0.4.1); sign-in
   form stays above the keyboard; offline moments no longer sign you out.
-- **A2 Save and attach.** Save a note; attach from camera, gallery, files and the Android
+- **A2 Save and attach** (split: **A2a** save and attach inside the app, built; **A2b** the
+  Android share menu, next). Save a note; attach from camera, gallery, files and the Android
   share menu (the same checks as the upload page: type from the first bytes, 20 MB, Visio
   text read on the phone).
+  **A2a as built:** "New note or photo" (home) and "New note here" (space) open a form: space,
+  title, note, and optional pictures/Visio files with a caption each. Without files it calls
+  `save_item`; with files, `attach_file` with space + title + note creates the note and returns
+  the upload link. "Add photos or files" on an item uses `attach_file` with the item id. The
+  app then does what the upload page does (`app/src/lib/upload.ts`). If the note was created
+  but the upload failed, Save retries the files on that same note. No database or server change.
 - **A3 Vault.** Save and reveal secrets in the app; compatibility tests against the web
   vault; optional fingerprint/face lock for opening the app (never stores the passphrase).
 - **A4 Android release.** Privacy policy page (on the existing GitHub Pages site), Play
