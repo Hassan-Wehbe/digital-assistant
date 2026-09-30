@@ -154,3 +154,7 @@ For later (commercial, not blocking A0-A4): in-app subscriptions must use Google
 and Apple in-app purchase (store fee 15% on the first $1M a year); a paid Supabase plan once
 real users arrive (the free plan pauses inactive projects); per-user AI costs; terms of use;
 a trademark check on the name "Wilma".
+
+> Update 2026-09-30: model provider is no longer fixed to Claude. See `docs/design.md` D20:
+> provider-neutral `llm` layer, model chosen by an evaluation set (leading candidate: OpenAI Luna
+> by default, Claude Sonnet 5.5 for escalation). Wherever this plan says "Claude API", read "the configured model API".
