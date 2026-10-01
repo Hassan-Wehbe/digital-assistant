@@ -204,7 +204,8 @@ Each is one PR, tested, and approved by the owner before the next.
   `docs/legal/delete-account.html`. Next in the app: "change sign-in password", so testers
   can replace the temporary password the owner gives them.
 - **A5 One conversational box, typed and by voice** (the owner creates the API key at this
-  point). Design: "The experience" at the top of this plan. Pieces:
+  point). **Build plan (provider-neutral, D21): `docs/phase5-chat-plan.md`**; it
+  supersedes the Claude-specific details below. Owner (2026-10-01): A5 before going public. Design: "The experience" at the top of this plan. Pieces:
   - **The box** replaces the home search field: text or microphone (the phone's built-in
     speech recognition; spoken replies with its text-to-speech, optional). Results and
     Wilma's replies appear as one thread under it; spaces stay below for browsing.
@@ -305,3 +306,7 @@ For later (commercial, not blocking A0-A4): in-app subscriptions must use Google
 and Apple in-app purchase (store fee 15% on the first $1M a year); a paid Supabase plan once
 real users arrive (the free plan pauses inactive projects); per-user AI costs; terms of use;
 a trademark check on the name "Wilma".
+
+> Update 2026-09-30: model provider is no longer fixed to Claude. See `docs/design.md` D21:
+> provider-neutral `llm` layer, model chosen by an evaluation set (leading candidate: OpenAI Luna
+> by default, Claude Sonnet 5.5 for escalation). Wherever this plan says "Claude API", read "the configured model API".

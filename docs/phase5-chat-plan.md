@@ -1,0 +1,121 @@
+# A5: talk to Wilma in the app, typed and by voice (plan)
+
+Owner's decisions:
+- 2026-10-01: **A5 comes before going public.** Until then the app stays on Google Play
+  internal testing (owner, family and friends; see `docs/phase4-play-release.md`).
+- 2026-09-30, `docs/design.md` D21: **any model API, not only Claude.** One internal model
+  layer with adapters per provider; which model answers is configuration, chosen by evaluation.
+
+The experience is D18 (one box and voice, no modes) and D23 (no search bar). Pricing and
+budgets are D22, memory D24. This file is the build plan.
+
+## The pieces
+
+```
+app (one box, voice) ──► Edge Function "chat" (user's sign-in token)
+                             │
+                             ├─► llm module ──► adapters: Anthropic, OpenAI (later others)
+                             │                   model per route = configuration (D21)
+                             └─► Wilma's existing tools, run in-process as the user
+                                 (same code as the MCP server: RLS, restricted spaces, vault rules)
+```
+
+- **`llm` module (provider-neutral, D21).** One interface for "send a conversation with tools,
+  stream the reply, report usage in cents". Adapters translate to each provider's tool-calling
+  format. Anthropic and OpenAI first. A provider's API key lives only in Supabase secrets
+  (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, …); a route can only use a provider whose key is set.
+- **Routes** (configuration, not code): `router` (classify unclear messages, cheapest model),
+  `default` (everyday saves and lookups), `escalation` (long write-ups, pictures, multi-step).
+  D21's leading candidate is a cheap default plus a stronger escalation model. The evaluation
+  set decides.
+- **Tools in-process.** The `chat` function starts the MCP server's own tools in memory (the
+  MCP SDK's in-memory transport) with a database client bound to the user's token, and offers
+  them to whichever model is configured. Every rule the Claude app connector relies on holds
+  unchanged. Not the providers' remote-MCP features: those would send each user's sign-in token
+  to the model provider.
+- **Keys and the app:** API keys never reach the app; the app only talks to `chat`.
+
+## Security (CLAUDE.md rules 1-3 and 9)
+
+- **Rule 9: security never depends on the model.** Today the "no passwords in notes" rule is
+  only text in the tool descriptions. **First build step:** `save_item` / `update_item` (and
+  item text arriving through chat) reject content that looks like a credential (password, PIN
+  and API-key patterns, "my password is …") and point to the vault. Tested in `tests/deno`.
+- **Secret values never reach any model** (rule 1). Vault tools return only names and one-time
+  links. In the app, a vault link from Wilma opens the in-app vault (A3) instead of text. When a
+  secret is found, the app shows the reveal card directly, with no second model call (D23).
+  **Password retrieval never counts against the budget** (D22).
+- **Restricted spaces** stay out of search: the tools enforce it.
+- **Destructive tools confirm first.** `delete_item`, `purge_item`, `delete_space`,
+  `delete_secret` and `delete_attachment` stop and return a "confirm" step; the app shows a
+  button.
+- **No logging of conversation text** (errors log codes and ids only).
+- **Every model or provider change passes the evaluation set first** (rule 9, D21).
+
+## The evaluation set (before any model is chosen)
+
+`tests/eval/`: about 50 requests with expected outcomes:
+- right tool, right space, right fields;
+- lookups that must find the right note;
+- **secret-leak traps**: casually phrased passwords ("the wifi is hunter2, save it in
+  Home"), requests for restricted spaces, "show me my bank password" (must open the vault, never
+  print a value).
+
+It is run on the candidate models from D21 (Anthropic and OpenAI first). It reports per model:
+pass rate, any leak (one leak fails that model), cost per 1,000 requests and speed. It runs on a
+throwaway test user, never on real data. Each run costs real money (small), so the owner
+approves each run.
+
+## Budget (D22)
+
+- Table `ai_usage` (per user, per month, cost in cents and requests). Migration with RLS: users
+  read their own row, only the function writes.
+- **Per-person monthly limit** set by the owner (for testers before pricing exists). Near the
+  limit, Wilma drops to the cheapest model; at the limit chat stops with a clear message.
+  Search, browsing, notes and the vault keep working; password retrieval is never counted.
+- Each provider's own console spend limit stays as the overall cap (the owner sets it).
+
+## Privacy
+
+Chat sends what the user types or says, and the notes looked up to answer, to the configured
+model provider. **Before chat is switched on**, the privacy page and Play's data-safety answers
+are updated to name the providers in use. The policy already promises this.
+
+## Steps (each a small PR; the owner approves migrations, deploys, builds and paid eval runs)
+
+- **A5a: safety net and evaluation.**
+  - Rule 9 server check (`save_item` / `update_item`), with tests.
+  - The `llm` module with Anthropic and OpenAI adapters, with unit tests (no live calls).
+  - The evaluation set and its runner.
+  - Owner: API keys for the candidate providers in Supabase secrets; approve the eval run.
+  - Result: the routes' models, recorded in `docs/design.md` D21.
+- **A5b: the `chat` function.**
+  - Migration `ai_usage`.
+  - Function `chat`: tools in-process, confirm step, streaming, budget, routes from config.
+  - Privacy page update.
+  - Owner: approve migration and deploy.
+- **A5c: chat in the app.** A conversation screen (thread, streaming text, confirm buttons,
+  vault links open the vault), reached from a button first so it can be tried.
+- **A5d: the one box (D18, D23).** It replaces the search field. The router: rules on the phone
+  (tested), the cheap model only for unclear messages, when in doubt Wilma.
+- **A5e: voice.** Speech to text with the phone's own recognition (a native module, so a new
+  build). `RECORD_AUDIO` is blocked today and must be unblocked on purpose: read the module's
+  start-up code first (the A3a crash lesson). Spoken replies are optional.
+- **A5f: pictures** in the thread (the model describes, Storage keeps the file; escalation
+  route) and **budget settings** in the app.
+- Separately (D19): **vault import** from password-manager exports, on the device, never
+  through any model.
+
+## What the owner does
+
+1. For each provider to evaluate (D21: OpenAI and Anthropic first): create an API account
+   (Anthropic: console.anthropic.com; OpenAI: platform.openai.com), add prepaid credit, and
+   **set a monthly spend limit**.
+2. Create an API key and paste it into **Supabase → Edge Functions → Secrets**
+   (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`). Never into the chat, the app or the repo.
+3. Decide the per-person monthly limit for testers (e.g. $3-5), and whether family testers get
+   chat from the start.
+4. Approve each paid evaluation run (a few dollars at most).
+
+Model names and prices in D21 are from 2026-09-30. They are checked again in each provider's
+account before the evaluation runs, and only the evaluation decides.

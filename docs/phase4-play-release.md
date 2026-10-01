@@ -13,8 +13,8 @@ Web pages (GitHub Pages, from `docs/legal/`), needed by Play Console:
 - Privacy policy: https://hassan-wehbe.github.io/digital-assistant/legal/privacy
 - Account deletion: https://hassan-wehbe.github.io/digital-assistant/legal/delete-account
 
-Images for the listing: `docs/play/icon-512.png` (app icon, 512×512) and
-`docs/play/feature-graphic.png` (1024×500). Screenshots come from the owner's phone.
+Images for the listing: `docs/play/icon-512.png` (the Wilma mascot app icon, 512×512, same as
+`app/assets/brand/play-store-icon-512.png`) and `docs/play/feature-graphic.png` (1024×500). Screenshots come from the owner's phone.
 
 ## Steps at a glance
 
