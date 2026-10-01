@@ -3,6 +3,7 @@ import { chunkAndEmbed, hasPending, scheduleEmbedPending } from "../lib/embed.ts
 import { loadSpaces, resolveSpace } from "../lib/spaces.ts";
 import { addressedAs } from "../lib/assistant.ts";
 import { NO_CREDENTIALS_IN_DESCRIPTIONS, uploadLink } from "../lib/attachments.ts";
+import { rejectCredentials } from "../lib/credentials.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
 const ASK_FIRST =
@@ -36,6 +37,7 @@ export const registerAttachFile: RegisterTool = (server, { db, accessToken, assi
     },
     ({ item_id, space, title, note, item_type, tags, description }) =>
       guarded(async () => {
+        rejectCredentials({ title, note, tags, description }, assistantName);
         if (item_id && (space || title || note || item_type || tags)) {
           throw new Error("Give either item_id (existing item) or space + title (new item), not both.");
         }
