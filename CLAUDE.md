@@ -46,6 +46,11 @@ settings screen, approve a deploy).
 7. **History is kept.** Editing an item writes the previous version to
    `item_revision` first. Only the current version is chunked for search.
 8. **Soft delete items** (`deleted_at`); purge is a separate, explicit action.
+9. **Security never depends on the model.** Any model may misroute a request, so the
+   server enforces the rules itself: `save_item`/`update_item` reject content that
+   looks like a credential (password/PIN/API-key patterns, "my password is ...") and
+   point the user to the vault instead. Every model or provider change must pass the
+   evaluation set's secret-leak traps before it ships (see `docs/design.md` D21).
 
 ## Conventions
 

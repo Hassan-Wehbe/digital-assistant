@@ -1,71 +1,78 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-09-30 late evening (after A3b "save, change, delete secrets" was merged and
-confirmed on the phone). Read this, then `CLAUDE.md`, `docs/design.md` and
-`docs/phase3-mobile-app-plan.md`, before changing anything. The owner is returning to
-development: explain steps plainly, keep PRs small, say clearly when they must act, never ask
-for passwords, tokens or keys in chat.
+Last updated 2026-10-01 (after A3c, A4 internal testing on Google Play, and the A5 plan).
+Read this, then `CLAUDE.md`, `docs/design.md`, `docs/phase3-mobile-app-plan.md` and
+`docs/phase5-chat-plan.md`, before changing anything. The owner is returning to development:
+explain steps plainly, keep PRs small, say clearly when they must act, never ask for passwords,
+tokens or keys in chat.
 
-## Where things stand (2026-09-30 late evening)
+## Where things stand (2026-10-01)
 
 | Piece | State |
 |---|---|
-| Database | migrations up to `recycle_bin` applied (unchanged this session) |
-| MCP server `mcp` | version 7, server 0.5.0, 22 tools (unchanged this session) |
-| Mobile app (Expo, `app/`) | merged to `main` up to PR #23: A0-A2a, delete/recycle bin, A2b Share to Wilma (#17), A3a vault unlock and reveal (#18, #20, #21), **A3b save / change / delete secrets (#23)** |
-| Latest app build | preview build of `main` at 1bbf8e3 (PR #23): https://expo.dev/accounts/zafnut/projects/wilma/builds/9c98f335-b77a-4e41-b71c-37df141043ed . **Owner confirmed on the phone: "seems everything works".** |
-| Supabase | checked 2026-09-30 19:35 UTC: ACTIVE_HEALTHY; auth, storage, `mcp` (401 without a token) all answer |
+| Database | migrations up to `recycle_bin` applied (unchanged since 2026-09-30) |
+| MCP server `mcp` | version 7, server 0.5.0, 22 tools (unchanged) |
+| Mobile app (Expo, `app/`) | merged to `main` up to PR #29: A0-A3 complete. A3b secrets (#23), **A3c** spaces (#25), vault setup / recovery / passphrase change (#26), **A4** privacy + deletion pages and Play guide (#27), change sign-in password (#28), mascot app icon (#29, from another session). `npm run check`: 129 tests |
+| Google Play | app created, **internal testing release "Available to internal testers"** (production build of `main` at e90664c, versionCode 2: https://expo.dev/accounts/zafnut/projects/wilma/builds/b9ddd891-b815-4995-bd2a-5fc96a7f9a97 ; built before the mascot icon). Owner was waiting for the join link to work ("Item not found" right after release: accept invite first, matching Google account, give it time). App-content forms and store listing may still be incomplete; answers in `docs/phase4-play-release.md` |
+| Web pages | `docs/legal/privacy.html`, `docs/legal/delete-account.html` live (contact zaftechlabs@gmail.com) |
+| Supabase | ACTIVE_HEALTHY, region us-west-2 |
 
-What the app does now: everything before (sign in, spaces, search, items, attachments, new
-note with photos/Visio, delete, recycle bin), plus **Share to Wilma** from other Android apps
-(photos, Visio, text or a link -> new note or add to an existing note; confirmed by the owner)
-and the **vault**: list secrets by name, unlock with the vault passphrase then the fingerprint,
-reveal (values hidden until Show, hidden again after 30 s, clipboard cleared after 30 s,
-screenshots blocked on the secret screen), lock after 5 minutes or a minute away, and (A3b)
-save a new secret (works while locked; sealed on the phone), change a value, rename / change
-the website, delete (confirm dialog); change, rename and delete need the vault unlocked.
+What the app does now: sign in (and change the sign-in password), spaces (create, nested,
+delete when empty), search, items, attachments, notes with photos/Visio, recycle bin, Share to
+Wilma, and the vault in full: set up (recovery key shown once), unlock (passphrase then
+fingerprint), reveal, save / change / rename / delete secrets, change the passphrase, recover
+with the recovery key.
 
-## Next task: A3c "vault setup, recovery, passphrase change, and spaces in the app"
+## Owner's decisions this session (2026-09-30 / 10-01)
 
-Plan in `docs/phase3-mobile-app-plan.md` ("A3c plan"). In short:
-- **Spaces (owner's request, 2026-09-30):** create a space from the home screen with the
-  existing MCP tool `create_space` (name, optional parent, description, restricted switch);
-  add it to `APP_TOOLS` in `src/lib/wilma.ts` (+ test). Deleting a space already works (space
-  screen, empty spaces only); make it easy to find. Suggested as its own small PR, first.
-- **Vault setup in the app:** `crypto.createVault` -> `setup_vault`; show the recovery key
-  once (screenshots blocked, never logged or copied).
-- **Recover with the recovery key** and **change the passphrase:** `unlockWithRecoveryKey` /
-  `rewrapPassphrase` -> `rewrap_vault_passphrase`.
-- `setup_vault` and `rewrap_vault_passphrase` accept the app's sign-in
-  (`_vault_require_browser_session`), and the crypto is already tested against the web code,
-  so no database or server change is expected. JavaScript only; the owner still needs a build.
+- Testing with the owner plus **family and friends** on Play **internal testing**. Each tester
+  gets a Wilma account the owner creates in Supabase (sign-ups stay closed). Public contact
+  email **zaftechlabs@gmail.com**.
+- **A5 (chat and voice) comes before going public.**
+- From another session (branch `design/vault-import`, merged in the A5-plan PR and renumbered
+  after `main`'s D18): vault import D19, own app with AI built in D20, **provider-neutral
+  model layer chosen by evaluation D21** (any provider's API key, not only Claude), pricing and
+  budget D22, no search bar D23, memory D24, and **CLAUDE.md rule 9: security never depends on
+  the model**. Rule 9's server check is **not built yet**: it is A5a's first step.
 
-A3b as built (PR #23): logic in `src/lib/vaultFlow.ts` (`saveNewSecret`, `changeSecretValue`,
-`entryFields`, `detailsChange`, `sameName`, tested), screens `src/app/vault/enter.tsx` and
-`[id].tsx`, form `src/components/SecretFieldsForm.tsx`. `npm run check` has 117 tests.
+## Next task: A5a "safety net and evaluation" (`docs/phase5-chat-plan.md`)
 
-After A3c: A4 Play release, A5 chat and voice.
+1. Rule 9: `save_item` / `update_item` reject credential-looking content, with Deno tests.
+   This is a server change, so ask the owner before deploying `mcp`.
+2. `llm` module with Anthropic and OpenAI adapters (unit tests, no live calls).
+3. The evaluation set (`tests/eval/`, about 50 requests with secret-leak traps) and its runner.
+   Paid runs only with the owner's approval, on a throwaway user.
+
+Owner, before step 3: API accounts with a spend limit for the candidate providers, keys in
+Supabase secrets (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`), never in chat. Also decide the
+per-person monthly limit for testers.
 
 ## Owner status and open items
 
-- Owner signs in to the app with **hassan.wehbe@gmail.com** (the only account in the project).
-- Expo account `zafnut`, project `wilma` (id `f51dc24a-fef9-4f2a-8602-3fbe2e2c5deb`),
-  `EXPO_TOKEN` GitHub secret set. Builds: GitHub **Actions -> app build -> Run workflow
-  (preview)** on `main` (Claude starts it with the GitHub tools after the owner says "merge and
-  build"); the free Expo queue often takes an hour or more. The owner installs from the
-  expo.dev build page.
-- Branches the owner may delete on GitHub (sessions cannot delete branches; the owner said on
-  2026-09-30 they would): `claude/revert-a3a` (unused backup), `claude/vault-crash-fix`,
-  `claude/fix-startup-crash-screen-capture`, `claude/a3a-vault-unlock-reveal`,
-  `claude/a2b-share-to-wilma`, `claude/handoff-2026-09-30`, and now also
-  `claude/handoff-2026-09-30-evening`, `claude/a3b-save-change-delete-secrets`,
-  `claude/plan-a3c-spaces` (all merged).
-- Google Play personal developer account: not confirmed yet (needed at A4).
-- Search cutoff (`CLOSE_MATCH_MAX_DISTANCE = 0.2`) was not calibrated on real data; loosen it
-  if the owner reports missing results.
+- Owner signs in to the app with **hassan.wehbe@gmail.com**. Testers' accounts: Supabase →
+  Authentication → Users → Add user (Auto Confirm). To remove one: delete their Storage folder
+  `attachments/<user id>/` first, then the user (the tables cascade; Storage does not).
+- Expo account `zafnut`, project `wilma`, `EXPO_TOKEN` GitHub secret set. Builds: GitHub
+  **Actions -> app build -> Run workflow** on `main`: `preview` (.apk for sideloading, "merge
+  and build") or `production` (.aab for Play, "build for Play"; versionCode increments by
+  itself). The owner uploads each `.aab` to Play Console by hand (internal testing → Create
+  new release). **A Play install cannot update a sideloaded preview APK** (different signing
+  key): uninstall the expo.dev APK first.
+- Play listing images: `docs/play/icon-512.png` (= `app/assets/brand/play-store-icon-512.png`,
+  the mascot) and `docs/play/feature-graphic.png`. The next production build carries the
+  mascot icon (the current Play build still has the old "W").
+- Suggested to the owner, not decided: Supabase Pro ($25/month) once family stores real data
+  (daily backups, no pausing after 7 idle days).
+- Branches the owner may delete on GitHub (sessions cannot delete branches): all merged
+  `claude/*` branches (`revert-a3a`, `vault-crash-fix`, `fix-startup-crash-screen-capture`,
+  `a3a-vault-unlock-reveal`, `a2b-share-to-wilma`, `handoff-2026-09-30`,
+  `handoff-2026-09-30-evening`, `a3b-save-change-delete-secrets`, `plan-a3c-spaces`,
+  `a3c-spaces`, `a3c-vault`, `a4-play-prep`, `a4-change-password`), `brand/wilma-mascot-icon`,
+  and `design/vault-import` once the A5-plan PR is merged.
+- Search cutoff (`CLOSE_MATCH_MAX_DISTANCE = 0.2`) not calibrated on real data.
 - The recycle bin never empties itself (owner's choice).
-- `tests/browser/attachments_flow.mjs` still not run against the live project (needs a
-  throwaway user; ask first).
+- `tests/browser/attachments_flow.mjs` still not run against the live project (throwaway user;
+  ask first).
 
 ## Lessons from this session (read before adding native packages)
 
@@ -92,7 +99,7 @@ After A3c: A4 Play release, A5 chat and voice.
 - Prebuild rewrites `package.json` scripts: copy `package.json` aside before
   `npx expo prebuild` and copy it back after (a `git checkout package.json` also throws away new
   dependencies not yet committed). Then `rm -rf android`.
-- `npm run check` had 105 tests after A3a (117 after A3b).
+- `npm run check`: 105 tests after A3a, 117 after A3b, 129 after A4.
 
 ## History of this phase (details in the plan's "as built" notes)
 
