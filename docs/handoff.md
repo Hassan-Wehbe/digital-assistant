@@ -39,7 +39,9 @@ with the recovery key.
 
 1. Rule 9: `save_item` / `update_item` reject credential-looking content, with Deno tests.
    This is a server change, so ask the owner before deploying `mcp`.
-2. `llm` module with Anthropic and OpenAI adapters (unit tests, no live calls).
+2. `llm` module with Anthropic and OpenAI adapters (unit tests, no live calls). **Built** on
+   branch `claude/a5a-llm-module` (`supabase/functions/_shared/llm/`, details in
+   `docs/phase5-chat-plan.md` "The `llm` module"); nothing to deploy until the `chat` function.
 3. The evaluation set (`tests/eval/`, about 50 requests with secret-leak traps) and its runner.
    Paid runs only with the owner's approval, on a throwaway user.
 
@@ -217,7 +219,9 @@ edit an applied one).
 - **Branches:** `main` is protected (pull request required, no force push). Work on a branch,
   open a PR, merge when the owner agrees.
 - **Deno** is not preinstalled: `npm i -g deno`, then set `DENO_CERT=/root/.ccr/ca-bundle.crt`.
-  Unit tests: `deno test -A --config supabase/functions/mcp/deno.json tests/deno` (62 tests).
+  Unit tests: `deno test -A --config supabase/functions/mcp/deno.json tests/deno` (includes
+  the `llm` module tests). Deno refuses npm packages younger than 24 hours: pin an older
+  version rather than turning the check off.
   App: `cd app && npm ci && npm run check` (61 tests).
 - **SQL tests** run through the Supabase connector (`execute_sql`), each wrapped in
   `begin; … rollback;` (`tests/sql/run.sh --print NN` builds the script). To check a new
