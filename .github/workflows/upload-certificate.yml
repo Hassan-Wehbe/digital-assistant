@@ -1,0 +1,41 @@
+# Get the upload certificate (.pem) of the latest finished Play build, for Google Play's
+# "Request upload key reset" form. Run it from GitHub: Actions -> "upload certificate" ->
+# Run workflow, then download the "upload-certificate" file from the run page.
+# The certificate is public (it is inside every signed build); the keystore itself stays
+# on Expo's servers and never passes through here.
+name: upload certificate
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  certificate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Download the latest finished production build
+        run: |
+          url=$(eas build:list --platform android --build-profile production --status finished --limit 1 --json --non-interactive | jq -r '.[0].artifacts.buildUrl // empty')
+          if [ -z "$url" ]; then echo "No finished production build found." >&2; exit 1; fi
+          curl -fsSL -o build.aab "$url"
+      - name: Extract the upload certificate
+        run: |
+          sig=$(unzip -Z1 build.aab | grep -E '^META-INF/[^/]+\.(RSA|EC|DSA)$' | head -1)
+          if [ -z "$sig" ]; then echo "The build is not signed." >&2; exit 1; fi
+          unzip -p build.aab "$sig" | openssl pkcs7 -inform DER -print_certs | sed -n '/BEGIN CERTIFICATE/,/END CERTIFICATE/p' > upload_certificate.pem
+          echo "Upload key certificate fingerprint:"
+          openssl x509 -in upload_certificate.pem -noout -fingerprint -sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: upload-certificate
+          path: app/upload_certificate.pem
