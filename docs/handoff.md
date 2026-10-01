@@ -11,7 +11,7 @@ tokens or keys in chat.
 | Piece | State |
 |---|---|
 | Database | migrations up to `recycle_bin` applied (unchanged since 2026-09-30) |
-| MCP server `mcp` | version 7, server 0.5.0, 22 tools (unchanged) |
+| MCP server `mcp` | **version 8, server 0.6.0**, 22 tools, with the rule 9 credential check (PR #31, deployed 2026-10-01; deployed files checked identical to the repo, unsigned calls answer 401) |
 | Mobile app (Expo, `app/`) | merged to `main` up to PR #29: A0-A3 complete. A3b secrets (#23), **A3c** spaces (#25), vault setup / recovery / passphrase change (#26), **A4** privacy + deletion pages and Play guide (#27), change sign-in password (#28), mascot app icon (#29, from another session). `npm run check`: 129 tests |
 | Google Play | app created, **internal testing release "Available to internal testers"** (production build of `main` at e90664c, versionCode 2: https://expo.dev/accounts/zafnut/projects/wilma/builds/b9ddd891-b815-4995-bd2a-5fc96a7f9a97 ; built before the mascot icon). Owner was waiting for the join link to work ("Item not found" right after release: accept invite first, matching Google account, give it time). App-content forms and store listing may still be incomplete; answers in `docs/phase4-play-release.md` |
 | Web pages | `docs/legal/privacy.html`, `docs/legal/delete-account.html` live (contact zaftechlabs@gmail.com) |
@@ -23,6 +23,55 @@ Wilma, and the vault in full: set up (recovery key shown once), unlock (passphra
 fingerprint), reveal, save / change / rename / delete secrets, change the passphrase, recover
 with the recovery key.
 
+## Google Play and app updates (2026-10-01)
+
+- Wilma is on **Internal testing** ("Available to internal testers"), production build
+  versionCode 2 (built before the mascot icon from PR #29). Testers are the owner plus family
+  and friends; the owner creates their Wilma accounts in Supabase.
+- **Server changes** (the `mcp` function, migrations) reach everyone without an app update.
+- **App changes:** the owner says "merge and build for Play" → GitHub Actions **app build**
+  with profile `production` (.aab, versionCode increments by itself, EAS-managed upload key) →
+  the owner downloads the .aab from expo.dev and uploads it in Play Console → Internal testing
+  → Create new release → Save and publish → testers update through Google Play.
+- **Preview .apk builds can no longer be installed over the Play version** (different signing
+  key). Phones should use the Play version only.
+- **Automatic upload to Play: offered, NOT confirmed set up.** Owner's part: a Google Cloud
+  service account (Google Play Android Developer API enabled, JSON key), invited in Play
+  Console with "Release apps to testing tracks" for Wilma, and the JSON key uploaded at
+  expo.dev → Credentials → Android → com.zaf.wilma → Service account key (never in chat).
+  When the owner says "auto-submit is set up, published" (or "draft"): add a submit option to
+  `.github/workflows/app-build.yml` (`eas build ... --auto-submit`, which schedules the
+  submission on EAS when the build finishes, even with `--no-wait`) and set
+  `submit.production.android.releaseStatus` in `app/eas.json` to `"completed"` (published) or
+  keep `"draft"`.
+- Open: whether to "build for Play" now (ships the mascot icon) or wait for the first A5 app
+  changes.
+
+## Rule 9 credential check (A5a step 1, built 2026-10-01)
+
+`supabase/functions/mcp/lib/credentials.ts`, called first in `save_item`, `update_item`,
+`attach_file` and `describe_attachment` (every text field: title, body, summary, tags, item
+type, metadata keys and values, change note, attachment note and description). It refuses:
+- well-known formats anywhere: Anthropic/OpenAI/GitHub/GitLab/AWS/Google/Slack/Stripe/
+  Supabase/SendGrid keys, JWTs, private-key blocks, card numbers (network prefix + Luhn),
+  `scheme://user:password@host`;
+- labelled values: password/passcode/passphrase/pwd (also Passwort, mot de passe,
+  contraseña, كلمة السر), Wi-Fi, PIN, door/gate/alarm codes, CVV, API key/token/secret, with
+  `:`, `=`, `is`, `was`, `for X is`, `to`; plain-word passwords only when the value clearly ends
+  the phrase ("Password: marigold", "the wifi password is sunshine.") or is first-person
+  ("my password is fluffy and ...").
+
+It lets through placeholders (`<password>`, `${DB_PASSWORD}`, `****`, `[YOUR-PASSWORD]`),
+code and types (`password: z.string()`, `Uint8Array`), paths and links, and prose ("the
+password is stored in the vault"). Run over this repo's own docs and code (about 1,400
+paragraphs) it flagged only real-looking test values plus one known edge case: a JavaScript
+ternary `x ? "passphrase" : "recovery"` reads like JSON `"password": "value"`.
+
+The refusal ("Not saved: the body looks like it contains a password. ...") names only the
+field and kind, never the value, points to `save_secret`, and suggests changing a value typed
+into the chat. Nothing is saved, loaded or embedded when it fires. Tool errors are not logged.
+Tests: `tests/deno/credentials_test.ts` (traps, false positives, through the tools).
+
 ## Owner's decisions this session (2026-09-30 / 10-01)
 
 - Testing with the owner plus **family and friends** on Play **internal testing**. Each tester
@@ -33,12 +82,12 @@ with the recovery key.
   after `main`'s D18): vault import D19, own app with AI built in D20, **provider-neutral
   model layer chosen by evaluation D21** (any provider's API key, not only Claude), pricing and
   budget D22, no search bar D23, memory D24, and **CLAUDE.md rule 9: security never depends on
-  the model**. Rule 9's server check is **not built yet**: it is A5a's first step.
+  the model**. Rule 9's server check is built and live (PR #31, `mcp` version 8).
 
 ## Next task: A5a "safety net and evaluation" (`docs/phase5-chat-plan.md`)
 
 1. Rule 9: `save_item` / `update_item` reject credential-looking content, with Deno tests.
-   This is a server change, so ask the owner before deploying `mcp`.
+   **Built and live** (PR #31, `mcp` version 8, server 0.6.0, deployed 2026-10-01).
 2. `llm` module with Anthropic and OpenAI adapters (unit tests, no live calls). **Built** on
    branch `claude/a5a-llm-module` (`supabase/functions/_shared/llm/`, details in
    `docs/phase5-chat-plan.md` "The `llm` module"); nothing to deploy until the `chat` function.
@@ -70,7 +119,7 @@ per-person monthly limit for testers.
   `a3a-vault-unlock-reveal`, `a2b-share-to-wilma`, `handoff-2026-09-30`,
   `handoff-2026-09-30-evening`, `a3b-save-change-delete-secrets`, `plan-a3c-spaces`,
   `a3c-spaces`, `a3c-vault`, `a4-play-prep`, `a4-change-password`), `brand/wilma-mascot-icon`,
-  and `design/vault-import` once the A5-plan PR is merged.
+  `design/vault-import` and `claude/a5-plan-handoff` (PR #30 is merged).
 - Search cutoff (`CLOSE_MATCH_MAX_DISTANCE = 0.2`) not calibrated on real data.
 - The recycle bin never empties itself (owner's choice).
 - `tests/browser/attachments_flow.mjs` still not run against the live project (throwaway user;
@@ -172,7 +221,7 @@ user (ask the owner first), and the owner tries "Wilma, attach this photo to …
 | Piece | Where | State |
 |---|---|---|
 | Database | Supabase project `digital-assistant`, ref `motvckmpusxiuelpwqxy` | migrations `initial_schema`, `knowledge_path`, `vault`, `cleanup_followups`, `assistant_name`, `attachments`, `search_cutoff`, `recycle_bin` applied; Storage bucket `attachments` |
-| MCP server | Edge Function `mcp` (`supabase/functions/mcp/`), `https://motvckmpusxiuelpwqxy.supabase.co/functions/v1/mcp` | version 7 (server 0.5.0), 22 tools |
+| MCP server | Edge Function `mcp` (`supabase/functions/mcp/`), `https://motvckmpusxiuelpwqxy.supabase.co/functions/v1/mcp` | version 8 (server 0.6.0), 22 tools |
 | Sign-in page | `docs/oauth/consent.html` → `https://hassan-wehbe.github.io/digital-assistant/oauth/consent` | used by the Claude connector (OAuth 2.1 via Supabase Auth) |
 | Vault pages | `docs/vault/` → `https://hassan-wehbe.github.io/digital-assistant/vault/` | setup, enter, reveal, recover |
 | Mobile app | `app/` (Expo), package `com.zaf.wilma`, Expo project `zafnut/wilma` | preview builds via GitHub Actions `app build`; latest build of PR #15 (see top) |
@@ -219,9 +268,9 @@ edit an applied one).
 - **Branches:** `main` is protected (pull request required, no force push). Work on a branch,
   open a PR, merge when the owner agrees.
 - **Deno** is not preinstalled: `npm i -g deno`, then set `DENO_CERT=/root/.ccr/ca-bundle.crt`.
-  Unit tests: `deno test -A --config supabase/functions/mcp/deno.json tests/deno` (includes
-  the `llm` module tests). Deno refuses npm packages younger than 24 hours: pin an older
-  version rather than turning the check off.
+  Unit tests: `deno test -A --config supabase/functions/mcp/deno.json tests/deno` (162 tests:
+  rule 9 check and `llm` module included). Deno refuses npm packages younger than 24 hours: pin
+  an older version rather than turning the check off.
   App: `cd app && npm ci && npm run check` (61 tests).
 - **SQL tests** run through the Supabase connector (`execute_sql`), each wrapped in
   `begin; … rollback;` (`tests/sql/run.sh --print NN` builds the script). To check a new
@@ -234,7 +283,8 @@ edit an applied one).
   `import_map_path: "deno.json"` (without it the deploy fails on a stale import-map path).
   The file contents are pasted into the call, so **verify after deploying**: `get_edge_function`
   (its output is saved to a file; parse it with python) and compare every file with the repo
-  (all must be identical; `deno.json` is not listed back). Then `curl` the function without a
+  (all must be identical; one file may not be listed back: `deno.json` before 2026-10-01,
+  `lib/supabase-ai.d.ts`, which holds types only, on 2026-10-01). Then `curl` the function without a
   token: it must answer 401.
 - **Rollout order for a feature with a migration + server change + app:** apply the migration
   (new functions/parameters are backward compatible), deploy `mcp`, then merge and build the

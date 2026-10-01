@@ -2,6 +2,7 @@ import { z } from "zod";
 import { chunkAndEmbed, hasPending, scheduleEmbedPending } from "../lib/embed.ts";
 import { loadSpaces, resolveSpace } from "../lib/spaces.ts";
 import { addressedAs } from "../lib/assistant.ts";
+import { rejectCredentials } from "../lib/credentials.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
 export const registerSaveItem: RegisterTool = (server, { db, accessToken, assistantName }) => {
@@ -26,6 +27,8 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
     },
     ({ space, title, body, item_type, summary, tags, metadata }) =>
       guarded(async () => {
+        // Rule 9: enforced here, not left to the model.
+        rejectCredentials({ title, body, summary, tags, metadata, item_type }, assistantName);
         const target = resolveSpace(await loadSpaces(db), space);
         const chunks = await chunkAndEmbed({ title, summary, body });
         const { data, error } = await db.rpc("save_item", {
