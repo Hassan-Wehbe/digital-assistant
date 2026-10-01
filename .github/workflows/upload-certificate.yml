@@ -29,6 +29,10 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
       # eas reads the app config, which needs the app's packages installed.
       - run: npm ci
+      - name: Recent production builds
+        run: |
+          eas build:list --platform android --build-profile production --limit 3 --json --non-interactive > recent.json
+          jq -r '.[] | "\(.id)  versionCode \(.appBuildVersion)  \(.status)  created \(.createdAt)"' recent.json
       - name: Download the latest finished production build
         run: |
           eas build:list --platform android --build-profile production --status finished --limit 1 --json --non-interactive > builds.json
