@@ -84,7 +84,9 @@ are updated to name the providers in use. The policy already promises this.
 ## Steps (each a small PR; the owner approves migrations, deploys, builds and paid eval runs)
 
 - **A5a: safety net and evaluation.**
-  - Rule 9 server check (`save_item` / `update_item`), with tests.
+  - Rule 9 server check (`save_item` / `update_item`), with tests. **Built** (server 0.6.0,
+    `lib/credentials.ts`, `tests/deno/credentials_test.ts`); also covers `attach_file` and
+    `describe_attachment`. Not yet deployed.
   - The `llm` module with Anthropic and OpenAI adapters, with unit tests (no live calls).
   - The evaluation set and its runner.
   - Owner: API keys for the candidate providers in Supabase secrets; approve the eval run.

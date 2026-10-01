@@ -77,7 +77,7 @@ function unauthorized(detail: string): Response {
 
 function buildServer(ctx: ToolContext): McpServer {
   const server = new McpServer(
-    { name: "digital-assistant", version: "0.5.0" },
+    { name: "digital-assistant", version: "0.6.0" },
     { instructions: serverInstructions(ctx.assistantName) },
   );
   for (const register of [

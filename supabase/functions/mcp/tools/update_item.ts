@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { type Chunk, chunkAndEmbed, hasPending, scheduleEmbedPending } from "../lib/embed.ts";
 import { loadSpaces, resolveSpace } from "../lib/spaces.ts";
+import { rejectCredentials } from "../lib/credentials.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
-export const registerUpdateItem: RegisterTool = (server, { db, accessToken }) => {
+export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assistantName }) => {
   server.registerTool(
     "update_item",
     {
@@ -25,6 +26,9 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken }) =>
     },
     (args) =>
       guarded(async () => {
+        // Rule 9: enforced here, not left to the model.
+        const { title, body, summary, tags, metadata, item_type, change_note } = args;
+        rejectCredentials({ title, body, summary, tags, metadata, item_type, change_note }, assistantName);
         const targetSpace = args.space ? resolveSpace(await loadSpaces(db), args.space) : null;
 
         // Text changed: re-chunk the new current version (only it is searchable).

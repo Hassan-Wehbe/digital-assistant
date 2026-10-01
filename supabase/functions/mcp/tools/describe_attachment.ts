@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { scheduleEmbedPending } from "../lib/embed.ts";
 import { NO_CREDENTIALS_IN_DESCRIPTIONS } from "../lib/attachments.ts";
+import { rejectCredentials } from "../lib/credentials.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
-export const registerDescribeAttachment: RegisterTool = (server, { db, accessToken }) => {
+export const registerDescribeAttachment: RegisterTool = (server, { db, accessToken, assistantName }) => {
   server.registerTool(
     "describe_attachment",
     {
@@ -20,6 +21,7 @@ export const registerDescribeAttachment: RegisterTool = (server, { db, accessTok
     },
     ({ attachment_id, description }) =>
       guarded(async () => {
+        rejectCredentials({ description }, assistantName);
         const { data, error } = await db.rpc("set_attachment_description", {
           p_attachment_id: attachment_id,
           p_description: description,
