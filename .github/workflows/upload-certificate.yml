@@ -24,6 +24,8 @@ jobs:
       - uses: expo/expo-github-action@v8
         with:
           eas-version: latest
+          # npm instead of the default yarn: the yarn registry failed twice on 2026-10-01.
+          packager: npm
           token: ${{ secrets.EXPO_TOKEN }}
       # eas reads the app config, which needs the app's packages installed.
       - run: npm ci
