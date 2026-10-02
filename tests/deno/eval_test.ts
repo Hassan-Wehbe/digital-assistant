@@ -10,7 +10,9 @@ import { ALL_TOOLS, openSession, runConversation } from "../eval/harness.ts";
 import { CASES } from "../eval/cases.ts";
 import { grade, observe } from "../eval/grade.ts";
 import { IDS, World } from "../eval/world.ts";
-import { type Candidate, estimateCents, parseArgs, selectCases, selectModels, splitByKeys } from "../eval/run.ts";
+import {
+  type Candidate, estimateCents, parseArgs, selectCases, selectModels, splitByKeys, stopReason,
+} from "../eval/run.ts";
 import { markdown, summarize } from "../eval/report.ts";
 
 const MODEL: ModelConfig = {
@@ -171,6 +173,17 @@ Deno.test("loop: an account out of credit is recorded as quota_exceeded", async 
   const run = await runConversation(empty, MODEL, ["hello"]);
   assertEquals(run.errorCode, QUOTA_EXCEEDED);
   assert(run.error?.includes("quota_exceeded"));
+});
+
+Deno.test("runner: answers that would repeat for every case stop the model, others do not", () => {
+  const luna: ModelConfig = { ...MODEL, provider: "openai", model: "gpt-6.0-luna" };
+  assert(stopReason({ errorCode: "model_not_found", errorStatus: 404 }, "luna", luna)!.includes('does not know the model "gpt-6.0-luna"'));
+  assert(stopReason({ errorCode: QUOTA_EXCEEDED, errorStatus: 429 }, "luna", luna)!.includes("out of credit"));
+  assert(stopReason({ errorStatus: 401 }, "luna", luna)!.includes("OPENAI_API_KEY was refused"));
+  assert(stopReason({ errorStatus: 403 }, "luna", luna)!.includes("allowed models"));
+  assertEquals(stopReason({ errorCode: "rate_limit_exceeded", errorStatus: 429 }, "luna", luna), null);
+  assertEquals(stopReason({ errorCode: "server_error", errorStatus: 500 }, "luna", luna), null);
+  assertEquals(stopReason({}, "luna", luna), null);
 });
 
 Deno.test("loop: a failing model call is an error, not a wrong answer", async () => {

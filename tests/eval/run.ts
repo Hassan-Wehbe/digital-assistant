@@ -66,6 +66,31 @@ export function estimateCents(m: ModelConfig, cases: EvalCase[], repeat: number)
   return (turns * 3 * (9000 * m.price.input + 500 * m.price.output)) / 1_000_000 * 100;
 }
 
+/**
+ * Why every further call to this model would fail the same way, or null. Such an answer stops
+ * the model's run at once instead of repeating it for every case.
+ */
+export function stopReason(
+  run: { errorCode?: string; errorStatus?: number },
+  id: string,
+  m: ModelConfig,
+): string | null {
+  const keyName = KEY_ENV[m.provider];
+  if (run.errorCode === QUOTA_EXCEEDED) {
+    return `${id} stopped: the ${m.provider} account is out of credit or over its spend limit ` +
+      "(top up or raise the limit, then run again)";
+  }
+  if (run.errorStatus === 401) return `${id} stopped: ${keyName} was refused (HTTP 401); create a new key and update the secret`;
+  if (run.errorStatus === 403) {
+    return `${id} stopped: this key may not use "${m.model}" (HTTP 403); check the project's allowed models`;
+  }
+  if (run.errorStatus === 404) {
+    return `${id} stopped: ${m.provider} does not know the model "${m.model}", or this key may not use it ` +
+      "(HTTP 404); check the exact model id and the project's allowed models";
+  }
+  return null;
+}
+
 /** Models whose provider key is set, and the others (skipped, with the setting to add). */
 export function splitByKeys(
   models: [string, Candidate][],
@@ -126,21 +151,20 @@ async function main() {
   const notes = [...missing];
   for (const [id, m] of models) {
     results[id] = [];
-    let outOfCredit = false;
+    let stopped = false;
     const jobs = cases.flatMap((c) => Array.from({ length: repeat }, () => c));
     await pool(jobs, concurrency, async (c) => {
-      if (spentCents >= capCents || outOfCredit) {
+      if (spentCents >= capCents || stopped) {
         results[id].push("skipped");
         return;
       }
       const run = await runConversation(adapters.get(m.provider)!, m, c.turns, { setup: c.setup });
       spentCents += run.costCents;
-      if (run.errorCode === QUOTA_EXCEEDED && !outOfCredit) {
-        outOfCredit = true;
-        const note = `${id} stopped: the ${m.provider} account is out of credit or over its spend limit ` +
-          "(top up or raise the limit, then run again)";
-        notes.push(note);
-        console.log(note);
+      const stop = stopReason(run, id, m);
+      if (stop && !stopped) {
+        stopped = true;
+        notes.push(stop);
+        console.log(stop);
       }
       const g = grade(c, run);
       results[id].push(g);
