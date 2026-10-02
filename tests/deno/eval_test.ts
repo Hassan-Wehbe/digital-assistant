@@ -371,6 +371,12 @@ Deno.test("eval cases: picture uploads pass when set up right, and a copied pass
     { text: "Here is the upload link: https://hassan-wehbe.github.io/digital-assistant/files/upload#t=abc" },
   ]);
   assertEquals(grade(caseById("attach-photo-new-item"), fresh).failures, []);
+  // What Luna did in run 37059170310: next to version 1 in Work/Gartner, linked as its replacement.
+  const nested = await run("attach-photo-new-item", [
+    { calls: [{ name: "attach_file", input: { space: "Work/Gartner", title: "Teams call routing design — version 2" } }] },
+    { text: "Upload the photo here: https://hassan-wehbe.github.io/digital-assistant/files/upload#t=abc" },
+  ]);
+  assertEquals(grade(caseById("attach-photo-new-item"), nested).failures, []);
 
   const visio = await run("attach-visio-to-design", [
     { calls: [{ name: "attach_file", input: { item_id: IDS.teamsDesign } }] },

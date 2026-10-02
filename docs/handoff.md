@@ -34,8 +34,13 @@ tokens or keys in chat.
    2,000-4,000 messages), logs with ids, tool names and costs only. The app does not use `chat`
    yet (A5c). In this sandbox the owner had to approve calling the function and signing in the
    test user (Claude Code's safety check blocks both by default).
-5. **Then:** evaluation re-run on the shared instructions (about 2 cents; GitHub Actions "model
-   evaluation", model luna), started by the owner or with their OK.
+5. **Done, 2026-10-02:** evaluation re-run on the shared instructions with 3 new picture-upload
+   cases (59 cases): **58/59, 0 leaks, 0 unsafe, $0.02** (run 37059170310). The "new version"
+   instruction is confirmed; the one miss was the new case's check (fixed). Uploads are tested as
+   the model setting them up (right note, upload link, no password copied from a picture): chat
+   and the evaluation are text-only; the model seeing pictures is A5f.
+
+**Next:** A5c, the chat screen in the app (strongest model: new code in the chat path).
 
 | Piece | State |
 |---|---|

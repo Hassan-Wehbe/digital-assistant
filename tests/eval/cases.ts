@@ -425,7 +425,9 @@ export const CASES: EvalCase[] = [
     checks: [
       called("attach_file", (a) => typeof a.space === "string" && /work/i.test(a.space) && typeof a.title === "string",
         "a new item in Work, with a title"),
-      itemWhere(both(inSpace("Work"), has(/routing|whiteboard/i)), "the new item for the photo in Work"),
+      // Work or a space inside it (Work/Gartner, next to version 1, is a good choice too).
+      itemWhere(both((i, w) => /^work(\/|$)/i.test(w.pathOf(i.space_id)), has(/routing|whiteboard/i)),
+        "the new item for the photo in Work or under it"),
       replyHas(/\/files\/upload#t=/, "give the upload link"),
     ],
   },
