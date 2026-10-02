@@ -1,6 +1,6 @@
 # A5c: the chat screen in the app (plan)
 
-Status: **plan only, nothing built** (2026-10-02). Parent plans: `docs/phase5-chat-plan.md` (A5c),
+Status: **plan approved by the owner, nothing built yet** (2026-10-02). All ten decisions below were answered "yes, as recommended". Parent plans: `docs/phase5-chat-plan.md` (A5c),
 `docs/phase5-a5b-chat-function-plan.md` ("As built: step 3" defines the request and the streamed
 events). The `chat` function is deployed and live-checked; the app does not use it yet.
 
@@ -257,7 +257,7 @@ Not in A5c: the usage bar and the admin screen (A5f / separate step), the one bo
 (A5d), voice (A5e), pictures (A5f), markdown rendering (decision 3), showing the reveal card without
 a second model call (D23 idea, later).
 
-## Decisions for the owner (my recommendation first)
+## Decisions (owner approved all ten as recommended, 2026-10-02)
 
 1. **Entry point.** *Recommend:* a button "Ask Wilma" at the top of the home screen, search stays
    until A5d. Alternative: replace the search field now (no; A5d does it with the router).
