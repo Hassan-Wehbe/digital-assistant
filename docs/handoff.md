@@ -41,6 +41,7 @@ tokens or keys in chat.
    and the evaluation are text-only; the model seeing pictures is A5f.
 
 **Next:** A5c, the chat screen in the app (strongest model: new code in the chat path).
+The A5c plan (for the owner's approval, 10 decisions): `docs/phase5-a5c-chat-screen-plan.md`.
 
 | Piece | State |
 |---|---|
