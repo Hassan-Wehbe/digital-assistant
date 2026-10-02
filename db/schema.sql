@@ -23,6 +23,9 @@ create table app_user (
   --   recovery_wrapped_private_key bytea, vault_key_version int
   -- Added by 20260929100000_assistant_name.sql: assistant_name text not null
   --   default 'Wilma' (what the owner calls the assistant; design.md D17)
+  -- Added by 20261002120000_ai_usage.sql: ai_monthly_limit_cents numeric (personal chat
+  --   allowance; null = the default in ai_settings), is_admin boolean (set by hand; never
+  --   writable by users)
   created_at           timestamptz not null default now()
 );
 
@@ -287,3 +290,14 @@ create policy secret_log_insert on secret_access_log
 --   application/vnd.ms-visio.drawing (.vsdx), application/vnd.visio (.vsd). Policies on
 --   storage.objects: read/delete own folder; upload only to an id reserved by an open upload
 --   link, and only from a browser session (not the connector's token).
+
+-- =========================================================
+-- AI allowance (20261002120000_ai_usage.sql; design.md D22, docs/phase5-a5b-chat-function-plan.md)
+-- =========================================================
+-- ai_settings: one row; default_monthly_limit_cents (100 = $1). No direct access; changed by
+--   admin_set_default_limit().
+-- ai_usage: user_id, month (first day, UTC), cost_cents, requests. Own rows readable; written
+--   only by record_ai_usage(cost), which only ever adds (0-100 cents per call).
+-- my_ai_allowance(): the caller's used_cents, requests, limit_cents, used_fraction this month.
+-- Admin only (is_admin): admin_ai_overview() (email and numbers per person, nothing else),
+--   admin_set_ai_limit(user, cents | null), admin_set_default_limit(cents).

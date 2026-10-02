@@ -115,6 +115,18 @@ First real results (Luna only): 52/56 twice, **0 leaks, 0 unsafe attempts**, abo
 1,000 requests, ~5 s per request; then 53/56; details in `docs/phase5-chat-plan.md` ("Results
 so far"). The vault-search fix (`mcp` 0.6.1) needs an `mcp` deploy once merged. Also decide the per-person monthly limit for testers.
 
+## Changing chat limits before the admin screen exists (after migration `ai_usage`)
+
+Limits are in cents: 100 = $1. Changes apply from the next chat message; no deploy needed.
+
+- **Default for everyone:** Supabase → Table editor → `ai_settings` → the one row →
+  `default_monthly_limit_cents`.
+- **One person:** Table editor → `app_user` → that person's row → `ai_monthly_limit_cents`
+  (empty = use the default).
+- **This month's usage:** Table editor → `ai_usage` (one row per person per month).
+- **Admin:** `app_user.is_admin` is set by hand here too, for the owner only. Users can never
+  change it, their own limit or their usage from the app.
+
 ## Owner status and open items
 
 - Owner signs in to the app with **hassan.wehbe@gmail.com**. Testers' accounts: Supabase →
