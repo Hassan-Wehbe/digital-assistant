@@ -16,26 +16,7 @@ import { loadAssistantName, serverInstructions } from "./lib/assistant.ts";
 import { supabaseUrl, userClient, verifyAccessToken } from "./lib/db.ts";
 import { embedPending, scheduleEmbedPending } from "./lib/embed.ts";
 import type { ToolContext } from "./tools/_shared.ts";
-import { registerListSpaces } from "./tools/list_spaces.ts";
-import { registerCreateSpace } from "./tools/create_space.ts";
-import { registerSaveItem } from "./tools/save_item.ts";
-import { registerUpdateItem } from "./tools/update_item.ts";
-import { registerGetItem } from "./tools/get_item.ts";
-import { registerSearchItems } from "./tools/search_items.ts";
-import { registerLinkItems } from "./tools/link_items.ts";
-import { registerSaveSecret } from "./tools/save_secret.ts";
-import { registerFindSecret } from "./tools/find_secret.ts";
-import { registerGetSecret } from "./tools/get_secret.ts";
-import { registerUpdateSecret } from "./tools/update_secret.ts";
-import { registerDeleteSecret } from "./tools/delete_secret.ts";
-import { registerSetAssistantName } from "./tools/set_assistant_name.ts";
-import { registerAttachFile } from "./tools/attach_file.ts";
-import { registerGetAttachmentLink } from "./tools/get_attachment_link.ts";
-import { registerDescribeAttachment } from "./tools/describe_attachment.ts";
-import { registerDeleteAttachment } from "./tools/delete_attachment.ts";
-import { registerDeleteItem } from "./tools/delete_item.ts";
-import { registerListDeletedItems, registerPurgeItem, registerRestoreItem } from "./tools/recycle_bin.ts";
-import { registerDeleteSpace } from "./tools/delete_space.ts";
+import { ALL_TOOLS } from "./tools/all.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -80,32 +61,7 @@ function buildServer(ctx: ToolContext): McpServer {
     { name: "digital-assistant", version: "0.6.1" },
     { instructions: serverInstructions(ctx.assistantName) },
   );
-  for (const register of [
-    registerListSpaces,
-    registerCreateSpace,
-    registerSaveItem,
-    registerUpdateItem,
-    registerGetItem,
-    registerSearchItems,
-    registerLinkItems,
-    registerSaveSecret,
-    registerFindSecret,
-    registerGetSecret,
-    registerUpdateSecret,
-    registerDeleteSecret,
-    registerSetAssistantName,
-    registerAttachFile,
-    registerGetAttachmentLink,
-    registerDescribeAttachment,
-    registerDeleteAttachment,
-    registerDeleteItem,
-    registerListDeletedItems,
-    registerRestoreItem,
-    registerPurgeItem,
-    registerDeleteSpace,
-  ]) {
-    register(server, ctx);
-  }
+  for (const register of ALL_TOOLS) register(server, ctx);
   return server;
 }
 

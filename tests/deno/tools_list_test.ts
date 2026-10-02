@@ -4,40 +4,12 @@ import { assertEquals } from "jsr:@std/assert@1";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { registerListSpaces } from "../../supabase/functions/mcp/tools/list_spaces.ts";
-import { registerCreateSpace } from "../../supabase/functions/mcp/tools/create_space.ts";
-import { registerSaveItem } from "../../supabase/functions/mcp/tools/save_item.ts";
-import { registerUpdateItem } from "../../supabase/functions/mcp/tools/update_item.ts";
-import { registerGetItem } from "../../supabase/functions/mcp/tools/get_item.ts";
-import { registerSearchItems } from "../../supabase/functions/mcp/tools/search_items.ts";
-import { registerLinkItems } from "../../supabase/functions/mcp/tools/link_items.ts";
-import { registerSaveSecret } from "../../supabase/functions/mcp/tools/save_secret.ts";
-import { registerFindSecret } from "../../supabase/functions/mcp/tools/find_secret.ts";
-import { registerGetSecret } from "../../supabase/functions/mcp/tools/get_secret.ts";
-import { registerUpdateSecret } from "../../supabase/functions/mcp/tools/update_secret.ts";
-import { registerDeleteSecret } from "../../supabase/functions/mcp/tools/delete_secret.ts";
-import { registerSetAssistantName } from "../../supabase/functions/mcp/tools/set_assistant_name.ts";
-import { registerAttachFile } from "../../supabase/functions/mcp/tools/attach_file.ts";
-import { registerGetAttachmentLink } from "../../supabase/functions/mcp/tools/get_attachment_link.ts";
-import { registerDescribeAttachment } from "../../supabase/functions/mcp/tools/describe_attachment.ts";
-import { registerDeleteAttachment } from "../../supabase/functions/mcp/tools/delete_attachment.ts";
-import { registerDeleteItem } from "../../supabase/functions/mcp/tools/delete_item.ts";
-import {
-  registerListDeletedItems, registerPurgeItem, registerRestoreItem,
-} from "../../supabase/functions/mcp/tools/recycle_bin.ts";
-import { registerDeleteSpace } from "../../supabase/functions/mcp/tools/delete_space.ts";
+import { ALL_TOOLS } from "../../supabase/functions/mcp/tools/all.ts";
 
 async function rpc(body: unknown) {
   const server = new McpServer({ name: "test", version: "0" });
   const ctx = { db: {} as SupabaseClient, userId: "u", accessToken: "t", assistantName: "Wilma" };
-  for (const r of [registerListSpaces, registerCreateSpace, registerSaveItem, registerUpdateItem,
-                   registerGetItem, registerSearchItems, registerLinkItems, registerSaveSecret,
-                   registerFindSecret, registerGetSecret, registerUpdateSecret, registerDeleteSecret,
-                   registerSetAssistantName, registerAttachFile, registerGetAttachmentLink,
-                   registerDescribeAttachment, registerDeleteAttachment, registerDeleteItem,
-                   registerListDeletedItems, registerRestoreItem, registerPurgeItem, registerDeleteSpace]) {
-    r(server, ctx);
-  }
+  for (const r of ALL_TOOLS) r(server, ctx);
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,
