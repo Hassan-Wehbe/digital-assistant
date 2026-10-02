@@ -1,9 +1,12 @@
-// The phone's real storage for the session (see sessionStorage.ts for the design).
+// The phone's real storage for the session and the chat thread (see sessionStorage.ts and
+// chatStore.ts for the design).
 import { aesDecryptAsync, aesEncryptAsync, AESEncryptionKey, AESSealedData } from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 import kv from 'expo-sqlite/kv-store';
+import { Platform } from 'react-native';
 
-import { base64Bytes, encryptedStorage, utf8Bytes, utf8Text, type KeyStore } from './sessionStorage';
+import { chatStore, EMPTY_CHAT, type ChatStore } from './chatStore';
+import { base64Bytes, encryptedStorage, utf8Bytes, utf8Text, type Cipher, type KeyStore } from './sessionStorage';
 
 // Kept on this device only: not synced to other devices or copied into backups.
 const KEYCHAIN = { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY };
@@ -22,7 +25,7 @@ const localData: KeyStore = {
   },
 };
 
-export const deviceSessionStorage = encryptedStorage(secureKeys, localData, {
+const deviceCipher: Cipher = {
   async newKey() {
     return (await AESEncryptionKey.generate()).encoded('base64');
   },
@@ -40,4 +43,15 @@ export const deviceSessionStorage = encryptedStorage(secureKeys, localData, {
     // Android sizes the output buffer from an estimate; drop any zero padding at the end.
     return utf8Text(new Uint8Array(bytes)).replace(/\0+$/, '');
   },
-});
+};
+
+export const deviceSessionStorage = encryptedStorage(secureKeys, localData, deviceCipher);
+
+/**
+ * The chat thread: same mechanism, its own AES key per account. The web build keeps no thread
+ * (it uses the browser's storage for the session; the thread is for the phone only).
+ */
+export const deviceChatStore: ChatStore =
+  Platform.OS !== 'web'
+    ? chatStore(encryptedStorage(secureKeys, localData, deviceCipher), () => kv.getAllKeysAsync())
+    : { load: async () => EMPTY_CHAT, save: async () => {}, clear: async () => {}, forgetOthers: async () => {} };

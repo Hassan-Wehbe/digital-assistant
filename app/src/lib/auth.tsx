@@ -2,7 +2,9 @@
 import { isAuthRetryableFetchError, type Session } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
+import { threadsToKeep } from './chatStore';
 import { MCP_URL } from './config';
+import { deviceChatStore } from './deviceStorage';
 import { changePassword as changePasswordFlow } from './password';
 import { sessionToken } from './sessionToken';
 import { supabase } from './supabase';
@@ -68,10 +70,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => data.subscription.unsubscribe();
   }, []);
 
+  // The chat thread is kept per account on the phone: forgotten on sign-out (also when the
+  // session ends by itself, and on account deletion, which signs out), and another account's
+  // left-over thread is forgotten when someone signs in.
+  const userId = session?.user.id ?? null;
+  const signedIn = !!session || waitingForConnection;
+  useEffect(() => {
+    const keep = threadsToKeep(loading, signedIn, userId);
+    if (keep !== undefined) deviceChatStore.forgetOthers(keep);
+  }, [loading, signedIn, userId]);
+
   const value = useMemo<AuthState>(
     () => ({
       session,
-      signedIn: !!session || waitingForConnection,
+      signedIn,
       loading,
       wilma,
       async signIn(email, password) {
@@ -100,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setWaitingForConnection(false);
       },
     }),
-    [session, loading, waitingForConnection],
+    [session, loading, signedIn],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
