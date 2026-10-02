@@ -327,10 +327,14 @@ function words(q: string): string[] {
   return q.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length > 2 && !STOP.has(w));
 }
 
-/** Keyword search with light stemming, standing in for the real hybrid (meaning + keyword) search. */
-function score(item: Item, query: string): number {
+/**
+ * Keyword search with light stemming, standing in for the real hybrid (meaning + keyword) search.
+ * Meaning search finds "my recipes" in recipe notes even when the word is absent, so the item's
+ * type and space count as weak matches too.
+ */
+function score(item: Item, query: string, spacePath: string): number {
   const title = item.title.toLowerCase();
-  const tags = item.tags.join(" ").toLowerCase();
+  const tags = `${item.tags.join(" ")} ${item.item_type} ${spacePath}`.toLowerCase();
   const body = `${item.summary ?? ""} ${item.body_markdown}`.toLowerCase();
   let total = 0;
   for (const w of words(query)) {
@@ -410,7 +414,7 @@ function rpc(w: World, name: string, p: Record<string, unknown>): Result {
         .filter((i) => !scope || scope.has(i.space_id))
         .filter((i) => !type || i.item_type === type)
         .filter((i) => wanted.every((t) => i.tags.includes(t)))
-        .map((i) => ({ i, s: query ? score(i, query) : 1 }))
+        .map((i) => ({ i, s: query ? score(i, query, w.pathOf(i.space_id)) : 1 }))
         .filter((r) => r.s > 0)
         .sort((a, b) => b.s - a.s || b.i.updated_at.localeCompare(a.i.updated_at))
         .slice(0, (p.p_limit as number) ?? 10)
