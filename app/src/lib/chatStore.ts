@@ -35,7 +35,10 @@ export interface ChatStore {
 const str = (v: unknown): v is string => typeof v === 'string';
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const cut = (text: string) => (text.length > MAX_TEXT ? text.slice(0, MAX_TEXT) : text);
-const CONFIRM_STATES: ConfirmState[] = ['pending', 'deleted', 'cancelled', 'not_done', 'failed'];
+const CONFIRM_STATES: ConfirmState[] = ['pending', 'running', 'deleted', 'cancelled', 'not_done', 'failed'];
+
+/** A card saved while its delete was under way (the app closed): it may or may not have happened. */
+export const INTERRUPTED = 'The app closed before this finished. Check whether it was deleted before trying again.';
 
 /** One saved entry → a well-formed entry with only the known fields (texts cut), or null. */
 export function toEntry(raw: unknown): Entry | null {
@@ -52,6 +55,9 @@ export function toEntry(raw: unknown): Entry | null {
       if (!CONFIRM_STATES.includes(raw.state as ConfirmState)) return null;
       // Delete arguments are ids: anything that is not a string is dropped.
       const args = Object.fromEntries(Object.entries(raw.args).filter(([, v]) => str(v)));
+      const interrupted = raw.state === 'running';
+      const state = interrupted ? 'failed' : (raw.state as ConfirmState);
+      const error = interrupted ? INTERRUPTED : state === 'failed' && str(raw.error) ? cut(raw.error) : null;
       return {
         kind: 'confirm',
         id,
@@ -61,7 +67,8 @@ export function toEntry(raw: unknown): Entry | null {
         message: cut(raw.message),
         confirmLabel: raw.confirmLabel,
         cancelLabel: raw.cancelLabel,
-        state: raw.state as ConfirmState,
+        state,
+        ...(error ? { error } : {}),
       };
     }
     case 'vault':

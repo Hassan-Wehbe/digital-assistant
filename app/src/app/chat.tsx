@@ -7,11 +7,11 @@ import { FlatList, KeyboardAvoidingView, Pressable, Text, TextInput, View } from
 import { ChatBubble } from '@/components/ChatBubble';
 import { Button, confirm, Loading, Muted, styles, useColors } from '@/components/ui';
 import { useChat } from '@/lib/chat';
-import type { ErrorButton } from '@/lib/chatThread';
+import { cardActive, type ErrorButton } from '@/lib/chatThread';
 
 export default function Chat() {
   const c = useColors();
-  const { state, ready, canSend, bannerVisible, send, stop, retry, dismissBanner, clear } = useChat();
+  const { state, ready, canSend, bannerVisible, send, stop, retry, dismissBanner, clear, confirmDelete, cancelDelete } = useChat();
   const [text, setText] = useState('');
   const list = useRef<FlatList>(null);
 
@@ -67,8 +67,18 @@ export default function Chat() {
           style={{ flex: 1 }}
           contentContainerStyle={styles.list}
           data={state.entries}
+          extraData={state.streaming}
           keyExtractor={(e) => e.id}
-          renderItem={({ item }) => <ChatBubble entry={item} onButton={onButton} buttonsEnabled={item === last && !state.streaming} />}
+          renderItem={({ item }) => (
+            <ChatBubble
+              entry={item}
+              onButton={onButton}
+              buttonsEnabled={item === last && !state.streaming}
+              cardActive={cardActive(state, item)}
+              onConfirm={confirmDelete}
+              onCancel={cancelDelete}
+            />
+          )}
           ListEmptyComponent={<Muted>Ask about your notes, save something new, or find a password in your vault.</Muted>}
           ListFooterComponent={state.status ? <Muted>{state.status}</Muted> : null}
           onContentSizeChange={() => list.current?.scrollToEnd({ animated: true })}

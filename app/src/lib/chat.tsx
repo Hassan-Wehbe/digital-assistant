@@ -4,13 +4,17 @@
 //
 // The thread is read from the phone when an account signs in, saved after each finished answer
 // (not on every piece of text), and dropped with the running request on sign-out.
+//
+// A delete card's Delete runs that one delete here, through the existing client methods and only
+// as chatDeletes.ts allows; nothing else from the stream is ever run.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { useAuth } from './auth';
-import { runTurn } from './chatRun';
+import { runConfirm, runTurn } from './chatRun';
 import { threadsToKeep } from './chatStore';
 import { canSend, chatReducer, initialChat, monthKey, noticeVisible, type ChatAction, type ChatState } from './chatThread';
 import { deviceChatStore } from './deviceStorage';
+import { useVault } from './vault';
 
 interface ChatContextValue {
   state: ChatState;
@@ -26,12 +30,17 @@ interface ChatContextValue {
   dismissBanner(): void;
   /** "New conversation": stops any answer and empties the thread. */
   clear(): void;
+  /** Delete tapped on a card: runs its one delete (once, however often it is tapped). */
+  confirmDelete(id: string): void;
+  /** Cancel tapped on a card: nothing runs. */
+  cancelDelete(id: string): void;
 }
 
 const ChatContext = createContext<ChatContextValue | null>(null);
 
 export function ChatProvider({ children }: { children: ReactNode }) {
-  const { session, chat, signOut, signedIn, loading } = useAuth();
+  const { session, chat, wilma, signOut, signedIn, loading } = useAuth();
+  const { remove: removeSecret } = useVault();
   const userId = session?.user.id ?? null;
 
   // The reducer runs here (not in useReducer) so a send knows the thread it is sending at once.
@@ -138,8 +147,25 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         abort();
         act({ type: 'clear' });
       },
+      confirmDelete(id) {
+        if (!loadedFor || loadedFor !== userId) return;
+        const forUser = user.current;
+        const runners = {
+          deleteItem: wilma.deleteItem,
+          purgeItem: wilma.purgeItem,
+          deleteSpace: wilma.deleteSpace,
+          deleteAttachment: wilma.deleteAttachment,
+          removeSecret,
+        };
+        runConfirm(() => current.current, act, id, runners, () => user.current === forUser).then((end) => {
+          if (end === 'signed_out') signOut();
+        });
+      },
+      cancelDelete(id) {
+        act({ type: 'confirm_cancel', id });
+      },
     }),
-    [state, loadedFor, userId, act, start, abort],
+    [state, loadedFor, userId, act, start, abort, wilma, removeSecret, signOut],
   );
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

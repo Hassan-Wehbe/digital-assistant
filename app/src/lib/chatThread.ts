@@ -5,6 +5,7 @@
 // Only user and assistant *text* ever goes to the server: cards, errors, status lines and the
 // allowance banner stay on the phone.
 
+import { cancelledMessage, checkDelete, deletedMessage } from './chatDeletes';
 import type { ChatEvent } from './chatStream';
 
 /** At most this many entries are kept (oldest dropped). */
@@ -46,7 +47,11 @@ export function errorButtons(code: string): ErrorButton[] {
   }
 }
 
-export type ConfirmState = 'pending' | 'deleted' | 'cancelled' | 'not_done' | 'failed';
+/**
+ * A delete card: waiting for a tap (pending), its delete under way (running), then deleted,
+ * cancelled, not done (the conversation moved on) or failed (Delete and Cancel stay).
+ */
+export type ConfirmState = 'pending' | 'running' | 'deleted' | 'cancelled' | 'not_done' | 'failed';
 
 export type Entry =
   | { kind: 'user'; id: string; text: string }
@@ -61,6 +66,8 @@ export type Entry =
       confirmLabel: string;
       cancelLabel: string;
       state: ConfirmState;
+      /** Why the delete failed (state failed): the client's own plain message. */
+      error?: string;
     }
   /** Ids and names only: the vault link never reaches the thread. */
   | { kind: 'vault'; id: string; action: 'reveal' | 'enter'; secretId: string; name: string; secretType?: string }
@@ -97,7 +104,15 @@ export type ChatAction =
   /** A saved thread was read from the phone (or the account changed): start from it. */
   | { type: 'load'; entries: Entry[]; noticeDismissed: string | null }
   /** "New conversation": an empty thread; the banner choice for this month is kept. */
-  | { type: 'clear' };
+  | { type: 'clear' }
+  /** Delete tapped on a card: it starts running (the caller then runs its one delete). */
+  | { type: 'confirm_start'; id: string }
+  /** The card's delete finished. */
+  | { type: 'confirm_done'; id: string }
+  /** The card's delete failed; Delete and Cancel stay. */
+  | { type: 'confirm_failed'; id: string; error: string }
+  /** Cancel tapped on a card. */
+  | { type: 'confirm_cancel'; id: string };
 
 /** A thread as loaded from the phone (or empty). Status, banner and limits start fresh. */
 export function initialChat(entries: Entry[] = [], noticeDismissed: string | null = null): ChatState {
@@ -125,9 +140,26 @@ export function noticeVisible(state: ChatState, month: string): boolean {
   return state.notice !== null && state.noticeDismissed !== month;
 }
 
+/** A delete is under way: nothing else is sent until it ends, so its follow-up comes in order. */
+const deleting = (state: ChatState) => state.entries.some((e) => e.kind === 'confirm' && e.state === 'running');
+
 /** Whether a new message can be sent now. */
 export function canSend(state: ChatState): boolean {
-  return !state.streaming && state.blocked === null;
+  return !state.streaming && state.blocked === null && !deleting(state);
+}
+
+/**
+ * Whether a card's Delete and Cancel can be tapped: it waits for an answer (pending, or failed),
+ * the app accepts what it asks for, and no answer is streaming (the follow-up message would land
+ * in the middle of it).
+ */
+export function cardActive(state: ChatState, entry: Entry): boolean {
+  return (
+    entry.kind === 'confirm' &&
+    (entry.state === 'pending' || entry.state === 'failed') &&
+    checkDelete(entry) !== null &&
+    !state.streaming
+  );
 }
 
 /**
@@ -156,6 +188,30 @@ function endAnswer(state: ChatState): ChatState {
 
 function add(state: ChatState, entry: Entry): ChatState {
   return { ...state, entries: cap([...state.entries, entry]), seq: state.seq + 1 };
+}
+
+type ConfirmEntry = Extract<Entry, { kind: 'confirm' }>;
+
+/** Replaces one card (by id) with its next state; unchanged when there is no such card or `change` says no. */
+function withCard(state: ChatState, id: string, change: (card: ConfirmEntry) => ConfirmEntry | null): ChatState {
+  const at = state.entries.findIndex((e) => e.id === id);
+  const card = state.entries[at];
+  if (!card || card.kind !== 'confirm') return state;
+  const next = change(card);
+  if (!next) return state;
+  return { ...state, entries: state.entries.map((e, i) => (i === at ? next : e)) };
+}
+
+/** A card answered: its new state, and the assistant's short follow-up (no model call). */
+function answerCard(state: ChatState, id: string, from: ConfirmState[], to: ConfirmState, say: (title: string) => string) {
+  let title: string | null = null;
+  const next = withCard(state, id, (card) => {
+    if (!from.includes(card.state)) return null;
+    title = card.target.title;
+    const { error: _, ...rest } = card;
+    return { ...rest, state: to };
+  });
+  return title === null ? state : add(next, { kind: 'assistant', id: String(next.seq), text: cut(say(title)) });
 }
 
 function onEvent(state: ChatState, event: ChatEvent): ChatState {
@@ -221,9 +277,11 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       const text = cut(action.text.trim());
       if (!text || !canSend(state)) return state;
       // A delete card left unanswered can no longer be tapped once the conversation moves on.
-      const entries = state.entries.map((e) =>
-        e.kind === 'confirm' && e.state === 'pending' ? { ...e, state: 'not_done' as const } : e,
-      );
+      const entries = state.entries.map((e) => {
+        if (e.kind !== 'confirm' || (e.state !== 'pending' && e.state !== 'failed')) return e;
+        const { error: _, ...rest } = e;
+        return { ...rest, state: 'not_done' as const };
+      });
       return startAnswer(add({ ...state, entries }, { kind: 'user', id: String(state.seq), text }));
     }
     case 'event':
@@ -242,5 +300,23 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       return initialChat(action.entries, action.noticeDismissed);
     case 'clear':
       return { ...initialChat([], state.noticeDismissed), notice: state.notice, blocked: state.blocked };
+    case 'confirm_start': {
+      const card = state.entries.find((e) => e.id === action.id);
+      // Only once (a second tap finds it running), and only for a card the app accepts.
+      if (!card || !cardActive(state, card)) return state;
+      return withCard(state, action.id, (c) => {
+        const { error: _, ...rest } = c;
+        return { ...rest, state: 'running' };
+      });
+    }
+    case 'confirm_done':
+      return answerCard(state, action.id, ['running'], 'deleted', deletedMessage);
+    case 'confirm_failed':
+      return withCard(state, action.id, (c) => (c.state === 'running' ? { ...c, state: 'failed', error: cut(action.error) } : null));
+    case 'confirm_cancel': {
+      const card = state.entries.find((e) => e.id === action.id);
+      if (!card || card.kind !== 'confirm' || state.streaming) return state;
+      return answerCard(state, action.id, ['pending', 'failed'], 'cancelled', cancelledMessage);
+    }
   }
 }
