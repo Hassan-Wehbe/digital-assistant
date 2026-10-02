@@ -10,6 +10,13 @@ you are doing in plain terms, prefer small reviewable steps, and say clearly
 when the owner must do something themselves (sign up, paste a value into a
 settings screen, approve a deploy).
 
+At the start of each step, recommend which Claude model to use (the owner switches with
+`/model`; Claude cannot). Strongest model: new code or design touching secrets, sharing,
+restricted spaces, auth, RLS or the chat loop. Smaller model (e.g. Sonnet): merging reviewed
+PRs, applying an already dry-run migration, deploys that follow a written plan, starting
+evaluation runs, docs and small fixes. Also suggest a fresh session when a step starts and the
+conversation is long: `docs/handoff.md` and the plan docs carry the state.
+
 ## Stack (phase 1)
 
 - **Database, storage, auth:** Supabase (hosted Postgres + pgvector, Storage, Auth).
