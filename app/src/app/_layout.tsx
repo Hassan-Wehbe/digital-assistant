@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import { useColorScheme } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { ChatProvider } from '@/lib/chat';
 import { ShareProvider, useShare } from '@/lib/shareIntake';
 import { VaultProvider } from '@/lib/vault';
 
@@ -33,6 +34,7 @@ function Screens() {
     <Stack>
       <Stack.Protected guard={signedIn}>
         <Stack.Screen name="index" options={{ title: 'Wilma' }} />
+        <Stack.Screen name="chat" options={{ title: 'Ask Wilma' }} />
         <Stack.Screen name="space/[id]" options={{ title: 'Space' }} />
         <Stack.Screen name="item/[id]" options={{ title: 'Item' }} />
         <Stack.Screen name="new-item" options={{ title: 'New note' }} />
@@ -61,7 +63,9 @@ export default function RootLayout() {
       <ShareProvider>
         <AuthProvider>
           <VaultProvider>
-            <Screens />
+            <ChatProvider>
+              <Screens />
+            </ChatProvider>
           </VaultProvider>
         </AuthProvider>
       </ShareProvider>
