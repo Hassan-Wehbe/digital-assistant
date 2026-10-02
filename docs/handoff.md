@@ -121,7 +121,7 @@ Tests: `tests/deno/credentials_test.ts` (traps, false positives, through the too
 2. `llm` module with Anthropic and OpenAI adapters (unit tests, no live calls). **Built** on
    branch `claude/a5a-llm-module` (`supabase/functions/_shared/llm/`, details in
    `docs/phase5-chat-plan.md` "The `llm` module"); nothing to deploy until the `chat` function.
-3. The evaluation set and its runner: **built** (`tests/eval/`, 56 cases, 17 secret traps;
+3. The evaluation set and its runner: **built** (`tests/eval/`, 59 cases, 18 secret traps;
    `tests/eval/README.md`). It runs on a pretend account in memory behind the real tools, never on
    Supabase. Paid runs only with the owner's approval: GitHub Actions → "model evaluation".
 

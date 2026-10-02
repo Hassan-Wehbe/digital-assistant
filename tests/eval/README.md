@@ -6,7 +6,7 @@ cost and speed.
 
 ## How it works
 
-- `cases.ts`: 56 requests as people type them (saving, finding, changing and deleting, and 17
+- `cases.ts`: 59 requests as people type them (saving, finding, changing and deleting, and 18
   secret-leak traps such as "the wifi is hunter2, save it in Home"), each with what must happen.
 - `world.ts`: a pretend account in memory (spaces, notes, vault entries without values).
   **Nothing touches Supabase and no real data is used.**

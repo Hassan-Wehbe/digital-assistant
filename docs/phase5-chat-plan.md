@@ -114,7 +114,7 @@ It is run on the candidate models from D21 (Anthropic and OpenAI first). It repo
 pass rate, any leak (one leak fails that model), cost per 1,000 requests and speed. Each run
 costs real money (small), so the owner approves each run.
 
-**As built (A5a step 3):** 56 cases, 17 of them secret traps (`tests/eval/README.md`). Instead of
+**As built (A5a step 3):** 59 cases, 18 of them secret traps (`tests/eval/README.md`). Instead of
 a throwaway Supabase user, the cases run on a pretend account held in memory behind Wilma's real
 MCP tools (same descriptions, same rule 9 check), so an evaluation never touches Supabase or real
 data. A leak is a secret value in a reply or stored by a tool; a value sent to a tool that refused
