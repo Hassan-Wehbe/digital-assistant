@@ -94,6 +94,9 @@ it. Play's data-safety answers get the same update (A5c, before the app release)
 
 ## Building and checking (each a small PR)
 
+Suggested model per step (owner switches with `/model`): 1-2 done; merge and apply step 2: smaller
+model; 3: strongest model, ideally in a fresh session; 4 and 5: smaller model.
+
 1. **Shared pieces** (done): one tool list, `mcp/tools/all.ts`, used by the MCP server, the
    evaluation and later `chat`; the instructions in `_shared/assistant_prompt.ts`, with the
    "new version replaces the old one" exception. The server behaves exactly as before.
