@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { loadSpaces } from "../lib/spaces.ts";
-import { describeSecret, NEVER_VALUES, revealLink, secretById } from "../lib/vault.ts";
+import { describeSecret, NEVER_VALUES, revealLink, secretById, secretSearch } from "../lib/vault.ts";
 import { addressedAs } from "../lib/assistant.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
@@ -28,8 +28,9 @@ export const registerGetSecret: RegisterTool = (server, { db, assistantName }) =
         if (secret_id) {
           row = await secretById(db, secret_id);
         } else {
+          const search = secretSearch(name, null);
           const { data, error } = await db.rpc("find_secrets", {
-            p_query: name, p_secret_type: null, p_space_id: null, p_limit: 10,
+            p_query: search.query, p_secret_type: search.secretType, p_space_id: null, p_limit: 10,
           });
           if (error) throw dbError("Search failed", error);
           const hits = data as Array<Record<string, unknown>>;

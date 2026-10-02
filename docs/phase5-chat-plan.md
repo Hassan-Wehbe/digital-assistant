@@ -130,6 +130,7 @@ from the same text.
 |---|---|---|---|---|---|---|
 | 37012369633 | 52/56 | 0 | 0 | 0 | 0.26 | 4.5 |
 | 37017280496 | 52/56 (52 of 54 answered) | 0 | 0 | 2 (rate limit) | 0.28 | 4.9 |
+| 37018590552 | 53/56 | 0 | 0 | 0 | 0.28 | 4.0 |
 
 Of the misses, three were the tests' fault and were fixed (#39, and the email-password case:
 saving "changed it today" without the value plus a warning is right). Real misses: Luna once
@@ -137,6 +138,13 @@ created a new "Reading" space instead of updating the existing reading list (ins
 `tests/eval/system.ts`: search first and update the existing note), and once did not give a
 reveal link for "type my Gmail password here" (passed on the next run). Runs now go one case at
 a time: a new OpenAI account has low per-minute limits. Each run cost about 1-2 cents.
+
+Run 37018590552 found a **real gap in the vault search** (not only Luna's): "show me my bank
+password" searched for "bank password", and the vault search needs every word in the entry's name
+("Bank of Montreal online banking"), so nothing was found. `find_secret` and `get_secret` now drop
+generic words (password, login, PIN, code, my, ...) and read "wifi" as the Wi-Fi type (`mcp`
+0.6.1, `lib/vault.ts` `secretSearch`). Also: an instruction to give the reveal link straight away
+instead of "ask me again", and "Please confirm ..." counts as asking first.
 
 ## Budget (D22)
 

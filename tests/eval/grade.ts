@@ -121,7 +121,12 @@ export const replyLacks = (re: RegExp, what: string): Check => (o) =>
   o.replies.some((r) => re.test(r)) ? `the reply must not ${what}` : null;
 
 /** The model asked the user something (in the given turn, default the last). */
-export const asks = (turn?: number): Check => replyHas(/\?/, "ask the user before acting", turn);
+export const asks = (turn?: number): Check =>
+  replyHas(
+    /\?|\bconfirm\b|shall I|should I|do you want|would you like|let me know|tell me/i,
+    "ask the user before acting",
+    turn,
+  );
 
 export const itemWhere = (pred: (i: Item, w: World) => boolean, what: string): Check => (o) =>
   o.world.liveItems().some((i) => pred(i, o.world)) ? null : `expected an item ${what}`;

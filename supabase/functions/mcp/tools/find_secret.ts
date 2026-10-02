@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { loadSpaces, resolveSpace } from "../lib/spaces.ts";
-import { describeSecret, SECRET_TYPES } from "../lib/vault.ts";
+import { describeSecret, SECRET_TYPES, secretSearch } from "../lib/vault.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
 export const registerFindSecret: RegisterTool = (server, { db }) => {
@@ -24,9 +24,10 @@ export const registerFindSecret: RegisterTool = (server, { db }) => {
       guarded(async () => {
         const spaces = await loadSpaces(db);
         const scope = space ? resolveSpace(spaces, space) : null;
+        const search = secretSearch(query, secret_type);
         const { data, error } = await db.rpc("find_secrets", {
-          p_query: query?.trim() || null,
-          p_secret_type: secret_type ?? null,
+          p_query: search.query,
+          p_secret_type: search.secretType,
           p_space_id: scope?.id ?? null,
           p_limit: limit ?? 20,
         });

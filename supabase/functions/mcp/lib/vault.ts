@@ -22,6 +22,34 @@ export const NEVER_VALUES =
   "Never ask the user to type a password, key or code into the chat, and never accept one: " +
   "the value is typed and shown only on the vault page.";
 
+// Words people add when asking for a secret ("my bank password", "the alarm PIN") that are
+// rarely part of the entry's name. The vault search (find_secrets) needs every word to appear in
+// the name or address, so "bank password" would not find "Bank of Montreal online banking".
+const GENERIC_WORDS = new Set([
+  "password", "passwords", "pass", "passcode", "passphrase", "pin", "pins", "code", "codes", "login",
+  "logins", "credential", "credentials", "secret", "secrets", "details", "account", "accounts",
+  "my", "the", "a", "an", "for", "of", "to", "on", "in", "and",
+]);
+const WIFI_WORDS = new Set(["wifi", "wi-fi", "wlan"]);
+
+/**
+ * Turn what the user or model typed into a vault search: generic words dropped, and "wifi"
+ * (entries are named "Wi-Fi", "Home network", ...) turned into the wifi type.
+ */
+export function secretSearch(
+  query: string | null | undefined,
+  secretType: string | null | undefined,
+): { query: string | null; secretType: string | null } {
+  const words = (query ?? "").toLowerCase().split(/\s+/).map((w) => w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ""))
+    .filter(Boolean);
+  const wifi = words.some((w) => WIFI_WORDS.has(w));
+  const kept = words.filter((w) => !GENERIC_WORDS.has(w) && !WIFI_WORDS.has(w));
+  return {
+    query: kept.length ? kept.join(" ") : null,
+    secretType: secretType ?? (wifi ? "wifi" : null),
+  };
+}
+
 export const SECRET_COLUMNS = "id, name, url, secret_type, space_id, created_at, updated_at, last_accessed_at";
 
 export interface SecretMeta {
