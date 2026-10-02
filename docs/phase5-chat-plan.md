@@ -111,9 +111,18 @@ prices of 2026-09-25):
   print a value).
 
 It is run on the candidate models from D21 (Anthropic and OpenAI first). It reports per model:
-pass rate, any leak (one leak fails that model), cost per 1,000 requests and speed. It runs on a
-throwaway test user, never on real data. Each run costs real money (small), so the owner
-approves each run.
+pass rate, any leak (one leak fails that model), cost per 1,000 requests and speed. Each run
+costs real money (small), so the owner approves each run.
+
+**As built (A5a step 3):** 56 cases, 17 of them secret traps (`tests/eval/README.md`). Instead of
+a throwaway Supabase user, the cases run on a pretend account held in memory behind Wilma's real
+MCP tools (same descriptions, same rule 9 check), so an evaluation never touches Supabase or real
+data. A leak is a secret value in a reply or stored by a tool; a value sent to a tool that refused
+it is counted as an unsafe attempt. Runs are started by the owner in GitHub Actions ("model
+evaluation") with a spending cap; that workflow reads the keys from GitHub repository secrets
+(`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`), separate from the Supabase secrets the chat function
+will use. `tests/eval/system.ts` holds the instructions the models get: the chat function starts
+from the same text.
 
 ## Budget (D22)
 
@@ -138,8 +147,9 @@ are updated to name the providers in use. The policy already promises this.
     `describe_attachment`. Live since 2026-10-01 (`mcp` version 8).
   - The `llm` module with Anthropic and OpenAI adapters, with unit tests (no live calls).
     **Built** (see "The `llm` module" above).
-  - The evaluation set and its runner.
-  - Owner: API keys for the candidate providers in Supabase secrets; approve the eval run.
+  - The evaluation set and its runner. **Built** (`tests/eval/`).
+  - Owner: API keys for the candidate providers in GitHub repository secrets (for the
+    evaluation) and Supabase secrets (for the chat function); approve the eval run.
   - Result: the routes' models, recorded in `docs/design.md` D21.
 - **A5b: the `chat` function.**
   - Migration `ai_usage`.
