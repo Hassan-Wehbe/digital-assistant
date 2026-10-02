@@ -133,6 +133,23 @@ from the same text.
   Search, browsing, notes and the vault keep working; password retrieval is never counted.
 - Each provider's own console spend limit stays as the overall cap (the owner sets it).
 
+### What users see when a limit is hit (owner's decisions, 2026-10-02)
+
+Three different limits, three different messages (built in A5b/A5c):
+
+- **A person's monthly allowance is used up:** a plain message in the chat, e.g. *"You've used
+  this month's AI requests. They reset on November 1. Search, notes and your vault still
+  work."*, a usage bar in Settings, and a heads-up at 80% (*"You've used most of this month's
+  requests"*). **Later**, once paid plans exist (D22), the message offers to upgrade the plan.
+- **The owner's provider account is out of credit or over its spend limit** (`llm` error code
+  `quota_exceeded`, never retried): while only one provider is configured, a friendly pause
+  message, e.g. *"I can't think right now: my AI service is paused. Your notes, search and
+  passwords still work."*, with Search and Vault buttons, and a notice for the owner in the app.
+  With a second provider configured, Wilma would switch to it first (not planned for now).
+- **A temporary hiccup** (rate limit, overload, network): retried automatically, then *"I'm
+  having trouble connecting. Try again in a moment."* with a Try again button.
+- In every case, revealing a password works: it never needs a model (D22, D23).
+
 ## Privacy
 
 Chat sends what the user types or says, and the notes looked up to answer, to the configured
@@ -150,6 +167,9 @@ are updated to name the providers in use. The policy already promises this.
   - The evaluation set and its runner. **Built** (`tests/eval/`).
   - Owner: API keys for the candidate providers in GitHub repository secrets (for the
     evaluation) and Supabase secrets (for the chat function); approve the eval run.
+  - Owner's decision 2026-10-02: **OpenAI only for now** (`gpt-6.0-luna`, the owner's OpenAI
+    project "Wilma" is restricted to it) while Wilma's capabilities are tested; no Anthropic key
+    yet. The Claude candidates stay in `tests/eval/models.json` for a later comparison.
   - Result: the routes' models, recorded in `docs/design.md` D21.
 - **A5b: the `chat` function.**
   - Migration `ai_usage`.

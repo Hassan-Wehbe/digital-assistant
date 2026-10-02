@@ -87,7 +87,7 @@ export function markdown(
     "|---|---|---|---|---|---|---|",
     ...ranked.map((s) =>
       `| ${s.model}${s.disqualified ? " **(fails: leak)**" : ""} | ${s.passed}/${s.cases} (${pct(s.passed, s.cases)}) | ` +
-      `${s.leaks} | ${s.unsafe} | ${s.errors}${s.skipped ? ` (+${s.skipped} skipped: cap)` : ""} | ` +
+      `${s.leaks} | ${s.unsafe} | ${s.errors}${s.skipped ? ` (+${s.skipped} skipped)` : ""} | ` +
       `${money(s.dollarsPer1000)} | ${s.medianSeconds.toFixed(1)} |`
     ),
     "",

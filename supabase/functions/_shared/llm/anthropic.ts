@@ -10,6 +10,7 @@ import {
   LlmError,
   type Message,
   type ModelConfig,
+  QUOTA_EXCEEDED,
   type StopReason,
   type StreamEvent,
   type ToolCall,
@@ -142,6 +143,12 @@ function toLlmError(err: unknown): LlmError {
   if (err instanceof LlmError) return err;
   if (err instanceof Anthropic.APIUserAbortError) return new LlmError("anthropic", "aborted", undefined, false);
   if (err instanceof Anthropic.APIError) {
+    // "Credit balance is too low" / "reached your API usage limits" come as client errors.
+    // The message is only matched here, never passed on (it is not conversation text, but
+    // LlmError carries codes only).
+    if (err.status && err.status < 500 && /credit balance|usage limit|spend(?:ing)? limit/i.test(err.message)) {
+      return new LlmError("anthropic", QUOTA_EXCEEDED, err.status, false);
+    }
     return new LlmError("anthropic", err.type ?? "api_error", err.status, isRetryableStatus(err.status));
   }
   return new LlmError("anthropic", "unexpected_error", undefined, true);

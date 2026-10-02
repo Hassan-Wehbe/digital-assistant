@@ -11,7 +11,7 @@ on:
     inputs:
       models:
         description: "Models to compare (ids from tests/eval/models.json, comma-separated); a model whose API key is not set is skipped"
-        default: "luna,haiku-4-5,sonnet-5-5-low"
+        default: "luna"
       cases:
         description: "Cases: all, or ids / categories (save, lookup, secret, edit, other)"
         default: "all"

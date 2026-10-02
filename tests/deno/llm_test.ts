@@ -440,3 +440,29 @@ Deno.test("createLlm: reads LLM_ROUTES, and a route without its API key fails cl
     assertEquals(e.provider, "anthropic");
   }
 });
+
+Deno.test("out of credit is quota_exceeded and not retryable (OpenAI sends it as 429)", async () => {
+  const quota = OpenAI.APIError.generate(
+    429, { error: { message: "You exceeded your current quota", type: "insufficient_quota", code: "insufficient_quota" } }, undefined, new Headers(),
+  );
+  const e1 = await assertRejects(() => collect(new OpenAIAdapter(fakeOpenAI([], quota).client).stream(GPT, REQ)), LlmError);
+  assertEquals([e1.code, e1.status, e1.retryable], ["quota_exceeded", 429, false]);
+
+  const slowDown = OpenAI.APIError.generate(429, { error: { message: "Rate limit reached", type: "requests", code: "rate_limit_exceeded" } }, undefined, new Headers());
+  const e2 = await assertRejects(() => collect(new OpenAIAdapter(fakeOpenAI([], slowDown).client).stream(GPT, REQ)), LlmError);
+  assertEquals([e2.code, e2.retryable], ["rate_limit_exceeded", true]);
+
+  const credit = Anthropic.APIError.generate(
+    400, { type: "error", error: { type: "invalid_request_error", message: "Your credit balance is too low to access the Anthropic API." } },
+    undefined, new Headers(),
+  );
+  const e3 = await assertRejects(() => collect(new AnthropicAdapter(fakeAnthropic({}, [], credit).client).stream(CLAUDE, REQ)), LlmError);
+  assertEquals([e3.code, e3.retryable], ["quota_exceeded", false]);
+  assert(!e3.message.includes("credit balance"), "codes only, never the provider's text");
+
+  const other = Anthropic.APIError.generate(
+    400, { type: "error", error: { type: "invalid_request_error", message: "messages: roles must alternate" } }, undefined, new Headers(),
+  );
+  const e4 = await assertRejects(() => collect(new AnthropicAdapter(fakeAnthropic({}, [], other).client).stream(CLAUDE, REQ)), LlmError);
+  assertEquals(e4.code, "invalid_request_error");
+});

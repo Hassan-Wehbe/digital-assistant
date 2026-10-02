@@ -2,8 +2,9 @@
 // pretend account answers Wilma's real tools, the loop runs tool calls, grading catches leaks,
 // and the runner's selection, estimate and report work. No model API is called.
 import { assert, assertEquals, assertThrows } from "jsr:@std/assert@1";
-import type {
-  ChatRequest, LlmAdapter, ModelConfig, StreamEvent, ToolCall,
+import {
+  type ChatRequest, type LlmAdapter, LlmError, type ModelConfig, QUOTA_EXCEEDED, type StreamEvent,
+  type ToolCall,
 } from "../../supabase/functions/_shared/llm/index.ts";
 import { ALL_TOOLS, openSession, runConversation } from "../eval/harness.ts";
 import { CASES } from "../eval/cases.ts";
@@ -157,6 +158,19 @@ Deno.test("loop: a model stuck in tool calls is stopped and the case fails", asy
   assertEquals(run.modelCalls, 3);
   assert(run.turns[0].reply.includes("too many tool rounds"));
   assertEquals(grade(caseById("find-list-spaces"), run).pass, false);
+});
+
+Deno.test("loop: an account out of credit is recorded as quota_exceeded", async () => {
+  const empty: LlmAdapter = {
+    provider: "openai",
+    // deno-lint-ignore require-yield
+    async *stream() {
+      throw new LlmError("openai", QUOTA_EXCEEDED, 429, false);
+    },
+  };
+  const run = await runConversation(empty, MODEL, ["hello"]);
+  assertEquals(run.errorCode, QUOTA_EXCEEDED);
+  assert(run.error?.includes("quota_exceeded"));
 });
 
 Deno.test("loop: a failing model call is an error, not a wrong answer", async () => {

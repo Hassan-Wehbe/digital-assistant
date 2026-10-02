@@ -103,9 +103,13 @@ owner's OpenAI account, the cheapest, released 2026-09-22; the OpenAI project "W
 restricted to this one model), `haiku-4-5`, `sonnet-5-5-low`, `sonnet-5-5`; OpenAI prices were
 found by web search on 2026-10-02 (OpenAI's pages are blocked from the sandbox), so compare a
 run's cost with OpenAI → Settings → Usage. A model whose key is not set is skipped with a note.
-Owner status 2026-10-02: OpenAI project "Wilma" with spend limits and an `OPENAI_API_KEY`
-created (in GitHub secrets per the owner's steps; not verified from here); no Anthropic key
-yet. Also decide the per-person monthly limit for testers.
+Owner status 2026-10-02: OpenAI project "Wilma" with spend limits, restricted to
+`gpt-6.0-luna`, and an `OPENAI_API_KEY` created (in GitHub secrets per the owner's steps; not
+verified from here). **Owner's decision: OpenAI/Luna only for now, no Anthropic key** while
+Wilma's capabilities are tested; the eval workflow defaults to `luna`. What users see when a
+limit is hit is decided: `docs/phase5-chat-plan.md` "What users see when a limit is hit". An
+account out of credit is `llm` error `quota_exceeded` (not retried); the eval runner stops that
+model and says so in the report. Also decide the per-person monthly limit for testers.
 
 ## Owner status and open items
 
