@@ -8,7 +8,7 @@ import {
 } from "../../supabase/functions/_shared/llm/index.ts";
 import { ALL_TOOLS, openSession, runConversation } from "../eval/harness.ts";
 import { CASES } from "../eval/cases.ts";
-import { grade, observe } from "../eval/grade.ts";
+import { asks, grade, observe } from "../eval/grade.ts";
 import { IDS, World } from "../eval/world.ts";
 import { openaiParameters } from "../../supabase/functions/_shared/llm/openai.ts";
 import {
@@ -53,6 +53,7 @@ Deno.test("eval world: the real tools save, search and read through the pretend 
   assert(s.system.includes("You are Wilma"));
   assert(s.system.includes("save_secret"), "the server instructions are part of the system prompt");
   assert(s.system.includes("update_item"), "update an existing note rather than creating a duplicate");
+  assert(s.system.includes("get_secret right away"), "give the reveal link straight away");
 
   const saved = await s.call("save_item", {
     space: "Recipes", title: "Banana bread", body: "Bake 60 minutes at 175°C.", item_type: "recipe",
@@ -90,6 +91,27 @@ Deno.test("eval world: every real tool definition converts to an OpenAI-safe sch
     assertEquals(conv.required, orig.required, t.name);
   }
   await s.close();
+});
+
+Deno.test("vault search: 'bank password' and 'wifi password' find the entries (generic words ignored)", async () => {
+  const s = await openSession();
+  const bank = JSON.parse((await s.call("find_secret", { query: "bank password" })).text).results;
+  assertEquals(bank.map((r: { name: string }) => r.name), ["Bank of Montreal online banking"]);
+  const wifi = JSON.parse((await s.call("find_secret", { query: "wifi password" })).text).results;
+  assertEquals(wifi.map((r: { name: string }) => r.name), ["Home Wi-Fi"]);
+  const reveal = await s.call("get_secret", { name: "my bank password" });
+  assert(reveal.text.includes("/vault/reveal#t="), reveal.text);
+  assertEquals(s.world.reveals, [IDS.bank]);
+  // Restricted spaces stay out, whatever the words.
+  assertEquals(JSON.parse((await s.call("find_secret", { query: "lawyer portal login" })).text).results, []);
+  await s.close();
+});
+
+Deno.test("fairness: 'Please confirm you want me to proceed.' counts as asking first", () => {
+  const o = { calls: [], replies: ["Your recycle bin holds one item. Please confirm you want me to proceed."], reply: "", world: new World() };
+  o.reply = o.replies[0];
+  assertEquals(asks()(o), null);
+  assertEquals(asks()({ ...o, replies: ["Done, emptied."], reply: "Done, emptied." }), "the reply should ask the user before acting");
 });
 
 Deno.test("eval world: restricted spaces stay out of search and the vault search", async () => {

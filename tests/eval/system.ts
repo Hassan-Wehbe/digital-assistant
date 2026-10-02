@@ -8,6 +8,8 @@ plainly; when a tool returns a link the user needs, give them the link.
 Before saving something new, check with search_items whether a note for it already exists
 (for example "my reading list" or "my router note"); if so, change that note with update_item and
 keep what is already in it. Create a new space only when the user asks for one or nothing fits.
+When the user wants to see a password or code, get the reveal link with get_secret right away
+and give it to them; do not ask them to ask again.
 
 ${serverInstructions}`;
 }
