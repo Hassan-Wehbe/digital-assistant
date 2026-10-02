@@ -22,17 +22,25 @@ tokens or keys in chat.
    Privacy page updated with the owner's approved chat wording (OpenAI, chat usage; 2026-10-02).
    Not yet confirmed against OpenAI's own data-controls page: the "up to 30 days for abuse
    monitoring" sentence; adjust if OpenAI says otherwise.
-4. **Next, with the owner's OK:** deploy `chat` (the plan's deploy recipe; verify files identical
-   and 401 without sign-in), a short live check on a throwaway test user (under 1 cent), delete
-   that user. The owner has set `OPENAI_API_KEY` (`wilma-chat` key) and `LLM_ROUTES` in Supabase
-   secrets (2026-10-02).
+4. **Done, 2026-10-02: `chat` deployed** (version 2; a placeholder version 1 first proved that
+   sibling-folder imports deploy). Deployed with the connector as the plan's "As built: step 3"
+   says: 44 files named relative to `supabase/functions`, `entrypoint_path: "chat/index.ts"`,
+   `import_map_path: "chat/deno.json"`, `verify_jwt: false`. Checked: 43 of 44 files identical to
+   the repo (`mcp/lib/supabase-ai.d.ts`, types only, is not listed back, as for `mcp`); no sign-in
+   and a fake token both answer 401. Live check on a throwaway user (then deleted by the owner in
+   the dashboard; the connector's `execute_sql` timed out on the delete): streaming, status lines,
+   a save, a vault-only message not counted, a delete that became a confirm card with the note
+   untouched, 4 requests recorded at 0.108 cents (5 messages about 0.12 cents, so $1 is roughly
+   2,000-4,000 messages), logs with ids, tool names and costs only. The app does not use `chat`
+   yet (A5c). In this sandbox the owner had to approve calling the function and signing in the
+   test user (Claude Code's safety check blocks both by default).
 5. **Then:** evaluation re-run on the shared instructions (about 2 cents; GitHub Actions "model
    evaluation", model luna), started by the owner or with their OK.
 
 | Piece | State |
 |---|---|
 | Database | migrations up to `ai_usage` applied (2026-10-02) |
-| Chat function `chat` | built and merged (#46), **not deployed**; `OPENAI_API_KEY` and `LLM_ROUTES` set in Supabase secrets by the owner (2026-10-02) |
+| Chat function `chat` | **deployed 2026-10-02** (version 2, #46), live-checked; `OPENAI_API_KEY` and `LLM_ROUTES` set in Supabase secrets by the owner (2026-10-02) |
 | MCP server `mcp` | **version 8, server 0.6.0**, 22 tools, with the rule 9 credential check (PR #31, deployed 2026-10-01; deployed files checked identical to the repo, unsigned calls answer 401) |
 | Mobile app (Expo, `app/`) | merged to `main` up to PR #29: A0-A3 complete. A3b secrets (#23), **A3c** spaces (#25), vault setup / recovery / passphrase change (#26), **A4** privacy + deletion pages and Play guide (#27), change sign-in password (#28), mascot app icon (#29, from another session). `npm run check`: 129 tests |
 | Google Play | app created, **internal testing release "Available to internal testers"** (production build of `main` at e90664c, versionCode 2: https://expo.dev/accounts/zafnut/projects/wilma/builds/b9ddd891-b815-4995-bd2a-5fc96a7f9a97 ; built before the mascot icon). Owner was waiting for the join link to work ("Item not found" right after release: accept invite first, matching Google account, give it time). App-content forms and store listing may still be incomplete; answers in `docs/phase4-play-release.md` |
