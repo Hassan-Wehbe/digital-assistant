@@ -3,7 +3,7 @@
 //
 //   deno run -A --config supabase/functions/mcp/deno.json tests/eval/run.ts \
 //     --models haiku-4-5,sonnet-5-5-low [--cases all|<ids or categories>] [--repeat 1] \
-//     [--max-dollars 10] [--concurrency 2] [--out tests/eval/results] [--dry-run]
+//     [--max-dollars 10] [--concurrency 1] [--out tests/eval/results] [--dry-run]
 //
 // --dry-run prints the plan and a cost estimate and calls nothing (no keys needed).
 // Keys come from ANTHROPIC_API_KEY / OPENAI_API_KEY in the environment and are never printed.
@@ -144,7 +144,8 @@ async function main() {
   const cases = selectCases(args.cases ?? "all");
   const repeat = Math.max(1, Number(args.repeat ?? 1));
   const maxDollars = Number(args["max-dollars"] ?? 10);
-  const concurrency = Number(args.concurrency ?? 2);
+  // One case at a time by default: new provider accounts have low per-minute limits.
+  const concurrency = Number(args.concurrency ?? 1);
   if (!(maxDollars > 0) || !(concurrency >= 1)) throw new Error("--max-dollars and --concurrency must be positive");
   // A dry run plans every selected model; a real run skips models whose provider key is missing.
   const { ready, missing } = args["dry-run"]

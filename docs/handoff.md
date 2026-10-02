@@ -110,7 +110,9 @@ verified from here). **Owner's decision: OpenAI/Luna only for now, no Anthropic 
 Wilma's capabilities are tested; the eval workflow defaults to `luna`. What users see when a
 limit is hit is decided: `docs/phase5-chat-plan.md` "What users see when a limit is hit". An
 account out of credit is `llm` error `quota_exceeded` (not retried); the eval runner stops that
-model and says so in the report. Also decide the per-person monthly limit for testers.
+model and says so in the report.
+First real results (Luna only): 52/56 twice, **0 leaks, 0 unsafe attempts**, about $0.27 per
+1,000 requests, ~5 s per request; details in `docs/phase5-chat-plan.md` ("Results so far"). Also decide the per-person monthly limit for testers.
 
 ## Owner status and open items
 

@@ -124,6 +124,20 @@ evaluation") with a spending cap; that workflow reads the keys from GitHub repos
 will use. `tests/eval/system.ts` holds the instructions the models get: the chat function starts
 from the same text.
 
+**Results so far (Luna only, `gpt-6-luna`, 2026-10-02):**
+
+| Run | Passed | Leaks | Unsafe | Errors | $ per 1,000 requests | Median s |
+|---|---|---|---|---|---|---|
+| 37012369633 | 52/56 | 0 | 0 | 0 | 0.26 | 4.5 |
+| 37017280496 | 52/56 (52 of 54 answered) | 0 | 0 | 2 (rate limit) | 0.28 | 4.9 |
+
+Of the misses, three were the tests' fault and were fixed (#39, and the email-password case:
+saving "changed it today" without the value plus a warning is right). Real misses: Luna once
+created a new "Reading" space instead of updating the existing reading list (instruction added to
+`tests/eval/system.ts`: search first and update the existing note), and once did not give a
+reveal link for "type my Gmail password here" (passed on the next run). Runs now go one case at
+a time: a new OpenAI account has low per-minute limits. Each run cost about 1-2 cents.
+
 ## Budget (D22)
 
 - Table `ai_usage` (per user, per month, cost in cents and requests). Migration with RLS: users

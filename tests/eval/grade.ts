@@ -131,6 +131,12 @@ export const noItemWhere = (pred: (i: Item, w: World) => boolean, what: string):
 
 export const holds = (pred: (o: Observed) => boolean, what: string): Check => (o) => (pred(o) ? null : what);
 
+/** Passes when all of the checks pass (for use inside anyOf). */
+export const allOf = (...checks: Check[]): Check => (o) => {
+  const reasons = checks.map((c) => c(o)).filter((r): r is string => !!r);
+  return reasons.length ? reasons.join(" and ") : null;
+};
+
 /** Passes when any of the checks passes. */
 export const anyOf = (...checks: Check[]): Check => (o) => {
   const reasons = checks.map((c) => c(o));
