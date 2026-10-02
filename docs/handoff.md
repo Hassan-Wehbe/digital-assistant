@@ -91,12 +91,16 @@ Tests: `tests/deno/credentials_test.ts` (traps, false positives, through the too
 2. `llm` module with Anthropic and OpenAI adapters (unit tests, no live calls). **Built** on
    branch `claude/a5a-llm-module` (`supabase/functions/_shared/llm/`, details in
    `docs/phase5-chat-plan.md` "The `llm` module"); nothing to deploy until the `chat` function.
-3. The evaluation set (`tests/eval/`, about 50 requests with secret-leak traps) and its runner.
-   Paid runs only with the owner's approval, on a throwaway user.
+3. The evaluation set and its runner: **built** (`tests/eval/`, 56 cases, 17 secret traps;
+   `tests/eval/README.md`). It runs on a pretend account in memory behind the real tools, never on
+   Supabase. Paid runs only with the owner's approval: GitHub Actions → "model evaluation".
 
-Owner, before step 3: API accounts with a spend limit for the candidate providers, keys in
-Supabase secrets (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`), never in chat. Also decide the
-per-person monthly limit for testers.
+Owner, before the first evaluation run: API accounts with a spend limit for the candidate
+providers; keys as **GitHub repository secrets** `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` (for the
+evaluation workflow), and later the same names in Supabase secrets (for the chat function).
+Never in chat. The OpenAI candidate in `tests/eval/models.json` is disabled until its model id
+and prices are filled in from the owner's OpenAI account. Also decide the per-person monthly
+limit for testers.
 
 ## Owner status and open items
 
@@ -268,8 +272,8 @@ edit an applied one).
 - **Branches:** `main` is protected (pull request required, no force push). Work on a branch,
   open a PR, merge when the owner agrees.
 - **Deno** is not preinstalled: `npm i -g deno`, then set `DENO_CERT=/root/.ccr/ca-bundle.crt`.
-  Unit tests: `deno test -A --config supabase/functions/mcp/deno.json tests/deno` (162 tests:
-  rule 9 check and `llm` module included). Deno refuses npm packages younger than 24 hours: pin
+  Unit tests: `deno test -A --config supabase/functions/mcp/deno.json tests/deno` (176 tests:
+  rule 9 check, `llm` module and evaluation machinery included). Deno refuses npm packages younger than 24 hours: pin
   an older version rather than turning the check off.
   App: `cd app && npm ci && npm run check` (61 tests).
 - **SQL tests** run through the Supabase connector (`execute_sql`), each wrapped in

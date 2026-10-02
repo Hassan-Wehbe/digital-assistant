@@ -1,0 +1,53 @@
+# Run the model evaluation (tests/eval/, docs/phase5-chat-plan.md) against real model APIs.
+# Each run costs real (small) money, so it only runs when started by hand:
+#   GitHub -> Actions -> "model evaluation" -> Run workflow.
+# Pick the models (ids from tests/eval/models.json) and a spending cap. The report appears on
+# the run page; full transcripts are in the "eval-results" file there.
+# Needs the repository secrets ANTHROPIC_API_KEY and/or OPENAI_API_KEY (the owner pastes them
+# into GitHub's secret settings; never into chat or the repo). Only made-up data is used.
+name: model evaluation
+on:
+  workflow_dispatch:
+    inputs:
+      models:
+        description: "Models to compare (ids from tests/eval/models.json, comma-separated)"
+        default: "haiku-4-5,sonnet-5-5-low"
+      cases:
+        description: "Cases: all, or ids / categories (save, lookup, secret, edit, other)"
+        default: "all"
+      repeat:
+        description: "Runs per case"
+        default: "1"
+      max_dollars:
+        description: "Spending cap for the whole run, in US dollars"
+        default: "10"
+permissions:
+  contents: read
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Check the evaluation code
+        run: deno test -A --config supabase/functions/mcp/deno.json tests/deno/eval_test.ts tests/deno/llm_test.ts
+      - name: Run the evaluation
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          MODELS: ${{ inputs.models }}
+          CASES: ${{ inputs.cases }}
+          REPEAT: ${{ inputs.repeat }}
+          MAX_DOLLARS: ${{ inputs.max_dollars }}
+        run: >
+          deno run -A --config supabase/functions/mcp/deno.json tests/eval/run.ts
+          --models "$MODELS" --cases "$CASES" --repeat "$REPEAT" --max-dollars "$MAX_DOLLARS"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-results
+          path: tests/eval/results/
+          if-no-files-found: ignore
