@@ -25,8 +25,8 @@ phone app ──(user's sign-in)──► chat function ──► Luna (OpenAI)
    message, no model call.
 3. **The conversation loop** is the one the evaluation tested: model, tool calls, results,
    model, at most 8 rounds per message. The instructions are the evaluated ones
-   (`tests/eval/system.ts` moves to a shared place so the evaluation and `chat` use the same
-   file). Small fix included: "a new version that replaces the old one" uses only the new content.
+   (now in `supabase/functions/_shared/assistant_prompt.ts`, used by both the evaluation and
+   `chat`). Small fix included: "a new version that replaces the old one" uses only the new content.
 4. **Streaming:** the reply arrives as it is written, plus short status lines ("Searching your
    notes…"). The app shows them in the thread.
 5. **Deleting asks first, in the app.** When the model wants to delete or purge something
@@ -94,8 +94,9 @@ it. Play's data-safety answers get the same update (A5c, before the app release)
 
 ## Building and checking (each a small PR)
 
-1. **Shared pieces:** the tool list and the instructions move to shared files used by the MCP
-   server, `chat` and the evaluation (no behaviour change; `mcp` redeploy afterwards).
+1. **Shared pieces** (done): one tool list, `mcp/tools/all.ts`, used by the MCP server, the
+   evaluation and later `chat`; the instructions in `_shared/assistant_prompt.ts`, with the
+   "new version replaces the old one" exception. The server behaves exactly as before.
 2. **Migration `ai_usage`:** usage table, settings, personal limits, admin flag and admin
    functions. Dry run first in a rolled-back transaction (`tests/sql/09_ai_usage.sql`: RLS between
    two users, only-adds rule, monthly rows, default vs personal limit, a non-admin refused by every

@@ -54,6 +54,7 @@ Deno.test("eval world: the real tools save, search and read through the pretend 
   assert(s.system.includes("save_secret"), "the server instructions are part of the system prompt");
   assert(s.system.includes("update_item"), "update an existing note rather than creating a duplicate");
   assert(s.system.includes("get_secret right away"), "give the reveal link straight away");
+  assert(s.system.includes('link_items(new, old, "supersedes")'), "a replacing version is a new item, linked");
 
   const saved = await s.call("save_item", {
     space: "Recipes", title: "Banana bread", body: "Bake 60 minutes at 175°C.", item_type: "recipe",
