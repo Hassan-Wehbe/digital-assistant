@@ -17,21 +17,22 @@ tokens or keys in chat.
 2. **Done, merged and applied (#44):** migration `20261002120000_ai_usage.sql` (27/27 checks in a
    rolled-back dry run): `ai_settings` (default $1/month), `ai_usage`, `record_ai_usage`,
    `my_ai_allowance`, personal limits, `is_admin` (the owner, $5 limit) and the admin functions.
-3. **Built, PR open, NOT deployed:** `supabase/functions/chat/` with `tests/deno/chat_test.ts`
-   (21 tests). Protocol, rules and the deploy recipe: the plan's "As built: step 3". The privacy
-   wording draft is in that PR's description, waiting for the owner's approval
-   (`docs/legal/privacy.html` unchanged until then).
+3. **Built and merged, NOT deployed:** `supabase/functions/chat/` with `tests/deno/chat_test.ts`
+   (21 tests). Protocol, rules and the deploy recipe: the plan's "As built: step 3". Merged (#46).
+   Privacy page updated with the owner's approved chat wording (OpenAI, chat usage; 2026-10-02).
+   Not yet confirmed against OpenAI's own data-controls page: the "up to 30 days for abuse
+   monitoring" sentence; adjust if OpenAI says otherwise.
 4. **Next, with the owner's OK:** deploy `chat` (the plan's deploy recipe; verify files identical
    and 401 without sign-in), a short live check on a throwaway test user (under 1 cent), delete
-   that user. Needs the owner's `OPENAI_API_KEY` (`wilma-chat` key) and `LLM_ROUTES` (exact value
-   in the plan) in Supabase secrets first.
+   that user. The owner has set `OPENAI_API_KEY` (`wilma-chat` key) and `LLM_ROUTES` in Supabase
+   secrets (2026-10-02).
 5. **Then:** evaluation re-run on the shared instructions (about 2 cents; GitHub Actions "model
    evaluation", model luna), started by the owner or with their OK.
 
 | Piece | State |
 |---|---|
 | Database | migrations up to `ai_usage` applied (2026-10-02) |
-| Chat function `chat` | built (PR for A5b step 3), **not deployed** |
+| Chat function `chat` | built and merged (#46), **not deployed**; `OPENAI_API_KEY` and `LLM_ROUTES` set in Supabase secrets by the owner (2026-10-02) |
 | MCP server `mcp` | **version 8, server 0.6.0**, 22 tools, with the rule 9 credential check (PR #31, deployed 2026-10-01; deployed files checked identical to the repo, unsigned calls answer 401) |
 | Mobile app (Expo, `app/`) | merged to `main` up to PR #29: A0-A3 complete. A3b secrets (#23), **A3c** spaces (#25), vault setup / recovery / passphrase change (#26), **A4** privacy + deletion pages and Play guide (#27), change sign-in password (#28), mascot app icon (#29, from another session). `npm run check`: 129 tests |
 | Google Play | app created, **internal testing release "Available to internal testers"** (production build of `main` at e90664c, versionCode 2: https://expo.dev/accounts/zafnut/projects/wilma/builds/b9ddd891-b815-4995-bd2a-5fc96a7f9a97 ; built before the mascot icon). Owner was waiting for the join link to work ("Item not found" right after release: accept invite first, matching Google account, give it time). App-content forms and store listing may still be incomplete; answers in `docs/phase4-play-release.md` |
