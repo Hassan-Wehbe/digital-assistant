@@ -1,9 +1,10 @@
-// Sign-in state for the whole app, and a Wilma client bound to the session.
+// Sign-in state for the whole app, and the Wilma and chat clients bound to the session.
 import { isAuthRetryableFetchError, type Session } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
+import { chatClient, type ChatClient } from './chatClient';
 import { threadsToKeep } from './chatStore';
-import { MCP_URL } from './config';
+import { CHAT_URL, MCP_URL } from './config';
 import { deviceChatStore } from './deviceStorage';
 import { changePassword as changePasswordFlow } from './password';
 import { sessionToken } from './sessionToken';
@@ -17,6 +18,8 @@ interface AuthState {
   /** True until the saved session has been read from the phone. */
   loading: boolean;
   wilma: WilmaClient;
+  /** Chat with Wilma (streamed answers); used by ChatProvider. */
+  chat: ChatClient;
   signIn(email: string, password: string): Promise<string | null>;
   signOut(): Promise<void>;
   /** New sign-in password; the current one is checked first. */
@@ -25,25 +28,27 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null);
 
-const wilma = wilmaClient({
-  url: MCP_URL,
-  token: () =>
-    sessionToken({
-      getSession: () => supabase.auth.getSession(),
-      signOutLocally: () => supabase.auth.signOut({ scope: 'local' }),
-      isConnectionError: isAuthRetryableFetchError,
-    }),
-  refresh: async () => {
-    const { data, error } = await supabase.auth.refreshSession();
-    // No connection: keep the session and let the call fail with "could not reach".
-    if (isAuthRetryableFetchError(error)) throw error;
-    if (error || !data.session) {
-      await supabase.auth.signOut({ scope: 'local' });
-      return null;
-    }
-    return data.session.access_token;
-  },
-});
+// The current token and a refresh after a 401, shared by the Wilma tools and chat.
+const token = () =>
+  sessionToken({
+    getSession: () => supabase.auth.getSession(),
+    signOutLocally: () => supabase.auth.signOut({ scope: 'local' }),
+    isConnectionError: isAuthRetryableFetchError,
+  });
+
+const refresh = async () => {
+  const { data, error } = await supabase.auth.refreshSession();
+  // No connection: keep the session and let the call fail with "could not reach".
+  if (isAuthRetryableFetchError(error)) throw error;
+  if (error || !data.session) {
+    await supabase.auth.signOut({ scope: 'local' });
+    return null;
+  }
+  return data.session.access_token;
+};
+
+const wilma = wilmaClient({ url: MCP_URL, token, refresh });
+const chat = chatClient({ url: CHAT_URL, token, refresh });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -86,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signedIn,
       loading,
       wilma,
+      chat,
       async signIn(email, password) {
         const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (!error) return null;

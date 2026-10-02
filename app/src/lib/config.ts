@@ -8,6 +8,9 @@ export const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_fUOMLFoWl6Avh7NqvhKBNQ_s
 /** Wilma's tools: the existing MCP server (supabase/functions/mcp/). */
 export const MCP_URL = `${SUPABASE_URL}/functions/v1/mcp`;
 
+/** Chat with Wilma: the `chat` function (supabase/functions/chat/), streamed answers. */
+export const CHAT_URL = `${SUPABASE_URL}/functions/v1/chat`;
+
 /** The web vault pages (setup until the app can set up the vault itself). */
 export const VAULT_PAGES_URL = 'https://hassan-wehbe.github.io/digital-assistant/vault';
 

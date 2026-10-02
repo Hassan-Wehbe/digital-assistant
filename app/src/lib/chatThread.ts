@@ -93,7 +93,11 @@ export type ChatAction =
   | { type: 'stop' }
   /** Try again: removes the connection error; the caller then sends `messagesToSend` again. */
   | { type: 'retry' }
-  | { type: 'dismiss_notice'; month: string };
+  | { type: 'dismiss_notice'; month: string }
+  /** A saved thread was read from the phone (or the account changed): start from it. */
+  | { type: 'load'; entries: Entry[]; noticeDismissed: string | null }
+  /** "New conversation": an empty thread; the banner choice for this month is kept. */
+  | { type: 'clear' };
 
 /** A thread as loaded from the phone (or empty). Status, banner and limits start fresh. */
 export function initialChat(entries: Entry[] = [], noticeDismissed: string | null = null): ChatState {
@@ -234,5 +238,9 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
     }
     case 'dismiss_notice':
       return { ...state, noticeDismissed: action.month };
+    case 'load':
+      return initialChat(action.entries, action.noticeDismissed);
+    case 'clear':
+      return { ...initialChat([], state.noticeDismissed), notice: state.notice, blocked: state.blocked };
   }
 }

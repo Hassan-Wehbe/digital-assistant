@@ -1,7 +1,7 @@
 // Home: search everything (restricted spaces are never searched), or browse by space.
 import * as Application from 'expo-application';
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, Text, TextInput, View } from 'react-native';
 
 import { ItemRow, SpaceRow } from '@/components/rows';
@@ -17,6 +17,14 @@ export default function Home() {
   const { wilma, session, signOut } = useAuth();
   const [text, setText] = useState('');
   const [query, setQuery] = useState('');
+  // "Search" from a chat message comes back here and puts the cursor in the search field.
+  const { focus } = useLocalSearchParams<{ focus?: string }>();
+  const search = useRef<TextInput>(null);
+  useEffect(() => {
+    if (focus !== 'search') return;
+    search.current?.focus();
+    router.setParams({ focus: undefined });
+  }, [focus]);
 
   const { data, error, loading, reload } = useLoad<Row[]>(`home:${query}`, async () =>
     query
@@ -28,8 +36,10 @@ export default function Home() {
 
   const header = (
     <View style={{ gap: 12 }}>
-      <Button title="New note or photo" onPress={() => router.push('/new-item')} />
+      <Button title="Ask Wilma" onPress={() => router.push('/chat')} />
+      <Button title="New note or photo" kind="plain" onPress={() => router.push('/new-item')} />
       <TextInput
+        ref={search}
         style={[styles.input, { color: c.text, borderColor: c.line, backgroundColor: c.card }]}
         placeholder="Search your notes, recipes, designs…"
         placeholderTextColor={c.muted}
