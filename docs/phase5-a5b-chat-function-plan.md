@@ -97,8 +97,9 @@ it. Play's data-safety answers get the same update (A5c, before the app release)
 1. **Shared pieces** (done): one tool list, `mcp/tools/all.ts`, used by the MCP server, the
    evaluation and later `chat`; the instructions in `_shared/assistant_prompt.ts`, with the
    "new version replaces the old one" exception. The server behaves exactly as before.
-2. **Migration `ai_usage`:** usage table, settings, personal limits, admin flag and admin
-   functions. Dry run first in a rolled-back transaction (`tests/sql/09_ai_usage.sql`: RLS between
+2. **Migration `ai_usage`** (`supabase/migrations/20261002120000_ai_usage.sql`; dry run
+   2026-10-02: 27 of 27 checks passed, rolled back): usage table, settings, personal limits,
+   admin flag and admin functions. Dry run first in a rolled-back transaction (`tests/sql/09_ai_usage.sql`: RLS between
    two users, only-adds rule, monthly rows, default vs personal limit, a non-admin refused by every
    admin function, admin overview shows numbers only), then applied **with the owner's OK**.
 3. **The `chat` function:** tested without any model or database using the evaluation's pretend
