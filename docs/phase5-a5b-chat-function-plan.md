@@ -1,6 +1,6 @@
 # A5b: the `chat` function (plan for the owner's review)
 
-Status: **proposed, 2026-10-02.** Nothing here is built yet. Parent plan: `docs/phase5-chat-plan.md`.
+Status: **approved by the owner, 2026-10-02** (decisions below). Nothing here is built yet. Parent plan: `docs/phase5-chat-plan.md`.
 Model: `gpt-6-luna` only for now (owner's decision; evaluation 55/56, 0 leaks).
 
 ## What it is, in one paragraph
@@ -41,13 +41,12 @@ phone app ──(user's sign-in)──► chat function ──► Luna (OpenAI)
    credit, `quota_exceeded`), "trouble connecting, try again". Logs hold codes and ids only, never
    conversation text.
 
-### Where the conversation is kept (owner's choice, recommendation first)
+### Where the conversation is kept: on the phone only (owner's decision)
 
-- **Recommended: on the phone only.** The app keeps the thread and sends the recent part (last
-  ~20 messages) with each new message. Nothing about the conversation is stored on the server, so
-  there is nothing extra to protect, back up or delete. Clearing the app's thread forgets it.
-- Alternative: stored on the server (a `conversation` table with RLS), so it follows the user to
-  another phone. More to protect; can be added later without changing the rest.
+The app keeps the thread and sends the recent part (last ~20 messages) with each new message.
+Nothing about the conversation is stored on the server, so there is nothing extra to protect,
+back up or delete. Clearing the app's thread forgets it. (Storing threads on the server, so they
+follow a person to another phone, can be added later without changing the rest.)
 
 ## Budget (D22): the `ai_usage` migration
 
@@ -56,14 +55,28 @@ phone app ──(user's sign-in)──► chat function ──► Luna (OpenAI)
 - One database function `record_ai_usage(cost)` called by `chat` as the signed-in user. It only
   ever *adds* (it refuses negative or oversized amounts), so a person can never lower their own
   usage. No service-role key on the request path (CLAUDE.md rule 5).
-- **Per-person monthly limit:** a column on `app_user` (`ai_monthly_limit_cents`), with a default
-  the owner picks. The owner can change one person's limit in the Supabase table editor.
+- **Limits are settings in the database, not code** (owner's decision): changing them needs no
+  deploy and no app update, and applies from the next message.
+  - `ai_settings`: one row with the **default monthly limit: $1 (100 cents)**.
+  - `app_user.ai_monthly_limit_cents`: an optional **personal limit** that overrides the default
+    (empty = use the default). **The owner's account starts at $5.**
+  - At Luna's price, $1 is roughly 2,000-3,400 requests a month (about 70-110 a day).
+- **Admin groundwork** (for the admin screen, below): `app_user.is_admin` (the owner only), and
+  database functions that check it on the server: `admin_ai_overview()` (each person's email,
+  usage this month and limit), `admin_set_ai_limit(user, cents)` and `admin_set_default_limit(cents)`. **Admin sees
+  numbers only**: never notes, spaces, secrets or conversations. This is the one documented
+  exception to "every row is owned" (CLAUDE.md rule 5), limited to usage figures. A tester cannot
+  make themselves admin: `is_admin` is not writable by users, and every admin function checks it.
+- **Until the admin screen exists:** the owner changes limits in Supabase → Table editor (a short
+  how-to goes into the handoff).
 - At 80%: a heads-up. At 100%: the "allowance used, resets on the 1st" message.
   Search, notes and the vault keep working without chat.
 - **Password retrieval never counts** (D22): a message whose only tool calls are vault lookups
   (`find_secret`, `get_secret`) is not added to usage.
 - Shown to people as **requests**; kept internally in cents (Luna costs ~$0.29 per 1,000
-  requests in the evaluation, so $3 is roughly 10,000 requests).
+  requests in the evaluation; real conversations a little more, since earlier messages are sent
+  again, mostly at the cheap cached rate). Pictures (A5f) will cost more per request: the limit
+  is reviewed then.
 
 ## Secrets and settings (owner, in Supabase → Edge Functions → Secrets; never in chat)
 
@@ -83,8 +96,10 @@ it. Play's data-safety answers get the same update (A5c, before the app release)
 
 1. **Shared pieces:** the tool list and the instructions move to shared files used by the MCP
    server, `chat` and the evaluation (no behaviour change; `mcp` redeploy afterwards).
-2. **Migration `ai_usage`:** dry run first in a rolled-back transaction (`tests/sql/09_ai_usage.sql`:
-   RLS between two users, only-adds rule, monthly rows), then applied **with the owner's OK**.
+2. **Migration `ai_usage`:** usage table, settings, personal limits, admin flag and admin
+   functions. Dry run first in a rolled-back transaction (`tests/sql/09_ai_usage.sql`: RLS between
+   two users, only-adds rule, monthly rows, default vs personal limit, a non-admin refused by every
+   admin function, admin overview shows numbers only), then applied **with the owner's OK**.
 3. **The `chat` function:** tested without any model or database using the evaluation's pretend
    account and a scripted model: streaming, the confirm card for every delete tool, vault links,
    allowance (80%, 100%, vault-only messages not counted), each error message, no conversation text
@@ -94,14 +109,21 @@ it. Play's data-safety answers get the same update (A5c, before the app release)
    user is deleted.
 5. **Evaluation re-run** on the shared instructions (2 cents).
 
-## What the owner decides or does
+## Owner's decisions (2026-10-02)
 
-1. **Monthly limit per person** (default for everyone; can be changed per person).
-   Suggestion: **$3** (≈ 10,000 requests at today's Luna price, effectively unlimited for testing).
-2. **Where conversations are kept:** phone only (recommended) or on the server.
-3. Create the **`wilma-chat` OpenAI key** and add it, with `LLM_ROUTES`, to Supabase secrets.
-4. Approve: the migration, the `chat` deploy (and the small `mcp` redeploy), and the privacy
+1. **Monthly limit:** default **$1** per person, **$5** for the owner; both are settings that can
+   be changed any time without a deploy.
+2. **Conversations:** kept **on the phone only**.
+3. **Admin control panel:** wanted. A5b builds the server side (settings, admin flag, admin
+   functions); the **admin screen in the app** (only the owner sees it: everyone's usage this
+   month, each limit with an edit button, the default limit; later perhaps creating tester
+   accounts) comes with the app screens (A5c/A5f). Until then: Supabase table editor.
+
+## What the owner still does
+
+1. Create the **`wilma-chat` OpenAI key** and add it, with `LLM_ROUTES`, to Supabase secrets.
+2. Approve: the migration, the `chat` deploy (and the small `mcp` redeploy), and the privacy
    wording.
 
-Not in A5b: the chat screen (A5c), the one box replacing search (A5d), voice (A5e), pictures and
-budget settings in the app (A5f).
+Not in A5b: the chat screen (A5c), the admin screen (A5c/A5f), the one box replacing search
+(A5d), voice (A5e), pictures (A5f).
