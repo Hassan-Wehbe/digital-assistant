@@ -35,6 +35,55 @@ app (one box, voice) ──► Edge Function "chat" (user's sign-in token)
   to the model provider.
 - **Keys and the app:** API keys never reach the app; the app only talks to `chat`.
 
+## The `llm` module (as built, A5a step 2)
+
+`supabase/functions/_shared/llm/`, shared by future Edge Functions (`chat`). SDK versions are
+pinned in the imports (`npm:@anthropic-ai/sdk@0.129.0`, `npm:openai@7.25.0`).
+
+- **One interface:** `createLlm({ env: Deno.env.get }).stream(route, { system, messages, tools })`
+  yields `text` deltas, then one `done` event with the assistant turn (text + tool calls), the
+  stop reason and usage (tokens and **cost in cents**, fractional). Tool calls come only in
+  `done`, and are run only when `stop === "tool_calls"`, never on a turn cut off by
+  `max_tokens` or `refused`. Arguments that are not a JSON object are flagged `invalidInput`.
+- **Conversation:** `user`, `assistant` (text, tool calls and the provider's own record of the
+  turn), `tool` (results for the previous turn's calls). The provider's record (Anthropic
+  thinking blocks, OpenAI encrypted reasoning items) is replayed only to the same model;
+  any other model gets plain text and tool calls, so a conversation can move between routes.
+- **Anthropic adapter:** Messages API streamed, top-level prompt caching, `output_config.effort`
+  only when the route sets `effort`. Server-side refusal fallbacks are not enabled: a refusal
+  ends the turn as `refused` (the chat function decides what to show), and the cost always
+  comes from the configured model.
+- **OpenAI adapter:** Responses API streamed with `store: false` (OpenAI keeps no copy),
+  function tools, `reasoning.effort` plus encrypted reasoning only when `effort` is set.
+  OpenAI counts cached tokens inside `input_tokens`; the adapter subtracts them so they are not
+  charged twice. Tool errors are sent as `Error: ...` (the API has no error flag).
+- **Errors:** `LlmError` with provider, code, HTTP status and `retryable`; never the provider's
+  message text (it can quote the conversation).
+- Tests: `tests/deno/llm_test.ts` (fake clients, no network, no keys).
+
+### Routes configuration
+
+Edge Function secret `LLM_ROUTES` (JSON). Each of `router`, `default`, `escalation` names a
+provider, a model id, its prices (USD per million tokens: `input`, `output`, `cacheRead`,
+`cacheWrite`, from the provider's console), `maxOutputTokens` and an optional `effort`. A route
+works only when that provider's key is set (`missingKeys` lists the ones that are not).
+**The evaluation decides the values.** This example only shows the format (Anthropic list
+prices of 2026-09-25):
+
+```json
+{
+  "router":     { "provider": "anthropic", "model": "claude-haiku-4-5", "maxOutputTokens": 1024,
+                  "price": { "input": 1, "output": 5, "cacheRead": 0.1, "cacheWrite": 1.25 } },
+  "default":    { "provider": "anthropic", "model": "claude-haiku-4-5", "maxOutputTokens": 4096,
+                  "price": { "input": 1, "output": 5, "cacheRead": 0.1, "cacheWrite": 1.25 } },
+  "escalation": { "provider": "anthropic", "model": "claude-sonnet-5-5", "maxOutputTokens": 16000,
+                  "effort": "medium",
+                  "price": { "input": 2, "output": 10, "cacheRead": 0.2, "cacheWrite": 2.5 } }
+}
+```
+
+(`effort` is not accepted by every model, e.g. Claude Haiku 4.5; leave it out there.)
+
 ## Security (CLAUDE.md rules 1-3 and 9)
 
 - **Rule 9: security never depends on the model.** Today the "no passwords in notes" rule is
@@ -86,8 +135,9 @@ are updated to name the providers in use. The policy already promises this.
 - **A5a: safety net and evaluation.**
   - Rule 9 server check (`save_item` / `update_item`), with tests. **Built** (server 0.6.0,
     `lib/credentials.ts`, `tests/deno/credentials_test.ts`); also covers `attach_file` and
-    `describe_attachment`. Not yet deployed.
+    `describe_attachment`. Live since 2026-10-01 (`mcp` version 8).
   - The `llm` module with Anthropic and OpenAI adapters, with unit tests (no live calls).
+    **Built** (see "The `llm` module" above).
   - The evaluation set and its runner.
   - Owner: API keys for the candidate providers in Supabase secrets; approve the eval run.
   - Result: the routes' models, recorded in `docs/design.md` D21.

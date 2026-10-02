@@ -11,7 +11,7 @@ tokens or keys in chat.
 | Piece | State |
 |---|---|
 | Database | migrations up to `recycle_bin` applied (unchanged since 2026-09-30) |
-| MCP server `mcp` | deployed: version 7, server 0.5.0, 22 tools. **On branch `claude/a5a-rule9-credential-check` (PR, not deployed yet): server 0.6.0 with the rule 9 credential check** |
+| MCP server `mcp` | **version 8, server 0.6.0**, 22 tools, with the rule 9 credential check (PR #31, deployed 2026-10-01; deployed files checked identical to the repo, unsigned calls answer 401) |
 | Mobile app (Expo, `app/`) | merged to `main` up to PR #29: A0-A3 complete. A3b secrets (#23), **A3c** spaces (#25), vault setup / recovery / passphrase change (#26), **A4** privacy + deletion pages and Play guide (#27), change sign-in password (#28), mascot app icon (#29, from another session). `npm run check`: 129 tests |
 | Google Play | app created, **internal testing release "Available to internal testers"** (production build of `main` at e90664c, versionCode 2: https://expo.dev/accounts/zafnut/projects/wilma/builds/b9ddd891-b815-4995-bd2a-5fc96a7f9a97 ; built before the mascot icon). Owner was waiting for the join link to work ("Item not found" right after release: accept invite first, matching Google account, give it time). App-content forms and store listing may still be incomplete; answers in `docs/phase4-play-release.md` |
 | Web pages | `docs/legal/privacy.html`, `docs/legal/delete-account.html` live (contact zaftechlabs@gmail.com) |
@@ -82,13 +82,15 @@ Tests: `tests/deno/credentials_test.ts` (traps, false positives, through the too
   after `main`'s D18): vault import D19, own app with AI built in D20, **provider-neutral
   model layer chosen by evaluation D21** (any provider's API key, not only Claude), pricing and
   budget D22, no search bar D23, memory D24, and **CLAUDE.md rule 9: security never depends on
-  the model**. Rule 9's server check is **not built yet**: it is A5a's first step.
+  the model**. Rule 9's server check is built and live (PR #31, `mcp` version 8).
 
 ## Next task: A5a "safety net and evaluation" (`docs/phase5-chat-plan.md`)
 
 1. Rule 9: `save_item` / `update_item` reject credential-looking content, with Deno tests.
-   **Built** (see above), waiting for the owner to approve merge and deploy of `mcp`.
-2. `llm` module with Anthropic and OpenAI adapters (unit tests, no live calls).
+   **Built and live** (PR #31, `mcp` version 8, server 0.6.0, deployed 2026-10-01).
+2. `llm` module with Anthropic and OpenAI adapters (unit tests, no live calls). **Built** on
+   branch `claude/a5a-llm-module` (`supabase/functions/_shared/llm/`, details in
+   `docs/phase5-chat-plan.md` "The `llm` module"); nothing to deploy until the `chat` function.
 3. The evaluation set (`tests/eval/`, about 50 requests with secret-leak traps) and its runner.
    Paid runs only with the owner's approval, on a throwaway user.
 
@@ -219,7 +221,7 @@ user (ask the owner first), and the owner tries "Wilma, attach this photo to …
 | Piece | Where | State |
 |---|---|---|
 | Database | Supabase project `digital-assistant`, ref `motvckmpusxiuelpwqxy` | migrations `initial_schema`, `knowledge_path`, `vault`, `cleanup_followups`, `assistant_name`, `attachments`, `search_cutoff`, `recycle_bin` applied; Storage bucket `attachments` |
-| MCP server | Edge Function `mcp` (`supabase/functions/mcp/`), `https://motvckmpusxiuelpwqxy.supabase.co/functions/v1/mcp` | version 7 (server 0.5.0), 22 tools |
+| MCP server | Edge Function `mcp` (`supabase/functions/mcp/`), `https://motvckmpusxiuelpwqxy.supabase.co/functions/v1/mcp` | version 8 (server 0.6.0), 22 tools |
 | Sign-in page | `docs/oauth/consent.html` → `https://hassan-wehbe.github.io/digital-assistant/oauth/consent` | used by the Claude connector (OAuth 2.1 via Supabase Auth) |
 | Vault pages | `docs/vault/` → `https://hassan-wehbe.github.io/digital-assistant/vault/` | setup, enter, reveal, recover |
 | Mobile app | `app/` (Expo), package `com.zaf.wilma`, Expo project `zafnut/wilma` | preview builds via GitHub Actions `app build`; latest build of PR #15 (see top) |
@@ -266,8 +268,9 @@ edit an applied one).
 - **Branches:** `main` is protected (pull request required, no force push). Work on a branch,
   open a PR, merge when the owner agrees.
 - **Deno** is not preinstalled: `npm i -g deno`, then set `DENO_CERT=/root/.ccr/ca-bundle.crt`.
-  Unit tests: `deno test -A --config supabase/functions/mcp/deno.json tests/deno` (145 tests
-  with the rule 9 check).
+  Unit tests: `deno test -A --config supabase/functions/mcp/deno.json tests/deno` (162 tests:
+  rule 9 check and `llm` module included). Deno refuses npm packages younger than 24 hours: pin
+  an older version rather than turning the check off.
   App: `cd app && npm ci && npm run check` (61 tests).
 - **SQL tests** run through the Supabase connector (`execute_sql`), each wrapped in
   `begin; … rollback;` (`tests/sql/run.sh --print NN` builds the script). To check a new
@@ -280,7 +283,8 @@ edit an applied one).
   `import_map_path: "deno.json"` (without it the deploy fails on a stale import-map path).
   The file contents are pasted into the call, so **verify after deploying**: `get_edge_function`
   (its output is saved to a file; parse it with python) and compare every file with the repo
-  (all must be identical; `deno.json` is not listed back). Then `curl` the function without a
+  (all must be identical; one file may not be listed back: `deno.json` before 2026-10-01,
+  `lib/supabase-ai.d.ts`, which holds types only, on 2026-10-01). Then `curl` the function without a
   token: it must answer 401.
 - **Rollout order for a feature with a migration + server change + app:** apply the migration
   (new functions/parameters are backward compatible), deploy `mcp`, then merge and build the
