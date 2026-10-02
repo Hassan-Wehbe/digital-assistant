@@ -10,6 +10,7 @@ import { ALL_TOOLS, openSession, runConversation } from "../eval/harness.ts";
 import { CASES } from "../eval/cases.ts";
 import { grade, observe } from "../eval/grade.ts";
 import { IDS, World } from "../eval/world.ts";
+import { openaiParameters } from "../../supabase/functions/_shared/llm/openai.ts";
 import {
   type Candidate, estimateCents, parseArgs, selectCases, selectModels, splitByKeys, stopReason,
 } from "../eval/run.ts";
@@ -63,6 +64,30 @@ Deno.test("eval world: the real tools save, search and read through the pretend 
 
   const item = await s.call("get_item", { item_id: IDS.sourdough });
   assert(JSON.parse(item.text).body_markdown.includes("45 minutes"));
+  await s.close();
+});
+
+Deno.test("eval world: every real tool definition converts to an OpenAI-safe schema", async () => {
+  const s = await openSession();
+  const dropped = ["$schema", "pattern", "format", "propertyNames"];
+  for (const t of s.tools) {
+    const p = openaiParameters(t.inputSchema);
+    const walk = (v: unknown, inProps = false): void => {
+      if (Array.isArray(v)) return v.forEach((x) => walk(x));
+      if (!v || typeof v !== "object") return;
+      for (const [k, x] of Object.entries(v)) {
+        if (!inProps) assert(!dropped.includes(k), `${t.name}: ${k} left in`);
+        walk(x, k === "properties");
+      }
+    };
+    walk(p);
+    assertEquals(p.type, "object", t.name);
+    const orig = t.inputSchema as { properties?: Record<string, { type?: string }>; required?: string[] };
+    const conv = p as { properties: Record<string, { type?: string }>; required?: string[] };
+    assertEquals(Object.keys(conv.properties).sort(), Object.keys(orig.properties ?? {}).sort(), t.name);
+    for (const [f, sch] of Object.entries(orig.properties ?? {})) assertEquals(conv.properties[f].type, sch.type, `${t.name}.${f}`);
+    assertEquals(conv.required, orig.required, t.name);
+  }
   await s.close();
 });
 
@@ -181,6 +206,7 @@ Deno.test("runner: answers that would repeat for every case stop the model, othe
   assert(stopReason({ errorCode: QUOTA_EXCEEDED, errorStatus: 429 }, "luna", luna)!.includes("out of credit"));
   assert(stopReason({ errorStatus: 401 }, "luna", luna)!.includes("OPENAI_API_KEY was refused"));
   assert(stopReason({ errorStatus: 403 }, "luna", luna)!.includes("allowed models"));
+  assert(stopReason({ errorCode: "invalid_function_parameters", errorStatus: 400 }, "luna", luna)!.includes("tool definition"));
   assertEquals(stopReason({ errorCode: "rate_limit_exceeded", errorStatus: 429 }, "luna", luna), null);
   assertEquals(stopReason({ errorCode: "server_error", errorStatus: 500 }, "luna", luna), null);
   assertEquals(stopReason({}, "luna", luna), null);

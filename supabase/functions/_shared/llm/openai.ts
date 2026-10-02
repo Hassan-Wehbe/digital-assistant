@@ -59,6 +59,30 @@ export function toOpenAIInput(messages: Message[], model: string): R.ResponseInp
   return out;
 }
 
+// JSON Schema keywords OpenAI's function-parameter check may reject, and which only repeat what
+// the tools check themselves (every tool validates its input with zod before acting): the
+// "$schema" header, regex patterns (e.g. \p{L} letter classes), formats and propertyNames.
+const DROPPED_KEYWORDS = new Set(["$schema", "pattern", "format", "propertyNames"]);
+
+/** A tool's input schema as OpenAI accepts it: same fields, types, descriptions and limits. */
+export function openaiParameters(schema: unknown): Record<string, unknown> {
+  const clean = (v: unknown, key?: string): unknown => {
+    if (Array.isArray(v)) return v.map((x) => clean(x));
+    if (!v || typeof v !== "object") return v;
+    // "additionalProperties": {} (any value) is written as true.
+    if (key === "additionalProperties" && Object.keys(v).length === 0) return true;
+    const out: Record<string, unknown> = {};
+    for (const [k, x] of Object.entries(v as Record<string, unknown>)) {
+      // Keywords are dropped where they describe a value; "properties" maps field names, kept as is.
+      if (DROPPED_KEYWORDS.has(k) && key !== "properties") continue;
+      out[k] = clean(x, k);
+    }
+    return out;
+  };
+  const out = clean(schema) as Record<string, unknown>;
+  return { type: "object", properties: {}, ...out };
+}
+
 export function toOpenAIParams(model: ModelConfig, req: ChatRequest): R.ResponseCreateParamsStreaming {
   return {
     model: model.model,
@@ -70,7 +94,7 @@ export function toOpenAIParams(model: ModelConfig, req: ChatRequest): R.Response
       type: "function" as const,
       name: t.name,
       description: t.description,
-      parameters: t.inputSchema,
+      parameters: openaiParameters(t.inputSchema),
       strict: false, // the tools validate their own input (zod in the MCP server)
     })),
     max_output_tokens: model.maxOutputTokens,
@@ -166,7 +190,9 @@ function toLlmError(err: unknown): LlmError {
     if (/insufficient_quota|billing_hard_limit|budget/i.test(`${err.code ?? ""} ${err.type ?? ""}`)) {
       return new LlmError("openai", QUOTA_EXCEEDED, err.status, false);
     }
-    return new LlmError("openai", err.code ?? err.type ?? "api_error", err.status, isRetryableStatus(err.status));
+    // `param` is a location in our request (e.g. "tools[12].parameters"), safe to report.
+    const where = typeof err.param === "string" && /^[\w.\[\]-]{1,100}$/.test(err.param) ? err.param : undefined;
+    return new LlmError("openai", err.code ?? err.type ?? "api_error", err.status, isRetryableStatus(err.status), where);
   }
   return new LlmError("openai", "unexpected_error", undefined, true);
 }

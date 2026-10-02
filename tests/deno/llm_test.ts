@@ -13,12 +13,11 @@ import {
   missingKeys,
   type ModelConfig,
   parseRoutes,
-  type Routes,
   RoutesConfigError,
   type StreamEvent,
 } from "../../supabase/functions/_shared/llm/index.ts";
 import { AnthropicAdapter, type AnthropicLike } from "../../supabase/functions/_shared/llm/anthropic.ts";
-import { OpenAIAdapter, type OpenAILike } from "../../supabase/functions/_shared/llm/openai.ts";
+import { OpenAIAdapter, type OpenAILike, openaiParameters } from "../../supabase/functions/_shared/llm/openai.ts";
 
 const PRICE = { input: 1, output: 5, cacheRead: 0.1, cacheWrite: 1.25 }; // USD per million tokens
 const CLAUDE: ModelConfig = { provider: "anthropic", model: "claude-test", price: PRICE, maxOutputTokens: 4096 };
@@ -465,4 +464,40 @@ Deno.test("out of credit is quota_exceeded and not retryable (OpenAI sends it as
   );
   const e4 = await assertRejects(() => collect(new AnthropicAdapter(fakeAnthropic({}, [], other).client).stream(CLAUDE, REQ)), LlmError);
   assertEquals(e4.code, "invalid_request_error");
+});
+
+Deno.test("openaiParameters: drops format hints OpenAI may reject, keeps fields, types and limits", () => {
+  const out = openaiParameters({
+    $schema: "http://json-schema.org/draft-07/schema#",
+    type: "object",
+    properties: {
+      name: { type: "string", pattern: "^\\p{L}+$", maxLength: 30, description: "A name" },
+      item_id: { type: "string", format: "uuid", pattern: "^[0-9a-f-]{36}$" },
+      metadata: { type: "object", propertyNames: { type: "string" }, additionalProperties: {} },
+      format: { type: "string", description: "a field that happens to be called format" },
+    },
+    required: ["name"],
+  });
+  assertEquals(out, {
+    type: "object",
+    properties: {
+      name: { type: "string", maxLength: 30, description: "A name" },
+      item_id: { type: "string" },
+      metadata: { type: "object", additionalProperties: true },
+      format: { type: "string", description: "a field that happens to be called format" },
+    },
+    required: ["name"],
+  });
+  assertEquals(openaiParameters({ type: "object", $schema: "x" }), { type: "object", properties: {} });
+});
+
+Deno.test("OpenAI errors report where in the request the problem is, never text", async () => {
+  const bad = OpenAI.APIError.generate(
+    400, { error: { message: "Invalid schema for function 'x': my wifi is hunter2", type: "invalid_request_error", code: "invalid_function_parameters", param: "tools[12].parameters" } },
+    undefined, new Headers(),
+  );
+  const e = await assertRejects(() => collect(new OpenAIAdapter(fakeOpenAI([], bad).client).stream(GPT, REQ)), LlmError);
+  assertEquals([e.code, e.where, e.retryable], ["invalid_function_parameters", "tools[12].parameters", false]);
+  assert(e.message.endsWith("at tools[12].parameters"));
+  assert(!e.message.includes("hunter2"));
 });
