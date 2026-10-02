@@ -193,7 +193,7 @@ are updated to name the providers in use. The policy already promises this.
     project "Wilma" is restricted to it) while Wilma's capabilities are tested; no Anthropic key
     yet. The Claude candidates stay in `tests/eval/models.json` for a later comparison.
   - Result: the routes' models, recorded in `docs/design.md` D21.
-- **A5b: the `chat` function.**
+- **A5b: the `chat` function.** Detailed plan: `docs/phase5-a5b-chat-function-plan.md`.
   - Migration `ai_usage`.
   - Function `chat`: tools in-process, confirm step, streaming, budget, routes from config.
   - Privacy page update.
