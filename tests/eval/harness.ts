@@ -2,10 +2,7 @@
 // of it (same descriptions, same server-side checks such as rule 9), connected in memory, and
 // the conversation loop the chat function will use: model -> tool calls -> results -> model,
 // until the model answers. Records every tool call and reply for grading.
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { serverInstructions } from "../../supabase/functions/mcp/lib/assistant.ts";
+import { connectTools } from "../../supabase/functions/chat/tools.ts";
 import type { ToolContext } from "../../supabase/functions/mcp/tools/_shared.ts";
 import { ALL_TOOLS } from "../../supabase/functions/mcp/tools/all.ts";
 import {
@@ -76,42 +73,18 @@ export interface Session {
   close(): Promise<void>;
 }
 
-/** A fresh pretend account with Wilma's tools connected to it. */
+/** A fresh pretend account with Wilma's tools connected to it, exactly as the chat function connects them. */
 export async function openSession(world = new World()): Promise<Session> {
   const ctx: ToolContext = {
     db: world.client(), userId: "eval-user", accessToken: "eval-token", assistantName: world.assistantName,
   };
-  const server = new McpServer(
-    { name: "digital-assistant", version: "eval" },
-    { instructions: serverInstructions(ctx.assistantName) },
-  );
-  for (const register of ALL_TOOLS) register(server, ctx);
-  const [serverSide, clientSide] = InMemoryTransport.createLinkedPair();
-  await server.connect(serverSide);
-  const client = new Client({ name: "wilma-eval", version: "1" });
-  await client.connect(clientSide);
-  const { tools } = await client.listTools();
+  const tools = await connectTools(ctx, "eval");
   return {
     world,
-    tools: tools.map((t) => ({
-      name: t.name,
-      description: t.description ?? "",
-      inputSchema: t.inputSchema as Record<string, unknown>,
-    })),
-    system: systemPrompt(ctx.assistantName, client.getInstructions() ?? ""),
-    async call(name, args) {
-      try {
-        const res = await client.callTool({ name, arguments: args });
-        const content = (res.content ?? []) as { type: string; text?: string }[];
-        return { isError: !!res.isError, text: content.map((c) => c.text ?? "").join("\n") };
-      } catch (e) {
-        return { isError: true, text: e instanceof Error ? e.message : String(e) };
-      }
-    },
-    async close() {
-      await client.close();
-      await server.close();
-    },
+    tools: tools.specs,
+    system: systemPrompt(ctx.assistantName, tools.instructions),
+    call: tools.call,
+    close: tools.close,
   };
 }
 

@@ -7,3 +7,8 @@ project_id = "digital-assistant"
 # answer unauthenticated OAuth discovery requests (401 + WWW-Authenticate)
 # the way MCP clients such as the Claude app expect.
 verify_jwt = false
+
+[functions.chat]
+# Like mcp: the function verifies the caller's Supabase access token itself (401 otherwise)
+# and then runs every query as that user.
+verify_jwt = false
