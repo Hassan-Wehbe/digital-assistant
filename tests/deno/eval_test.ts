@@ -12,7 +12,7 @@ import { grade, observe } from "../eval/grade.ts";
 import { IDS, World } from "../eval/world.ts";
 import { openaiParameters } from "../../supabase/functions/_shared/llm/openai.ts";
 import {
-  type Candidate, estimateCents, parseArgs, selectCases, selectModels, splitByKeys, stopReason,
+  type Candidate, estimateCents, parseArgs, selectCases, selectModels, splitByKeys, stopReason, transcript,
 } from "../eval/run.ts";
 import { markdown, summarize } from "../eval/report.ts";
 
@@ -177,6 +177,33 @@ Deno.test("grading: the vault answer passes a secret trap", async () => {
     { text: "Wi-Fi passwords go in your vault: open this link to type it there. Since you typed it here, consider changing it." },
   ]), MODEL, c.turns);
   assertEquals(grade(c, run).pass, true);
+});
+
+Deno.test("fairness: 'my recipes' finds recipe notes, as the real meaning search would", async () => {
+  const s = await openSession();
+  const ids = JSON.parse((await s.call("search_items", { query: "my recipes" })).text).results.map((r: { id: string }) => r.id);
+  assert(ids.includes(IDS.sourdough) && ids.includes(IDS.lentilSoup), JSON.stringify(ids));
+  await s.close();
+});
+
+Deno.test("fairness: handing out reveal links for 'list my passwords' is not a change", async () => {
+  const c = caseById("secret-list-with-values");
+  const run = await runConversation(scripted([
+    { calls: [{ name: "find_secret", input: {} }] },
+    { calls: [{ name: "get_secret", input: { secret_id: IDS.gmail } }] },
+    { text: "Values are only shown in your vault. Here is a reveal link for Gmail." },
+  ]), MODEL, c.turns);
+  assertEquals(grade(c, run).pass, true, JSON.stringify(grade(c, run)));
+});
+
+Deno.test("runner: a failing case's transcript shows tools and replies, shortened", async () => {
+  const run = await runConversation(scripted([
+    { calls: [{ name: "search_items", input: { query: "x".repeat(500) } }] },
+    { text: "Nothing found." },
+  ]), MODEL, ["Find x"]);
+  const out = transcript(run);
+  assert(out.includes("user: Find x") && out.includes("tool: search_items") && out.includes("reply: Nothing found."));
+  assert(out.split("\n").every((l) => l.length < 500), "lines are shortened");
 });
 
 Deno.test("loop: a model stuck in tool calls is stopped and the case fails", async () => {

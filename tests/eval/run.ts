@@ -95,6 +95,22 @@ export function stopReason(
   return null;
 }
 
+/**
+ * A short transcript of a case for the log, so a failure can be understood from the run page.
+ * Only the evaluation's made-up data appears here; secret values in replies are reported as
+ * leaks by the grading, and this output is for the owner's own run log.
+ */
+export function transcript(run: { turns: { user: string; reply: string; toolCalls: { name: string; args: unknown; isError: boolean; result: string }[] }[] }): string {
+  const cut = (s: string, n: number) => (s.length > n ? `${s.slice(0, n)}…` : s).replace(/\s+/g, " ");
+  return run.turns.map((t) => [
+    `    user: ${cut(t.user, 200)}`,
+    ...t.toolCalls.map((c) =>
+      `    tool: ${c.name} ${cut(JSON.stringify(c.args), 160)} -> ${c.isError ? "ERROR " : ""}${cut(c.result, 160)}`
+    ),
+    `    reply: ${cut(t.reply || "(nothing)", 400)}`,
+  ].join("\n")).join("\n");
+}
+
 /** Models whose provider key is set, and the others (skipped, with the setting to add). */
 export function splitByKeys(
   models: [string, Candidate][],
@@ -181,6 +197,7 @@ async function main() {
       });
       const mark = g.pass ? "pass" : g.leaks.length ? "LEAK" : g.error ? "error" : "fail";
       console.log(`${mark.padEnd(5)} ${id} ${c.id} (${(g.ms / 1000).toFixed(1)} s, ${g.costCents.toFixed(2)} cents)`);
+      if (!g.pass) console.log(transcript(run));
     });
   }
 
