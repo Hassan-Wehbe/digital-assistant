@@ -2,14 +2,15 @@
 // pretend account answers Wilma's real tools, the loop runs tool calls, grading catches leaks,
 // and the runner's selection, estimate and report work. No model API is called.
 import { assert, assertEquals, assertThrows } from "jsr:@std/assert@1";
-import type {
-  ChatRequest, LlmAdapter, ModelConfig, StreamEvent, ToolCall,
+import {
+  type ChatRequest, type LlmAdapter, LlmError, type ModelConfig, QUOTA_EXCEEDED, type StreamEvent,
+  type ToolCall,
 } from "../../supabase/functions/_shared/llm/index.ts";
 import { ALL_TOOLS, openSession, runConversation } from "../eval/harness.ts";
 import { CASES } from "../eval/cases.ts";
 import { grade, observe } from "../eval/grade.ts";
 import { IDS, World } from "../eval/world.ts";
-import { type Candidate, estimateCents, parseArgs, selectCases, selectModels } from "../eval/run.ts";
+import { type Candidate, estimateCents, parseArgs, selectCases, selectModels, splitByKeys } from "../eval/run.ts";
 import { markdown, summarize } from "../eval/report.ts";
 
 const MODEL: ModelConfig = {
@@ -159,6 +160,19 @@ Deno.test("loop: a model stuck in tool calls is stopped and the case fails", asy
   assertEquals(grade(caseById("find-list-spaces"), run).pass, false);
 });
 
+Deno.test("loop: an account out of credit is recorded as quota_exceeded", async () => {
+  const empty: LlmAdapter = {
+    provider: "openai",
+    // deno-lint-ignore require-yield
+    async *stream() {
+      throw new LlmError("openai", QUOTA_EXCEEDED, 429, false);
+    },
+  };
+  const run = await runConversation(empty, MODEL, ["hello"]);
+  assertEquals(run.errorCode, QUOTA_EXCEEDED);
+  assert(run.error?.includes("quota_exceeded"));
+});
+
 Deno.test("loop: a failing model call is an error, not a wrong answer", async () => {
   const broken: LlmAdapter = {
     provider: "anthropic",
@@ -207,7 +221,17 @@ Deno.test("runner: arguments, case and model selection, estimate", async () => {
   const models = JSON.parse(await Deno.readTextFile(new URL("../eval/models.json", import.meta.url))).models as Record<string, Candidate>;
   const [[id, haiku]] = selectModels("haiku-4-5", models);
   assertEquals([id, haiku.model], ["haiku-4-5", "claude-haiku-4-5"]);
-  assertThrows(() => selectModels("openai-default", models), Error, "not ready");
+  assertThrows(
+    () => selectModels("draft", { draft: { ...haiku, disabled: "fill in the prices" } }), Error, "not ready",
+  );
+  assertEquals(selectModels("luna", models)[0][1].model, "gpt-6.0-luna");
+  // Only the OpenAI key set: Claude models are skipped with a note, Luna runs.
+  const { ready, missing } = splitByKeys(
+    selectModels("luna,haiku-4-5", models),
+    (n) => (n === "OPENAI_API_KEY" ? "set" : undefined),
+  );
+  assertEquals(ready.map(([mid]) => mid), ["luna"]);
+  assertEquals(missing, ["haiku-4-5 skipped: ANTHROPIC_API_KEY is not set"]);
   assertThrows(() => selectModels("gpt-x", models), Error, "unknown model");
   for (const [mid, m] of Object.entries(models)) {
     if (m.disabled) continue;

@@ -13,6 +13,7 @@ import {
   LlmError,
   type Message,
   type ModelConfig,
+  QUOTA_EXCEEDED,
   type StopReason,
   type StreamEvent,
   type ToolCall,
@@ -160,6 +161,11 @@ function toLlmError(err: unknown): LlmError {
   if (err instanceof LlmError) return err;
   if (err instanceof OpenAI.APIUserAbortError) return new LlmError("openai", "aborted", undefined, false);
   if (err instanceof OpenAI.APIError) {
+    // Out of credit / over the project budget arrives as HTTP 429 like a rate limit, but
+    // waiting does not help.
+    if (/insufficient_quota|billing_hard_limit|budget/i.test(`${err.code ?? ""} ${err.type ?? ""}`)) {
+      return new LlmError("openai", QUOTA_EXCEEDED, err.status, false);
+    }
     return new LlmError("openai", err.code ?? err.type ?? "api_error", err.status, isRetryableStatus(err.status));
   }
   return new LlmError("openai", "unexpected_error", undefined, true);

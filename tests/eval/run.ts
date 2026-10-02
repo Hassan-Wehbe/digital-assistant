@@ -9,7 +9,9 @@
 // Keys come from ANTHROPIC_API_KEY / OPENAI_API_KEY in the environment and are never printed.
 import { AnthropicAdapter, anthropicClient } from "../../supabase/functions/_shared/llm/anthropic.ts";
 import { OpenAIAdapter, openaiClient } from "../../supabase/functions/_shared/llm/openai.ts";
-import type { LlmAdapter, ModelConfig, ProviderId } from "../../supabase/functions/_shared/llm/index.ts";
+import {
+  type LlmAdapter, type ModelConfig, type ProviderId, QUOTA_EXCEEDED,
+} from "../../supabase/functions/_shared/llm/index.ts";
 import { runConversation } from "./harness.ts";
 import { CASES } from "./cases.ts";
 import { type CaseResult, type EvalCase, grade } from "./grade.ts";
@@ -64,6 +66,17 @@ export function estimateCents(m: ModelConfig, cases: EvalCase[], repeat: number)
   return (turns * 3 * (9000 * m.price.input + 500 * m.price.output)) / 1_000_000 * 100;
 }
 
+/** Models whose provider key is set, and the others (skipped, with the setting to add). */
+export function splitByKeys(
+  models: [string, Candidate][],
+  env: (name: string) => string | undefined,
+): { ready: [string, Candidate][]; missing: string[] } {
+  const ready = models.filter(([, m]) => !!env(KEY_ENV[m.provider]));
+  const missing = models.filter(([, m]) => !env(KEY_ENV[m.provider]))
+    .map(([id, m]) => `${id} skipped: ${KEY_ENV[m.provider]} is not set`);
+  return { ready, missing };
+}
+
 function adapterFor(provider: ProviderId): LlmAdapter {
   const key = Deno.env.get(KEY_ENV[provider]);
   if (!key) throw new Error(`${KEY_ENV[provider]} is not set`);
@@ -82,12 +95,19 @@ async function main() {
   const all = (JSON.parse(await Deno.readTextFile(new URL("./models.json", import.meta.url))) as {
     models: Record<string, Candidate>;
   }).models;
-  const models = selectModels(args.models ?? "", all);
+  const selected = selectModels(args.models ?? "", all);
   const cases = selectCases(args.cases ?? "all");
   const repeat = Math.max(1, Number(args.repeat ?? 1));
   const maxDollars = Number(args["max-dollars"] ?? 10);
   const concurrency = Number(args.concurrency ?? 2);
   if (!(maxDollars > 0) || !(concurrency >= 1)) throw new Error("--max-dollars and --concurrency must be positive");
+  // A dry run plans every selected model; a real run skips models whose provider key is missing.
+  const { ready, missing } = args["dry-run"]
+    ? { ready: selected, missing: [] as string[] }
+    : splitByKeys(selected, (n) => Deno.env.get(n));
+  for (const note of missing) console.log(note);
+  if (!ready.length) throw new Error("no selected model has its API key set; nothing to run");
+  const models = ready;
 
   console.log(`Plan: ${cases.length} cases x ${repeat} run(s) on ${models.map(([id]) => id).join(", ")}.`);
   for (const [id, m] of models) {
@@ -103,16 +123,25 @@ async function main() {
   let spentCents = 0;
   const results: Record<string, (CaseResult | "skipped")[]> = {};
   const transcripts: unknown[] = [];
+  const notes = [...missing];
   for (const [id, m] of models) {
     results[id] = [];
+    let outOfCredit = false;
     const jobs = cases.flatMap((c) => Array.from({ length: repeat }, () => c));
     await pool(jobs, concurrency, async (c) => {
-      if (spentCents >= capCents) {
+      if (spentCents >= capCents || outOfCredit) {
         results[id].push("skipped");
         return;
       }
       const run = await runConversation(adapters.get(m.provider)!, m, c.turns, { setup: c.setup });
       spentCents += run.costCents;
+      if (run.errorCode === QUOTA_EXCEEDED && !outOfCredit) {
+        outOfCredit = true;
+        const note = `${id} stopped: the ${m.provider} account is out of credit or over its spend limit ` +
+          "(top up or raise the limit, then run again)";
+        notes.push(note);
+        console.log(note);
+      }
       const g = grade(c, run);
       results[id].push(g);
       transcripts.push({
@@ -129,7 +158,7 @@ async function main() {
 
   const date = new Date().toISOString().slice(0, 16).replace("T", " ");
   const report = markdown(Object.entries(results).map(([id, r]) => summarize(id, r)), results, {
-    date, repeat, maxDollars,
+    date, repeat, maxDollars, notes,
   });
   const outDir = args.out ?? "tests/eval/results";
   await Deno.mkdir(outDir, { recursive: true });

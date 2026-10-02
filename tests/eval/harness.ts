@@ -29,8 +29,9 @@ import {
   registerListDeletedItems, registerPurgeItem, registerRestoreItem,
 } from "../../supabase/functions/mcp/tools/recycle_bin.ts";
 import { registerDeleteSpace } from "../../supabase/functions/mcp/tools/delete_space.ts";
-import type {
-  LlmAdapter, Message, ModelConfig, StopReason, StreamEvent, ToolResult, ToolSpec,
+import {
+  type LlmAdapter, LlmError, type Message, type ModelConfig, type StopReason, type StreamEvent,
+  type ToolResult, type ToolSpec,
 } from "../../supabase/functions/_shared/llm/index.ts";
 import { World } from "./world.ts";
 import { systemPrompt } from "./system.ts";
@@ -90,6 +91,8 @@ export interface RunRecord {
   ms: number;
   /** A failed model call (network, rate limit, bad configuration): not a model mistake. */
   error?: string;
+  /** LlmError.code of that failure, e.g. quota_exceeded. */
+  errorCode?: string;
 }
 
 export interface Session {
@@ -194,6 +197,7 @@ export async function runConversation(
     }
   } catch (e) {
     record.error = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+    if (e instanceof LlmError) record.errorCode = e.code;
   } finally {
     record.ms = performance.now() - started;
     await session.close();

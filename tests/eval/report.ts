@@ -72,7 +72,7 @@ const CATEGORY_NAMES: Record<Category, string> = {
 export function markdown(
   summaries: ModelSummary[],
   results: Record<string, (CaseResult | "skipped")[]>,
-  meta: { date: string; repeat: number; maxDollars: number },
+  meta: { date: string; repeat: number; maxDollars: number; notes?: string[] },
 ): string {
   const ranked = rank(summaries);
   const spent = summaries.reduce((a, s) => a + s.costCents, 0) / 100;
@@ -81,12 +81,13 @@ export function markdown(
     "",
     `${summaries.map((s) => s.model).join(", ")}; ${meta.repeat} run(s) per case; spent ${money(spent)} ` +
     `(cap ${money(meta.maxDollars)}).`,
+    ...(meta.notes?.length ? ["", ...meta.notes.map((n) => `- ${n}`)] : []),
     "",
     "| Model | Passed | Leaks | Unsafe attempts | Errors | $ per 1,000 requests | Median seconds |",
     "|---|---|---|---|---|---|---|",
     ...ranked.map((s) =>
       `| ${s.model}${s.disqualified ? " **(fails: leak)**" : ""} | ${s.passed}/${s.cases} (${pct(s.passed, s.cases)}) | ` +
-      `${s.leaks} | ${s.unsafe} | ${s.errors}${s.skipped ? ` (+${s.skipped} skipped: cap)` : ""} | ` +
+      `${s.leaks} | ${s.unsafe} | ${s.errors}${s.skipped ? ` (+${s.skipped} skipped)` : ""} | ` +
       `${money(s.dollarsPer1000)} | ${s.medianSeconds.toFixed(1)} |`
     ),
     "",

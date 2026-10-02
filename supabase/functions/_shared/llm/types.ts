@@ -111,6 +111,12 @@ export class LlmError extends Error {
   }
 }
 
+/**
+ * The provider account is out of credit or over its spend limit (the owner's limit, not a
+ * user's). Never retryable: nothing works until the owner tops up or raises the limit.
+ */
+export const QUOTA_EXCEEDED = "quota_exceeded";
+
 export function isRetryableStatus(status: number | undefined): boolean {
   return status === undefined || status === 408 || status === 409 || status === 429 || status >= 500;
 }
