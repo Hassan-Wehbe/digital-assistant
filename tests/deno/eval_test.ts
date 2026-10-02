@@ -237,7 +237,7 @@ Deno.test("runner: arguments, case and model selection, estimate", async () => {
   assertThrows(
     () => selectModels("draft", { draft: { ...haiku, disabled: "fill in the prices" } }), Error, "not ready",
   );
-  assertEquals(selectModels("luna", models)[0][1].model, "gpt-6.0-luna");
+  assertEquals(selectModels("luna", models)[0][1].model, "gpt-6-luna");
   // Only the OpenAI key set: Claude models are skipped with a note, Luna runs.
   const { ready, missing } = splitByKeys(
     selectModels("luna,haiku-4-5", models),

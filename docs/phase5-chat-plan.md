@@ -167,7 +167,7 @@ are updated to name the providers in use. The policy already promises this.
   - The evaluation set and its runner. **Built** (`tests/eval/`).
   - Owner: API keys for the candidate providers in GitHub repository secrets (for the
     evaluation) and Supabase secrets (for the chat function); approve the eval run.
-  - Owner's decision 2026-10-02: **OpenAI only for now** (`gpt-6.0-luna`, the owner's OpenAI
+  - Owner's decision 2026-10-02: **OpenAI only for now** (`gpt-6-luna`, the owner's OpenAI
     project "Wilma" is restricted to it) while Wilma's capabilities are tested; no Anthropic key
     yet. The Claude candidates stay in `tests/eval/models.json` for a later comparison.
   - Result: the routes' models, recorded in `docs/design.md` D21.
