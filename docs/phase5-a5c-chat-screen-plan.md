@@ -1,6 +1,7 @@
 # A5c: the chat screen in the app (plan)
 
-Status: **plan approved by the owner, nothing built yet** (2026-10-02). All ten decisions below were answered "yes, as recommended". Parent plans: `docs/phase5-chat-plan.md` (A5c),
+Status: **plan approved by the owner** (2026-10-02). **Step 2 built** (chat plumbing, not used by
+the app yet): `app/src/lib/chatStream.ts`, `chatClient.ts`, `chatThread.ts` and their tests. All ten decisions below were answered "yes, as recommended". Parent plans: `docs/phase5-chat-plan.md` (A5c),
 `docs/phase5-a5b-chat-function-plan.md` ("As built: step 3" defines the request and the streamed
 events). The `chat` function is deployed and live-checked; the app does not use it yet.
 
