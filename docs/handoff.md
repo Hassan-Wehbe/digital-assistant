@@ -1,16 +1,37 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-10-01 (after A3c, A4 internal testing on Google Play, and the A5 plan).
+Last updated 2026-10-02 (A5b steps 1-3: shared tools and instructions, the `ai_usage` migration,
+the `chat` function built but not deployed).
 Read this, then `CLAUDE.md`, `docs/design.md`, `docs/phase3-mobile-app-plan.md` and
 `docs/phase5-chat-plan.md`, before changing anything. The owner is returning to development:
 explain steps plainly, keep PRs small, say clearly when they must act, never ask for passwords,
 tokens or keys in chat.
 
-## Where things stand (2026-10-01)
+## Where things stand (2026-10-02)
+
+**A5b, the `chat` function** (`docs/phase5-a5b-chat-function-plan.md`):
+1. **Done, merged (#43):** one tool list (`mcp/tools/all.ts`) and one set of instructions
+   (`_shared/assistant_prompt.ts`) for the MCP server, the evaluation and chat. The "new version
+   replaces the old one" instruction is not yet confirmed by an evaluation run (the last run,
+   55/56, missed exactly that). `mcp` not redeployed with this refactor (same behaviour; optional).
+2. **Done, merged and applied (#44):** migration `20261002120000_ai_usage.sql` (27/27 checks in a
+   rolled-back dry run): `ai_settings` (default $1/month), `ai_usage`, `record_ai_usage`,
+   `my_ai_allowance`, personal limits, `is_admin` (the owner, $5 limit) and the admin functions.
+3. **Built, PR open, NOT deployed:** `supabase/functions/chat/` with `tests/deno/chat_test.ts`
+   (21 tests). Protocol, rules and the deploy recipe: the plan's "As built: step 3". The privacy
+   wording draft is in that PR's description, waiting for the owner's approval
+   (`docs/legal/privacy.html` unchanged until then).
+4. **Next, with the owner's OK:** deploy `chat` (the plan's deploy recipe; verify files identical
+   and 401 without sign-in), a short live check on a throwaway test user (under 1 cent), delete
+   that user. Needs the owner's `OPENAI_API_KEY` (`wilma-chat` key) and `LLM_ROUTES` (exact value
+   in the plan) in Supabase secrets first.
+5. **Then:** evaluation re-run on the shared instructions (about 2 cents; GitHub Actions "model
+   evaluation", model luna), started by the owner or with their OK.
 
 | Piece | State |
 |---|---|
-| Database | migrations up to `recycle_bin` applied (unchanged since 2026-09-30) |
+| Database | migrations up to `ai_usage` applied (2026-10-02) |
+| Chat function `chat` | built (PR for A5b step 3), **not deployed** |
 | MCP server `mcp` | **version 8, server 0.6.0**, 22 tools, with the rule 9 credential check (PR #31, deployed 2026-10-01; deployed files checked identical to the repo, unsigned calls answer 401) |
 | Mobile app (Expo, `app/`) | merged to `main` up to PR #29: A0-A3 complete. A3b secrets (#23), **A3c** spaces (#25), vault setup / recovery / passphrase change (#26), **A4** privacy + deletion pages and Play guide (#27), change sign-in password (#28), mascot app icon (#29, from another session). `npm run check`: 129 tests |
 | Google Play | app created, **internal testing release "Available to internal testers"** (production build of `main` at e90664c, versionCode 2: https://expo.dev/accounts/zafnut/projects/wilma/builds/b9ddd891-b815-4995-bd2a-5fc96a7f9a97 ; built before the mascot icon). Owner was waiting for the join link to work ("Item not found" right after release: accept invite first, matching Google account, give it time). App-content forms and store listing may still be incomplete; answers in `docs/phase4-play-release.md` |
@@ -297,8 +318,10 @@ edit an applied one).
 - **Branches:** `main` is protected (pull request required, no force push). Work on a branch,
   open a PR, merge when the owner agrees.
 - **Deno** is not preinstalled: `npm i -g deno`, then set `DENO_CERT=/root/.ccr/ca-bundle.crt`.
-  Unit tests: `deno test -A --config supabase/functions/mcp/deno.json tests/deno` (176 tests:
-  rule 9 check, `llm` module and evaluation machinery included). Deno refuses npm packages younger than 24 hours: pin
+  Unit tests: `deno test -A --config supabase/functions/mcp/deno.json tests/deno` (211 tests:
+  rule 9 check, `llm` module, evaluation machinery and the `chat` function included). Type check:
+  `deno check --config supabase/functions/chat/deno.json supabase/functions/chat/index.ts` (and the
+  same with `mcp`). Deno refuses npm packages younger than 24 hours: pin
   an older version rather than turning the check off.
   App: `cd app && npm ci && npm run check` (61 tests).
 - **SQL tests** run through the Supabase connector (`execute_sql`), each wrapped in
