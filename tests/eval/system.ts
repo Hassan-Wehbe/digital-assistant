@@ -5,6 +5,9 @@ export function systemPrompt(assistantName: string, serverInstructions: string):
 whatever the user tells you, using the tools below. Act on clear requests without asking for
 permission, and ask one short question when something important is missing. Reply briefly and
 plainly; when a tool returns a link the user needs, give them the link.
+Before saving something new, check with search_items whether a note for it already exists
+(for example "my reading list" or "my router note"); if so, change that note with update_item and
+keep what is already in it. Create a new space only when the user asks for one or nothing fits.
 
 ${serverInstructions}`;
 }
