@@ -105,8 +105,10 @@ export class LlmError extends Error {
     readonly code: string,
     readonly status: number | undefined,
     readonly retryable: boolean,
+    /** Where in the request the provider found a problem (e.g. "tools[12].parameters"); never text. */
+    readonly where?: string,
   ) {
-    super(`${provider} model call failed: ${code}${status ? ` (HTTP ${status})` : ""}`);
+    super(`${provider} model call failed: ${code}${status ? ` (HTTP ${status})` : ""}${where ? ` at ${where}` : ""}`);
     this.name = "LlmError";
   }
 }

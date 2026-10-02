@@ -80,6 +80,10 @@ export function stopReason(
     return `${id} stopped: the ${m.provider} account is out of credit or over its spend limit ` +
       "(top up or raise the limit, then run again)";
   }
+  if (run.errorCode === "invalid_function_parameters") {
+    return `${id} stopped: ${m.provider} rejected a tool definition (HTTP 400); see the error's location ` +
+      "and fix the adapter's tool schema conversion";
+  }
   if (run.errorStatus === 401) return `${id} stopped: ${keyName} was refused (HTTP 401); create a new key and update the secret`;
   if (run.errorStatus === 403) {
     return `${id} stopped: this key may not use "${m.model}" (HTTP 403); check the project's allowed models`;
