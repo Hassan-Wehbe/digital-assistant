@@ -98,9 +98,13 @@ Tests: `tests/deno/credentials_test.ts` (traps, false positives, through the too
 Owner, before the first evaluation run: API accounts with a spend limit for the candidate
 providers; keys as **GitHub repository secrets** `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` (for the
 evaluation workflow), and later the same names in Supabase secrets (for the chat function).
-Never in chat. The OpenAI candidate in `tests/eval/models.json` is disabled until its model id
-and prices are filled in from the owner's OpenAI account. Also decide the per-person monthly
-limit for testers.
+Never in chat. Candidates in `tests/eval/models.json`: `luna` (gpt-6-luna, the cheapest,
+released 2026-09-22), `luna-5-6`, `haiku-4-5`, `sonnet-5-5-low`, `sonnet-5-5`; OpenAI prices were
+found by web search on 2026-10-02 (OpenAI's pages are blocked from the sandbox), so compare a
+run's cost with OpenAI → Settings → Usage. A model whose key is not set is skipped with a note.
+Owner status 2026-10-02: OpenAI project "Wilma" with spend limits and an `OPENAI_API_KEY`
+created (in GitHub secrets per the owner's steps; not verified from here); no Anthropic key
+yet. Also decide the per-person monthly limit for testers.
 
 ## Owner status and open items
 

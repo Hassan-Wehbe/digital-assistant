@@ -21,12 +21,19 @@
       "effort": "medium",
       "price": { "input": 2, "output": 10, "cacheRead": 0.2, "cacheWrite": 2.5 }
     },
-    "openai-default": {
+    "luna": {
       "provider": "openai",
-      "model": "",
+      "model": "gpt-6-luna",
       "maxOutputTokens": 4096,
-      "price": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
-      "disabled": "fill in the model id (the cheap default candidate in D21) and its prices from platform.openai.com"
+      "price": { "input": 0.1, "output": 0.5, "cacheRead": 0.01, "cacheWrite": 0.125 },
+      "_prices": "GPT-6 Luna (released 2026-09-22), standard tier, prompts under 272K tokens; from search on 2026-10-02. Check the model id in your OpenAI account and compare cost with Settings -> Usage after a run"
+    },
+    "luna-5-6": {
+      "provider": "openai",
+      "model": "gpt-5.6-luna",
+      "maxOutputTokens": 4096,
+      "price": { "input": 0.2, "output": 1.2, "cacheRead": 0.02, "cacheWrite": 0.25 },
+      "_prices": "Standard tier after OpenAI's 2026-07-30 price cut; from search on 2026-10-02"
     }
   }
 }

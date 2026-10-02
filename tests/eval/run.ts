@@ -64,6 +64,17 @@ export function estimateCents(m: ModelConfig, cases: EvalCase[], repeat: number)
   return (turns * 3 * (9000 * m.price.input + 500 * m.price.output)) / 1_000_000 * 100;
 }
 
+/** Models whose provider key is set, and the others (skipped, with the setting to add). */
+export function splitByKeys(
+  models: [string, Candidate][],
+  env: (name: string) => string | undefined,
+): { ready: [string, Candidate][]; missing: string[] } {
+  const ready = models.filter(([, m]) => !!env(KEY_ENV[m.provider]));
+  const missing = models.filter(([, m]) => !env(KEY_ENV[m.provider]))
+    .map(([id, m]) => `${id} skipped: ${KEY_ENV[m.provider]} is not set`);
+  return { ready, missing };
+}
+
 function adapterFor(provider: ProviderId): LlmAdapter {
   const key = Deno.env.get(KEY_ENV[provider]);
   if (!key) throw new Error(`${KEY_ENV[provider]} is not set`);
@@ -82,12 +93,19 @@ async function main() {
   const all = (JSON.parse(await Deno.readTextFile(new URL("./models.json", import.meta.url))) as {
     models: Record<string, Candidate>;
   }).models;
-  const models = selectModels(args.models ?? "", all);
+  const selected = selectModels(args.models ?? "", all);
   const cases = selectCases(args.cases ?? "all");
   const repeat = Math.max(1, Number(args.repeat ?? 1));
   const maxDollars = Number(args["max-dollars"] ?? 10);
   const concurrency = Number(args.concurrency ?? 2);
   if (!(maxDollars > 0) || !(concurrency >= 1)) throw new Error("--max-dollars and --concurrency must be positive");
+  // A dry run plans every selected model; a real run skips models whose provider key is missing.
+  const { ready, missing } = args["dry-run"]
+    ? { ready: selected, missing: [] as string[] }
+    : splitByKeys(selected, (n) => Deno.env.get(n));
+  for (const note of missing) console.log(note);
+  if (!ready.length) throw new Error("no selected model has its API key set; nothing to run");
+  const models = ready;
 
   console.log(`Plan: ${cases.length} cases x ${repeat} run(s) on ${models.map(([id]) => id).join(", ")}.`);
   for (const [id, m] of models) {
@@ -129,7 +147,7 @@ async function main() {
 
   const date = new Date().toISOString().slice(0, 16).replace("T", " ");
   const report = markdown(Object.entries(results).map(([id, r]) => summarize(id, r)), results, {
-    date, repeat, maxDollars,
+    date, repeat, maxDollars, notes: missing,
   });
   const outDir = args.out ?? "tests/eval/results";
   await Deno.mkdir(outDir, { recursive: true });

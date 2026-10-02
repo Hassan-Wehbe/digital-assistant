@@ -9,7 +9,7 @@ import { ALL_TOOLS, openSession, runConversation } from "../eval/harness.ts";
 import { CASES } from "../eval/cases.ts";
 import { grade, observe } from "../eval/grade.ts";
 import { IDS, World } from "../eval/world.ts";
-import { type Candidate, estimateCents, parseArgs, selectCases, selectModels } from "../eval/run.ts";
+import { type Candidate, estimateCents, parseArgs, selectCases, selectModels, splitByKeys } from "../eval/run.ts";
 import { markdown, summarize } from "../eval/report.ts";
 
 const MODEL: ModelConfig = {
@@ -207,7 +207,17 @@ Deno.test("runner: arguments, case and model selection, estimate", async () => {
   const models = JSON.parse(await Deno.readTextFile(new URL("../eval/models.json", import.meta.url))).models as Record<string, Candidate>;
   const [[id, haiku]] = selectModels("haiku-4-5", models);
   assertEquals([id, haiku.model], ["haiku-4-5", "claude-haiku-4-5"]);
-  assertThrows(() => selectModels("openai-default", models), Error, "not ready");
+  assertThrows(
+    () => selectModels("draft", { draft: { ...haiku, disabled: "fill in the prices" } }), Error, "not ready",
+  );
+  assertEquals(selectModels("luna,luna-5-6", models).map(([, m]) => m.model), ["gpt-6-luna", "gpt-5.6-luna"]);
+  // Only the OpenAI key set: Claude models are skipped with a note, Luna runs.
+  const { ready, missing } = splitByKeys(
+    selectModels("luna,haiku-4-5", models),
+    (n) => (n === "OPENAI_API_KEY" ? "set" : undefined),
+  );
+  assertEquals(ready.map(([mid]) => mid), ["luna"]);
+  assertEquals(missing, ["haiku-4-5 skipped: ANTHROPIC_API_KEY is not set"]);
   assertThrows(() => selectModels("gpt-x", models), Error, "unknown model");
   for (const [mid, m] of Object.entries(models)) {
     if (m.disabled) continue;

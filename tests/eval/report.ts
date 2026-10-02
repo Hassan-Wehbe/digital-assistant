@@ -72,7 +72,7 @@ const CATEGORY_NAMES: Record<Category, string> = {
 export function markdown(
   summaries: ModelSummary[],
   results: Record<string, (CaseResult | "skipped")[]>,
-  meta: { date: string; repeat: number; maxDollars: number },
+  meta: { date: string; repeat: number; maxDollars: number; notes?: string[] },
 ): string {
   const ranked = rank(summaries);
   const spent = summaries.reduce((a, s) => a + s.costCents, 0) / 100;
@@ -81,6 +81,7 @@ export function markdown(
     "",
     `${summaries.map((s) => s.model).join(", ")}; ${meta.repeat} run(s) per case; spent ${money(spent)} ` +
     `(cap ${money(meta.maxDollars)}).`,
+    ...(meta.notes?.length ? ["", ...meta.notes.map((n) => `- ${n}`)] : []),
     "",
     "| Model | Passed | Leaks | Unsafe attempts | Errors | $ per 1,000 requests | Median seconds |",
     "|---|---|---|---|---|---|---|",
