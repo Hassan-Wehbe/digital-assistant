@@ -98,13 +98,14 @@ Tests: `tests/deno/credentials_test.ts` (traps, false positives, through the too
 Owner, before the first evaluation run: API accounts with a spend limit for the candidate
 providers; keys as **GitHub repository secrets** `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` (for the
 evaluation workflow), and later the same names in Supabase secrets (for the chat function).
-Never in chat. Candidates in `tests/eval/models.json`: `luna` (`gpt-6.0-luna` as named in the
-owner's OpenAI account, the cheapest, released 2026-09-22; the OpenAI project "Wilma" is
+Never in chat. Candidates in `tests/eval/models.json`: `luna` (`gpt-6-luna`, the
+cheapest, released 2026-09-22; a first run with `gpt-6.0-luna` got "model not found" on every
+case at no cost; the OpenAI project "Wilma" is
 restricted to this one model), `haiku-4-5`, `sonnet-5-5-low`, `sonnet-5-5`; OpenAI prices were
 found by web search on 2026-10-02 (OpenAI's pages are blocked from the sandbox), so compare a
 run's cost with OpenAI → Settings → Usage. A model whose key is not set is skipped with a note.
 Owner status 2026-10-02: OpenAI project "Wilma" with spend limits, restricted to
-`gpt-6.0-luna`, and an `OPENAI_API_KEY` created (in GitHub secrets per the owner's steps; not
+the GPT-6 Luna model, and an `OPENAI_API_KEY` created (in GitHub secrets per the owner's steps; not
 verified from here). **Owner's decision: OpenAI/Luna only for now, no Anthropic key** while
 Wilma's capabilities are tested; the eval workflow defaults to `luna`. What users see when a
 limit is hit is decided: `docs/phase5-chat-plan.md` "What users see when a limit is hit". An

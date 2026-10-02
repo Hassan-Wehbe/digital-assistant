@@ -23,10 +23,10 @@
     },
     "luna": {
       "provider": "openai",
-      "model": "gpt-6.0-luna",
+      "model": "gpt-6-luna",
       "maxOutputTokens": 4096,
       "price": { "input": 0.1, "output": 0.5, "cacheRead": 0.01, "cacheWrite": 0.125 },
-      "_prices": "GPT-6 Luna (released 2026-09-22), standard tier, prompts under 272K tokens; from search on 2026-10-02. Model id as shown in the owner's OpenAI project (Wilma), which is restricted to this model. Compare cost with Settings -> Usage after a run"
+      "_prices": "GPT-6 Luna (released 2026-09-22), standard tier, prompts under 272K tokens; from search on 2026-10-02. Model id gpt-6-luna confirmed by the owner (the first run with gpt-6.0-luna got model_not_found); the owner's OpenAI project (Wilma) is restricted to this model. Compare cost with Settings -> Usage after a run"
     }
   }
 }

@@ -91,8 +91,9 @@ export interface RunRecord {
   ms: number;
   /** A failed model call (network, rate limit, bad configuration): not a model mistake. */
   error?: string;
-  /** LlmError.code of that failure, e.g. quota_exceeded. */
+  /** LlmError.code and HTTP status of that failure, e.g. quota_exceeded. */
   errorCode?: string;
+  errorStatus?: number;
 }
 
 export interface Session {
@@ -197,7 +198,10 @@ export async function runConversation(
     }
   } catch (e) {
     record.error = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
-    if (e instanceof LlmError) record.errorCode = e.code;
+    if (e instanceof LlmError) {
+      record.errorCode = e.code;
+      record.errorStatus = e.status;
+    }
   } finally {
     record.ms = performance.now() - started;
     await session.close();
