@@ -61,6 +61,16 @@ Wilma, and the vault in full: set up (recovery key shown once), unlock (passphra
 fingerprint), reveal, save / change / rename / delete secrets, change the passphrase, recover
 with the recovery key.
 
+## Trying the app in a browser (no phone, no build)
+
+The app also runs as a web page (since `app/metro.config.js`, 2026-10-03), for a quick look at
+work in progress. On a computer with Node.js: in `app/`, `npm ci`, then `npm run web:preview`
+(builds the web version, then serves it at http://localhost:8080; Ctrl+C stops it); sign in with
+your own Wilma account. (`npx expo start --web`, the live-reloading server, still fails on web:
+expo-sqlite's worker is not bundled in that mode, Expo SDK 57.) Differences from the phone: no fingerprint (the vault unlocks
+with the passphrase), screenshot blocking does nothing, and layout is close but not identical. The
+phone checklist stays the final test before a Play build.
+
 ## Google Play and app updates (2026-10-01)
 
 - Wilma is on **Internal testing** ("Available to internal testers"), production build
