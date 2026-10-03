@@ -1,4 +1,5 @@
-// Save a new secret, or type a new value for an existing one (params id, name, type).
+// Save a new secret, or type a new value for an existing one (params id, name, type). Without an
+// id, name and type only fill in the form (a chat card for a secret Wilma set up).
 // The value is sealed on the phone to the vault's public key; Wilma only gets the name,
 // kind and website (save_secret / update_secret) and the database only the ciphertext.
 // A new secret can be saved while the vault is locked; a new value needs it unlocked.
@@ -29,7 +30,7 @@ export default function EnterSecret() {
   // Restricted spaces are left out: the vault list never shows their secrets.
   const spaces = useLoad('spaces', async () => (await wilma.listSpaces()).filter((s) => !s.restricted));
   const [space, setSpace] = useState<string | undefined>();
-  const [name, setName] = useState('');
+  const [name, setName] = useState(changing ? '' : (params.name ?? ''));
   const [type, setType] = useState(params.type ?? 'login');
   const [url, setUrl] = useState('');
   const [values, setValues] = useState<Record<string, string>>({});

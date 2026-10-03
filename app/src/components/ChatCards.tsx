@@ -2,6 +2,10 @@
 // button labels as given; nothing is deleted until Delete is tapped, and only what
 // lib/chatDeletes.ts allows can run. Deleting a vault entry asks to unlock the vault first, here
 // in the card, then carries on with the Delete.
+//
+// A vault card opens the app's own vault screen when tapped (never by itself, so a reply still
+// being written is not interrupted), and never the server's link (lib/chatVault.ts).
+import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Text } from 'react-native';
 
@@ -9,6 +13,7 @@ import { UnlockCard } from '@/components/UnlockCard';
 import { Button, Card, Muted, useColors } from '@/components/ui';
 import { CANT_DO, checkDelete, needsVault } from '@/lib/chatDeletes';
 import type { Entry } from '@/lib/chatThread';
+import { vaultCardText, vaultRoute } from '@/lib/chatVault';
 import { useVault } from '@/lib/vault';
 
 type ConfirmEntry = Extract<Entry, { kind: 'confirm' }>;
@@ -88,6 +93,29 @@ export function DeleteCard({
       {unlocking ? <UnlockCard /> : null}
       <Button title={running ? 'Deleting…' : entry.confirmLabel} kind="danger" onPress={tapDelete} disabled={!active || unlocking} />
       <Button title={entry.cancelLabel} kind="plain" onPress={onCancel} disabled={!active} />
+    </Card>
+  );
+}
+
+export function VaultCard({ entry }: { entry: Extract<Entry, { kind: 'vault' }> }) {
+  const c = useColors();
+  const { text, button } = vaultCardText(entry);
+  const open = () => {
+    const route = vaultRoute(entry);
+    switch (route.screen) {
+      case 'secret':
+        return router.push({ pathname: '/vault/[id]', params: route.params });
+      case 'change':
+      case 'new':
+        return router.push({ pathname: '/vault/enter', params: route.params });
+      case 'list':
+        return router.push('/vault');
+    }
+  };
+  return (
+    <Card style={{ alignSelf: 'flex-start', maxWidth: '85%', gap: 10 }}>
+      <Text style={{ color: c.text, fontSize: 16, lineHeight: 22 }}>{`🔒 ${text}`}</Text>
+      <Button title={button} kind="plain" onPress={open} />
     </Card>
   );
 }

@@ -23,7 +23,15 @@ export type ChatEvent =
       confirm_label: string;
       cancel_label: string;
     }
-  | { type: 'vault'; action: 'reveal' | 'enter'; secret_id: string; name: string; secret_type?: string }
+  | {
+      type: 'vault';
+      action: 'reveal' | 'enter';
+      secret_id: string;
+      name: string;
+      secret_type?: string;
+      /** The id is for a secret that exists only once its value is entered (save_secret). */
+      new_secret?: true;
+    }
   | { type: 'error'; code: string; message: string }
   | { type: 'done'; counted: boolean };
 
@@ -67,6 +75,7 @@ export function toChatEvent(raw: unknown): ChatEvent | null {
         secret_id: raw.secret_id,
         name: raw.name,
         ...(str(raw.secret_type) ? { secret_type: raw.secret_type } : {}),
+        ...(raw.new_secret === true ? { new_secret: true as const } : {}),
       };
     case 'done':
       return { type: 'done', counted: raw.counted === true };

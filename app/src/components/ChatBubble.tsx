@@ -2,7 +2,7 @@
 // Text is plain and selectable (no markdown, no links opened: decision 3).
 import { Text, View } from 'react-native';
 
-import { DeleteCard } from '@/components/ChatCards';
+import { DeleteCard, VaultCard } from '@/components/ChatCards';
 import { Button, Card, Muted, useColors } from '@/components/ui';
 import type { Entry, ErrorButton } from '@/lib/chatThread';
 
@@ -64,12 +64,7 @@ export function ChatBubble({
       );
     case 'confirm':
       return <DeleteCard entry={entry} active={cardActive} onConfirm={() => onConfirm(entry.id)} onCancel={() => onCancel(entry.id)} />;
-    // Vault cards come in the next step; until then they only say where to look.
     case 'vault':
-      return (
-        <Card style={{ alignSelf: 'flex-start', maxWidth: '85%' }}>
-          <Muted>{`Open “${entry.name}” from the Vault on the home screen.`}</Muted>
-        </Card>
-      );
+      return <VaultCard entry={entry} />;
   }
 }
