@@ -55,6 +55,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "web:preview": "expo export --platform web && node scripts/serve-web.mjs dist",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "test": "jest",
