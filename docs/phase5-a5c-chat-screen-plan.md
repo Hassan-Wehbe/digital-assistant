@@ -6,7 +6,7 @@ the app yet): `app/src/lib/chatStream.ts`, `chatClient.ts`, `chatThread.ts` and 
 another account signs in, wired in `auth.tsx`), the device wiring in `deviceStorage.ts`, tests.
 **Step 4 built:** `ChatProvider` (`lib/chat.tsx`), `runTurn` (`lib/chatRun.ts`), the screen
 (`app/chat.tsx`, `components/ChatBubble.tsx`) and the **Ask Wilma** button; delete and vault
-events show a plain note only (no buttons) until steps 5 and 6. **Step 5 built:** delete cards
+events show a plain note only (no buttons) until steps 5 and 6. **Steps 5-7 built (2026-10-03; step 7 = the manual phone checklist, `docs/phase5-a5c-phone-checklist.md`, owner runs it, then the Play build on the owner's OK).** **Step 5 built:** delete cards
 (`chatDeletes.ts`, the five-tool table; `runConfirm` in `chatRun.ts`; card states in
 `chatThread.ts`, plus a `running` state so a double tap runs once, which a restart turns into
 "failed" with a note to check first; `components/ChatCards.tsx`; tests in `chatDeletes.test.ts`). **Step 6 built (#54), `chat` redeployed 2026-10-03 (version 3):** vault cards
@@ -246,8 +246,8 @@ Jest, in the style of the existing `lib/*.test.ts` (injected fakes, no phone):
    reads the first account's thread; sign-out and "New conversation" clear it; corrupt or
    unreadable data opens an empty thread, never crashes; the 100-entry and length caps.
 7. **Server:** the `vault` event carries `secret_type` (extend `tests/deno/chat_test.ts`).
-8. By hand, on a phone with the preview or Play build (the owner, with a short checklist in the
-   PR): stream a long answer; Stop; a save; a delete card with Delete and with Cancel; a vault
+8. By hand, on a phone with the preview or Play build (the owner; the checklist is
+   `docs/phase5-a5c-phone-checklist.md`): stream a long answer; Stop; a save; a delete card with Delete and with Cancel; a vault
    card to the fingerprint screen; airplane mode and Try again; close and reopen the app;
    sign out and back in (empty thread); a very long thread.
 

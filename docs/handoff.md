@@ -40,7 +40,7 @@ tokens or keys in chat.
    the model setting them up (right note, upload link, no password copied from a picture): chat
    and the evaluation are text-only; the model seeing pictures is A5f.
 
-**A5c progress (2026-10-03):** steps 2-6 built and merged (#50-#54), `chat` version 3 deployed; next is step 7 (phone checklist, then the app build for Play, with the owner's OK). See the plan's Status line.
+**A5c progress (2026-10-03):** steps 2-6 built and merged (#50-#54), `chat` version 3 deployed, `npm run web:preview` added (#56), step 7 written: the phone checklist is `docs/phase5-a5c-phone-checklist.md`. **Next:** the owner runs the checklist (any failure on the delete or vault lines blocks the build), then says "merge and build for Play" (see "Google Play and app updates"; the build ships the mascot icon and the chat screen). Not started. See the plan's Status line.
 
 **Next (was):** A5c, the chat screen in the app (strongest model: new code in the chat path).
 The A5c plan (for the owner's approval, 10 decisions): `docs/phase5-a5c-chat-screen-plan.md`.
