@@ -12,7 +12,8 @@
 //             {"type":"status","tool":...,"text":"Searching your notes…"}
 //             {"type":"text","text":...}                              reply, as it is written
 //             {"type":"confirm",...}                                  delete card (confirm.ts)
-//             {"type":"vault","action":"reveal"|"enter","secret_id":...,"name":...,"link":...}
+//             {"type":"vault","action":"reveal"|"enter","secret_id":...,"name":...,"secret_type":...,
+//              "new_secret":bool,"link":...}
 //             {"type":"error","code":"allowance_used"|"service_paused"|"connection","message":...}
 //             {"type":"done","counted":true|false}                    always last
 import { z } from "zod";
@@ -184,7 +185,7 @@ export function vaultEvents(tool: string, resultText: string): Record<string, un
   } catch {
     return [];
   }
-  const secret = data.secret as { id?: unknown; name?: unknown } | undefined;
+  const secret = data.secret as { id?: unknown; name?: unknown; secret_type?: unknown } | undefined;
   if (!secret || typeof secret.id !== "string") return [];
   const link = typeof data.reveal_link === "string" ? data.reveal_link : data.entry_link;
   if (typeof link !== "string") return [];
@@ -193,6 +194,11 @@ export function vaultEvents(tool: string, resultText: string): Record<string, un
     action: typeof data.reveal_link === "string" ? "reveal" : "enter",
     secret_id: secret.id,
     name: typeof secret.name === "string" ? secret.name : null,
+    // So the app can open its own entry screen for the right kind of secret (A5c step 6).
+    secret_type: typeof secret.secret_type === "string" ? secret.secret_type : null,
+    // save_secret's id is for a secret that exists only once its value is entered, so the app
+    // opens "save a new secret" for it, not "change the value" (which needs an existing one).
+    new_secret: tool === "save_secret",
     link,
     expires_at: data.expires_at ?? null,
   }];

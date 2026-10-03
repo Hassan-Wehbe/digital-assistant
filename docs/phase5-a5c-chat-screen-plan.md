@@ -9,7 +9,10 @@ another account signs in, wired in `auth.tsx`), the device wiring in `deviceStor
 events show a plain note only (no buttons) until steps 5 and 6. **Step 5 built:** delete cards
 (`chatDeletes.ts`, the five-tool table; `runConfirm` in `chatRun.ts`; card states in
 `chatThread.ts`, plus a `running` state so a double tap runs once, which a restart turns into
-"failed" with a note to check first; `components/ChatCards.tsx`; tests in `chatDeletes.test.ts`). All ten decisions below were answered "yes, as recommended". Parent plans: `docs/phase5-chat-plan.md` (A5c),
+"failed" with a note to check first; `components/ChatCards.tsx`; tests in `chatDeletes.test.ts`). **Step 6 built, `chat` NOT redeployed yet:** vault cards
+(`chatVault.ts`, `VaultCard` in `ChatCards.tsx`, tests in `chatVault.test.ts`); the server's
+`vault` event gains `secret_type` and `new_secret` (see "Vault events"). Until `chat` is redeployed
+an `enter` card opens the vault list. All ten decisions below were answered "yes, as recommended". Parent plans: `docs/phase5-chat-plan.md` (A5c),
 `docs/phase5-a5b-chat-function-plan.md` ("As built: step 3" defines the request and the streamed
 events). The `chat` function is deployed and live-checked; the app does not use it yet.
 
@@ -151,6 +154,10 @@ confirm_label, cancel_label}` and the model is told it is waiting. The app does 
   The event has no `secret_type`; the build adds it to the event (server: the tool result already
   contains `secret.secret_type`; one line plus a test, then a redeploy of `chat` with the owner's
   OK) rather than the app guessing. Until that is deployed the app falls back to the vault list.
+  *As built (step 6):* the event also carries `new_secret` (true for `save_secret`). Its id is for
+  a secret that exists only once its value is entered, so "change the value" would fail on it;
+  such a card opens **Save a secret** with the name and kind filled in (the user picks the space)
+  instead. Cards with an unknown kind or a malformed id open the vault list.
 - **The `link` is never used and never stored.** It is the fallback for clients without a vault
   screen (the web page). The app drops it as the event is read, so it cannot reach the saved
   thread, a log or the clipboard (CLAUDE.md rule 1). A test asserts this.

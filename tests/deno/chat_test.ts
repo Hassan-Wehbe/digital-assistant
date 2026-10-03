@@ -379,8 +379,16 @@ Deno.test("chat: vault links come with the secret's id, and never a value", asyn
   assertEquals(enter.secret_id, s.account.world.secretEntries[0].secret_id);
   assert(String(enter.link).includes("/enter#t="));
   assertEquals([reenter.action, reenter.secret_id], ["enter", IDS.gmail]);
+  // The kind of secret (never its value), so the app opens the right entry screen.
+  assertEquals(enter.secret_type, "note");
+  // Only save_secret's id is for a secret that does not exist yet.
+  assertEquals([reveal.new_secret, enter.new_secret, reenter.new_secret], [false, true, false]);
   for (const v of vault) {
-    assertEquals(Object.keys(v).sort(), ["action", "expires_at", "link", "name", "secret_id", "type"]);
+    assertEquals(typeof v.secret_type, "string");
+    assertEquals(
+      Object.keys(v).sort(),
+      ["action", "expires_at", "link", "name", "new_secret", "secret_id", "secret_type", "type"],
+    );
   }
 });
 

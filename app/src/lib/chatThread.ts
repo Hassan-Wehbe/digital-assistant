@@ -70,7 +70,16 @@ export type Entry =
       error?: string;
     }
   /** Ids and names only: the vault link never reaches the thread. */
-  | { kind: 'vault'; id: string; action: 'reveal' | 'enter'; secretId: string; name: string; secretType?: string }
+  | {
+      kind: 'vault';
+      id: string;
+      action: 'reveal' | 'enter';
+      secretId: string;
+      name: string;
+      secretType?: string;
+      /** A secret that does not exist yet: its card opens "save a new secret". */
+      newSecret?: true;
+    }
   | { kind: 'error'; id: string; code: string; message: string; buttons: ErrorButton[]; note?: string };
 
 export interface ChatState {
@@ -252,6 +261,7 @@ function onEvent(state: ChatState, event: ChatEvent): ChatState {
         secretId: event.secret_id,
         name: event.name,
         ...(event.secret_type ? { secretType: event.secret_type } : {}),
+        ...(event.new_secret ? { newSecret: true as const } : {}),
       });
     case 'error': {
       const partial = event.code === 'connection' && state.tools.some((t) => !READ_ONLY_TOOLS.has(t));

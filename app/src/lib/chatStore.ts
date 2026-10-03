@@ -81,6 +81,7 @@ export function toEntry(raw: unknown): Entry | null {
         secretId: raw.secretId,
         name: raw.name,
         ...(str(raw.secretType) ? { secretType: raw.secretType } : {}),
+        ...(raw.newSecret === true ? { newSecret: true as const } : {}),
       };
     case 'error':
       if (!str(raw.code) || !str(raw.message)) return null;
