@@ -9,10 +9,11 @@ another account signs in, wired in `auth.tsx`), the device wiring in `deviceStor
 events show a plain note only (no buttons) until steps 5 and 6. **Step 5 built:** delete cards
 (`chatDeletes.ts`, the five-tool table; `runConfirm` in `chatRun.ts`; card states in
 `chatThread.ts`, plus a `running` state so a double tap runs once, which a restart turns into
-"failed" with a note to check first; `components/ChatCards.tsx`; tests in `chatDeletes.test.ts`). **Step 6 built, `chat` NOT redeployed yet:** vault cards
+"failed" with a note to check first; `components/ChatCards.tsx`; tests in `chatDeletes.test.ts`). **Step 6 built (#54), `chat` redeployed 2026-10-03 (version 3):** vault cards
 (`chatVault.ts`, `VaultCard` in `ChatCards.tsx`, tests in `chatVault.test.ts`); the server's
-`vault` event gains `secret_type` and `new_secret` (see "Vault events"). Until `chat` is redeployed
-an `enter` card opens the vault list. All ten decisions below were answered "yes, as recommended". Parent plans: `docs/phase5-chat-plan.md` (A5c),
+`vault` event gains `secret_type` and `new_secret` (see "Vault events"). Deploy checked: 43 of 44 files identical to the repo
+(`mcp/lib/supabase-ai.d.ts`, types only, is not listed back), no sign-in and a fake token both
+answer 401. All ten decisions below were answered "yes, as recommended". Parent plans: `docs/phase5-chat-plan.md` (A5c),
 `docs/phase5-a5b-chat-function-plan.md` ("As built: step 3" defines the request and the streamed
 events). The `chat` function is deployed and live-checked; the app does not use it yet.
 

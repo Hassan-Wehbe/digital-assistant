@@ -40,13 +40,15 @@ tokens or keys in chat.
    the model setting them up (right note, upload link, no password copied from a picture): chat
    and the evaluation are text-only; the model seeing pictures is A5f.
 
-**Next:** A5c, the chat screen in the app (strongest model: new code in the chat path).
+**A5c progress (2026-10-03):** steps 2-6 built and merged (#50-#54), `chat` version 3 deployed; next is step 7 (phone checklist, then the app build for Play, with the owner's OK). See the plan's Status line.
+
+**Next (was):** A5c, the chat screen in the app (strongest model: new code in the chat path).
 The A5c plan (for the owner's approval, 10 decisions): `docs/phase5-a5c-chat-screen-plan.md`.
 
 | Piece | State |
 |---|---|
 | Database | migrations up to `ai_usage` applied (2026-10-02) |
-| Chat function `chat` | **deployed 2026-10-02** (version 2, #46), live-checked; `OPENAI_API_KEY` and `LLM_ROUTES` set in Supabase secrets by the owner (2026-10-02) |
+| Chat function `chat` | **version 3, deployed 2026-10-03** (#54: the `vault` event carries `secret_type` and `new_secret`; 43/44 files identical, 401 without sign-in), first deployed 2026-10-02 (version 2, #46) and live-checked; `OPENAI_API_KEY` and `LLM_ROUTES` set in Supabase secrets by the owner (2026-10-02) |
 | MCP server `mcp` | **version 8, server 0.6.0**, 22 tools, with the rule 9 credential check (PR #31, deployed 2026-10-01; deployed files checked identical to the repo, unsigned calls answer 401) |
 | Mobile app (Expo, `app/`) | merged to `main` up to PR #29: A0-A3 complete. A3b secrets (#23), **A3c** spaces (#25), vault setup / recovery / passphrase change (#26), **A4** privacy + deletion pages and Play guide (#27), change sign-in password (#28), mascot app icon (#29, from another session). `npm run check`: 129 tests |
 | Google Play | app created, **internal testing release "Available to internal testers"** (production build of `main` at e90664c, versionCode 2: https://expo.dev/accounts/zafnut/projects/wilma/builds/b9ddd891-b815-4995-bd2a-5fc96a7f9a97 ; built before the mascot icon). Owner was waiting for the join link to work ("Item not found" right after release: accept invite first, matching Google account, give it time). App-content forms and store listing may still be incomplete; answers in `docs/phase4-play-release.md` |
