@@ -6,7 +6,10 @@ the app yet): `app/src/lib/chatStream.ts`, `chatClient.ts`, `chatThread.ts` and 
 another account signs in, wired in `auth.tsx`), the device wiring in `deviceStorage.ts`, tests.
 **Step 4 built:** `ChatProvider` (`lib/chat.tsx`), `runTurn` (`lib/chatRun.ts`), the screen
 (`app/chat.tsx`, `components/ChatBubble.tsx`) and the **Ask Wilma** button; delete and vault
-events show a plain note only (no buttons) until steps 5 and 6. All ten decisions below were answered "yes, as recommended". Parent plans: `docs/phase5-chat-plan.md` (A5c),
+events show a plain note only (no buttons) until steps 5 and 6. **Step 5 built:** delete cards
+(`chatDeletes.ts`, the five-tool table; `runConfirm` in `chatRun.ts`; card states in
+`chatThread.ts`, plus a `running` state so a double tap runs once, which a restart turns into
+"failed" with a note to check first; `components/ChatCards.tsx`; tests in `chatDeletes.test.ts`). All ten decisions below were answered "yes, as recommended". Parent plans: `docs/phase5-chat-plan.md` (A5c),
 `docs/phase5-a5b-chat-function-plan.md` ("As built: step 3" defines the request and the streamed
 events). The `chat` function is deployed and live-checked; the app does not use it yet.
 

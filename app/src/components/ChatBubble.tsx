@@ -2,6 +2,7 @@
 // Text is plain and selectable (no markdown, no links opened: decision 3).
 import { Text, View } from 'react-native';
 
+import { DeleteCard } from '@/components/ChatCards';
 import { Button, Card, Muted, useColors } from '@/components/ui';
 import type { Entry, ErrorButton } from '@/lib/chatThread';
 
@@ -11,11 +12,18 @@ export function ChatBubble({
   entry,
   onButton,
   buttonsEnabled,
+  cardActive,
+  onConfirm,
+  onCancel,
 }: {
   entry: Entry;
   onButton: (button: ErrorButton) => void;
   /** Error buttons show only on the latest message, and not while an answer is coming. */
   buttonsEnabled: boolean;
+  /** A delete card's Delete and Cancel can be tapped. */
+  cardActive: boolean;
+  onConfirm: (id: string) => void;
+  onCancel: (id: string) => void;
 }) {
   const c = useColors();
   switch (entry.kind) {
@@ -54,18 +62,9 @@ export function ChatBubble({
             : null}
         </Card>
       );
-    // Delete and vault cards come in the next steps; until then they only say what Wilma
-    // suggested, and nothing can be run from here.
     case 'confirm':
-      return (
-        <Card style={{ alignSelf: 'flex-start', maxWidth: '85%' }}>
-          <Muted>
-            {entry.state === 'pending'
-              ? `Wilma suggested deleting “${entry.target.title}”. Deleting from the chat comes in a later update; for now, open it from the home screen.`
-              : `Not deleted: “${entry.target.title}”.`}
-          </Muted>
-        </Card>
-      );
+      return <DeleteCard entry={entry} active={cardActive} onConfirm={() => onConfirm(entry.id)} onCancel={() => onCancel(entry.id)} />;
+    // Vault cards come in the next step; until then they only say where to look.
     case 'vault':
       return (
         <Card style={{ alignSelf: 'flex-start', maxWidth: '85%' }}>
