@@ -6,7 +6,7 @@ the app yet): `app/src/lib/chatStream.ts`, `chatClient.ts`, `chatThread.ts` and 
 another account signs in, wired in `auth.tsx`), the device wiring in `deviceStorage.ts`, tests.
 **Step 4 built:** `ChatProvider` (`lib/chat.tsx`), `runTurn` (`lib/chatRun.ts`), the screen
 (`app/chat.tsx`, `components/ChatBubble.tsx`) and the **Ask Wilma** button; delete and vault
-events show a plain note only (no buttons) until steps 5 and 6. **Steps 5-7 built (2026-10-03; step 7 = the manual phone checklist, `docs/phase5-a5c-phone-checklist.md`, owner runs it, then the Play build on the owner's OK).** **Step 5 built:** delete cards
+events show a plain note only (no buttons) until steps 5 and 6. **Steps 5-7 done (step 7 = the manual phone checklist, `docs/phase5-a5c-phone-checklist.md`). Shipped to internal testers 2026-10-04 (Play versionCode 5); the owner's phone check found two layout bugs (keyboard and Android button bar), fixed in #60/#61 and not yet built.** **Step 5 built:** delete cards
 (`chatDeletes.ts`, the five-tool table; `runConfirm` in `chatRun.ts`; card states in
 `chatThread.ts`, plus a `running` state so a double tap runs once, which a restart turns into
 "failed" with a note to check first; `components/ChatCards.tsx`; tests in `chatDeletes.test.ts`). **Step 6 built (#54), `chat` redeployed 2026-10-03 (version 3):** vault cards
