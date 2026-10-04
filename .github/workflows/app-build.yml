@@ -35,4 +35,12 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
       - run: npm ci
       - run: npm run check
-      - run: eas build --platform android --profile ${{ inputs.profile }} --non-interactive --no-wait
+      - name: Build (production builds are also submitted to Google Play)
+        env:
+          PROFILE: ${{ inputs.profile }}
+        run: |
+          if [ "$PROFILE" = "production" ]; then
+            eas build --platform android --profile production --non-interactive --no-wait --auto-submit
+          else
+            eas build --platform android --profile "$PROFILE" --non-interactive --no-wait
+          fi
