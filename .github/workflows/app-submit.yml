@@ -1,0 +1,44 @@
+# Send a finished production build to Google Play (Internal testing) with EAS Submit.
+# Run it from GitHub: Actions -> "app submit" -> Run workflow.
+#   build_id   optional: the Expo build to send (the id at the end of its expo.dev link);
+#              empty = the latest finished Android build.
+# Needs the repository secret EXPO_TOKEN, and the Google service account key set at
+# expo.dev -> Credentials -> Android -> com.zaf.wilma -> "Google Service Account Key for
+# Play Store Submissions". The release status comes from submit.production in app/eas.json.
+name: app submit
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        description: "Expo build id (empty = latest finished Android build)"
+        type: string
+        default: ""
+permissions:
+  contents: read
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: npm ci
+      - name: Submit to Google Play
+        env:
+          BUILD_ID: ${{ inputs.build_id }}
+        run: |
+          if [ -n "$BUILD_ID" ]; then
+            eas submit --platform android --profile production --id "$BUILD_ID" --non-interactive --no-wait
+          else
+            eas submit --platform android --profile production --latest --non-interactive --no-wait
+          fi
