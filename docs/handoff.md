@@ -49,6 +49,7 @@ build, then the owner re-checks chat, New note (Save button reachable), a form f
 bottom while typing, the home search and the vault secret edit fields (the layout was verified by
 lint, types, tests and a web bundle only, never on a device). Then A5d (the one box,
 `docs/phase5-chat-plan.md`).
+The A5d plan (for the owner's approval, no code yet): `docs/phase5-a5d-one-box-plan.md`.
 
 **Next (was):** A5c, the chat screen in the app (strongest model: new code in the chat path).
 The A5c plan (for the owner's approval, 10 decisions): `docs/phase5-a5c-chat-screen-plan.md`.
