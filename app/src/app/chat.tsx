@@ -1,16 +1,37 @@
 // Ask Wilma: the conversation screen. The thread and the running answer live in ChatProvider
 // (lib/chat.tsx), so this screen only draws them.
 import { router, Stack } from 'expo-router';
-import { useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Pressable, Text, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { FlatList, Keyboard, KeyboardAvoidingView, Pressable, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ChatBubble } from '@/components/ChatBubble';
 import { Button, confirm, Loading, Muted, styles, useColors } from '@/components/ui';
 import { useChat } from '@/lib/chat';
 import { cardActive, type ErrorButton } from '@/lib/chatThread';
 
+// True while the on-screen keyboard is open.
+function useKeyboardOpen() {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', () => setOpen(true));
+    const hide = Keyboard.addListener('keyboardDidHide', () => setOpen(false));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+  return open;
+}
+
 export default function Chat() {
   const c = useColors();
+  const insets = useSafeAreaInsets();
+  const keyboardOpen = useKeyboardOpen();
+  // KeyboardAvoidingView lifts the screen by how far the keyboard reaches into it, measured from
+  // the window top, so the header and status bar above this screen must be added to its offset.
+  const top = useRef<View>(null);
+  const [offset, setOffset] = useState(0);
   const { state, ready, canSend, bannerVisible, send, stop, retry, dismissBanner, clear, confirmDelete, cancelDelete } = useChat();
   const [text, setText] = useState('');
   const list = useRef<FlatList>(null);
@@ -35,7 +56,11 @@ export default function Chat() {
   const input = [styles.input, { color: c.text, borderColor: c.line, backgroundColor: c.card, flex: 1, maxHeight: 140 }];
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.background }} behavior="padding">
+    <View
+      ref={top}
+      style={{ flex: 1, backgroundColor: c.background }}
+      onLayout={() => top.current?.measureInWindow((_x, y) => setOffset(y))}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={offset}>
       <Stack.Screen
         options={{
           title: 'Ask Wilma',
@@ -88,7 +113,16 @@ export default function Chat() {
         <Loading />
       )}
 
-      <View style={{ padding: 12, gap: 6, borderTopColor: c.line, borderTopWidth: 1 }}>
+      {/* Android draws under its three-button bar: keep the box above it (the keyboard covers that
+          bar while open, so no extra space then). */}
+      <View
+        style={{
+          padding: 12,
+          paddingBottom: 12 + (keyboardOpen ? 0 : insets.bottom),
+          gap: 6,
+          borderTopColor: c.line,
+          borderTopWidth: 1,
+        }}>
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
           <TextInput
             style={input}
@@ -109,5 +143,6 @@ export default function Chat() {
         <Muted>Never type passwords here. Use the Vault.</Muted>
       </View>
     </KeyboardAvoidingView>
+    </View>
   );
 }
