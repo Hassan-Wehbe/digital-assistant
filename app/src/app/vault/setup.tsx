@@ -5,10 +5,10 @@
 import { router, Stack } from 'expo-router';
 import { usePreventScreenCapture } from 'expo-screen-capture';
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, ScrollView, Text, TextInput } from 'react-native';
+import { ScrollView, Text, TextInput } from 'react-native';
 
 import { PassphraseInput } from '@/components/PassphraseInput';
-import { Button, Card, Loading, Muted, styles, useColors } from '@/components/ui';
+import { Button, Card, KeyboardScreen, Loading, Muted, styles, useColors } from '@/components/ui';
 import { useVault } from '@/lib/vault';
 import { MIN_PASSPHRASE_LENGTH } from '@/lib/vaultCrypto';
 
@@ -127,12 +127,12 @@ export default function VaultSetup() {
   return (
     <>
       <Stack.Screen options={{ title: 'Set up the vault' }} />
-      <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.background }} behavior="padding">
+      <KeyboardScreen>
         <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
           {body}
           {error ? <Text style={{ color: c.danger, fontSize: 15 }}>{error}</Text> : null}
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardScreen>
     </>
   );
 }

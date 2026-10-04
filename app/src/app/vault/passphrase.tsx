@@ -6,10 +6,10 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { usePreventScreenCapture } from 'expo-screen-capture';
 import { useState } from 'react';
-import { KeyboardAvoidingView, ScrollView, Text } from 'react-native';
+import { ScrollView, Text } from 'react-native';
 
 import { PassphraseInput } from '@/components/PassphraseInput';
-import { Button, Card, Muted, styles, useColors } from '@/components/ui';
+import { Button, Card, KeyboardScreen, Muted, styles, useColors } from '@/components/ui';
 import { useVault } from '@/lib/vault';
 import { MIN_PASSPHRASE_LENGTH } from '@/lib/vaultCrypto';
 
@@ -48,7 +48,7 @@ export default function VaultPassphrase() {
   return (
     <>
       <Stack.Screen options={{ title }} />
-      <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.background }} behavior="padding">
+      <KeyboardScreen>
         <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
           {done ? (
             <Card>
@@ -89,7 +89,7 @@ export default function VaultPassphrase() {
           )}
           {error ? <Text style={{ color: c.danger, fontSize: 15 }}>{error}</Text> : null}
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardScreen>
     </>
   );
 }

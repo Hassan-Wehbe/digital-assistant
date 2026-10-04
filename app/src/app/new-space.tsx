@@ -1,10 +1,10 @@
 // Create a space (create_space), optionally inside another one (param `parent`: its id).
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { ScrollView, Switch, Text, TextInput, View } from 'react-native';
 
 import { SpaceChips } from '@/components/SpaceChips';
-import { Button, Muted, styles, useColors, useLoad } from '@/components/ui';
+import { Button, KeyboardScreen, Muted, styles, useColors, useLoad } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { newSpace, SPACE_DESCRIPTION_MAX, SPACE_NAME_MAX } from '@/lib/spaces';
 
@@ -37,7 +37,7 @@ export default function NewSpace() {
 
   const input = [styles.input, { color: c.text, borderColor: c.line, backgroundColor: c.card }];
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.background }} behavior="padding">
+    <KeyboardScreen>
       <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
         <TextInput
           style={input}
@@ -84,6 +84,6 @@ export default function NewSpace() {
         {error ? <Text style={{ color: c.danger, fontSize: 15 }}>{error}</Text> : null}
         <Button title={busy ? 'Creating…' : 'Create space'} onPress={save} disabled={busy} />
       </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardScreen>
   );
 }

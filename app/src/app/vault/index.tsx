@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { FlatList, Pressable, RefreshControl, Text, TextInput, View } from 'react-native';
 
 import { UnlockCard } from '@/components/UnlockCard';
-import { Button, Card, ErrorBox, Loading, Muted, styles, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
+import { Button, Card, ErrorBox, KeyboardScreen, Loading, Muted, styles, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { useVault } from '@/lib/vault';
 import { TYPE_LABELS } from '@/lib/vaultCrypto';
@@ -80,28 +80,30 @@ export default function VaultScreen() {
   );
 
   return (
-    <FlatList
-      style={{ backgroundColor: c.background }}
-      contentContainerStyle={styles.list}
-      data={secrets.data ?? []}
-      keyExtractor={(s) => s.id}
-      keyboardShouldPersistTaps="handled"
-      ListHeaderComponent={header}
-      ListFooterComponent={footer}
-      ListEmptyComponent={secrets.loading ? <Loading /> : secrets.error ? null : <Muted>{query ? 'No secret matches.' : 'No secrets yet.'}</Muted>}
-      renderItem={({ item: s }) => (
-        <Pressable
-          accessibilityRole="button"
-          onPress={() =>
-            router.push({ pathname: '/vault/[id]', params: { id: s.id, name: s.name, type: s.secret_type, space: s.space ?? '', url: s.url ?? '' } })
-          }>
-          <Card>
-            <Text style={[styles.title, { color: c.text }]}>{s.name}</Text>
-            <Muted>{[TYPE_LABELS[s.secret_type] ?? s.secret_type, s.space, s.url].filter(Boolean).join(' · ')}</Muted>
-          </Card>
-        </Pressable>
-      )}
-      refreshControl={<RefreshControl refreshing={secrets.loading && !!secrets.data} onRefresh={secrets.reload} />}
-    />
+    <KeyboardScreen>
+      <FlatList
+        style={{ backgroundColor: c.background }}
+        contentContainerStyle={styles.list}
+        data={secrets.data ?? []}
+        keyExtractor={(s) => s.id}
+        keyboardShouldPersistTaps="handled"
+        ListHeaderComponent={header}
+        ListFooterComponent={footer}
+        ListEmptyComponent={secrets.loading ? <Loading /> : secrets.error ? null : <Muted>{query ? 'No secret matches.' : 'No secrets yet.'}</Muted>}
+        renderItem={({ item: s }) => (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() =>
+              router.push({ pathname: '/vault/[id]', params: { id: s.id, name: s.name, type: s.secret_type, space: s.space ?? '', url: s.url ?? '' } })
+            }>
+            <Card>
+              <Text style={[styles.title, { color: c.text }]}>{s.name}</Text>
+              <Muted>{[TYPE_LABELS[s.secret_type] ?? s.secret_type, s.space, s.url].filter(Boolean).join(' · ')}</Muted>
+            </Card>
+          </Pressable>
+        )}
+        refreshControl={<RefreshControl refreshing={secrets.loading && !!secrets.data} onRefresh={secrets.reload} />}
+      />
+    </KeyboardScreen>
   );
 }

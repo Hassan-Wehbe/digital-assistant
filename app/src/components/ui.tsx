@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Pressable,
   StyleSheet,
   Text,
@@ -131,6 +132,27 @@ export function ErrorBox({ message, onRetry }: { message: string; onRetry?: () =
       <Text style={{ color: c.text, fontSize: 16 }}>{message}</Text>
       {onRetry && <Button title="Try again" kind="plain" onPress={onRetry} />}
     </Card>
+  );
+}
+
+/**
+ * A screen that stays clear of the on-screen keyboard. KeyboardAvoidingView measures the keyboard
+ * from the window top, so the header and status bar above the screen must be passed as its offset.
+ * (The bottom button bar of Android is padded once for every screen in app/_layout.tsx.)
+ */
+export function KeyboardScreen({ children }: { children: ReactNode }) {
+  const c = useColors();
+  const top = useRef<View>(null);
+  const [offset, setOffset] = useState(0);
+  return (
+    <View
+      ref={top}
+      style={{ flex: 1, backgroundColor: c.background }}
+      onLayout={() => top.current?.measureInWindow((_x, y) => setOffset(y))}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={offset}>
+        {children}
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 

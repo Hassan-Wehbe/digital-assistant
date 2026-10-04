@@ -1,11 +1,11 @@
 // Save a new note in a space, optionally with pictures or Visio files (saveNote.ts).
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, ScrollView, Text, TextInput } from 'react-native';
+import { ScrollView, Text, TextInput } from 'react-native';
 
 import { AttachmentPicker } from '@/components/AttachmentPicker';
 import { SpaceChips } from '@/components/SpaceChips';
-import { Button, Card, Muted, styles, useColors, useLoad } from '@/components/ui';
+import { Button, Card, KeyboardScreen, Muted, styles, useColors, useLoad } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { deviceUploadDeps } from '@/lib/deviceFiles';
 import { saveNote } from '@/lib/saveNote';
@@ -58,7 +58,7 @@ export default function NewItem() {
 
   const input = [styles.input, { color: c.text, borderColor: c.line, backgroundColor: c.card }];
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.background }} behavior="padding">
+    <KeyboardScreen>
       <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
         <Text style={[styles.title, { color: c.text }]}>Space</Text>
         <SpaceChips
@@ -109,6 +109,6 @@ export default function NewItem() {
         {status ? <Muted>{status}</Muted> : null}
         <Button title={busy ? 'Saving…' : files.length ? `Save with ${files.length} file${files.length > 1 ? 's' : ''}` : 'Save'} onPress={save} disabled={busy} />
       </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardScreen>
   );
 }

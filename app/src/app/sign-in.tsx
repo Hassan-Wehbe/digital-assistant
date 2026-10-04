@@ -1,8 +1,8 @@
 // Sign in with the same email and password as the vault pages and the Claude connector.
 import { useRef, useState } from 'react';
-import { KeyboardAvoidingView, ScrollView, Text, TextInput } from 'react-native';
+import { ScrollView, Text, TextInput } from 'react-native';
 
-import { Button, Card, Muted, styles, useColors } from '@/components/ui';
+import { Button, Card, KeyboardScreen, Muted, styles, useColors } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { useShare } from '@/lib/shareIntake';
 
@@ -33,9 +33,7 @@ export default function SignIn() {
   return (
     // The form sits at the top so the keyboard never covers it; 'padding' also on Android,
     // where the app draws edge to edge and the window is not resized for the keyboard.
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: c.background }}
-      behavior="padding">
+    <KeyboardScreen>
       <ScrollView contentContainerStyle={[styles.list, { paddingTop: 24 }]} keyboardShouldPersistTaps="handled">
         <Card style={{ gap: 12 }}>
           <Text style={[styles.title, { color: c.text, fontSize: 22 }]}>{"Hi, I'm Wilma."}</Text>
@@ -75,6 +73,6 @@ export default function SignIn() {
           <Button title={busy ? 'Signing in…' : 'Sign in'} onPress={submit} disabled={busy} />
         </Card>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardScreen>
   );
 }

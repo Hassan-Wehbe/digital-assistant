@@ -7,12 +7,12 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { usePreventScreenCapture } from 'expo-screen-capture';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { SecretFieldsForm } from '@/components/SecretFieldsForm';
 import { SpaceChips } from '@/components/SpaceChips';
 import { UnlockCard } from '@/components/UnlockCard';
-import { Button, Card, confirm, Muted, styles, useColors, useLoad } from '@/components/ui';
+import { Button, Card, confirm, KeyboardScreen, Muted, styles, useColors, useLoad } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { useVault } from '@/lib/vault';
 import { SECRET_FIELDS, TYPE_LABELS } from '@/lib/vaultCrypto';
@@ -76,7 +76,7 @@ export default function EnterSecret() {
   return (
     <>
       <Stack.Screen options={{ title: changing ? 'New value' : 'Save a secret' }} />
-      <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.background }} behavior="padding">
+      <KeyboardScreen>
         <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
           {changing ? (
             <Card>
@@ -156,7 +156,7 @@ export default function EnterSecret() {
           )}
           {!changing && spaces.data ? <Muted>Restricted spaces are not listed here; ask Wilma in the Claude app to save to one.</Muted> : null}
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardScreen>
     </>
   );
 }

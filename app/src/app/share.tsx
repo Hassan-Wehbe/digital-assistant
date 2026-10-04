@@ -3,11 +3,11 @@
 // (picked.ts, saveNote.ts); the shared files are copied into the app's cache first.
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { AttachmentPicker } from '@/components/AttachmentPicker';
 import { SpaceChips } from '@/components/SpaceChips';
-import { Button, Card, ErrorBox, Loading, Muted, styles, useColors, useLoad } from '@/components/ui';
+import { Button, Card, ErrorBox, KeyboardScreen, Loading, Muted, styles, useColors, useLoad } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { deviceUploadDeps, prepareShared, removeCopies } from '@/lib/deviceFiles';
 import { saveNote, type SaveTarget } from '@/lib/saveNote';
@@ -128,7 +128,7 @@ function ShareForm({ shared, onDone, onCancel }: { shared: Shared; onDone: () =>
   const locked = busy || !!createdId;
   const input = [styles.input, { color: c.text, borderColor: c.line, backgroundColor: c.card }];
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.background }} behavior="padding">
+    <KeyboardScreen>
       <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
         {canAddToNote ? (
           <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -215,7 +215,7 @@ function ShareForm({ shared, onDone, onCancel }: { shared: Shared; onDone: () =>
         />
         <Button title="Cancel" kind="plain" onPress={onCancel} disabled={busy} />
       </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardScreen>
   );
 }
 
