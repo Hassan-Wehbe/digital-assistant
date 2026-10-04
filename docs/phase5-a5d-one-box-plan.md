@@ -1,8 +1,8 @@
 # A5d: the one box (plan)
 
-Status: **plan for the owner's approval** (2026-10-04). No code is written until it is approved.
-Six design questions are already answered "yes, as recommended" (D1-D6 below); seven more are
-raised as Q1-Q7, each with a recommendation. Parent plans: `docs/phase5-chat-plan.md` (A5d),
+Status: **owner answered "yes to all" (2026-10-04)**: D1-D6 and Q1-Q7 below are all decided as
+recommended (Q4: the classifier is built last, only if still wanted). Code starts once this plan
+is merged. Parent plans: `docs/phase5-chat-plan.md` (A5d),
 `docs/phase5-a5c-chat-screen-plan.md` (the chat screen this builds on). Design: `docs/design.md`
 D18 (one box, an invisible router that prefers the model when unsure), D22 (password retrieval
 never counts against the budget) and D23 (no search bar; a found secret shows the reveal card
@@ -162,7 +162,7 @@ only if, after the rules are on phones, it looks worth it.
 
 ## Steps (each a small PR; the owner approves merges, builds, deploys and migrations)
 
-1. **Plan** (this PR). Owner approves and answers Q1-Q7.
+1. **Plan** (this PR). Approved, Q1-Q7 answered as recommended.
 2. **Router rules, no screen:** `router.ts` and its tests. Nothing in the app calls it yet.
 3. **Thread support:** the `lookup` action and the allowance-used change, with tests.
 4. **Wire the router into `send`** in `chat.tsx` (spaces list, secret read, outcomes), with tests.
@@ -194,7 +194,7 @@ from the app).
 - **D6** A secret's value is never sent anywhere; a restricted space never appears through a
   lookup (CLAUDE.md rules 1-3).
 
-### Open questions (each with a recommendation)
+### Questions Q1-Q7: owner answered "yes to all", i.e. the recommendation of each (2026-10-04)
 
 - **Q1. What happens on a match?** *Recommend:* a **space opens straight away** (read-only,
   nothing sensitive, it is what "go to Recipes" means); a **secret shows its card in the chat
