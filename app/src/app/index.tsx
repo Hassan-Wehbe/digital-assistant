@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, Text, TextInput, View } from 'react-native';
 
 import { ItemRow, SpaceRow } from '@/components/rows';
-import { Button, ErrorBox, Loading, Muted, styles, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
+import { Button, ErrorBox, KeyboardScreen, Loading, Muted, styles, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { versionLabel } from '@/lib/config';
 import type { SearchResult, Space } from '@/lib/wilma';
@@ -85,17 +85,19 @@ export default function Home() {
   );
 
   return (
-    <FlatList
-      style={{ backgroundColor: c.background }}
-      contentContainerStyle={styles.list}
-      data={data ?? []}
-      keyExtractor={(r) => (r.kind === 'space' ? r.space.id : r.item.id)}
-      renderItem={({ item: r }) => (r.kind === 'space' ? <SpaceRow space={r.space} /> : <ItemRow item={r.item} />)}
-      ListHeaderComponent={header}
-      ListEmptyComponent={empty}
-      ListFooterComponent={footer}
-      keyboardShouldPersistTaps="handled"
-      refreshControl={<RefreshControl refreshing={loading && !!data} onRefresh={reload} />}
-    />
+    <KeyboardScreen>
+      <FlatList
+        style={{ backgroundColor: c.background }}
+        contentContainerStyle={styles.list}
+        data={data ?? []}
+        keyExtractor={(r) => (r.kind === 'space' ? r.space.id : r.item.id)}
+        renderItem={({ item: r }) => (r.kind === 'space' ? <SpaceRow space={r.space} /> : <ItemRow item={r.item} />)}
+        ListHeaderComponent={header}
+        ListEmptyComponent={empty}
+        ListFooterComponent={footer}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl refreshing={loading && !!data} onRefresh={reload} />}
+      />
+    </KeyboardScreen>
   );
 }

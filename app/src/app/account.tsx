@@ -1,10 +1,10 @@
 // Change the sign-in password (the one for signing in to Wilma, not the vault passphrase).
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, ScrollView, Text } from 'react-native';
+import { ScrollView, Text } from 'react-native';
 
 import { PassphraseInput } from '@/components/PassphraseInput';
-import { Button, Card, Muted, styles, useColors } from '@/components/ui';
+import { Button, Card, KeyboardScreen, Muted, styles, useColors } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { MIN_PASSWORD_LENGTH } from '@/lib/password';
 
@@ -35,7 +35,7 @@ export default function Account() {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.background }} behavior="padding">
+    <KeyboardScreen>
       <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
         {done ? (
           <Card>
@@ -59,6 +59,6 @@ export default function Account() {
           </>
         )}
       </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardScreen>
   );
 }

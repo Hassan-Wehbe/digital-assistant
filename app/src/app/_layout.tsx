@@ -3,7 +3,9 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
 import { useColorScheme } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useColors } from '@/components/ui';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { ChatProvider } from '@/lib/chat';
 import { ShareProvider, useShare } from '@/lib/shareIntake';
@@ -15,6 +17,10 @@ SplashScreen.preventAutoHideAsync();
 
 function Screens() {
   const { signedIn, loading } = useAuth();
+  const c = useColors();
+  // Android draws the app under its three-button bar (and iOS under the home indicator): pad every
+  // screen's bottom by that bar, so the last button or text box is never hidden behind it.
+  const insets = useSafeAreaInsets();
   useEffect(() => {
     if (!loading) SplashScreen.hideAsync();
   }, [loading]);
@@ -31,7 +37,7 @@ function Screens() {
   }, [loading, signedIn, navReady, seq]);
   // Signed out, only the sign-in screen exists; signed in, it does not.
   return (
-    <Stack>
+    <Stack screenOptions={{ contentStyle: { backgroundColor: c.background, paddingBottom: insets.bottom } }}>
       <Stack.Protected guard={signedIn}>
         <Stack.Screen name="index" options={{ title: 'Wilma' }} />
         <Stack.Screen name="chat" options={{ title: 'Ask Wilma' }} />

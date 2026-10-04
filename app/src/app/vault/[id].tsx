@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { UnlockCard } from '@/components/UnlockCard';
-import { Button, Card, confirm, Muted, styles, useColors } from '@/components/ui';
+import { Button, Card, confirm, KeyboardScreen, Muted, styles, useColors } from '@/components/ui';
 import { copySecret } from '@/lib/secretClipboard';
 import { useVault } from '@/lib/vault';
 import { displayRows, TYPE_LABELS } from '@/lib/vaultCrypto';
@@ -114,92 +114,94 @@ export default function SecretScreen() {
   return (
     <>
       <Stack.Screen options={{ title: shown?.name || name || 'Secret' }} />
-      <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
-        <Card>
-          <Text style={[styles.title, { color: c.text }]}>{shown?.name ?? name}</Text>
-          <Muted>{[TYPE_LABELS[type ?? ''] ?? type, space].filter(Boolean).join(' · ')}</Muted>
-          {shown?.url || url ? <Muted>{shown?.url ?? url}</Muted> : null}
-        </Card>
+      <KeyboardScreen>
+        <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
+          <Card>
+            <Text style={[styles.title, { color: c.text }]}>{shown?.name ?? name}</Text>
+            <Muted>{[TYPE_LABELS[type ?? ''] ?? type, space].filter(Boolean).join(' · ')}</Muted>
+            {shown?.url || url ? <Muted>{shown?.url ?? url}</Muted> : null}
+          </Card>
 
-        {vault.status === 'locked' ? <UnlockCard /> : null}
+          {vault.status === 'locked' ? <UnlockCard /> : null}
 
-        {vault.status === 'unlocked' && !shown ? (
-          <>
-            <Button title={busy ? 'Decrypting…' : 'Reveal'} onPress={reveal} disabled={busy} />
-            <Muted>{"Each reveal is recorded in your vault's access log."}</Muted>
-          </>
-        ) : null}
+          {vault.status === 'unlocked' && !shown ? (
+            <>
+              <Button title={busy ? 'Decrypting…' : 'Reveal'} onPress={reveal} disabled={busy} />
+              <Muted>{"Each reveal is recorded in your vault's access log."}</Muted>
+            </>
+          ) : null}
 
-        {shown ? (
-          <>
-            {displayRows(shown.type, shown.fields).map((row) => {
-              const on = !row.masked || visible[row.key];
-              return (
-                <Card key={row.key}>
-                  <Muted>{row.label}</Muted>
-                  <Text selectable={false} style={{ color: c.text, fontSize: 17, fontFamily: 'monospace' }}>
-                    {on ? row.value : DOTS}
-                  </Text>
-                  <View style={{ flexDirection: 'row', gap: 16 }}>
-                    {row.masked ? (
-                      <Pressable accessibilityRole="button" onPress={() => setVisible((v) => ({ ...v, [row.key]: !v[row.key] }))}>
-                        <Text style={{ color: c.accent, fontSize: 15 }}>{on ? 'Hide' : 'Show'}</Text>
+          {shown ? (
+            <>
+              {displayRows(shown.type, shown.fields).map((row) => {
+                const on = !row.masked || visible[row.key];
+                return (
+                  <Card key={row.key}>
+                    <Muted>{row.label}</Muted>
+                    <Text selectable={false} style={{ color: c.text, fontSize: 17, fontFamily: 'monospace' }}>
+                      {on ? row.value : DOTS}
+                    </Text>
+                    <View style={{ flexDirection: 'row', gap: 16 }}>
+                      {row.masked ? (
+                        <Pressable accessibilityRole="button" onPress={() => setVisible((v) => ({ ...v, [row.key]: !v[row.key] }))}>
+                          <Text style={{ color: c.accent, fontSize: 15 }}>{on ? 'Hide' : 'Show'}</Text>
+                        </Pressable>
+                      ) : null}
+                      <Pressable accessibilityRole="button" onPress={() => copy(row.value)}>
+                        <Text style={{ color: c.accent, fontSize: 15 }}>Copy</Text>
                       </Pressable>
-                    ) : null}
-                    <Pressable accessibilityRole="button" onPress={() => copy(row.value)}>
-                      <Text style={{ color: c.accent, fontSize: 15 }}>Copy</Text>
-                    </Pressable>
-                  </View>
-                </Card>
-              );
-            })}
-            <Muted>Hides in {left} s.</Muted>
-            <Button title="Hide now" kind="plain" onPress={hide} />
-          </>
-        ) : null}
+                    </View>
+                  </Card>
+                );
+              })}
+              <Muted>Hides in {left} s.</Muted>
+              <Button title="Hide now" kind="plain" onPress={hide} />
+            </>
+          ) : null}
 
-        {vault.status === 'unlocked' && !shown ? (
-          editing ? (
-            <Card>
-              <Muted>Name</Muted>
-              <TextInput
-                style={[styles.input, { color: c.text, borderColor: c.line, backgroundColor: c.background }]}
-                value={editing.name}
-                onChangeText={(t) => setEditing({ ...editing, name: t })}
-                maxLength={200}
-                editable={!busy}
-              />
-              <Muted>Website (leave empty to remove it)</Muted>
-              <TextInput
-                style={[styles.input, { color: c.text, borderColor: c.line, backgroundColor: c.background }]}
-                value={editing.url}
-                onChangeText={(t) => setEditing({ ...editing, url: t })}
-                maxLength={2000}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
-                editable={!busy}
-              />
-              <Button title={busy ? 'Saving…' : 'Save'} onPress={saveDetails} disabled={busy} />
-              <Button title="Cancel" kind="plain" onPress={() => setEditing(null)} disabled={busy} />
-            </Card>
-          ) : (
-            <Card>
-              <Text style={[styles.title, { color: c.text }]}>Change</Text>
-              <Button
-                title="Change the value"
-                kind="plain"
-                disabled={busy}
-                onPress={() => router.push({ pathname: '/vault/enter', params: { id, name, type: type ?? '' } })}
-              />
-              <Button title="Rename or change the website" kind="plain" disabled={busy} onPress={() => setEditing({ name, url: url ?? '' })} />
-              <Button title={busy ? 'Deleting…' : 'Delete'} kind="danger" disabled={busy} onPress={remove} />
-            </Card>
-          )
-        ) : null}
+          {vault.status === 'unlocked' && !shown ? (
+            editing ? (
+              <Card>
+                <Muted>Name</Muted>
+                <TextInput
+                  style={[styles.input, { color: c.text, borderColor: c.line, backgroundColor: c.background }]}
+                  value={editing.name}
+                  onChangeText={(t) => setEditing({ ...editing, name: t })}
+                  maxLength={200}
+                  editable={!busy}
+                />
+                <Muted>Website (leave empty to remove it)</Muted>
+                <TextInput
+                  style={[styles.input, { color: c.text, borderColor: c.line, backgroundColor: c.background }]}
+                  value={editing.url}
+                  onChangeText={(t) => setEditing({ ...editing, url: t })}
+                  maxLength={2000}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="url"
+                  editable={!busy}
+                />
+                <Button title={busy ? 'Saving…' : 'Save'} onPress={saveDetails} disabled={busy} />
+                <Button title="Cancel" kind="plain" onPress={() => setEditing(null)} disabled={busy} />
+              </Card>
+            ) : (
+              <Card>
+                <Text style={[styles.title, { color: c.text }]}>Change</Text>
+                <Button
+                  title="Change the value"
+                  kind="plain"
+                  disabled={busy}
+                  onPress={() => router.push({ pathname: '/vault/enter', params: { id, name, type: type ?? '' } })}
+                />
+                <Button title="Rename or change the website" kind="plain" disabled={busy} onPress={() => setEditing({ name, url: url ?? '' })} />
+                <Button title={busy ? 'Deleting…' : 'Delete'} kind="danger" disabled={busy} onPress={remove} />
+              </Card>
+            )
+          ) : null}
 
-        {message ? <Text style={{ color: message.error ? c.danger : c.muted, fontSize: 15 }}>{message.text}</Text> : null}
-      </ScrollView>
+          {message ? <Text style={{ color: message.error ? c.danger : c.muted, fontSize: 15 }}>{message.text}</Text> : null}
+        </ScrollView>
+      </KeyboardScreen>
     </>
   );
 }
