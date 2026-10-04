@@ -40,7 +40,15 @@ tokens or keys in chat.
    the model setting them up (right note, upload link, no password copied from a picture): chat
    and the evaluation are text-only; the model seeing pictures is A5f.
 
-**A5c progress (2026-10-03):** steps 2-6 built and merged (#50-#54), `chat` version 3 deployed, `npm run web:preview` added (#56), step 7 written: the phone checklist is `docs/phase5-a5c-phone-checklist.md`. **Next:** the owner runs the checklist (any failure on the delete or vault lines blocks the build), then says "merge and build for Play" (see "Google Play and app updates"; the build ships the mascot icon and the chat screen). Not started. See the plan's Status line.
+**A5c progress (2026-10-04):** steps 2-7 done. The chat screen is **live for internal testers**
+(Play versionCode 5, built from `main` at 61b1674, submitted 2026-10-04). The owner ran the phone
+checklist (`docs/phase5-a5c-phone-checklist.md`): "looks good", but two layout bugs: the keyboard
+covered the message box and Android's three-button bar covered it. Fixed in #60 (chat) and #61
+(every screen) and merged, **not yet built**: the next Play build carries them. **Next:** a Play
+build, then the owner re-checks chat, New note (Save button reachable), a form field near the
+bottom while typing, the home search and the vault secret edit fields (the layout was verified by
+lint, types, tests and a web bundle only, never on a device). Then A5d (the one box,
+`docs/phase5-chat-plan.md`).
 
 **Next (was):** A5c, the chat screen in the app (strongest model: new code in the chat path).
 The A5c plan (for the owner's approval, 10 decisions): `docs/phase5-a5c-chat-screen-plan.md`.
@@ -50,8 +58,8 @@ The A5c plan (for the owner's approval, 10 decisions): `docs/phase5-a5c-chat-scr
 | Database | migrations up to `ai_usage` applied (2026-10-02) |
 | Chat function `chat` | **version 3, deployed 2026-10-03** (#54: the `vault` event carries `secret_type` and `new_secret`; 43/44 files identical, 401 without sign-in), first deployed 2026-10-02 (version 2, #46) and live-checked; `OPENAI_API_KEY` and `LLM_ROUTES` set in Supabase secrets by the owner (2026-10-02) |
 | MCP server `mcp` | **version 8, server 0.6.0**, 22 tools, with the rule 9 credential check (PR #31, deployed 2026-10-01; deployed files checked identical to the repo, unsigned calls answer 401) |
-| Mobile app (Expo, `app/`) | merged to `main` up to PR #29: A0-A3 complete. A3b secrets (#23), **A3c** spaces (#25), vault setup / recovery / passphrase change (#26), **A4** privacy + deletion pages and Play guide (#27), change sign-in password (#28), mascot app icon (#29, from another session). `npm run check`: 129 tests |
-| Google Play | app created, **internal testing release "Available to internal testers"** (production build of `main` at e90664c, versionCode 2: https://expo.dev/accounts/zafnut/projects/wilma/builds/b9ddd891-b815-4995-bd2a-5fc96a7f9a97 ; built before the mascot icon). Owner was waiting for the join link to work ("Item not found" right after release: accept invite first, matching Google account, give it time). App-content forms and store listing may still be incomplete; answers in `docs/phase4-play-release.md` |
+| Mobile app (Expo, `app/`) | merged to `main` up to PR #61: A0-A3 and A5c (chat screen, delete and vault cards) complete. A3b secrets (#23), **A3c** spaces (#25), vault setup / recovery / passphrase change (#26), **A4** privacy + deletion pages and Play guide (#27), change sign-in password (#28), mascot app icon (#29, from another session), A5c chat screen (#50-#54), layout fixes (#60, #61). `npm run check`: 218 tests |
+| Google Play | app created, **internal testing, versionCode 5 live** (built 2026-10-04 from `main` at 61b1674: https://expo.dev/accounts/zafnut/projects/wilma/builds/116e9645-4d8a-4ed6-9631-3a00ae6d7ee2 ; has the chat screen and the mascot icon, not the layout fixes #60/#61). Upload key reset done (see "Google Play and app updates"). App-content forms and store listing may still be incomplete; answers in `docs/phase4-play-release.md` |
 | Web pages | `docs/legal/privacy.html`, `docs/legal/delete-account.html` live (contact zaftechlabs@gmail.com) |
 | Supabase | ACTIVE_HEALTHY, region us-west-2 |
 
@@ -59,7 +67,7 @@ What the app does now: sign in (and change the sign-in password), spaces (create
 delete when empty), search, items, attachments, notes with photos/Visio, recycle bin, Share to
 Wilma, and the vault in full: set up (recovery key shown once), unlock (passphrase then
 fingerprint), reveal, save / change / rename / delete secrets, change the passphrase, recover
-with the recovery key.
+with the recovery key. **Ask Wilma** (the chat screen, with delete and vault cards) is on the home screen.
 
 ## Trying the app in a browser (no phone, no build)
 
@@ -71,29 +79,48 @@ expo-sqlite's worker is not bundled in that mode, Expo SDK 57.) Differences from
 with the passphrase), screenshot blocking does nothing, and layout is close but not identical. The
 phone checklist stays the final test before a Play build.
 
-## Google Play and app updates (2026-10-01)
+## Google Play and app updates (updated 2026-10-04)
 
-- Wilma is on **Internal testing** ("Available to internal testers"), production build
-  versionCode 2 (built before the mascot icon from PR #29). Testers are the owner plus family
+- Wilma is on **Internal testing**, currently **versionCode 5**. Testers are the owner plus family
   and friends; the owner creates their Wilma accounts in Supabase.
-- **Server changes** (the `mcp` function, migrations) reach everyone without an app update.
-- **App changes:** the owner says "merge and build for Play" → GitHub Actions **app build**
-  with profile `production` (.aab, versionCode increments by itself, EAS-managed upload key) →
-  the owner downloads the .aab from expo.dev and uploads it in Play Console → Internal testing
-  → Create new release → Save and publish → testers update through Google Play.
+- **Server changes** (the `mcp` and `chat` functions, migrations) reach everyone without an app
+  update.
+- **App changes, how to ship:** the owner says "merge and build for Play".
+  1. Merge the reviewed PRs.
+  2. GitHub Actions **app build**, profile `production` (.aab, versionCode goes up by itself).
+     It runs `npm run check`, then asks Expo to build (`--no-wait`) **and to auto-submit** the
+     build to Play when it finishes. The GitHub run only starts the build; follow it on
+     expo.dev (Builds, Submissions).
+  3. If the build was not submitted (or only the submit failed): GitHub Actions **app submit**
+     (`.github/workflows/app-submit.yml`) with the Expo build id (empty = latest finished
+     Android build). It runs `eas submit ... --non-interactive --no-wait`. This path is proven
+     (run 1, submission 1adc0d57…). Do not run both for the same build: Play refuses a
+     versionCode it already has.
+  4. `submit.production.android.releaseStatus` in `app/eas.json` is `"completed"`: the release
+     is published to internal testers without pressing Publish in Play Console. Set it to
+     `"draft"` to publish by hand.
+  5. Testers update through Google Play. The Expo website has no submit button, only a command.
+- **Submission key (set up 2026-10-04).** Google Cloud project `wilma-play`, service account
+  `expo-upload@wilma-play.iam.gserviceaccount.com`, invited in Play Console with "Release apps
+  to testing tracks" for `com.zaf.wilma`; its JSON key is at expo.dev → Credentials → Android →
+  com.zaf.wilma → **"Google Service Account Key for Play Store Submissions"**. Lesson: it was
+  first uploaded under "FCM V1 service account key" (push notifications), and the build then
+  failed with "Google Service Account Keys cannot be set up in --non-interactive mode". The FCM
+  entry is unused and harmless. The key file is never in the repo or in chat.
+- **Auto-submit from `app build` is not yet proven end to end:** its only run (18) failed before
+  the key was in the right slot; the build itself went through and was submitted with `app
+  submit`. The next production build will show whether `--auto-submit` works on its own.
+- **Upload key.** The Expo credentials for `com.zaf.wilma` were deleted by mistake (2026-10-01),
+  so EAS generated a new upload key for the next build; Google's upload-key reset was requested
+  and became valid 2026-10-03 23:28 UTC, after which uploads work. (The helper workflow for
+  extracting the certificate, #33, is on `main`; its follow-up #34 was closed, not needed.)
 - **Preview .apk builds can no longer be installed over the Play version** (different signing
   key). Phones should use the Play version only.
-- **Automatic upload to Play: offered, NOT confirmed set up.** Owner's part: a Google Cloud
-  service account (Google Play Android Developer API enabled, JSON key), invited in Play
-  Console with "Release apps to testing tracks" for Wilma, and the JSON key uploaded at
-  expo.dev → Credentials → Android → com.zaf.wilma → Service account key (never in chat).
-  When the owner says "auto-submit is set up, published" (or "draft"): add a submit option to
-  `.github/workflows/app-build.yml` (`eas build ... --auto-submit`, which schedules the
-  submission on EAS when the build finishes, even with `--no-wait`) and set
-  `submit.production.android.releaseStatus` in `app/eas.json` to `"completed"` (published) or
-  keep `"draft"`.
-- Open: whether to "build for Play" now (ships the mascot icon) or wait for the first A5 app
-  changes.
+- **Android layout lessons (A5c, #60/#61).** Expo SDK 57 draws the app edge to edge on Android:
+  (1) every screen is padded at the bottom by the safe-area inset in `app/_layout.tsx` (otherwise
+  the last button sits under the three-button bar); (2) `KeyboardAvoidingView` needs the
+  header's height as its offset, so screens use `KeyboardScreen` from `components/ui.tsx`, never
+  a bare `KeyboardAvoidingView`. The browser preview shows neither problem; only a device does.
 
 ## Rule 9 credential check (A5a step 1, built 2026-10-01)
 
