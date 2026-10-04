@@ -209,6 +209,7 @@ are updated to name the providers in use. The policy already promises this.
   vault links open the vault), reached from a button first so it can be tried.
 - **A5d: the one box (D18, D23).** It replaces the search field. The router: rules on the phone
   (tested), the cheap model only for unclear messages, when in doubt Wilma.
+  Detailed plan: `docs/phase5-a5d-one-box-plan.md`.
 - **A5e: voice.** Speech to text with the phone's own recognition (a native module, so a new
   build). `RECORD_AUDIO` is blocked today and must be unblocked on purpose: read the module's
   start-up code first (the A3a crash lesson). Spoken replies are optional.
