@@ -95,7 +95,7 @@ export default function Home() {
         />
         <Button title="Send" onPress={submit} disabled={!chat.canSend || !text.trim()} />
       </View>
-      {held ? <Muted>{held}</Muted> : null}
+      {held ? <Muted>{held}</Muted> : chat.routing ? <Muted>One moment…</Muted> : null}
       {link('Conversation', () => router.push('/chat'))}
       <Button title="New note or photo" kind="plain" onPress={() => router.push('/new-item')} />
       {query ? (

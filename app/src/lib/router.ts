@@ -182,6 +182,14 @@ type Candidate = { route: Route; keys: { msg: string; name: string }[] };
  * only when nothing matches exactly, one typo in a name of six or more letters.
  */
 export function pickLookup(lookup: Lookup, spaces: Space[], secrets: SecretName[]): Route {
+  return placeLookup(lookup, spaces, secrets) ?? WILMA;
+}
+
+/**
+ * Step B, telling the two kinds of "Wilma" apart: null when no name matches at all (the message
+ * may be a search, step 6's classifier decides), Wilma when two or more match (she asks which).
+ */
+export function placeLookup(lookup: Lookup, spaces: Space[], secrets: SecretName[]): Route | null {
   const restricted = restrictedPaths(spaces);
   const msgCommon = lookup.common.join('');
   const msgVault = lookup.vault.join('');
@@ -213,5 +221,6 @@ export function pickLookup(lookup: Lookup, spaces: Space[], secrets: SecretName[
   const near = candidates.filter((c) =>
     c.keys.some((k) => Array.from(k.name).length >= TYPO_MIN && oneTypo(k.msg, k.name)),
   );
+  if (!near.length) return null;
   return near.length === 1 ? near[0].route : WILMA;
 }

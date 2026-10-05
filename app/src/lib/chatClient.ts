@@ -7,6 +7,7 @@
 import { fetch as expoFetch } from 'expo/fetch';
 
 import { CONNECTION_MESSAGE, readChatEvents, type ChatEvent, type ChunkSource } from './chatStream';
+import type { Verdict } from './chatRoute';
 import { messagesToSend, type Entry } from './chatThread';
 import { WilmaError } from './wilma';
 
@@ -26,6 +27,21 @@ export interface ChatClientOptions {
 }
 
 const SESSION_ENDED = 'Your session has ended. Please sign in again.';
+
+/** The classifier answers in about 2 seconds; after this the message goes to Wilma. */
+export const CLASSIFY_TIMEOUT_MS = 8_000;
+
+const WILMA: Verdict = { route: 'wilma' };
+
+/** The server's answer, checked again here: anything but a search with words is Wilma. */
+export function toVerdict(raw: unknown): Verdict {
+  if (typeof raw !== 'object' || raw === null) return WILMA;
+  const r = raw as Record<string, unknown>;
+  if (r.route === 'search' && typeof r.query === 'string' && r.query.trim() && r.query.length <= 100) {
+    return { route: 'search', query: r.query.trim() };
+  }
+  return WILMA;
+}
 
 const connectionLost: ChatEvent[] = [
   { type: 'error', code: 'connection', message: CONNECTION_MESSAGE },
@@ -79,7 +95,59 @@ export function chatClient({ url, token, refresh, fetch: f = expoFetch as unknow
     yield* readChatEvents(res.body.getReader(), signal);
   }
 
-  return { send };
+  /**
+   * Asks the server's classifier (step 6) whether a short message is a search. Never throws:
+   * signed out, offline, slow, an error or an odd answer all mean Wilma.
+   */
+  async function classify(text: string): Promise<Verdict> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), CLASSIFY_TIMEOUT_MS);
+    const post = (accessToken: string) =>
+      f(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ classify: text.slice(0, 500) }),
+        signal: controller.signal,
+      });
+    try {
+      let accessToken = await token();
+      if (!accessToken) return WILMA;
+      let res = await post(accessToken);
+      if (res.status === 401) {
+        accessToken = await refresh();
+        if (!accessToken) return WILMA;
+        res = await post(accessToken);
+      }
+      if (!res.ok || !res.body) return WILMA;
+      return toVerdict(JSON.parse(await readAll(res.body.getReader())));
+    } catch {
+      return WILMA;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  return { send, classify };
+}
+
+/** The whole (short) body as text. */
+async function readAll(source: ChunkSource): Promise<string> {
+  const decoder = new TextDecoder();
+  let out = '';
+  const take = (value: Uint8Array) => {
+    out += decoder.decode(value, { stream: true });
+    if (out.length > 10_000) throw new Error('too long');
+  };
+  if (Symbol.asyncIterator in source) {
+    for await (const value of source) take(value);
+  } else {
+    for (;;) {
+      const { done, value } = await source.read();
+      if (done) break;
+      if (value) take(value);
+    }
+  }
+  return out + decoder.decode();
 }
 
 export type ChatClient = ReturnType<typeof chatClient>;

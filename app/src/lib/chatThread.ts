@@ -7,6 +7,7 @@
 //
 // A lookup from the one box (docs/phase5-a5d-one-box-plan.md) is written into the same thread
 // with no model call: the message, a short assistant line, and for a secret the usual vault card.
+// A search the classifier recognised (step 6) is written the same way, with a notes card.
 
 import { cancelledMessage, checkDelete, deletedMessage } from './chatDeletes';
 import type { ChatEvent } from './chatStream';
@@ -18,6 +19,17 @@ export const MAX_ENTRIES = 100;
 export const MAX_TEXT = 20_000;
 /** At most this many messages are sent with each new one. */
 export const MAX_SENT = 20;
+
+/** A note in a notes card: what the card shows, nothing else. */
+export interface NoteRef {
+  id: string;
+  title: string;
+  space?: string;
+  snippet?: string;
+}
+
+/** Longer snippets in a notes card are cut. */
+export const MAX_SNIPPET = 300;
 
 /** Added to the connection message when a tool that may have changed something already ran. */
 export const PARTIAL_NOTE = 'Part of this may already be done. Check your notes before trying again.';
@@ -93,7 +105,9 @@ export type Entry =
       /** A secret that does not exist yet: its card opens "save a new secret". */
       newSecret?: true;
     }
-  | { kind: 'error'; id: string; code: string; message: string; buttons: ErrorButton[]; note?: string };
+  | { kind: 'error'; id: string; code: string; message: string; buttons: ErrorButton[]; note?: string }
+  /** The notes found for a search the classifier recognised (step 6), with "Ask Wilma instead". */
+  | { kind: 'notes'; id: string; query: string; notes: NoteRef[] };
 
 export interface ChatState {
   entries: Entry[];
@@ -125,6 +139,8 @@ export type ChatAction =
   | { type: 'send'; text: string }
   /** A message the router answered without Wilma: written into the thread, nothing sent. */
   | { type: 'lookup'; text: string; route: LookupRoute }
+  /** A search the classifier recognised: the message, a short line and the notes; nothing sent. */
+  | { type: 'notes'; text: string; query: string; notes: NoteRef[] }
   | { type: 'event'; event: ChatEvent }
   /** Stop tapped, or the request was abandoned (leaving, signing out). */
   | { type: 'stop' }
@@ -188,6 +204,17 @@ export function lookupMessage(route: LookupRoute): string {
   return route.to === 'space' ? `Opened “${route.space.path}”.` : `Here is “${route.secret.name}” in your vault.`;
 }
 
+/** The assistant's line before a notes card: the titles, so Wilma knows them in the next message. */
+export function notesMessage(query: string, notes: NoteRef[]): string {
+  const list = notes.map((n) => (n.space ? `${n.title} (${n.space})` : n.title)).join('; ');
+  return `Notes for “${query}”: ${list}.`;
+}
+
+/** A notes card's "Ask Wilma instead" works while it is the newest entry and Wilma can be asked. */
+export function notesActive(state: ChatState, entry: Entry): boolean {
+  return entry.kind === 'notes' && state.entries[state.entries.length - 1]?.id === entry.id && canSend(state);
+}
+
 /**
  * Whether a card's Delete and Cancel can be tapped: it waits for an answer (pending, or failed),
  * the app accepts what it asks for, and no answer is streaming (the follow-up message would land
@@ -225,6 +252,16 @@ function moveOn(entries: Entry[]): Entry[] {
     const { error: _, ...rest } = e;
     return { ...rest, state: 'not_done' as const };
   });
+}
+
+/** Only the fields a notes card shows, texts cut. */
+export function noteRef(n: NoteRef): NoteRef {
+  return {
+    id: n.id,
+    title: cut(n.title),
+    ...(n.space ? { space: n.space } : {}),
+    ...(n.snippet ? { snippet: n.snippet.slice(0, MAX_SNIPPET) } : {}),
+  };
 }
 
 function startAnswer(state: ChatState): ChatState {
@@ -340,6 +377,14 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         next = add(next, { kind: 'vault', id: String(next.seq), action: 'reveal', secretId: id, name, ...(secretType ? { secretType } : {}) });
       }
       return next;
+    }
+    case 'notes': {
+      const text = cut(action.text.trim());
+      if (!text || !action.notes.length || !canLookup(state)) return state;
+      const notes = action.notes.map(noteRef);
+      let next = add({ ...state, entries: moveOn(state.entries) }, { kind: 'user', id: String(state.seq), text });
+      next = add(next, { kind: 'assistant', id: String(next.seq), text: cut(notesMessage(action.query, notes)) });
+      return add(next, { kind: 'notes', id: String(next.seq), query: cut(action.query), notes });
     }
     case 'event':
       // Anything arriving after Stop belongs to an abandoned answer.

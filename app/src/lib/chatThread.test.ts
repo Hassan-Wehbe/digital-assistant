@@ -12,6 +12,9 @@ import {
   MAX_TEXT,
   messagesToSend,
   monthKey,
+  MAX_SNIPPET,
+  notesActive,
+  notesMessage,
   noticeVisible,
   PARTIAL_NOTE,
   type ChatAction,
@@ -319,5 +322,57 @@ describe('the Search button after an error', () => {
 
   it('is null in an empty thread', () => {
     expect(lastUserText([])).toBeNull();
+  });
+});
+
+describe('notes from the classifier (A5d step 6)', () => {
+  const notes = [
+    { id: 'n1', title: 'Lasagna', space: 'Recipes', snippet: 'Layers of pasta' },
+    { id: 'n2', title: 'Mom’s lasagna' },
+  ];
+  const found = (t = 'lasagna recipe'): ChatAction => ({ type: 'notes', text: t, query: 'lasagna', notes });
+
+  it('the message, a line naming the notes, and the card; nothing sent, no answer started', () => {
+    const s = run(initialChat(), found('  lasagna recipe '));
+    expect(s.entries).toEqual([
+      { kind: 'user', id: '0', text: 'lasagna recipe' },
+      { kind: 'assistant', id: '1', text: 'Notes for “lasagna”: Lasagna (Recipes); Mom’s lasagna.' },
+      { kind: 'notes', id: '2', query: 'lasagna', notes },
+    ]);
+    expect(s.streaming).toBe(false);
+    // The next message to Wilma carries the line (titles only), never the card.
+    expect(messagesToSend(run(s, { type: 'send', text: 'the second one' }).entries)).toEqual([
+      { role: 'user', content: 'lasagna recipe' },
+      { role: 'assistant', content: 'Notes for “lasagna”: Lasagna (Recipes); Mom’s lasagna.' },
+      { role: 'user', content: 'the second one' },
+    ]);
+  });
+
+  it('the card keeps only id, title, space and a cut snippet', () => {
+    const extra = { id: 'n3', title: 'T', snippet: 'x'.repeat(MAX_SNIPPET + 50), url: 'https://x', body: 'secret body' };
+    const s = run(initialChat(), { type: 'notes', text: 'x', query: 'x', notes: [extra] as never });
+    const card = s.entries[2] as Extract<Entry, { kind: 'notes' }>;
+    expect(Object.keys(card.notes[0]).sort()).toEqual(['id', 'snippet', 'title']);
+    expect(card.notes[0].snippet).toHaveLength(MAX_SNIPPET);
+  });
+
+  it('no notes, or while an answer streams: nothing is written', () => {
+    expect(run(initialChat(), { type: 'notes', text: 'x', query: 'x', notes: [] }).entries).toEqual([]);
+    const streaming = run(initialChat(), { type: 'send', text: 'hi' });
+    expect(run(streaming, found())).toBe(streaming);
+  });
+
+  it('"Ask Wilma instead" works on the newest card only, and not when Wilma cannot be asked', () => {
+    const s = run(initialChat(), found());
+    const card = s.entries[2];
+    expect(notesActive(s, card)).toBe(true);
+    const later = run(s, { type: 'send', text: 'lasagna recipe' });
+    expect(notesActive(later, card)).toBe(false);
+    expect(notesActive({ ...s, blocked: 'Used up' }, card)).toBe(false);
+    expect(notesActive(s, s.entries[0])).toBe(false);
+  });
+
+  it('notesMessage lists the titles, with the space when known', () => {
+    expect(notesMessage('roof', [{ id: 'a', title: 'Roof quote', space: 'Home' }])).toBe('Notes for “roof”: Roof quote (Home).');
   });
 });
