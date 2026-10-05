@@ -5,7 +5,7 @@ the fingerprint part only works on the phone). About 20 minutes. Use a test acco
 space so nothing real is lost. Tick each line; note anything odd (what you did, what you saw).
 Never type a real password into the chat with Wilma.
 
-Start: sign in, open **Ask Wilma** from the home screen, tap **New conversation** if the thread
+Start: sign in, open the conversation from the home screen (**Ask Wilma** before A5d, the **Conversation** link since), tap **New conversation** if the thread
 is not empty.
 
 ## Answers

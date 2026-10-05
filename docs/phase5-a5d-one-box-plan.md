@@ -19,7 +19,9 @@ did, do, does, much, many, should, will) to Wilma before any read (merged, #66).
 **Step 5 built:** the home screen's one box with Send, and two small links under it: **Search**
 (the old note search on the box's text, D3) and **Conversation** (back to the thread without
 sending; added because the Ask Wilma button is gone). The old search field and the Ask Wilma button
-are removed. Parent plans: `docs/phase5-chat-plan.md` (A5d),
+are removed (merged, #67). **Step 6 deferred** (Q4: after the owner has used the box).
+**Step 7:** phone checklist `docs/phase5-a5d-phone-checklist.md` (with the #60/#61 layout
+re-checks) and handoff updated; next, the owner's "build for Play" and the phone check. Parent plans: `docs/phase5-chat-plan.md` (A5d),
 `docs/phase5-a5c-chat-screen-plan.md` (the chat screen this builds on). Design: `docs/design.md`
 D18 (one box, an invisible router that prefers the model when unsure), D22 (password retrieval
 never counts against the budget) and D23 (no search bar; a found secret shows the reveal card

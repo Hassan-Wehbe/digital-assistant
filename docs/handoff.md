@@ -1,13 +1,26 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-10-02 (A5b steps 1-3: shared tools and instructions, the `ai_usage` migration,
-the `chat` function built but not deployed).
+Last updated 2026-10-05 (A5d, the one box: steps 1-5 merged, #63-#67; step 7 = build and phone
+check next; step 6, the cheap classifier, deferred by the owner).
 Read this, then `CLAUDE.md`, `docs/design.md`, `docs/phase3-mobile-app-plan.md` and
 `docs/phase5-chat-plan.md`, before changing anything. The owner is returning to development:
 explain steps plainly, keep PRs small, say clearly when they must act, never ask for passwords,
 tokens or keys in chat.
 
-## Where things stand (2026-10-02)
+## Where things stand (2026-10-05)
+
+**A5d, the one box** (`docs/phase5-a5d-one-box-plan.md`; all 13 decisions "yes, as recommended"):
+steps 1-5 merged (#63 plan, #64 router rules, #65 lookups in the thread, #66 routing in `send`,
+#67 the box on the home screen), **not yet built**. The home screen's box sends the exact name
+of one space (opens it) or one secret (its vault card, no model, not counted) without Wilma;
+everything else goes to Wilma. Restricted spaces are left out of every lookup. A small **Search**
+link (old note search, temporary) and **Conversation** link sit under the box. When the
+allowance is used up, lookups still work. Rules: `app/src/lib/router.ts` (pure, tested);
+routing: `chatRoute.ts` and `send` in `lib/chat.tsx`. **Step 6** (cheap classifier) is deferred
+until the owner has used the box (it needs a `chat` change, a migration and eval cases).
+**Next (step 7):** the owner says "build for Play" (the build also carries the layout fixes #60
+and #61), then runs `docs/phase5-a5d-phone-checklist.md` (the one box plus the layout re-checks).
+After a few days of use the owner decides when to delete the Search link.
 
 **A5b, the `chat` function** (`docs/phase5-a5b-chat-function-plan.md`):
 1. **Done, merged (#43):** one tool list (`mcp/tools/all.ts`) and one set of instructions
@@ -47,9 +60,8 @@ covered the message box and Android's three-button bar covered it. Fixed in #60 
 (every screen) and merged, **not yet built**: the next Play build carries them. **Next:** a Play
 build, then the owner re-checks chat, New note (Save button reachable), a form field near the
 bottom while typing, the home search and the vault secret edit fields (the layout was verified by
-lint, types, tests and a web bundle only, never on a device). Then A5d (the one box,
-`docs/phase5-chat-plan.md`).
-The A5d plan (for the owner's approval, no code yet): `docs/phase5-a5d-one-box-plan.md`.
+lint, types, tests and a web bundle only, never on a device). Those re-checks are now part of the
+A5d phone checklist.
 
 **Next (was):** A5c, the chat screen in the app (strongest model: new code in the chat path).
 The A5c plan (for the owner's approval, 10 decisions): `docs/phase5-a5c-chat-screen-plan.md`.
@@ -59,7 +71,7 @@ The A5c plan (for the owner's approval, 10 decisions): `docs/phase5-a5c-chat-scr
 | Database | migrations up to `ai_usage` applied (2026-10-02) |
 | Chat function `chat` | **version 3, deployed 2026-10-03** (#54: the `vault` event carries `secret_type` and `new_secret`; 43/44 files identical, 401 without sign-in), first deployed 2026-10-02 (version 2, #46) and live-checked; `OPENAI_API_KEY` and `LLM_ROUTES` set in Supabase secrets by the owner (2026-10-02) |
 | MCP server `mcp` | **version 8, server 0.6.0**, 22 tools, with the rule 9 credential check (PR #31, deployed 2026-10-01; deployed files checked identical to the repo, unsigned calls answer 401) |
-| Mobile app (Expo, `app/`) | merged to `main` up to PR #61: A0-A3 and A5c (chat screen, delete and vault cards) complete. A3b secrets (#23), **A3c** spaces (#25), vault setup / recovery / passphrase change (#26), **A4** privacy + deletion pages and Play guide (#27), change sign-in password (#28), mascot app icon (#29, from another session), A5c chat screen (#50-#54), layout fixes (#60, #61). `npm run check`: 218 tests |
+| Mobile app (Expo, `app/`) | merged to `main` up to PR #67: A0-A3, A5c (chat screen, delete and vault cards) and A5d steps 1-5 (the one box) complete; A5d not yet built. A3b secrets (#23), **A3c** spaces (#25), vault setup / recovery / passphrase change (#26), **A4** privacy + deletion pages and Play guide (#27), change sign-in password (#28), mascot app icon (#29, from another session), A5c chat screen (#50-#54), layout fixes (#60, #61), A5d one box (#64-#67). `npm run check`: 256 tests |
 | Google Play | app created, **internal testing, versionCode 5 live** (built 2026-10-04 from `main` at 61b1674: https://expo.dev/accounts/zafnut/projects/wilma/builds/116e9645-4d8a-4ed6-9631-3a00ae6d7ee2 ; has the chat screen and the mascot icon, not the layout fixes #60/#61). Upload key reset done (see "Google Play and app updates"). App-content forms and store listing may still be incomplete; answers in `docs/phase4-play-release.md` |
 | Web pages | `docs/legal/privacy.html`, `docs/legal/delete-account.html` live (contact zaftechlabs@gmail.com) |
 | Supabase | ACTIVE_HEALTHY, region us-west-2 |
