@@ -15,6 +15,7 @@ export const APP_TOOLS = [
   'get_item',
   'get_attachment_link',
   'save_item',
+  'update_item',
   'attach_file',
   'delete_attachment',
   'delete_item',
@@ -95,6 +96,12 @@ export interface NewItem {
   title: string;
   body: string;
   item_type?: string;
+}
+
+/** What the app may change on a note: only the fields given are sent. */
+export interface NoteChanges {
+  title?: string;
+  body?: string;
 }
 
 export interface UploadLink {
@@ -228,6 +235,9 @@ export function wilmaClient({ url, token, refresh, fetch: f = fetch }: ClientOpt
     attachmentLink: (id: string) => call<AttachmentLink>('get_attachment_link', { attachment_id: id }),
     saveItem: ({ space, title, body, item_type = 'note' }: NewItem) =>
       call<{ id: string; space: string }>('save_item', { space, title, body, item_type }),
+    /** Changes a note's title and/or text; the server keeps the previous version first. */
+    updateItem: (id: string, changes: NoteChanges) =>
+      call<{ id: string; updated: boolean }>('update_item', { item_id: id, ...changes }),
     /** A one-time upload link for an existing item, or for a new one (space + title + note). */
     uploadLink: (target: { item_id: string } | { space: string; title: string; note?: string }) =>
       call<UploadLink>('attach_file', target),
