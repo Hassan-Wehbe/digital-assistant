@@ -297,7 +297,8 @@ create policy secret_log_insert on secret_access_log
 -- ai_settings: one row; default_monthly_limit_cents (100 = $1). No direct access; changed by
 --   admin_set_default_limit().
 -- ai_usage: user_id, month (first day, UTC), cost_cents, requests. Own rows readable; written
---   only by record_ai_usage(cost), which only ever adds (0-100 cents per call).
+--   only by record_ai_usage(cost), which only ever adds (0-100 cents per call), and by
+--   record_ai_cost(cost) (the one box's classifier: cost only, not a request; 0-5 cents).
 -- my_ai_allowance(): the caller's used_cents, requests, limit_cents, used_fraction this month.
 -- Admin only (is_admin): admin_ai_overview() (email and numbers per person, nothing else),
 --   admin_set_ai_limit(user, cents | null), admin_set_default_limit(cents).
