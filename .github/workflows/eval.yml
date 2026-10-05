@@ -9,11 +9,14 @@ name: model evaluation
 on:
   workflow_dispatch:
     inputs:
+      suite:
+        description: "chat (Wilma's conversations) or router (the one box's classifier)"
+        default: "chat"
       models:
         description: "Models to compare (ids from tests/eval/models.json, comma-separated); a model whose API key is not set is skipped"
         default: "luna"
       cases:
-        description: "Cases: all, or ids / categories (save, lookup, secret, edit, other)"
+        description: "Cases: all, or ids / categories (chat: save, lookup, secret, edit, other; router: search, wilma, trap)"
         default: "all"
       repeat:
         description: "Runs per case"
@@ -33,18 +36,19 @@ jobs:
         with:
           deno-version: v2.x
       - name: Check the evaluation code
-        run: deno test -A --config supabase/functions/mcp/deno.json tests/deno/eval_test.ts tests/deno/llm_test.ts
+        run: deno test -A --config supabase/functions/mcp/deno.json tests/deno/eval_test.ts tests/deno/router_eval_test.ts tests/deno/llm_test.ts
       - name: Run the evaluation
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SUITE: ${{ inputs.suite }}
           MODELS: ${{ inputs.models }}
           CASES: ${{ inputs.cases }}
           REPEAT: ${{ inputs.repeat }}
           MAX_DOLLARS: ${{ inputs.max_dollars }}
         run: >
           deno run -A --config supabase/functions/mcp/deno.json tests/eval/run.ts
-          --models "$MODELS" --cases "$CASES" --repeat "$REPEAT" --max-dollars "$MAX_DOLLARS"
+          --suite "$SUITE" --models "$MODELS" --cases "$CASES" --repeat "$REPEAT" --max-dollars "$MAX_DOLLARS"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
