@@ -15,10 +15,13 @@ export default function Chat() {
   const [text, setText] = useState('');
   const list = useRef<FlatList>(null);
 
-  const submit = () => {
+  const submit = async () => {
     if (!canSend || !text.trim()) return;
-    send(text);
+    const out = await send(text);
+    // Used up or not sent: the text stays in the box.
+    if (out.to === 'none' || out.to === 'blocked') return;
     setText('');
+    if (out.to === 'space') router.push({ pathname: '/space/[id]', params: { id: out.id, path: out.path } });
   };
 
   const onButton = (button: ErrorButton) => {
@@ -92,11 +95,10 @@ export default function Chat() {
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
           <TextInput
             style={input}
-            placeholder={state.blocked ?? 'Message Wilma'}
+            placeholder="Message Wilma"
             placeholderTextColor={c.muted}
             value={text}
             onChangeText={setText}
-            editable={!state.blocked}
             multiline
             maxLength={20000}
           />
@@ -106,6 +108,8 @@ export default function Chat() {
             <Button title="Send" onPress={submit} disabled={!canSend || !text.trim()} />
           )}
         </View>
+        {/* Used up: names of spaces and secrets still work; anything else waits for next month. */}
+        {state.blocked ? <Muted>{state.blocked}</Muted> : null}
         <Muted>Never type passwords here. Use the Vault.</Muted>
       </View>
     </KeyboardScreen>
