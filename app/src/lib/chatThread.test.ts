@@ -1,7 +1,9 @@
 import { describe, expect, it } from '@jest/globals';
 
 import type { ChatEvent } from './chatStream';
+import { toEntry } from './chatStore';
 import {
+  canLookup,
   canSend,
   chatReducer,
   initialChat,
@@ -14,6 +16,7 @@ import {
   type ChatAction,
   type ChatState,
   type Entry,
+  type LookupRoute,
 } from './chatThread';
 
 const run = (state: ChatState, ...actions: ChatAction[]) => actions.reduce(chatReducer, state);
@@ -220,5 +223,84 @@ describe('chat thread', () => {
     ];
     const s = run(initialChat(saved), send('new'));
     expect(s.entries[2].id).toBe('9');
+  });
+});
+
+describe('lookups from the one box (A5d)', () => {
+  const wifi: LookupRoute = { to: 'secret', secret: { id: 'k1', name: 'Wi-Fi', secretType: 'wifi', space: 'Home' } };
+  const recipes: LookupRoute = { to: 'space', space: { id: 's1', path: 'Food/Recipes', name: 'Recipes' } };
+  const lookup = (t: string, route: LookupRoute): ChatAction => ({ type: 'lookup', text: t, route });
+
+  it('a secret: the message, a short line and the vault card, with no answer started', () => {
+    const s = run(initialChat(), lookup("  what's my wifi password ", wifi));
+    expect(s.entries).toEqual([
+      { kind: 'user', id: '0', text: "what's my wifi password" },
+      { kind: 'assistant', id: '1', text: 'Here is “Wi-Fi” in your vault.' },
+      { kind: 'vault', id: '2', action: 'reveal', secretId: 'k1', name: 'Wi-Fi', secretType: 'wifi' },
+    ]);
+    expect(s.streaming).toBe(false);
+    expect(canSend(s)).toBe(true);
+  });
+
+  it('a space: the message and a short line, no card', () => {
+    const s = run(initialChat(), lookup('recipes', recipes));
+    expect(s.entries).toEqual([
+      { kind: 'user', id: '0', text: 'recipes' },
+      { kind: 'assistant', id: '1', text: 'Opened “Food/Recipes”.' },
+    ]);
+  });
+
+  it('the vault card holds only id, name, kind and action (no link, address or space)', () => {
+    const route = { to: 'secret', secret: { ...wifi.secret, url: 'https://router.example', link: 'https://x.invalid/#t=abc' } } as LookupRoute;
+    const card = run(initialChat(), lookup('wifi', route)).entries[2];
+    expect(Object.keys(card).sort()).toEqual(['action', 'id', 'kind', 'name', 'secretId', 'secretType']);
+    expect(JSON.stringify(card)).not.toMatch(/https|#t=|Home/);
+  });
+
+  it('the next message to Wilma carries the lookup as text only', () => {
+    const s = run(initialChat(), lookup('wifi', wifi), send('and the guest network?'));
+    expect(messagesToSend(s.entries)).toEqual([
+      { role: 'user', content: 'wifi' },
+      { role: 'assistant', content: 'Here is “Wi-Fi” in your vault.' },
+      { role: 'user', content: 'and the guest network?' },
+    ]);
+  });
+
+  it('works when the allowance is used up, while messages to Wilma stay off', () => {
+    const s = run(initialChat(), send('hi'), error('allowance_used', 'Used up.'), DONE);
+    expect(canSend(s)).toBe(false);
+    expect(canLookup(s)).toBe(true);
+    const after = run(s, lookup('wifi', wifi));
+    expect(after.entries.slice(2).map((e) => e.kind)).toEqual(['user', 'assistant', 'vault']);
+    expect(after.blocked).toBe('Used up.');
+    expect(run(after, send('hello')).entries).toHaveLength(after.entries.length);
+  });
+
+  it('waits while an answer streams or a delete runs', () => {
+    const streaming = run(initialChat(), send('hi'));
+    expect(canLookup(streaming)).toBe(false);
+    expect(run(streaming, lookup('wifi', wifi))).toBe(streaming);
+    const item = '3f2a1c9e-8b7d-4e6f-9a0b-1c2d3e4f5a6b';
+    const card = ev({ ...confirm, args: { item_id: item }, target: { id: item, title: 'Tomato soup' } } as ChatEvent);
+    const running = run(initialChat(), send('delete soup'), card, DONE, { type: 'confirm_start', id: '1' });
+    expect(running.entries[1]).toMatchObject({ kind: 'confirm', state: 'running' });
+    expect(canLookup(running)).toBe(false);
+    expect(run(running, lookup('wifi', wifi))).toBe(running);
+  });
+
+  it('ignores an empty message', () => {
+    const s = initialChat();
+    expect(run(s, lookup('   ', wifi))).toBe(s);
+  });
+
+  it('moves the conversation on: an unanswered delete card becomes "not done"', () => {
+    const s = run(initialChat(), send('delete soup'), ev(confirm), DONE, lookup('recipes', recipes));
+    expect(s.entries[1]).toMatchObject({ kind: 'confirm', state: 'not_done' });
+  });
+
+  it('is saved and read back unchanged', () => {
+    const s = run(initialChat(), lookup('wifi', wifi), lookup('recipes', recipes));
+    expect(s.entries.map(toEntry)).toEqual(s.entries);
+    expect(initialChat(s.entries).seq).toBe(5);
   });
 });

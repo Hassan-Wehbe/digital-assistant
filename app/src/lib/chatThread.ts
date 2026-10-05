@@ -4,9 +4,13 @@
 //
 // Only user and assistant *text* ever goes to the server: cards, errors, status lines and the
 // allowance banner stay on the phone.
+//
+// A lookup from the one box (docs/phase5-a5d-one-box-plan.md) is written into the same thread
+// with no model call: the message, a short assistant line, and for a secret the usual vault card.
 
 import { cancelledMessage, checkDelete, deletedMessage } from './chatDeletes';
 import type { ChatEvent } from './chatStream';
+import type { Route } from './router';
 
 /** At most this many entries are kept (oldest dropped). */
 export const MAX_ENTRIES = 100;
@@ -98,12 +102,20 @@ export interface ChatState {
   notice: string | null;
   /** The month ("2026-10") in which the banner was dismissed. */
   noticeDismissed: string | null;
-  /** Set when this month's allowance is used up: sending is off, this is the box's placeholder. */
+  /**
+   * Set when this month's allowance is used up: nothing goes to Wilma (lookups still work), and
+   * this is the message to show.
+   */
   blocked: string | null;
 }
 
+/** What the router found: a space or a secret (never Wilma). */
+export type LookupRoute = Exclude<Route, { to: 'wilma' }>;
+
 export type ChatAction =
   | { type: 'send'; text: string }
+  /** A message the router answered without Wilma: written into the thread, nothing sent. */
+  | { type: 'lookup'; text: string; route: LookupRoute }
   | { type: 'event'; event: ChatEvent }
   /** Stop tapped, or the request was abandoned (leaving, signing out). */
   | { type: 'stop' }
@@ -152,9 +164,19 @@ export function noticeVisible(state: ChatState, month: string): boolean {
 /** A delete is under way: nothing else is sent until it ends, so its follow-up comes in order. */
 const deleting = (state: ChatState) => state.entries.some((e) => e.kind === 'confirm' && e.state === 'running');
 
-/** Whether a new message can be sent now. */
+/** Whether a message can go to Wilma now. */
 export function canSend(state: ChatState): boolean {
-  return !state.streaming && state.blocked === null && !deleting(state);
+  return canLookup(state) && state.blocked === null;
+}
+
+/** Whether a lookup can be written now: also when the allowance is used up (D22). */
+export function canLookup(state: ChatState): boolean {
+  return !state.streaming && !deleting(state);
+}
+
+/** The assistant's line after a lookup (the model reads it with the next message). */
+export function lookupMessage(route: LookupRoute): string {
+  return route.to === 'space' ? `Opened “${route.space.path}”.` : `Here is “${route.secret.name}” in your vault.`;
 }
 
 /**
@@ -186,6 +208,15 @@ export function messagesToSend(entries: Entry[]): { role: 'user' | 'assistant'; 
 
 const cut = (text: string) => (text.length > MAX_TEXT ? text.slice(0, MAX_TEXT) : text);
 const cap = (entries: Entry[]) => (entries.length > MAX_ENTRIES ? entries.slice(-MAX_ENTRIES) : entries);
+
+/** The conversation moved on: a delete card left unanswered can no longer be tapped. */
+function moveOn(entries: Entry[]): Entry[] {
+  return entries.map((e) => {
+    if (e.kind !== 'confirm' || (e.state !== 'pending' && e.state !== 'failed')) return e;
+    const { error: _, ...rest } = e;
+    return { ...rest, state: 'not_done' as const };
+  });
+}
 
 function startAnswer(state: ChatState): ChatState {
   return { ...state, streaming: true, status: null, answerId: null, tools: [] };
@@ -286,13 +317,20 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case 'send': {
       const text = cut(action.text.trim());
       if (!text || !canSend(state)) return state;
-      // A delete card left unanswered can no longer be tapped once the conversation moves on.
-      const entries = state.entries.map((e) => {
-        if (e.kind !== 'confirm' || (e.state !== 'pending' && e.state !== 'failed')) return e;
-        const { error: _, ...rest } = e;
-        return { ...rest, state: 'not_done' as const };
-      });
-      return startAnswer(add({ ...state, entries }, { kind: 'user', id: String(state.seq), text }));
+      return startAnswer(add({ ...state, entries: moveOn(state.entries) }, { kind: 'user', id: String(state.seq), text }));
+    }
+    case 'lookup': {
+      const text = cut(action.text.trim());
+      if (!text || !canLookup(state)) return state;
+      const { route } = action;
+      let next = add({ ...state, entries: moveOn(state.entries) }, { kind: 'user', id: String(state.seq), text });
+      next = add(next, { kind: 'assistant', id: String(next.seq), text: cut(lookupMessage(route)) });
+      if (route.to === 'secret') {
+        // Id, name and kind only: no link, no address (CLAUDE.md rule 1).
+        const { id, name, secretType } = route.secret;
+        next = add(next, { kind: 'vault', id: String(next.seq), action: 'reveal', secretId: id, name, ...(secretType ? { secretType } : {}) });
+      }
+      return next;
     }
     case 'event':
       // Anything arriving after Stop belongs to an abandoned answer.
