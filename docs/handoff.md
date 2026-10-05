@@ -37,9 +37,12 @@ transaction, then applied. `chat` **version 4** deployed from `main` at 003dafc 
 route gets only the message; vault words and credentials never reach the model; any failure is
 `wilma`): 44/45 files identical to the repo (the `.d.ts` is not listed back, as before), 401
 without sign-in and with a fake token. No live classification has been made yet: the app does
-not call it. **Next for step 6:** (a) evaluation cases for the router route, including secret
-traps, and the owner-approved paid run (CLAUDE.md rule 9, D21); (b) the app: unclear short
-messages go to the classifier, `search` shows the top notes as a card with **Ask Wilma instead**.
+not call it. **Evaluation (#75, `tests/eval/router.ts`, `run.ts --suite router`):** 28 cases (10
+searches, 9 for Wilma, 9 secret traps), each through the real `classify()`. **Run 37351420880
+(2026-10-05), Luna on the router route: 28/28, 0 leaks, 0 timeouts, $0.0009 in total (about
+$0.04 per 1,000 classifications), median 1.7 s;** the 5 guarded traps never reached the model.
+**Next for step 6:** the app: unclear short messages go to the classifier, `search` shows the top
+notes as a card with **Ask Wilma instead** (then a Play build and a phone check).
 **A5e plan** for the owner's answers: #73, `docs/phase5-a5e-voice-plan.md`.
 
 **A5b, the `chat` function** (`docs/phase5-a5b-chat-function-plan.md`):
