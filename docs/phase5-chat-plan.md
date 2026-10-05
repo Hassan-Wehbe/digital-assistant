@@ -213,6 +213,7 @@ are updated to name the providers in use. The policy already promises this.
 - **A5e: voice.** Speech to text with the phone's own recognition (a native module, so a new
   build). `RECORD_AUDIO` is blocked today and must be unblocked on purpose: read the module's
   start-up code first (the A3a crash lesson). Spoken replies are optional.
+  Detailed plan: `docs/phase5-a5e-voice-plan.md`.
 - **A5f: pictures** in the thread (the model describes, Storage keeps the file; escalation
   route) and **budget settings** in the app.
 - Separately (D19): **vault import** from password-manager exports, on the device, never
