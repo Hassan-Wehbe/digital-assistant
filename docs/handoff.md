@@ -1,7 +1,8 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-10-05 (A5d, the one box: steps 1-5 merged, #63-#67; step 7 = build and phone
-check next; step 6, the cheap classifier, deferred by the owner).
+Last updated 2026-10-05 (A5d, the one box: done. Steps 1-5 merged, #63-#67; built as Play
+versionCode 6; the owner's phone checklist passed in full; step 6, the cheap classifier, deferred
+by the owner).
 Read this, then `CLAUDE.md`, `docs/design.md`, `docs/phase3-mobile-app-plan.md` and
 `docs/phase5-chat-plan.md`, before changing anything. The owner is returning to development:
 explain steps plainly, keep PRs small, say clearly when they must act, never ask for passwords,
@@ -20,9 +21,12 @@ routing: `chatRoute.ts` and `send` in `lib/chat.tsx`. **Step 6** (cheap classifi
 until the owner has used the box (it needs a `chat` change, a migration and eval cases).
 **Built and live for internal testers: Play versionCode 6** (2026-10-05, from `main` at 6bb1b8e,
 GitHub run 37246623531, https://expo.dev/accounts/zafnut/projects/wilma/builds/36ef55dd-3de7-43c5-b058-e68c47663ae1 ;
-it also carries the layout fixes #60 and #61). **Next:** the owner runs
-`docs/phase5-a5d-phone-checklist.md` (the one box plus the layout re-checks).
-After a few days of use the owner decides when to delete the Search link.
+it also carries the layout fixes #60 and #61). **Phone checklist passed, 2026-10-05:** the owner
+ran `docs/phase5-a5d-phone-checklist.md` on versionCode 6 and every line passed (the one box, the
+allowance and offline lines, and the #60/#61 layout re-checks), so the layout fixes are now
+verified on a device. **A5d is done.** Still open, the owner's call after a few days of use:
+delete the Search link, and whether step 6 (cheap classifier) is wanted. **Next phase:** A5e
+(voice) or A5f (pictures, budget settings), `docs/phase5-chat-plan.md`.
 
 **A5b, the `chat` function** (`docs/phase5-a5b-chat-function-plan.md`):
 1. **Done, merged (#43):** one tool list (`mcp/tools/all.ts`) and one set of instructions
@@ -73,7 +77,7 @@ The A5c plan (for the owner's approval, 10 decisions): `docs/phase5-a5c-chat-scr
 | Database | migrations up to `ai_usage` applied (2026-10-02) |
 | Chat function `chat` | **version 3, deployed 2026-10-03** (#54: the `vault` event carries `secret_type` and `new_secret`; 43/44 files identical, 401 without sign-in), first deployed 2026-10-02 (version 2, #46) and live-checked; `OPENAI_API_KEY` and `LLM_ROUTES` set in Supabase secrets by the owner (2026-10-02) |
 | MCP server `mcp` | **version 8, server 0.6.0**, 22 tools, with the rule 9 credential check (PR #31, deployed 2026-10-01; deployed files checked identical to the repo, unsigned calls answer 401) |
-| Mobile app (Expo, `app/`) | merged to `main` up to PR #67: A0-A3, A5c (chat screen, delete and vault cards) and A5d steps 1-5 (the one box) complete; A5d not yet built. A3b secrets (#23), **A3c** spaces (#25), vault setup / recovery / passphrase change (#26), **A4** privacy + deletion pages and Play guide (#27), change sign-in password (#28), mascot app icon (#29, from another session), A5c chat screen (#50-#54), layout fixes (#60, #61), A5d one box (#64-#67). `npm run check`: 256 tests |
+| Mobile app (Expo, `app/`) | merged to `main` up to PR #69: A0-A3, A5c (chat screen, delete and vault cards) and A5d (the one box) complete, built (versionCode 6) and phone-checked. A3b secrets (#23), **A3c** spaces (#25), vault setup / recovery / passphrase change (#26), **A4** privacy + deletion pages and Play guide (#27), change sign-in password (#28), mascot app icon (#29, from another session), A5c chat screen (#50-#54), layout fixes (#60, #61), A5d one box (#64-#67). `npm run check`: 256 tests |
 | Google Play | app created, **internal testing, versionCode 6 live** (built 2026-10-05 from `main` at 6bb1b8e, auto-submitted: https://expo.dev/accounts/zafnut/projects/wilma/builds/36ef55dd-3de7-43c5-b058-e68c47663ae1 ; A5d one box, chat screen, layout fixes #60/#61, mascot icon). Upload key reset done (see "Google Play and app updates"). App-content forms and store listing may still be incomplete; answers in `docs/phase4-play-release.md` |
 | Web pages | `docs/legal/privacy.html`, `docs/legal/delete-account.html` live (contact zaftechlabs@gmail.com) |
 | Supabase | ACTIVE_HEALTHY, region us-west-2 |
