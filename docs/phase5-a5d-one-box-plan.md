@@ -15,7 +15,11 @@ the chat screen follows the outcome (opens a space, shows a secret's card, keeps
 the allowance is used up and shows why under the box). Two changes from the plan: the space list
 is read with the secrets, per short message, instead of being kept in memory (simpler, never
 stale; sentences make no read at all); and step A also sends question words (how, why, when, who,
-did, do, does, much, many, should, will) to Wilma before any read. Parent plans: `docs/phase5-chat-plan.md` (A5d),
+did, do, does, much, many, should, will) to Wilma before any read (merged, #66).
+**Step 5 built:** the home screen's one box with Send, and two small links under it: **Search**
+(the old note search on the box's text, D3) and **Conversation** (back to the thread without
+sending; added because the Ask Wilma button is gone). The old search field and the Ask Wilma button
+are removed. Parent plans: `docs/phase5-chat-plan.md` (A5d),
 `docs/phase5-a5c-chat-screen-plan.md` (the chat screen this builds on). Design: `docs/design.md`
 D18 (one box, an invisible router that prefers the model when unsure), D22 (password retrieval
 never counts against the budget) and D23 (no search bar; a found secret shows the reveal card

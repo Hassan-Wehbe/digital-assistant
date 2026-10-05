@@ -1,4 +1,6 @@
-// Home: search everything (restricted spaces are never searched), or browse by space.
+// Home: the one box (docs/phase5-a5d-one-box-plan.md): a space's or a secret's name is answered
+// here with no model call, anything else goes to Wilma. A small Search button still runs the old
+// note search on the box's text (restricted spaces are never searched); spaces to browse below.
 import * as Application from 'expo-application';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -7,6 +9,7 @@ import { FlatList, Pressable, RefreshControl, Text, TextInput, View } from 'reac
 import { ItemRow, SpaceRow } from '@/components/rows';
 import { Button, ErrorBox, KeyboardScreen, Loading, Muted, styles, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { useChat } from '@/lib/chat';
 import { versionLabel } from '@/lib/config';
 import type { SearchResult, Space } from '@/lib/wilma';
 
@@ -15,9 +18,12 @@ type Row = { kind: 'space'; space: Space } | { kind: 'item'; item: SearchResult 
 export default function Home() {
   const c = useColors();
   const { wilma, session, signOut } = useAuth();
+  const chat = useChat();
   const [text, setText] = useState('');
   const [query, setQuery] = useState('');
-  // "Search" from a chat message comes back here and puts the cursor in the search field.
+  // Shown under the box when a message for Wilma could not be sent (allowance used up).
+  const [held, setHeld] = useState<string | null>(null);
+  // "Search" from a chat message comes back here and puts the cursor in the box.
   const { focus } = useLocalSearchParams<{ focus?: string }>();
   const search = useRef<TextInput>(null);
   useEffect(() => {
@@ -34,25 +40,55 @@ export default function Home() {
 
   useReloadOnReturn(reload);
 
+  const submit = async () => {
+    if (!chat.canSend || !text.trim()) return;
+    const out = await chat.send(text);
+    if (out.to === 'none') return;
+    if (out.to === 'blocked') {
+      setHeld(chat.state.blocked);
+      return;
+    }
+    setText('');
+    setQuery('');
+    setHeld(null);
+    if (out.to === 'space') router.push({ pathname: '/space/[id]', params: { id: out.id, path: out.path } });
+    else router.push('/chat');
+  };
+
+  const link = (title: string, onPress: () => void, disabled = false) => (
+    <Pressable accessibilityRole="button" onPress={onPress} disabled={disabled} hitSlop={8}>
+      <Text style={{ color: c.accent, fontSize: 16, fontWeight: '600', opacity: disabled ? 0.5 : 1 }}>{title}</Text>
+    </Pressable>
+  );
+
   const header = (
     <View style={{ gap: 12 }}>
-      <Button title="Ask Wilma" onPress={() => router.push('/chat')} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <TextInput
+          ref={search}
+          style={[styles.input, { color: c.text, borderColor: c.line, backgroundColor: c.card, flex: 1 }]}
+          placeholder="Ask Wilma, or type a name"
+          placeholderTextColor={c.muted}
+          value={text}
+          onChangeText={(t) => {
+            setText(t);
+            setHeld(null);
+            if (!t.trim()) setQuery('');
+          }}
+          onSubmitEditing={submit}
+          returnKeyType="send"
+          clearButtonMode="while-editing"
+          maxLength={20000}
+        />
+        <Button title="Send" onPress={submit} disabled={!chat.canSend || !text.trim()} />
+      </View>
+      {held ? <Muted>{held}</Muted> : null}
+      <View style={{ flexDirection: 'row', gap: 24 }}>
+        {/* Temporary (plan D3): the old note search, never the model. */}
+        {link('Search', () => setQuery(text.trim()), !text.trim())}
+        {link('Conversation', () => router.push('/chat'))}
+      </View>
       <Button title="New note or photo" kind="plain" onPress={() => router.push('/new-item')} />
-      <TextInput
-        ref={search}
-        style={[styles.input, { color: c.text, borderColor: c.line, backgroundColor: c.card }]}
-        placeholder="Search your notes, recipes, designs…"
-        placeholderTextColor={c.muted}
-        value={text}
-        onChangeText={(t) => {
-          setText(t);
-          if (!t.trim()) setQuery('');
-        }}
-        onSubmitEditing={() => setQuery(text.trim())}
-        returnKeyType="search"
-        clearButtonMode="while-editing"
-        autoCapitalize="none"
-      />
       {query ? (
         <Text style={[styles.title, { color: c.text }]}>{`Results for “${query}”`}</Text>
       ) : (
