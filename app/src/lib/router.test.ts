@@ -90,6 +90,12 @@ describe('step A: parseLookup', () => {
     }
   });
 
+  it('sends questions and sentences to Wilma before any name is read', () => {
+    for (const text of ['how much did I pay for the roof', 'when is the dentist', 'why recipes', 'who has the spare key', 'do I have a bank pin']) {
+      expect(parseLookup(text)).toBeNull();
+    }
+  });
+
   it('sends empty, long and too wordy messages to Wilma', () => {
     expect(parseLookup('')).toBeNull();
     expect(parseLookup('   ')).toBeNull();

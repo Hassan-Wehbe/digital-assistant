@@ -2,8 +2,8 @@
 // without any model and without the network, whether a message is only the name of one space or
 // one secret. Anything else, and anything uncertain, goes to Wilma.
 //
-// Step A, `parseLookup(text)`: is this message only a name? Write words, values ("... is x",
-// ":", "=") and sentences go to Wilma. Otherwise it gives the words to look for (`query`, for the
+// Step A, `parseLookup(text)`: is this message only a name? Write words, question words
+// (how, why, when, ...), values ("... is x", ":", "=") and sentences go to Wilma. Otherwise it gives the words to look for (`query`, for the
 // server's vault search).
 // Step B, `pickLookup(lookup, spaces, secrets)`: exactly one space or secret with that name, or
 // Wilma. Restricted spaces, and everything inside them, are left out before matching (CLAUDE.md
@@ -51,6 +51,11 @@ const WRITE_WORDS = new Set([
   'save', 'store', 'keep', 'add', 'put', 'delete', 'remove', 'erase', 'purge', 'clear', 'trash',
   'empty', 'update', 'change', 'edit', 'rename', 'move', 'replace', 'set', 'create', 'make', 'new',
   'remember', 'forget', 'write', 'send', 'share', 'attach', 'upload', 'restore', 'copy',
+]);
+
+/** Words of a question or a sentence, never of a lookup ("how much did I pay ..."): Wilma. */
+const SENTENCE_WORDS = new Set([
+  'how', 'why', 'when', 'who', 'whom', 'whose', 'did', 'do', 'does', 'much', 'many', 'should', 'will',
 ]);
 
 /** Words around a name in a lookup ("open the Recipes space", "what's my ..."). */
@@ -111,7 +116,7 @@ const isIn = (set: Set<string>, word: string) => set.has(word) || set.has(singul
 export function parseLookup(text: string): Lookup | null {
   if (text.length > MAX_LENGTH || /[:=]/.test(text)) return null;
   const all = words(text);
-  if (all.some((w) => isIn(WRITE_WORDS, w.norm))) return null;
+  if (all.some((w) => isIn(WRITE_WORDS, w.norm) || SENTENCE_WORDS.has(w.norm))) return null;
   // "the wifi is hunter2": a value is being given, so the words never go to the vault search.
   if (all.some((w, i) => VALUE_WORDS.has(w.norm) && !(i > 0 && QUESTION_WORDS.has(all[i - 1].norm)))) return null;
   const kept = all.filter((w) => !isIn(COMMON_FILLERS, w.norm));

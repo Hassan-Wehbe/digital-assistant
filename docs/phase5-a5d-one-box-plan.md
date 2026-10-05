@@ -9,8 +9,13 @@ vault search (merged, #64).
 **Step 3 built:** `chatThread.ts` gains a `lookup` action (the message, a short assistant line
 and, for a secret, the usual vault card with id, name and kind only; no model call) and
 `canLookup` (lookups also work when the allowance is used up; `canSend`, the Wilma path, still
-stops). The saved thread needs no change (same entry kinds). 9 new tests. Not called by the app
-yet. Parent plans: `docs/phase5-chat-plan.md` (A5d),
+stops). The saved thread needs no change (same entry kinds). 9 new tests (merged, #65).
+**Step 4 built:** `chatRoute.ts` (`routeMessage`) and the provider's `send` route every message;
+the chat screen follows the outcome (opens a space, shows a secret's card, keeps the text when
+the allowance is used up and shows why under the box). Two changes from the plan: the space list
+is read with the secrets, per short message, instead of being kept in memory (simpler, never
+stale; sentences make no read at all); and step A also sends question words (how, why, when, who,
+did, do, does, much, many, should, will) to Wilma before any read. Parent plans: `docs/phase5-chat-plan.md` (A5d),
 `docs/phase5-a5c-chat-screen-plan.md` (the chat screen this builds on). Design: `docs/design.md`
 D18 (one box, an invisible router that prefers the model when unsure), D22 (password retrieval
 never counts against the budget) and D23 (no search bar; a found secret shows the reveal card
