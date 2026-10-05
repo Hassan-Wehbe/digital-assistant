@@ -1,8 +1,11 @@
 # A5d: the one box (plan)
 
 Status: **owner answered "yes to all" (2026-10-04)**: D1-D6 and Q1-Q7 below are all decided as
-recommended (Q4: the classifier is built last, only if still wanted). Code starts once this plan
-is merged. Parent plans: `docs/phase5-chat-plan.md` (A5d),
+recommended (Q4: the classifier is built last, only if still wanted). Plan merged (#63).
+**Step 2 built:** `app/src/lib/router.ts` and `router.test.ts` (22 tests), not called by the app
+yet. One addition to step A: a message that gives a value ("is/was/are/were" not straight after
+what/where/which, or any `:` or `=`) goes to Wilma, so words like "wifi hunter2" never reach the
+vault search. Parent plans: `docs/phase5-chat-plan.md` (A5d),
 `docs/phase5-a5c-chat-screen-plan.md` (the chat screen this builds on). Design: `docs/design.md`
 D18 (one box, an invisible router that prefers the model when unsure), D22 (password retrieval
 never counts against the budget) and D23 (no search bar; a found secret shows the reveal card
