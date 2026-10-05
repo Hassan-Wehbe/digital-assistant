@@ -24,9 +24,11 @@ GitHub run 37246623531, https://expo.dev/accounts/zafnut/projects/wilma/builds/3
 it also carries the layout fixes #60 and #61). **Phone checklist passed, 2026-10-05:** the owner
 ran `docs/phase5-a5d-phone-checklist.md` on versionCode 6 and every line passed (the one box, the
 allowance and offline lines, and the #60/#61 layout re-checks), so the layout fixes are now
-verified on a device. **A5d is done.** Still open, the owner's call after a few days of use:
-delete the Search link, and whether step 6 (cheap classifier) is wanted. **Next phase:** A5e
-(voice) or A5f (pictures, budget settings), `docs/phase5-chat-plan.md`.
+verified on a device. **A5d is done.** Owner's decisions (2026-10-05): **drop the Search link**
+(done on `main` once its PR merges, not yet built: the home screen keeps only **Conversation**
+under the box; when the allowance is used up, the held text runs the old note search instead,
+and the chat's **Search** button runs it on the last question; never the model), **build step 6**
+(the cheap classifier) and **start A5e** (voice) with a plan.
 
 **A5b, the `chat` function** (`docs/phase5-a5b-chat-function-plan.md`):
 1. **Done, merged (#43):** one tool list (`mcp/tools/all.ts`) and one set of instructions

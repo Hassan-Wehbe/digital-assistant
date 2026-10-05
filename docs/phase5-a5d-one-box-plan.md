@@ -22,8 +22,8 @@ sending; added because the Ask Wilma button is gone). The old search field and t
 are removed (merged, #67). **Step 6 deferred** (Q4: after the owner has used the box).
 **Step 7:** phone checklist `docs/phase5-a5d-phone-checklist.md` (with the #60/#61 layout
 re-checks) and handoff updated; built as Play versionCode 6 (2026-10-05) and **the owner's phone
-checklist passed in full** (2026-10-05). A5d is done; deleting the Search link and step 6 wait
-for the owner after a few days of use. Parent plans: `docs/phase5-chat-plan.md` (A5d),
+checklist passed in full** (2026-10-05). A5d is done. Owner, 2026-10-05: drop the Search link (its
+own PR; the note search stays only as the fallback when Wilma can't answer) and build step 6. Parent plans: `docs/phase5-chat-plan.md` (A5d),
 `docs/phase5-a5c-chat-screen-plan.md` (the chat screen this builds on). Design: `docs/design.md`
 D18 (one box, an invisible router that prefers the model when unsure), D22 (password retrieval
 never counts against the budget) and D23 (no search bar; a found secret shows the reveal card

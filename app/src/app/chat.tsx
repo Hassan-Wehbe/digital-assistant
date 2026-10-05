@@ -7,7 +7,7 @@ import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { ChatBubble } from '@/components/ChatBubble';
 import { Button, confirm, KeyboardScreen, Loading, Muted, styles, useColors } from '@/components/ui';
 import { useChat } from '@/lib/chat';
-import { cardActive, type ErrorButton } from '@/lib/chatThread';
+import { cardActive, type ErrorButton, lastUserText } from '@/lib/chatThread';
 
 export default function Chat() {
   const c = useColors();
@@ -27,7 +27,8 @@ export default function Chat() {
   const onButton = (button: ErrorButton) => {
     if (button === 'try_again') retry();
     else if (button === 'vault') router.push('/vault');
-    else router.dismissTo({ pathname: '/', params: { focus: 'search' } });
+    // Search: the note search (no model) on the last question, on the home screen.
+    else router.dismissTo({ pathname: '/', params: { focus: 'search', q: lastUserText(state.entries) ?? '' } });
   };
 
   const newConversation = async () => {

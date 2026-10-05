@@ -51,6 +51,15 @@ export function errorButtons(code: string): ErrorButton[] {
   }
 }
 
+/** The newest message the user typed in the thread, for the Search button (null when none). */
+export function lastUserText(entries: Entry[]): string | null {
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const e = entries[i];
+    if (e.kind === 'user') return e.text;
+  }
+  return null;
+}
+
 /**
  * A delete card: waiting for a tap (pending), its delete under way (running), then deleted,
  * cancelled, not done (the conversation moved on) or failed (Delete and Cancel stay).
