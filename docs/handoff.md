@@ -18,8 +18,10 @@ link (old note search, temporary) and **Conversation** link sit under the box. W
 allowance is used up, lookups still work. Rules: `app/src/lib/router.ts` (pure, tested);
 routing: `chatRoute.ts` and `send` in `lib/chat.tsx`. **Step 6** (cheap classifier) is deferred
 until the owner has used the box (it needs a `chat` change, a migration and eval cases).
-**Next (step 7):** the owner says "build for Play" (the build also carries the layout fixes #60
-and #61), then runs `docs/phase5-a5d-phone-checklist.md` (the one box plus the layout re-checks).
+**Built and live for internal testers: Play versionCode 6** (2026-10-05, from `main` at 6bb1b8e,
+GitHub run 37246623531, https://expo.dev/accounts/zafnut/projects/wilma/builds/36ef55dd-3de7-43c5-b058-e68c47663ae1 ;
+it also carries the layout fixes #60 and #61). **Next:** the owner runs
+`docs/phase5-a5d-phone-checklist.md` (the one box plus the layout re-checks).
 After a few days of use the owner decides when to delete the Search link.
 
 **A5b, the `chat` function** (`docs/phase5-a5b-chat-function-plan.md`):
@@ -72,7 +74,7 @@ The A5c plan (for the owner's approval, 10 decisions): `docs/phase5-a5c-chat-scr
 | Chat function `chat` | **version 3, deployed 2026-10-03** (#54: the `vault` event carries `secret_type` and `new_secret`; 43/44 files identical, 401 without sign-in), first deployed 2026-10-02 (version 2, #46) and live-checked; `OPENAI_API_KEY` and `LLM_ROUTES` set in Supabase secrets by the owner (2026-10-02) |
 | MCP server `mcp` | **version 8, server 0.6.0**, 22 tools, with the rule 9 credential check (PR #31, deployed 2026-10-01; deployed files checked identical to the repo, unsigned calls answer 401) |
 | Mobile app (Expo, `app/`) | merged to `main` up to PR #67: A0-A3, A5c (chat screen, delete and vault cards) and A5d steps 1-5 (the one box) complete; A5d not yet built. A3b secrets (#23), **A3c** spaces (#25), vault setup / recovery / passphrase change (#26), **A4** privacy + deletion pages and Play guide (#27), change sign-in password (#28), mascot app icon (#29, from another session), A5c chat screen (#50-#54), layout fixes (#60, #61), A5d one box (#64-#67). `npm run check`: 256 tests |
-| Google Play | app created, **internal testing, versionCode 5 live** (built 2026-10-04 from `main` at 61b1674: https://expo.dev/accounts/zafnut/projects/wilma/builds/116e9645-4d8a-4ed6-9631-3a00ae6d7ee2 ; has the chat screen and the mascot icon, not the layout fixes #60/#61). Upload key reset done (see "Google Play and app updates"). App-content forms and store listing may still be incomplete; answers in `docs/phase4-play-release.md` |
+| Google Play | app created, **internal testing, versionCode 6 live** (built 2026-10-05 from `main` at 6bb1b8e, auto-submitted: https://expo.dev/accounts/zafnut/projects/wilma/builds/36ef55dd-3de7-43c5-b058-e68c47663ae1 ; A5d one box, chat screen, layout fixes #60/#61, mascot icon). Upload key reset done (see "Google Play and app updates"). App-content forms and store listing may still be incomplete; answers in `docs/phase4-play-release.md` |
 | Web pages | `docs/legal/privacy.html`, `docs/legal/delete-account.html` live (contact zaftechlabs@gmail.com) |
 | Supabase | ACTIVE_HEALTHY, region us-west-2 |
 
@@ -94,7 +96,7 @@ phone checklist stays the final test before a Play build.
 
 ## Google Play and app updates (updated 2026-10-04)
 
-- Wilma is on **Internal testing**, currently **versionCode 5**. Testers are the owner plus family
+- Wilma is on **Internal testing**, currently **versionCode 6**. Testers are the owner plus family
   and friends; the owner creates their Wilma accounts in Supabase.
 - **Server changes** (the `mcp` and `chat` functions, migrations) reach everyone without an app
   update.
@@ -120,9 +122,9 @@ phone checklist stays the final test before a Play build.
   first uploaded under "FCM V1 service account key" (push notifications), and the build then
   failed with "Google Service Account Keys cannot be set up in --non-interactive mode". The FCM
   entry is unused and harmless. The key file is never in the repo or in chat.
-- **Auto-submit from `app build` is not yet proven end to end:** its only run (18) failed before
-  the key was in the right slot; the build itself went through and was submitted with `app
-  submit`. The next production build will show whether `--auto-submit` works on its own.
+- **Auto-submit from `app build` works end to end** (proven 2026-10-05, versionCode 6: build and
+  submission both succeeded, the owner confirmed). Its first run (18) had failed only because the
+  key was in the wrong slot. `app submit` stays as the backup when only the submit fails.
 - **Upload key.** The Expo credentials for `com.zaf.wilma` were deleted by mistake (2026-10-01),
   so EAS generated a new upload key for the next build; Google's upload-key reset was requested
   and became valid 2026-10-03 23:28 UTC, after which uploads work. (The helper workflow for
