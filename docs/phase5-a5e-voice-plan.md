@@ -1,7 +1,7 @@
 # A5e: voice, speech to text (plan)
 
-Status: **draft for the owner's approval (2026-10-05).** Nothing is built. Answer Q1-Q8 below
-("yes to all recommendations" is fine). Parent plan: `docs/phase5-chat-plan.md` (A5e). Builds on
+Status: **approved by the owner (2026-10-05): Q1-Q8 all as recommended** (below). Nothing is
+built; next is step 2. Parent plan: `docs/phase5-chat-plan.md` (A5e). Builds on
 A5d, the one box (`docs/phase5-a5d-one-box-plan.md`). Design: `docs/design.md` D18 (one box and
 voice, no modes). Read `docs/handoff.md`, "Lessons from this session (read before adding native
 packages)", before step 2.
@@ -158,6 +158,11 @@ iOS and the web page (the app ships on Android only today), dictation in note ed
 
 ## Decisions
 
+**Owner's answers (2026-10-05):** Q1 into the box, the user taps Send; Q2 `expo-speech-recognition`
+if step 2's checks pass; Q3 on-device when available, otherwise the phone's speech service, said on
+the privacy page; Q4 the home box and the chat box only; Q5 the phone's language; Q6 words appear
+while speaking; Q7 no spoken replies in this phase; Q8 "Never type or say passwords here."
+
 - **Q1. Dictated text: into the box, or sent straight away?** *Recommend:* **into the box; you
   tap Send.** Never auto-sent. A misheard word could open the wrong thing, save junk, or start a
   delete (deletes confirm, but a save does not). And a dictated password must reach the same
@@ -227,7 +232,7 @@ screen while listening, airplane mode, no mic in the vault, and "my wifi passwor
 
 ## What the owner does
 
-- Approve this plan and answer Q1-Q8.
+- ~~Approve this plan and answer Q1-Q8.~~ Done 2026-10-05, all as recommended.
 - Approve the merges (steps 2, 3, 4), the preview build in step 2 and the Play build in step 5.
 - Approve the privacy wording; update Data safety in Play Console yourself (Claude cannot).
 - Run the phone checklist. Never dictate or paste passwords or keys to Wilma or to me; if you
