@@ -5,7 +5,12 @@ recommended (Q4: the classifier is built last, only if still wanted). Plan merge
 **Step 2 built:** `app/src/lib/router.ts` and `router.test.ts` (22 tests), not called by the app
 yet. One addition to step A: a message that gives a value ("is/was/are/were" not straight after
 what/where/which, or any `:` or `=`) goes to Wilma, so words like "wifi hunter2" never reach the
-vault search. Parent plans: `docs/phase5-chat-plan.md` (A5d),
+vault search (merged, #64).
+**Step 3 built:** `chatThread.ts` gains a `lookup` action (the message, a short assistant line
+and, for a secret, the usual vault card with id, name and kind only; no model call) and
+`canLookup` (lookups also work when the allowance is used up; `canSend`, the Wilma path, still
+stops). The saved thread needs no change (same entry kinds). 9 new tests. Not called by the app
+yet. Parent plans: `docs/phase5-chat-plan.md` (A5d),
 `docs/phase5-a5c-chat-screen-plan.md` (the chat screen this builds on). Design: `docs/design.md`
 D18 (one box, an invisible router that prefers the model when unsure), D22 (password retrieval
 never counts against the budget) and D23 (no search bar; a found secret shows the reveal card
