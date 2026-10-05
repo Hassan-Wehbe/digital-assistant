@@ -149,7 +149,7 @@ function setup(steps: Step[], opts: { llm?: ChatDeps["llm"] } = {}): Setup {
     verifyToken: (t) => Promise.resolve(t === "good-token" ? "eval-user" : null),
     clientFor: () => account.client(),
     llm: opts.llm ?? model.llm(),
-    log: (e) => logs.push(e),
+    log: (e) => e.event === "chat" && logs.push(e),
   });
   return { account, model, logs, handler };
 }
@@ -516,7 +516,7 @@ Deno.test("chat: a database client that throws still ends the stream with the co
     verifyToken: () => Promise.resolve("eval-user"),
     clientFor: () => ({ rpc: () => Promise.reject(new Error("Zanzibar socket")) }) as unknown as SupabaseClient,
     llm: s.model.llm(),
-    log: (e) => s.logs.push(e),
+    log: (e) => e.event === "chat" && s.logs.push(e),
   });
   const res = await handler(request({ messages: [{ role: "user", content: "hello" }] }));
   const events = (await res.text()).split("\n").filter(Boolean).map((l) => JSON.parse(l));

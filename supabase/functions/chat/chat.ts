@@ -16,11 +16,15 @@
 //              "new_secret":bool,"link":...}
 //             {"type":"error","code":"allowance_used"|"service_paused"|"connection","message":...}
 //             {"type":"done","counted":true|false}                    always last
+//
+// A body {"classify": "..."} is the one box's classifier instead (classify.ts): a plain JSON
+// answer, not a stream.
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { systemPrompt } from "../_shared/assistant_prompt.ts";
 import { type Llm, LlmError, type Message, QUOTA_EXCEEDED, RoutesConfigError, type ToolResult } from "../_shared/llm/index.ts";
 import { loadAssistantName } from "../mcp/lib/assistant.ts";
+import { classify, classifyBody, type ClassifyLog } from "./classify.ts";
 import { CONFIRM_TOOLS, confirmCard } from "./confirm.ts";
 import {
   ALLOWANCE_LOW, allowanceUsed, type ChatErrorCode, ERROR_TEXT, STATUS, STATUS_DEFAULT, TOO_MANY_STEPS,
@@ -62,7 +66,7 @@ export interface ChatDeps {
   clientFor(token: string): SupabaseClient;
   /** The configured model routes. May throw RoutesConfigError (LLM_ROUTES missing or invalid). */
   llm(): Pick<Llm, "stream">;
-  log(entry: LogEntry): void;
+  log(entry: LogEntry | ClassifyLog): void;
 }
 
 const CORS = {
@@ -109,6 +113,12 @@ export function createHandler(deps: ChatDeps): (req: Request) => Promise<Respons
       raw = await req.json();
     } catch {
       raw = null;
+    }
+    if (raw && typeof raw === "object" && "classify" in raw) {
+      const body = classifyBody.safeParse(raw);
+      if (!body.success) return jsonError(400, "bad_request", "send {classify: \"...\"} (1-500 characters)");
+      const verdict = await classify(deps, token, userId, body.data.classify, req.signal);
+      return Response.json(verdict, { headers: { ...CORS, "Cache-Control": "no-store" } });
     }
     const parsed = bodySchema.safeParse(raw);
     const messages = parsed.success ? toMessages(parsed.data.messages) : null;
