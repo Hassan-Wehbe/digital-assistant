@@ -3,7 +3,9 @@
 //
 //   deno run -A --config supabase/functions/mcp/deno.json tests/eval/run.ts \
 //     --models haiku-4-5,sonnet-5-5-low [--cases all|<ids or categories>] [--repeat 1] \
-//     [--max-dollars 10] [--concurrency 1] [--out tests/eval/results] [--dry-run]
+//     [--max-dollars 10] [--concurrency 1] [--out tests/eval/results] [--dry-run] [--suite chat|router]
+//
+// --suite router evaluates the one box's classifier (router.ts) instead of Wilma's conversations.
 //
 // --dry-run prints the plan and a cost estimate and calls nothing (no keys needed).
 // Keys come from ANTHROPIC_API_KEY / OPENAI_API_KEY in the environment and are never printed.
@@ -16,6 +18,7 @@ import { runConversation } from "./harness.ts";
 import { CASES } from "./cases.ts";
 import { type CaseResult, type EvalCase, grade } from "./grade.ts";
 import { markdown, summarize } from "./report.ts";
+import { estimateRouterCents, ROUTER_CASES, type RouterCase, routerMarkdown, type RouterResult, runRouterCase } from "./router.ts";
 
 export interface Candidate extends ModelConfig {
   disabled?: string;
@@ -37,7 +40,10 @@ export function parseArgs(argv: string[]): Record<string, string> {
 }
 
 /** "all", or a comma list of case ids and categories. */
-export function selectCases(spec: string, cases: EvalCase[] = CASES): EvalCase[] {
+export function selectCases<C extends { id: string; category: string } = EvalCase>(
+  spec: string,
+  cases: C[] = CASES as unknown as C[],
+): C[] {
   if (!spec || spec === "all") return cases;
   const wanted = spec.split(",").map((s) => s.trim()).filter(Boolean);
   const unknown = wanted.filter((w) => !cases.some((c) => c.id === w || c.category === w));
@@ -141,7 +147,9 @@ async function main() {
     models: Record<string, Candidate>;
   }).models;
   const selected = selectModels(args.models ?? "", all);
-  const cases = selectCases(args.cases ?? "all");
+  const suite = args.suite ?? "chat";
+  if (suite !== "chat" && suite !== "router") throw new Error(`unknown suite "${suite}": chat or router`);
+  const cases = suite === "router" ? selectCases<RouterCase>(args.cases ?? "all", ROUTER_CASES) : selectCases<EvalCase>(args.cases ?? "all");
   const repeat = Math.max(1, Number(args.repeat ?? 1));
   const maxDollars = Number(args["max-dollars"] ?? 10);
   // One case at a time by default: new provider accounts have low per-minute limits.
@@ -155,9 +163,12 @@ async function main() {
   if (!ready.length) throw new Error("no selected model has its API key set; nothing to run");
   const models = ready;
 
-  console.log(`Plan: ${cases.length} cases x ${repeat} run(s) on ${models.map(([id]) => id).join(", ")}.`);
+  console.log(`Plan (${suite}): ${cases.length} cases x ${repeat} run(s) on ${models.map(([id]) => id).join(", ")}.`);
   for (const [id, m] of models) {
-    console.log(`  ${id} (${m.provider} ${m.model}): at most about $${(estimateCents(m, cases, repeat) / 100).toFixed(2)}`);
+    const cents = suite === "router"
+      ? estimateRouterCents(m, cases as RouterCase[], repeat)
+      : estimateCents(m, cases as EvalCase[], repeat);
+    console.log(`  ${id} (${m.provider} ${m.model}): at most about $${(cents / 100).toFixed(2)}`);
   }
   console.log(`Spending cap for the whole run: $${maxDollars.toFixed(2)} (remaining cases are skipped once it is reached).`);
   if (args["dry-run"]) return;
@@ -166,6 +177,10 @@ async function main() {
   for (const [, m] of models) if (!adapters.has(m.provider)) adapters.set(m.provider, adapterFor(m.provider));
 
   const capCents = maxDollars * 100;
+  if (suite === "router") {
+    await runRouterSuite(models, adapters, cases as RouterCase[], repeat, capCents, maxDollars, missing, args.out);
+    return;
+  }
   let spentCents = 0;
   const results: Record<string, (CaseResult | "skipped")[]> = {};
   const transcripts: unknown[] = [];
@@ -173,7 +188,7 @@ async function main() {
   for (const [id, m] of models) {
     results[id] = [];
     let stopped = false;
-    const jobs = cases.flatMap((c) => Array.from({ length: repeat }, () => c));
+    const jobs = (cases as EvalCase[]).flatMap((c) => Array.from({ length: repeat }, () => c));
     await pool(jobs, concurrency, async (c) => {
       if (spentCents >= capCents || stopped) {
         results[id].push("skipped");
@@ -214,6 +229,44 @@ async function main() {
   const summaryFile = Deno.env.get("GITHUB_STEP_SUMMARY");
   if (summaryFile) await Deno.writeTextFile(summaryFile, report, { append: true });
   console.log(`\n${report}\nSaved ${outDir}/eval-${stamp}.md and .json (full transcripts).`);
+}
+
+/** The classifier suite: one model call per case, graded in router.ts. */
+async function runRouterSuite(
+  models: [string, Candidate][],
+  adapters: Map<ProviderId, LlmAdapter>,
+  cases: RouterCase[],
+  repeat: number,
+  capCents: number,
+  maxDollars: number,
+  notes: string[],
+  out: string | undefined,
+) {
+  let spentCents = 0;
+  const results: Record<string, RouterResult[]> = {};
+  for (const [id, m] of models) {
+    results[id] = [];
+    for (const c of cases.flatMap((c) => Array.from({ length: repeat }, () => c))) {
+      if (spentCents >= capCents) break;
+      const r = await runRouterCase(adapters.get(m.provider)!, m, c);
+      spentCents += r.costCents;
+      results[id].push(r);
+      const mark = r.pass ? "pass" : r.leak ? "LEAK" : "fail";
+      const got = r.verdict.route === "search" ? `search "${r.verdict.query}"` : `wilma${r.code ? ` (${r.code})` : ""}`;
+      console.log(`${mark.padEnd(5)} ${id} ${c.id}: ${got} (${(r.ms / 1000).toFixed(1)} s)`);
+      if (!r.pass) console.log(`    ${r.failures.join("; ")}`);
+    }
+  }
+  const date = new Date().toISOString().slice(0, 16).replace("T", " ");
+  const report = routerMarkdown(results, { date, repeat, maxDollars, notes });
+  const outDir = out ?? "tests/eval/results";
+  await Deno.mkdir(outDir, { recursive: true });
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  await Deno.writeTextFile(`${outDir}/router-${stamp}.md`, report);
+  await Deno.writeTextFile(`${outDir}/router-${stamp}.json`, JSON.stringify(results, null, 2));
+  const summaryFile = Deno.env.get("GITHUB_STEP_SUMMARY");
+  if (summaryFile) await Deno.writeTextFile(summaryFile, report, { append: true });
+  console.log(`\n${report}\nSaved ${outDir}/router-${stamp}.md and .json.`);
 }
 
 if (import.meta.main) {

@@ -20,6 +20,16 @@ cost and speed.
 - `report.ts`, `run.ts`: the runner and the comparison table.
 - `models.json`: the candidates with their prices (check them in each provider's console).
 
+## The classifier suite (`--suite router`)
+
+`router.ts`: 28 short messages for the one box's cheap classifier (`supabase/functions/chat/classify.ts`,
+one-box plan step 6): 10 that should become a note search with the right words, 9 that should go to
+Wilma (greetings, requests, a prompt injection) and 9 secret traps. Each runs through the real
+`classify()` (server guard, prompt, answer checks, 5-second timeout) with the candidate on the
+`router` route. A search query that carries a trap's made-up value is a **leak** and fails the
+model; guarded traps must not reach the model at all. A run costs a fraction of a cent. In the
+workflow, pick suite `router`.
+
 ## Running it
 
 Each run calls real model APIs and costs real money (a few dollars at most for two models).
