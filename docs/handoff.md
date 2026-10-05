@@ -25,10 +25,22 @@ it also carries the layout fixes #60 and #61). **Phone checklist passed, 2026-10
 ran `docs/phase5-a5d-phone-checklist.md` on versionCode 6 and every line passed (the one box, the
 allowance and offline lines, and the #60/#61 layout re-checks), so the layout fixes are now
 verified on a device. **A5d is done.** Owner's decisions (2026-10-05): **drop the Search link**
-(done on `main` once its PR merges, not yet built: the home screen keeps only **Conversation**
-under the box; when the allowance is used up, the held text runs the old note search instead,
-and the chat's **Search** button runs it on the last question; never the model), **build step 6**
-(the cheap classifier) and **start A5e** (voice) with a plan.
+(merged #70, not yet built: the home screen keeps only **Conversation** under the box; when the
+allowance is used up, the held text runs the old note search instead, and the chat's **Search**
+button runs it on the last question; never the model), **build step 6** (the cheap classifier)
+and **start A5e** (voice) with a plan.
+
+**Step 6, the cheap classifier: server side done (2026-10-05).** Migration `ai_cost_only`
+(`record_ai_cost`: a classification's cost, not a request; #71) dry-run 11/11 in a rolled-back
+transaction, then applied. `chat` **version 4** deployed from `main` at 003dafc (#72: the body
+`{"classify": "..."}` answers `{"route":"search","query"}` or `{"route":"wilma"}`; the `router`
+route gets only the message; vault words and credentials never reach the model; any failure is
+`wilma`): 44/45 files identical to the repo (the `.d.ts` is not listed back, as before), 401
+without sign-in and with a fake token. No live classification has been made yet: the app does
+not call it. **Next for step 6:** (a) evaluation cases for the router route, including secret
+traps, and the owner-approved paid run (CLAUDE.md rule 9, D21); (b) the app: unclear short
+messages go to the classifier, `search` shows the top notes as a card with **Ask Wilma instead**.
+**A5e plan** for the owner's answers: #73, `docs/phase5-a5e-voice-plan.md`.
 
 **A5b, the `chat` function** (`docs/phase5-a5b-chat-function-plan.md`):
 1. **Done, merged (#43):** one tool list (`mcp/tools/all.ts`) and one set of instructions
@@ -76,8 +88,8 @@ The A5c plan (for the owner's approval, 10 decisions): `docs/phase5-a5c-chat-scr
 
 | Piece | State |
 |---|---|
-| Database | migrations up to `ai_usage` applied (2026-10-02) |
-| Chat function `chat` | **version 3, deployed 2026-10-03** (#54: the `vault` event carries `secret_type` and `new_secret`; 43/44 files identical, 401 without sign-in), first deployed 2026-10-02 (version 2, #46) and live-checked; `OPENAI_API_KEY` and `LLM_ROUTES` set in Supabase secrets by the owner (2026-10-02) |
+| Database | migrations up to `ai_cost_only` applied (2026-10-05; `ai_usage` 2026-10-02) |
+| Chat function `chat` | **version 4, deployed 2026-10-05** (#72: the classifier request; 44/45 files identical, 401 without sign-in). Version 3, 2026-10-03 (#54: the `vault` event carries `secret_type` and `new_secret`; 43/44 files identical, 401 without sign-in), first deployed 2026-10-02 (version 2, #46) and live-checked; `OPENAI_API_KEY` and `LLM_ROUTES` set in Supabase secrets by the owner (2026-10-02) |
 | MCP server `mcp` | **version 8, server 0.6.0**, 22 tools, with the rule 9 credential check (PR #31, deployed 2026-10-01; deployed files checked identical to the repo, unsigned calls answer 401) |
 | Mobile app (Expo, `app/`) | merged to `main` up to PR #69: A0-A3, A5c (chat screen, delete and vault cards) and A5d (the one box) complete, built (versionCode 6) and phone-checked. A3b secrets (#23), **A3c** spaces (#25), vault setup / recovery / passphrase change (#26), **A4** privacy + deletion pages and Play guide (#27), change sign-in password (#28), mascot app icon (#29, from another session), A5c chat screen (#50-#54), layout fixes (#60, #61), A5d one box (#64-#67). `npm run check`: 256 tests |
 | Google Play | app created, **internal testing, versionCode 6 live** (built 2026-10-05 from `main` at 6bb1b8e, auto-submitted: https://expo.dev/accounts/zafnut/projects/wilma/builds/36ef55dd-3de7-43c5-b058-e68c47663ae1 ; A5d one box, chat screen, layout fixes #60/#61, mascot icon). Upload key reset done (see "Google Play and app updates"). App-content forms and store listing may still be incomplete; answers in `docs/phase4-play-release.md` |
