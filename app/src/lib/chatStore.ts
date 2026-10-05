@@ -8,7 +8,7 @@
 //
 // The pieces are passed in so the logic can be unit-tested without a phone.
 
-import { errorButtons, MAX_ENTRIES, MAX_TEXT, PARTIAL_NOTE, type ConfirmState, type Entry } from './chatThread';
+import { errorButtons, MAX_ENTRIES, MAX_TEXT, noteRef, PARTIAL_NOTE, type ConfirmState, type Entry, type NoteRef } from './chatThread';
 import type { AuthStorage } from './sessionStorage';
 
 const PREFIX = 'wilma.chat.';
@@ -93,6 +93,18 @@ export function toEntry(raw: unknown): Entry | null {
         buttons: errorButtons(raw.code),
         ...(raw.note === PARTIAL_NOTE ? { note: PARTIAL_NOTE } : {}),
       };
+    case 'notes': {
+      if (!str(raw.query) || !Array.isArray(raw.notes)) return null;
+      const notes: NoteRef[] = raw.notes
+        .filter((n): n is Record<string, unknown> => isObject(n) && str(n.id) && str(n.title))
+        .map((n) => noteRef({
+          id: n.id as string,
+          title: n.title as string,
+          ...(str(n.space) ? { space: n.space } : {}),
+          ...(str(n.snippet) ? { snippet: n.snippet } : {}),
+        }));
+      return notes.length ? { kind: 'notes', id, query: cut(raw.query), notes } : null;
+    }
     default:
       return null;
   }

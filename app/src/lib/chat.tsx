@@ -10,12 +10,13 @@
 //
 // A message first goes through the router (chatRoute.ts, docs/phase5-a5d-one-box-plan.md): the
 // exact name of one space or secret is answered here with no model call; anything else goes to
-// Wilma. Lookups also work when the month's allowance is used up.
+// Wilma. Lookups also work when the month's allowance is used up. A short message that matches no
+// name may be a search: the server's classifier decides (step 6), and the notes found are shown
+// with "Ask Wilma instead". The classifier is not asked when the allowance is used up.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { useAuth } from './auth';
-import { routeMessage } from './chatRoute';
-import type { Route } from './router';
+import { MAX_NOTES, routeMessage, type MessageRoute } from './chatRoute';
 import { runConfirm, runTurn } from './chatRun';
 import { threadsToKeep } from './chatStore';
 import { canLookup, chatReducer, initialChat, monthKey, noticeVisible, type ChatAction, type ChatState } from './chatThread';
@@ -30,6 +31,8 @@ export type SendOutcome =
   | { to: 'space'; id: string; path: string }
   /** The name of a secret: its vault card is in the thread. */
   | { to: 'secret' }
+  /** A search the classifier recognised: the notes card is in the thread. */
+  | { to: 'notes' }
   /** For Wilma, but this month's allowance is used up: nothing was sent (`state.blocked` says why). */
   | { to: 'blocked' }
   /** Nothing happened (empty, not ready, or busy). */
@@ -43,8 +46,12 @@ interface ChatContextValue {
   canSend: boolean;
   /** The allowance banner shows this month. */
   bannerVisible: boolean;
-  /** Routes the message (a lookup, or Wilma) and says what happened. */
+  /** A message is being routed (names read, maybe the classifier asked): Send waits. */
+  routing: boolean;
+  /** Routes the message (a lookup, a search, or Wilma) and says what happened. */
   send(text: string): Promise<SendOutcome>;
+  /** "Ask Wilma instead" on a notes card: sends that message to Wilma, past the router. */
+  askWilma(text: string): Promise<SendOutcome>;
   stop(): void;
   /** Try again after a connection error: re-sends the last message. */
   retry(): void;
@@ -149,6 +156,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       state,
       ready: loadedFor !== null && loadedFor === userId,
       canSend: canLookup(state) && !routingNow && loadedFor !== null && loadedFor === userId,
+      routing: routingNow,
       bannerVisible: noticeVisible(state, monthKey(new Date())),
       async send(text) {
         const none: SendOutcome = { to: 'none' };
@@ -156,11 +164,19 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         const forUser = user.current;
         routing.current = true;
         setRoutingNow(true);
-        let route: Route;
+        let route: MessageRoute;
+        // Used up this month: the classifier is not asked (it would cost, and answer Wilma anyway).
+        const classifier = current.current.blocked === null
+          ? {
+            classify: chat.classify,
+            searchNotes: (query: string) => wilma.search({ query, limit: MAX_NOTES, close_matches_only: true }),
+          }
+          : {};
         try {
           route = await routeMessage(text, {
             spaces: wilma.listSpaces,
             findSecrets: (query) => wilma.findSecrets({ query }),
+            ...classifier,
           });
         } finally {
           routing.current = false;
@@ -169,10 +185,24 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         // Signed out or another account while the names were read: nothing is written.
         if (user.current !== forUser) return none;
         const before = current.current;
+        if (route.to === 'notes') {
+          if (act({ type: 'notes', text, query: route.query, notes: route.notes }) === before) return none;
+          return { to: 'notes' };
+        }
         if (route.to !== 'wilma') {
           if (act({ type: 'lookup', text, route }) === before) return none;
           return route.to === 'space' ? { to: 'space', id: route.space.id, path: route.space.path } : { to: 'secret' };
         }
+        if (before.blocked !== null) return { to: 'blocked' };
+        const next = act({ type: 'send', text });
+        if (next === before) return none;
+        start(next.entries);
+        return { to: 'wilma' };
+      },
+      async askWilma(text) {
+        const none: SendOutcome = { to: 'none' };
+        if (!loadedFor || loadedFor !== userId || routing.current || !text.trim()) return none;
+        const before = current.current;
         if (before.blocked !== null) return { to: 'blocked' };
         const next = act({ type: 'send', text });
         if (next === before) return none;
@@ -213,7 +243,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         act({ type: 'confirm_cancel', id });
       },
     }),
-    [state, routingNow, loadedFor, userId, act, start, abort, wilma, removeSecret, signOut],
+    [state, routingNow, loadedFor, userId, act, start, abort, wilma, chat, removeSecret, signOut],
   );
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

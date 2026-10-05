@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { oneTypo, parseLookup, pickLookup, secretNames, type Route, type SecretName } from './router';
+import { oneTypo, parseLookup, pickLookup, placeLookup, secretNames, type Route, type SecretName } from './router';
 import type { SecretMeta, Space } from './wilma';
 
 const space = (id: string, path: string, restricted = false): Space => ({ id, path, description: null, restricted });
@@ -219,5 +219,26 @@ describe('oneTypo', () => {
     expect(oneTypo('netflix', 'ntflx')).toBe(false);
     expect(oneTypo('netflix', 'xetflox')).toBe(false);
     expect(oneTypo('وصفات', 'وصفاة')).toBe(true);
+  });
+});
+
+describe('step B for step 6: placeLookup tells "no name" from "two names"', () => {
+  const place = (text: string) => placeLookup(parseLookup(text)!, SPACES, SECRETS);
+
+  it('no name at all is null (the classifier may decide), the same as pickLookup otherwise', () => {
+    expect(place('lasagna recipe')).toBeNull();
+    expect(place('recipes')).toEqual(toSpace('s-recipes'));
+    expect(place('gmail')).toEqual(toSecret('k-gmail'));
+  });
+
+  it('two names is Wilma, never null', () => {
+    const twin = [...SECRETS, secret('k-recipes', 'Recipes')];
+    expect(placeLookup(parseLookup('recipes')!, SPACES, twin)).toEqual(WILMA);
+  });
+
+  it('a restricted space is the same as no name (null), with no hint (rule 3)', () => {
+    expect(place('health')).toBeNull();
+    expect(place('clinic')).toBeNull();
+    expect(place('health')).toEqual(place('nothing like this'));
   });
 });

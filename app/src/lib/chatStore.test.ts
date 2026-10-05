@@ -215,3 +215,13 @@ describe('chat store', () => {
     expect(threadsToKeep(false, true, null)).toBeUndefined();
   });
 });
+
+describe('saved notes cards (A5d step 6)', () => {
+  it('keeps a notes card with only its known fields, and drops a malformed one', () => {
+    expect(
+      toEntry({ kind: 'notes', id: '4', query: 'lasagna', notes: [{ id: 'n1', title: 'Lasagna', space: 'Recipes', link: 'https://x', snippet: 5 }, { title: 'no id' }] }),
+    ).toEqual({ kind: 'notes', id: '4', query: 'lasagna', notes: [{ id: 'n1', title: 'Lasagna', space: 'Recipes' }] });
+    expect(toEntry({ kind: 'notes', id: '4', query: 'x', notes: [] })).toBeNull();
+    expect(toEntry({ kind: 'notes', id: '4', notes: [{ id: 'n1', title: 'T' }] })).toBeNull();
+  });
+});

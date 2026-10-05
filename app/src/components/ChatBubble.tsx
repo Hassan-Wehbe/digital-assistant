@@ -2,7 +2,7 @@
 // Text is plain and selectable (no markdown, no links opened: decision 3).
 import { Text, View } from 'react-native';
 
-import { DeleteCard, VaultCard } from '@/components/ChatCards';
+import { DeleteCard, NotesCard, VaultCard } from '@/components/ChatCards';
 import { Button, Card, Muted, useColors } from '@/components/ui';
 import type { Entry, ErrorButton } from '@/lib/chatThread';
 
@@ -15,6 +15,8 @@ export function ChatBubble({
   cardActive,
   onConfirm,
   onCancel,
+  notesActive = false,
+  onAskWilma,
 }: {
   entry: Entry;
   onButton: (button: ErrorButton) => void;
@@ -24,6 +26,9 @@ export function ChatBubble({
   cardActive: boolean;
   onConfirm: (id: string) => void;
   onCancel: (id: string) => void;
+  /** A notes card's "Ask Wilma instead" can be tapped. */
+  notesActive?: boolean;
+  onAskWilma?: (entry: Extract<Entry, { kind: 'notes' }>) => void;
 }) {
   const c = useColors();
   switch (entry.kind) {
@@ -66,5 +71,7 @@ export function ChatBubble({
       return <DeleteCard entry={entry} active={cardActive} onConfirm={() => onConfirm(entry.id)} onCancel={() => onCancel(entry.id)} />;
     case 'vault':
       return <VaultCard entry={entry} />;
+    case 'notes':
+      return <NotesCard entry={entry} active={notesActive && !!onAskWilma} onAskWilma={() => onAskWilma?.(entry)} />;
   }
 }

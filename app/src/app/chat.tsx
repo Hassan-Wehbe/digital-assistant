@@ -7,11 +7,11 @@ import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { ChatBubble } from '@/components/ChatBubble';
 import { Button, confirm, KeyboardScreen, Loading, Muted, styles, useColors } from '@/components/ui';
 import { useChat } from '@/lib/chat';
-import { cardActive, type ErrorButton, lastUserText } from '@/lib/chatThread';
+import { cardActive, type Entry, type ErrorButton, lastUserText, notesActive } from '@/lib/chatThread';
 
 export default function Chat() {
   const c = useColors();
-  const { state, ready, canSend, bannerVisible, send, stop, retry, dismissBanner, clear, confirmDelete, cancelDelete } = useChat();
+  const { state, ready, canSend, routing, bannerVisible, send, askWilma, stop, retry, dismissBanner, clear, confirmDelete, cancelDelete } = useChat();
   const [text, setText] = useState('');
   const list = useRef<FlatList>(null);
 
@@ -29,6 +29,13 @@ export default function Chat() {
     else if (button === 'vault') router.push('/vault');
     // Search: the note search (no model) on the last question, on the home screen.
     else router.dismissTo({ pathname: '/', params: { focus: 'search', q: lastUserText(state.entries) ?? '' } });
+  };
+
+  // "Ask Wilma instead": the message just before the card goes to Wilma, past the router.
+  const onAskWilma = (card: Entry) => {
+    const at = state.entries.findIndex((e) => e.id === card.id);
+    const asked = state.entries.slice(0, at).findLast((e) => e.kind === 'user');
+    if (asked?.kind === 'user') askWilma(asked.text);
   };
 
   const newConversation = async () => {
@@ -81,10 +88,12 @@ export default function Chat() {
               cardActive={cardActive(state, item)}
               onConfirm={confirmDelete}
               onCancel={cancelDelete}
+              notesActive={notesActive(state, item) && canSend}
+              onAskWilma={onAskWilma}
             />
           )}
           ListEmptyComponent={<Muted>Ask about your notes, save something new, or find a password in your vault.</Muted>}
-          ListFooterComponent={state.status ? <Muted>{state.status}</Muted> : null}
+          ListFooterComponent={state.status ? <Muted>{state.status}</Muted> : routing ? <Muted>One moment…</Muted> : null}
           onContentSizeChange={() => list.current?.scrollToEnd({ animated: true })}
           keyboardShouldPersistTaps="handled"
         />

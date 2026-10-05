@@ -1,6 +1,6 @@
 import { describe, expect, it, jest } from '@jest/globals';
 
-import { chatClient, type StreamingFetch } from './chatClient';
+import { chatClient, toVerdict, type StreamingFetch } from './chatClient';
 import { CONNECTION_MESSAGE, type ChatEvent } from './chatStream';
 import type { Entry } from './chatThread';
 import { WilmaError } from './wilma';
@@ -168,5 +168,41 @@ describe('chat client', () => {
     });
     const stopped = chatClient({ url: URL, token: async () => TOKEN, refresh: async () => null, fetch });
     expect(await all(stopped.send(hello, controller.signal))).toEqual([]);
+  });
+});
+
+describe('classify (A5d step 6)', () => {
+  const json = (status: number, body: unknown) => {
+    const bytes = [new TextEncoder().encode(JSON.stringify(body))];
+    return { ...streamed(status), body: { getReader: () => ({ read: async () => { const value = bytes.shift(); return value ? { done: false as const, value } : { done: true as const, value: undefined }; }, cancel: async () => {} }) } };
+  };
+
+  it('posts only the message with the sign-in, and returns the server\'s search', async () => {
+    const { client, fetch } = setup([json(200, { route: 'search', query: 'lasagna' }) as never]);
+    expect(await client.classify('lasagna recipe')).toEqual({ route: 'search', query: 'lasagna' });
+    const [url, init] = fetch.mock.calls[0];
+    expect(url).toBe(URL);
+    expect(JSON.parse(init.body)).toEqual({ classify: 'lasagna recipe' });
+    expect(init.headers.Authorization).toBe(`Bearer ${TOKEN}`);
+  });
+
+  it('refreshes once after a 401', async () => {
+    const { client, refresh } = setup([streamed(401), json(200, { route: 'wilma' }) as never]);
+    expect(await client.classify('x')).toEqual({ route: 'wilma' });
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('never throws: signed out, offline, an error status or an odd answer all mean wilma', async () => {
+    expect(await setup([], { token: null }).client.classify('x')).toEqual({ route: 'wilma' });
+    expect(await setup([new Error('offline')]).client.classify('x')).toEqual({ route: 'wilma' });
+    expect(await setup([json(500, { route: 'search', query: 'x' }) as never]).client.classify('x')).toEqual({ route: 'wilma' });
+    expect(await setup([streamed(401), streamed(401)], { refreshed: null }).client.classify('x')).toEqual({ route: 'wilma' });
+  });
+
+  it('toVerdict accepts only a search with words, or wilma', () => {
+    expect(toVerdict({ route: 'search', query: ' roof ' })).toEqual({ route: 'search', query: 'roof' });
+    for (const odd of [null, 'search', { route: 'search' }, { route: 'search', query: '' }, { route: 'delete', query: 'x' }, { route: 'search', query: 'x'.repeat(101) }]) {
+      expect(toVerdict(odd)).toEqual({ route: 'wilma' });
+    }
   });
 });

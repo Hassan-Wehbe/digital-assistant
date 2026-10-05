@@ -41,9 +41,14 @@ not call it. **Evaluation (#75, `tests/eval/router.ts`, `run.ts --suite router`)
 searches, 9 for Wilma, 9 secret traps), each through the real `classify()`. **Run 37351420880
 (2026-10-05), Luna on the router route: 28/28, 0 leaks, 0 timeouts, $0.0009 in total (about
 $0.04 per 1,000 classifications), median 1.7 s;** the 5 guarded traps never reached the model.
-**Next for step 6:** the app: unclear short messages go to the classifier, `search` shows the top
-notes as a card with **Ask Wilma instead** (then a Play build and a phone check).
-**A5e plan** for the owner's answers: #73, `docs/phase5-a5e-voice-plan.md`.
+**App side built (PR "App: the classifier's notes card"):** a short message that matches no name
+at all (`placeLookup` null; two matches still go to Wilma, and vault words never reach the
+classifier) asks the classifier; on `search` the app runs `search_items` (close matches, at most
+5) and writes the message, a line naming the notes and a **notes card** with **Ask Wilma
+instead**; anything else, no notes or any failure goes to Wilma. Not asked when the allowance is
+used up. **Next:** merge, a Play build (it also carries #70), and
+`docs/phase5-a5d-step6-phone-checklist.md`.
+**A5e plan approved** (#73, Q1-Q8 as recommended): next is step 2, `docs/phase5-a5e-voice-plan.md`.
 
 **A5b, the `chat` function** (`docs/phase5-a5b-chat-function-plan.md`):
 1. **Done, merged (#43):** one tool list (`mcp/tools/all.ts`) and one set of instructions

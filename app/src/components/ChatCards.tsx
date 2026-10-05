@@ -7,7 +7,7 @@
 // being written is not interrupted), and never the server's link (lib/chatVault.ts).
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Text } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { UnlockCard } from '@/components/UnlockCard';
 import { Button, Card, Muted, useColors } from '@/components/ui';
@@ -116,6 +116,44 @@ export function VaultCard({ entry }: { entry: Extract<Entry, { kind: 'vault' }> 
     <Card style={{ alignSelf: 'flex-start', maxWidth: '85%', gap: 10 }}>
       <Text style={{ color: c.text, fontSize: 16, lineHeight: 22 }}>{`🔒 ${text}`}</Text>
       <Button title={button} kind="plain" onPress={open} />
+    </Card>
+  );
+}
+
+/**
+ * The notes found for a search the classifier recognised (one-box plan step 6). Each opens the
+ * note; "Ask Wilma instead" sends the same message to Wilma, so a wrong guess is never a dead end.
+ */
+export function NotesCard({
+  entry,
+  active,
+  onAskWilma,
+}: {
+  entry: Extract<Entry, { kind: 'notes' }>;
+  /** "Ask Wilma instead" can be tapped (the card is the newest entry and Wilma can be asked). */
+  active: boolean;
+  onAskWilma: () => void;
+}) {
+  const c = useColors();
+  return (
+    <Card style={{ alignSelf: 'flex-start', maxWidth: '85%', gap: 10 }}>
+      {entry.notes.map((n) => (
+        <Pressable
+          key={n.id}
+          accessibilityRole="button"
+          onPress={() => router.push({ pathname: '/item/[id]', params: { id: n.id } })}>
+          <View style={{ gap: 2 }}>
+            <Text style={{ color: c.accent, fontSize: 16, fontWeight: '600' }}>{n.title}</Text>
+            {n.space ? <Muted>{n.space}</Muted> : null}
+            {n.snippet ? (
+              <Text style={{ color: c.text, fontSize: 15, lineHeight: 21 }} numberOfLines={2}>
+                {n.snippet}
+              </Text>
+            ) : null}
+          </View>
+        </Pressable>
+      ))}
+      {active ? <Button title="Ask Wilma instead" kind="plain" onPress={onAskWilma} /> : null}
     </Card>
   );
 }
