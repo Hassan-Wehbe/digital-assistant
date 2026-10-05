@@ -1,6 +1,7 @@
 // Home: the one box (docs/phase5-a5d-one-box-plan.md): a space's or a secret's name is answered
-// here with no model call, anything else goes to Wilma. A small Search button still runs the old
-// note search on the box's text (restricted spaces are never searched); spaces to browse below.
+// here with no model call, anything else goes to Wilma. When Wilma can't answer (allowance used
+// up, or the chat's Search button), the old note search runs on the text instead, never the model
+// (restricted spaces are never searched); spaces to browse below.
 import * as Application from 'expo-application';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -23,14 +24,24 @@ export default function Home() {
   const [query, setQuery] = useState('');
   // Shown under the box when a message for Wilma could not be sent (allowance used up).
   const [held, setHeld] = useState<string | null>(null);
-  // "Search" from a chat message comes back here and puts the cursor in the box.
-  const { focus } = useLocalSearchParams<{ focus?: string }>();
+  // "Search" from a chat message comes back here with the last question (q) and runs the note
+  // search on it, or, with no question, puts the cursor in the box.
+  const { focus, q } = useLocalSearchParams<{ focus?: string; q?: string }>();
   const search = useRef<TextInput>(null);
+  const [seenQ, setSeenQ] = useState<string | undefined>(undefined);
+  if (q !== seenQ) {
+    setSeenQ(q);
+    const words = focus === 'search' ? q?.trim() : '';
+    if (words) {
+      setText(words);
+      setQuery(words);
+    }
+  }
   useEffect(() => {
     if (focus !== 'search') return;
-    search.current?.focus();
-    router.setParams({ focus: undefined });
-  }, [focus]);
+    if (!q?.trim()) search.current?.focus();
+    router.setParams({ focus: undefined, q: undefined });
+  }, [focus, q]);
 
   const { data, error, loading, reload } = useLoad<Row[]>(`home:${query}`, async () =>
     query
@@ -45,7 +56,9 @@ export default function Home() {
     const out = await chat.send(text);
     if (out.to === 'none') return;
     if (out.to === 'blocked') {
+      // Wilma can't answer this month: search the notes for the text instead (no model).
       setHeld(chat.state.blocked);
+      setQuery(text.trim());
       return;
     }
     setText('');
@@ -55,9 +68,9 @@ export default function Home() {
     else router.push('/chat');
   };
 
-  const link = (title: string, onPress: () => void, disabled = false) => (
-    <Pressable accessibilityRole="button" onPress={onPress} disabled={disabled} hitSlop={8}>
-      <Text style={{ color: c.accent, fontSize: 16, fontWeight: '600', opacity: disabled ? 0.5 : 1 }}>{title}</Text>
+  const link = (title: string, onPress: () => void) => (
+    <Pressable accessibilityRole="button" onPress={onPress} hitSlop={8} style={{ alignSelf: 'flex-start' }}>
+      <Text style={{ color: c.accent, fontSize: 16, fontWeight: '600' }}>{title}</Text>
     </Pressable>
   );
 
@@ -83,11 +96,7 @@ export default function Home() {
         <Button title="Send" onPress={submit} disabled={!chat.canSend || !text.trim()} />
       </View>
       {held ? <Muted>{held}</Muted> : null}
-      <View style={{ flexDirection: 'row', gap: 24 }}>
-        {/* Temporary (plan D3): the old note search, never the model. */}
-        {link('Search', () => setQuery(text.trim()), !text.trim())}
-        {link('Conversation', () => router.push('/chat'))}
-      </View>
+      {link('Conversation', () => router.push('/chat'))}
       <Button title="New note or photo" kind="plain" onPress={() => router.push('/new-item')} />
       {query ? (
         <Text style={[styles.title, { color: c.text }]}>{`Results for “${query}”`}</Text>

@@ -50,7 +50,9 @@ From milestone A1 the app opens on a sign-in screen. Use the same email and pass
 for Wilma in the Claude app (you type them on the phone, never into a chat). Then:
 
 - **Spaces:** tap one to see its items. Restricted spaces show a lock and do not open yet.
-- **Search:** type in the box at the top and press search. Restricted spaces are never searched.
+- **The box at the top** (since A5d): a space's or a secret's name opens it; anything else goes
+  to Wilma. Restricted spaces are never searched. (The old note search now runs only when Wilma
+  can't answer: the monthly allowance is used up, or the chat's **Search** button.)
 - **An item:** its full text, tags, linked items and attachments. **Download** asks Wilma for a
   fresh 10-minute link and opens it in the phone's browser, which saves the file.
 - **Sign out** is at the bottom of the home screen.

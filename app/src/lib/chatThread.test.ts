@@ -7,6 +7,7 @@ import {
   canSend,
   chatReducer,
   initialChat,
+  lastUserText,
   MAX_ENTRIES,
   MAX_TEXT,
   messagesToSend,
@@ -302,5 +303,21 @@ describe('lookups from the one box (A5d)', () => {
     const s = run(initialChat(), lookup('wifi', wifi), lookup('recipes', recipes));
     expect(s.entries.map(toEntry)).toEqual(s.entries);
     expect(initialChat(s.entries).seq).toBe(5);
+  });
+});
+
+describe('the Search button after an error', () => {
+  it('searches for the newest question the user typed', () => {
+    const entries: Entry[] = [
+      { kind: 'user', id: '1', text: 'first' },
+      { kind: 'assistant', id: '2', text: 'answer' },
+      { kind: 'user', id: '3', text: 'pasta recipe' },
+      { kind: 'error', id: '4', code: 'allowance_used', message: 'Used up', buttons: ['search', 'vault'] },
+    ];
+    expect(lastUserText(entries)).toBe('pasta recipe');
+  });
+
+  it('is null in an empty thread', () => {
+    expect(lastUserText([])).toBeNull();
   });
 });
