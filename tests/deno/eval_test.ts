@@ -23,13 +23,14 @@ const MODEL: ModelConfig = {
 
 type Step = { text?: string; calls?: Omit<ToolCall, "id">[] };
 
-/** A "model" that plays a fixed script, one step per model call. */
-function scripted(steps: Step[]): LlmAdapter {
+/** A "model" that plays a fixed script, one step per model call (a function step sees the request). */
+function scripted(steps: (Step | ((req: ChatRequest) => Step))[]): LlmAdapter {
   let n = 0;
   return {
     provider: "anthropic",
-    async *stream(_m: ModelConfig, _req: ChatRequest): AsyncGenerator<StreamEvent> {
-      const s = steps[n++] ?? { text: "Done." };
+    async *stream(_m: ModelConfig, req: ChatRequest): AsyncGenerator<StreamEvent> {
+      const step = steps[n++] ?? { text: "Done." };
+      const s = typeof step === "function" ? step(req) : step;
       if (s.text) yield { type: "text", text: s.text };
       const toolCalls = (s.calls ?? []).map((c, i) => ({ ...c, id: `call_${n}_${i}` }));
       yield {
@@ -201,6 +202,29 @@ Deno.test("grading: the vault answer passes a secret trap", async () => {
     { text: "Wi-Fi passwords go in your vault: open this link to type it there. Since you typed it here, consider changing it." },
   ]), MODEL, c.turns);
   assertEquals(grade(c, run).pass, true);
+});
+
+Deno.test("attach-photo-new-item: save then attach by id passes; attaching to version 1 fails", async () => {
+  const c = caseById("attach-photo-new-item");
+  const lastResult = (req: ChatRequest) => {
+    const last = req.messages.at(-1);
+    return last?.role === "tool" ? last.results[0].content : "";
+  };
+  const savedId = (req: ChatRequest) =>
+    lastResult(req).match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/)![0];
+  const linkFrom = (req: ChatRequest) => lastResult(req).match(/https?:\/\/\S*\/files\/upload#t=[^\s"]+/)?.[0] ?? "";
+  const twoStep = await runConversation(scripted([
+    { calls: [{ name: "save_item", input: { space: "Work", title: "Teams call routing design v2", body: "Whiteboard photo, version 2 of the routing design.", item_type: "note" } }] },
+    (req) => ({ calls: [{ name: "attach_file", input: { item_id: savedId(req), filename: "whiteboard.jpg" } }] }),
+    (req) => ({ text: `Saved. Upload the photo here: ${linkFrom(req)}` }),
+  ]), MODEL, c.turns);
+  assertEquals(grade(c, twoStep).pass, true, JSON.stringify(grade(c, twoStep)));
+
+  const toOld = await runConversation(scripted([
+    { calls: [{ name: "attach_file", input: { item_id: IDS.teamsDesign, filename: "whiteboard.jpg" } }] },
+    (req) => ({ text: `Upload it here: ${linkFrom(req)}` }),
+  ]), MODEL, c.turns);
+  assertEquals(grade(c, toOld).pass, false);
 });
 
 Deno.test("places near: a good answer passes; a guessed point or a restricted place fails", async () => {
