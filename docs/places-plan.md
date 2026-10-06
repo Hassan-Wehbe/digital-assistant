@@ -1,7 +1,9 @@
 # Places: notes with a location (plan)
 
-Status: **approved by the owner (2026-10-06): Q1-Q8 all as recommended.** Nothing is built; next
-is step 2, after A5e (Q8). Asked by the
+Status: **approved by the owner (2026-10-06): Q1-Q8 all as recommended; extended the same day**
+("Extension: richer places" below: cuisine, price, occasions, dishes, visits, "save where I am"
+and coordinates; Q2 changed). Nothing is built; next is step 2, after A5e (Q8). Comes **before
+the company account and before the day planner** (owner, 2026-10-06). Asked by the
 owner 2026-10-06: "a note type that allows adding a location, for example for restaurants or
 places to visit". Design entry: `docs/design.md` D26. Comes **after A5e** (voice) unless the owner
 says otherwise (Q8). Later feeds the day planner (D25, "saved places").
@@ -29,6 +31,32 @@ smaller one (Sonnet) for this plan's edits, step 5 (checklist, build, handoff) a
 5. **Not in the first version** (Q2): "near me", a map with pins, and "use where I am now".
    Those need the phone's location or a paid map service; they come later, with the day planner.
 
+## Extension: richer places (owner, 2026-10-06)
+
+The owner's example: "I go to a restaurant, I like it, I store the name, the location and the type
+of food, so a day planner or a **date planner** can use it later." So a place records what Wilma
+needs to *recommend* it, not only to find it:
+
+- **Facts:** name, address, map position (when known), kind, **cuisine** (one or more, e.g.
+  Italian, Lebanese, sushi), **price level** ($ to $$$$).
+- **The owner's opinion:** rating, **dishes liked** ("carbonara", "fattoush"), **would go back**
+  (yes/no), **occasions** (date night, with kids, business lunch, quick lunch, group, special
+  occasion) and the note.
+- **Visits:** "we went again last Friday with Sarah" adds a visit (date, who with, a line), so
+  Wilma knows what has not been done in a while. The latest visit sets `been` and `visited_on`.
+- **Ways to save** (in addition to telling Wilma, New note → Place and sharing from Google Maps):
+  **"Save where I am"** (one tap at the table: the phone's current location, asked only on that
+  tap, then "what's this place?") and a **photo** of the storefront or menu as an attachment
+  (attachments already exist).
+- **What it unlocks:** questions now ("Italian places we liked for date night", "where haven't we
+  been in a while?", "a good business lunch place downtown", "places near here" once coordinates
+  exist, by plain distance, no map service); later, with the day planner and the company's Google
+  setup: live opening hours, travel times with traffic, and the **date planner** ("plan a date
+  night Friday": a favourite tagged date night, not visited recently, open, timed around traffic).
+- **Live details are fetched, not stored:** opening hours change, so the planner checks them when
+  planning. Google's Maps terms generally allow keeping a place's Google ID but limit storing
+  other Google content; Wilma keeps the ID (when known) plus the owner's own notes.
+
 ## How it works
 
 - **No new table, probably no migration** (see Search below). An item already has a free `item_type` and a `metadata` field
@@ -42,9 +70,17 @@ smaller one (Sonnet) for this plan's edits, step 5 (checklist, build, handoff) a
   | `kind` | `restaurant` | restaurant, cafe, bar, shop, to-visit, hotel, other |
   | `status` | `want` | `want` (default) or `been` |
   | `rating` | 4 | 1-5, only when `been` |
-  | `visited_on` | 2026-10-12 | optional |
+  | `visited_on` | 2026-10-12 | optional; the latest visit |
+  | `cuisine` | `["italian"]` | list, short free words, lower case |
+  | `price_level` | 2 | 1-4 ($ to $$$$) |
+  | `dishes_liked` | `["carbonara"]` | list, short |
+  | `would_return` | true | optional |
+  | `occasions` | `["date_night"]` | from a fixed list: date_night, kids, business, quick_lunch, group, special |
+  | `visits` | `[{"on":"2026-10-12","with":"Sarah","note":"anniversary"}]` | newest first, at most 50 |
+  | `lat`, `lng` | 28.54, -81.38 | only from "save where I am" (or later a map service) |
+  | `google_place_id` | | later, with the company's Google setup; the only Google data kept |
 
-  Coordinates (`lat`, `lng`) are **not** stored in the first version (Q2).
+  Coordinates are stored only when the owner taps **Save where I am** (Q2, changed).
 - **The server checks place fields** (rule 9 spirit: the server, not the model, enforces the
   shape). `save_item` / `update_item` validate `place` metadata (known fields, lengths, link
   domains, rating range) and the credential check already covers every metadata value, so "the
@@ -67,11 +103,14 @@ smaller one (Sonnet) for this plan's edits, step 5 (checklist, build, handoff) a
   (`supabase/functions/_shared/assistant_prompt.ts`) learn the place type, and the evaluation gets
   cases: save a restaurant, mark it been with a rating, list "want to go" places, and a trap (a
   place note with a door or Wi-Fi code must be refused and pointed to the vault).
-- **Privacy:** in the first version the app never reads the phone's location, so the privacy
-  page's "does not collect your location" stays true; an address you type is your own content,
-  like any note. **No new Android permission.** If "use where I am now" comes later (Q2), it needs
-  the location permission, a privacy page change and a Play Data safety change, each approved by
-  the owner, like the microphone in A5e.
+- **Privacy:** the app reads the phone's location **only when the owner taps Save where I am**
+  (foreground, one reading, never in the background), and stores it in that place note only. This
+  needs the location permission (`ACCESS_FINE_LOCATION`, asked on that first tap), a privacy page
+  change and a Play Data safety change ("precise location, optional, stored with your note"),
+  each approved by the owner, like the microphone in A5e. Steps 2-4 need none of this; step 5 does.
+- **Near me (once coordinates exist):** distance is computed on the server from stored
+  coordinates (plain math, no map service, no cost); places without coordinates are listed by
+  address. Restricted spaces stay out (rule 3).
 
 ## Steps (each a small PR; the owner approves merges, builds and deploys)
 
@@ -84,16 +123,26 @@ smaller one (Sonnet) for this plan's edits, step 5 (checklist, build, handoff) a
    metadata round trip, the form refuses a non-Maps link. Strongest model.
 4. **Share from Google Maps** into the place form (check first what Google Maps shares on the
    owner's phone). Strongest model (touches the share intake).
-5. **Ship:** phone checklist (`docs/places-phone-checklist.md`), handoff, "build for Play".
+5. **Save where I am:** the location permission (asked on the tap only), one reading, the place
+   form with coordinates, `find_places` near a point (server-side distance), privacy page and
+   Data safety wording for the owner's approval. Strongest model (permission and privacy).
+6. **Ship:** phone checklist (`docs/places-phone-checklist.md`), handoff, "build for Play".
    Sonnet.
 
-Later, not in this plan: "near me" and a map with pins (needs coordinates, Q2), "use where I am
-now" (location permission), reminders when near a saved place, places in the day planner's
+Step 2 covers the extension's fields too (validation of cuisine, price, occasions, dishes,
+visits; "add a visit" through `update_item`; evaluation cases such as "Italian date-night places
+we liked", "where haven't we been since summer?", and a door code in a visit note, refused).
+Step 3 shows them (cuisine chips, price, occasions, dishes, **We went again** adding a visit).
+
+Later, not in this plan: a map with pins, live opening hours and travel times (Google, with the
+company account and the day planner), the **date planner**, geocoding typed addresses, reminders when near a saved place, places in the day planner's
 travel times (D25 step 3), sharing a list of places with family (item sharing, D-roadmap).
 
 ## Decisions
 
-**Owner's answers (2026-10-06): all as recommended.** Q1 a real `place` type; Q2 no coordinates
+**Owner's answers (2026-10-06): all as recommended,** then **Q2 changed the same day**: coordinates
+from **Save where I am** are in (step 5), with the location permission asked only on that tap; no
+geocoding service and no background location. Original answers: Q1 a real `place` type; Q2 no coordinates
 or "near me" now; Q3 short Maps links kept, not followed; Q4 a short fixed list of kinds; Q5 want to
 go / been there with a 1-5 rating; Q6 in the spaces you choose; Q7 share from Google Maps as step 4;
 Q8 after A5e.
