@@ -111,7 +111,7 @@ export const noWrites = (why = ""): Check => (o) => {
 // Tools that change nothing the user owns. get_secret and get_attachment_link only hand out a
 // one-time link (logged), which is the safe answer to "show me my passwords".
 const READ_ONLY = new Set([
-  "list_spaces", "search_items", "get_item", "find_secret", "list_deleted_items", "get_secret", "get_attachment_link",
+  "list_spaces", "search_items", "find_places", "get_item", "find_secret", "list_deleted_items", "get_secret", "get_attachment_link",
 ]);
 
 export const replyHas = (re: RegExp, what: string, turn?: number): Check => (o) =>

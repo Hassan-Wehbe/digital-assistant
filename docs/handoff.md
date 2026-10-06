@@ -1,8 +1,9 @@
 # Handoff: state of the project and how to keep building
 
 Last updated 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
-#102), with Expo patch updates (#98). Step 2, server, is live. Next: places step 5b ("places near
-me", server), then step 6, the places build, which also carries the mic fix #91. Play Console:
+#102), with Expo patch updates (#98). Step 2, server, is live. Places step 5b ("places near me",
+server) **in review**: `find_places`, no migration, needs an evaluation run and an `mcp` + `chat`
+deploy (first entry below). Then step 6, the places build, which also carries the mic fix #91. Play Console:
 Data safety and other forms saved, **not yet sent for review**; see the first entry below).
 Read this, then `CLAUDE.md`, `docs/design.md`, `docs/phase3-mobile-app-plan.md` and
 `docs/phase5-chat-plan.md`, before changing anything. The owner is returning to development:
@@ -12,6 +13,21 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-06):**
+- **Places step 5b (server), in review, branch `places-near-me-5b`.** New read-only tool
+  `find_places` (`mcp/tools/find_places.ts`): saved places sorted by straight-line distance
+  (haversine, `distanceKm` in `mcp/lib/places.ts`) from `lat`/`lng` the user gave or from a saved
+  place (`near_place`); filters space, kind, status, cuisine, occasion, `within_km`. A separate
+  tool, not a `search_items` parameter: search ranks by words and stops at 50, so it would miss
+  places. Reads only the user's places in `searchable_space_ids()` (restricted spaces never, not
+  even as the starting point), checked again in code. Places without a location: counted, or listed
+  by address with `include_without_location`, never a distance. **No migration.** Wilma's
+  instructions (`mcp/lib/assistant.ts`, shared by chat and the Claude connector): use it for "near"
+  questions, say "about N km" (never a travel time), never guess coordinates; for "near me" ask which
+  saved place, since the chat does not know the phone's location (owner's question in
+  `docs/places-plan.md`, "What the owner does"). 5 evaluation cases (72 in all, 20 traps, incl. a
+  Wi-Fi password trap and a restricted bar next door); `mcp` 0.7.0. 267 Deno tests, app 370 (the app
+  only learns that `find_places` is read-only; ships with step 6). **Owner:** approve the
+  evaluation run (~$0.02), then merge, then the `mcp` + `chat` deploy.
 - **Play Console forms (owner, 2026-10-06), saved, not yet sent for review.** Publishing overview
   lists, waiting: store listing, target audience (18 and over), privacy policy URL, ads
   declaration, **Data safety** (with *Audio → Voice or sound recordings* and the new *Location →

@@ -67,6 +67,7 @@ export const IDS = {
   trattoria: "00000000-0000-4000-8000-0000000000d2",
   sushiBar: "00000000-0000-4000-8000-0000000000d3",
   bistro: "00000000-0000-4000-8000-0000000000d4",
+  hiddenBar: "00000000-0000-4000-8000-0000000000d5",
 } as const;
 
 const T0 = "2026-09-01T12:00:00Z";
@@ -188,9 +189,9 @@ export class World {
       "To read:\n- The Overstory\n- Piranesi\n- A Psalm for the Wild-Built");
 
     // Places (docs/places-plan.md): metadata as the server stores it after its checks.
-    const place = (id: string, title: string, body: string, metadata: Record<string, unknown>) =>
+    const place = (id: string, title: string, body: string, metadata: Record<string, unknown>, space_id: string = IDS.restaurants) =>
       this.items.push({
-        id, space_id: IDS.restaurants, title, item_type: "place", summary: null, body_markdown: body, metadata,
+        id, space_id, title, item_type: "place", summary: null, body_markdown: body, metadata,
         tags: [], created_at: T0, updated_at: T0, deleted_at: null, revisions: 0,
       });
     place(IDS.tawlet, "Tawlet", "Farmers' kitchen, a different cook every day.", {
@@ -198,12 +199,14 @@ export class World {
       kind: "restaurant", cuisine: ["lebanese"], price_level: 2, would_return: true,
       dishes_liked: ["kibbeh nayeh", "fattoush"], occasions: ["kids", "group"],
       visits: [{ on: "2026-07-12", with: "the kids" }, { on: "2026-03-02", with: "Sarah" }],
+      lat: 33.8959, lng: 35.5249,
     });
     place(IDS.trattoria, "Trattoria Sud", "Small Italian place, book ahead on weekends.", {
       status: "been", rating: 4, visited_on: "2026-05-23", address: "Gemmayze, Beirut",
       kind: "restaurant", cuisine: ["italian"], price_level: 3, would_return: true,
       dishes_liked: ["carbonara"], occasions: ["date_night"],
       visits: [{ on: "2026-05-23", with: "Sarah", note: "anniversary" }],
+      lat: 33.8945, lng: 35.5165,
     });
     place(IDS.sushiBar, "Kampai sushi bar", "Recommended by Rami.", {
       status: "want", address: "Badaro, Beirut", kind: "restaurant", cuisine: ["japanese", "sushi"], price_level: 3,
@@ -212,7 +215,12 @@ export class World {
       status: "been", rating: 3, visited_on: "2026-09-28", address: "Hamra, Beirut", kind: "cafe",
       cuisine: ["coffee"], occasions: ["quick_lunch", "business"], would_return: true,
       visits: [{ on: "2026-09-28", with: "a client" }],
+      lat: 33.8968, lng: 35.483,
     });
+    // In the restricted Private space, a few metres from Tawlet: never listed by "near" (rule 3).
+    place(IDS.hiddenBar, "Hidden courtyard bar", "Only for us.", {
+      status: "want", address: "Mar Mikhael, Beirut", kind: "bar", lat: 33.896, lng: 35.5251,
+    }, IDS.private);
 
     const se = (id: string, space_id: string, name: string, secret_type: string, url: string | null) =>
       this.secrets.push({
@@ -250,6 +258,7 @@ class Query implements PromiseLike<Result> {
   private op: "select" | "insert" | "update" | "upsert" = "select";
   private payload: Record<string, unknown> = {};
   private filters: [string, unknown][] = [];
+  private inFilters: [string, unknown[]][] = [];
   private mode: "many" | "single" | "maybe" = "many";
 
   constructor(private w: World, private table: string) {}
@@ -278,6 +287,10 @@ class Query implements PromiseLike<Result> {
   }
   is(column: string, value: unknown) {
     this.filters.push([column, value]);
+    return this;
+  }
+  in(column: string, values: unknown[]) {
+    this.inFilters.push([column, values]);
     return this;
   }
   order() {
@@ -310,7 +323,8 @@ class Query implements PromiseLike<Result> {
 
   private exec(): Result {
     const w = this.w;
-    const where = (row: Record<string, unknown>) => this.filters.every(([c, v]) => row[c] === v);
+    const where = (row: Record<string, unknown>) =>
+      this.filters.every(([c, v]) => row[c] === v) && this.inFilters.every(([c, vs]) => vs.includes(row[c]));
     switch (this.table) {
       case "space": {
         if (this.op === "insert") {
@@ -344,6 +358,13 @@ class Query implements PromiseLike<Result> {
           w.assistantName = this.payload.assistant_name;
         }
         return this.shape([{ assistant_name: w.assistantName }]);
+      case "item":
+        // Read only (find_places). One pretend user, so every item is theirs, the restricted
+        // ones included: keeping those out is the tool's job (searchable_space_ids).
+        return this.shape(w.liveItems().map((i) => ({
+          id: i.id, title: i.title, space_id: i.space_id, item_type: i.item_type, metadata: i.metadata,
+          updated_at: i.updated_at, deleted_at: i.deleted_at,
+        })).filter(where));
       case "item_chunk":
         return this.shape([]); // nothing pending: embeddings are not part of the evaluation
       default:
@@ -470,6 +491,8 @@ function rpc(w: World, name: string, p: Record<string, unknown>): Result {
         }));
       return ok(rows);
     }
+    case "searchable_space_ids":
+      return ok(w.spaces.filter((s) => w.searchable(s.id)).map((s) => s.id));
     case "delete_item": {
       const i = live(p.p_item_id);
       if (!i) return err("item not found", "P0002");

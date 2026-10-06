@@ -275,3 +275,39 @@ export function withPlace(body: string, place: PlaceMetadata | null): string {
   const fields = placeText(place);
   return body.trim() ? `${body}\n\n${fields}` : fields;
 }
+
+// ---- Near a point (find_places) ----------------------------------------------------------------
+
+export interface Point {
+  lat: number;
+  lng: number;
+}
+
+/** Mean Earth radius in km (IUGG), the usual value for the haversine formula. */
+const EARTH_RADIUS_KM = 6371.0088;
+
+/**
+ * Straight-line ("as the crow flies") distance in km between two points, by the haversine
+ * formula. Plain math on stored coordinates: no map service, no cost. Roads make the real
+ * trip longer, so Wilma says "about" and never calls it a travel time.
+ */
+export function distanceKm(a: Point, b: Point): number {
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const dLat = rad(b.lat - a.lat);
+  const dLng = rad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+/**
+ * A saved place's position, or null when it has none. Read defensively: only a lat/lng pair of
+ * finite numbers in range counts (older or hand-edited metadata may hold anything), so a place
+ * without a real position never gets a distance.
+ */
+export function placePoint(metadata: unknown): Point | null {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return null;
+  const { lat, lng } = metadata as Record<string, unknown>;
+  const ok = (v: unknown, limit: number): v is number =>
+    typeof v === "number" && Number.isFinite(v) && Math.abs(v) <= limit;
+  return ok(lat, 90) && ok(lng, 180) ? { lat, lng } : null;
+}

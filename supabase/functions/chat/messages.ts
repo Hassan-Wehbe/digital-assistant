@@ -38,6 +38,7 @@ export const STATUS: Record<string, string> = {
   update_item: "Updating your note…",
   get_item: "Reading your note…",
   search_items: "Searching your notes…",
+  find_places: "Looking for places nearby…",
   link_items: "Linking your notes…",
   save_secret: "Preparing your vault…",
   find_secret: "Looking in your vault…",
