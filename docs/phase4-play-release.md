@@ -81,7 +81,12 @@ no chat with other people). The result should be "Everyone" or the local equival
     service (usually Google's) may send it off the phone to turn it into text, and declaring it
     is the safe reading of Google's form (declaring too much is allowed, too little is not).
     The resulting text is covered by "Other user-generated content".
-  - Not collected: location, contacts, messages, health, financial info, web browsing,
+  - *Location → Precise location* ("Save where I am", places step 5, from the places build).
+    Collected, **optional**, not shared, **processed ephemerally: No** (stored in that place
+    note). Purpose: **App functionality**. Read only when the user taps the button, once,
+    in the foreground; never in the background (background location is blocked in
+    `app/app.json`, so Play's separate background-location declaration does not apply).
+  - Not collected: contacts, messages, health, financial info, web browsing,
     device IDs, analytics or crash data (the app has none of these).
   - Vault values are end-to-end encrypted, so no one but the user can read them. Google's form
     still counts data that leaves the phone, so they are covered by "Other user-generated
