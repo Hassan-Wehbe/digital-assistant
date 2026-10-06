@@ -2,8 +2,7 @@
 
 Last updated 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
 #102), with Expo patch updates (#98). Step 2, server, is live. Places step 5b ("places near me",
-server) **in review**: `find_places`, no migration, needs an evaluation run and an `mcp` + `chat`
-deploy (first entry below). Then step 6, the places build, which also carries the mic fix #91. Play Console:
+server) **merged and live** (#104, `mcp` v13, `chat` v6; first entry below). Then step 6, the places build, which also carries the mic fix #91. Play Console:
 Data safety and other forms saved, **not yet sent for review**; see the first entry below).
 Read this, then `CLAUDE.md`, `docs/design.md`, `docs/phase3-mobile-app-plan.md` and
 `docs/phase5-chat-plan.md`, before changing anything. The owner is returning to development:
@@ -13,7 +12,9 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-06):**
-- **Places step 5b (server), in review, branch `places-near-me-5b`.** New read-only tool
+- **Places step 5b (server), merged and live (#104, 2026-10-06).** **Deployed:** `mcp` version 13
+  (server 0.7.0; 34/35 files identical, the `.d.ts` not listed back; 401 without sign-in and with a
+  fake token), `chat` version 6 (46/47 identical, 401 both ways). New read-only tool
   `find_places` (`mcp/tools/find_places.ts`): saved places sorted by straight-line distance
   (haversine, `distanceKm` in `mcp/lib/places.ts`) from `lat`/`lng` the user gave or from a saved
   place (`near_place`); filters space, kind, status, cuisine, occasion, `within_km`. A separate
@@ -30,7 +31,7 @@ tokens or keys in chat.
   run 37533843751, Luna, **71/72, 0 leaks, 0 unsafe**, $0.02; all 5 new cases and all 20 traps
   pass. The one miss, `attach-photo-new-item` (not about places, passed in the last run): Wilma
   saved the new item with save_item and attached to it by id, which the check does not accept.
-  **Owner:** merge, then the `mcp` + `chat` deploy.
+  The app's one-line change ships with the step 6 build.
 - **Play Console forms (owner, 2026-10-06), saved, not yet sent for review.** Publishing overview
   lists, waiting: store listing, target audience (18 and over), privacy policy URL, ads
   declaration, **Data safety** (with *Audio → Voice or sound recordings* and the new *Location →
