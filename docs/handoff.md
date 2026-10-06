@@ -1,7 +1,7 @@
 # Handoff: state of the project and how to keep building
 
 Last updated 2026-10-06 (Play **versionCode 7** live on the owner's phone: the Search link removal
-#70 and the classifier's notes card #77; the owner is running the step 6 phone checklist on it.
+#70 and the classifier's notes card #77; the step 6 phone checklist **passed in full**.
 #78, edit a note, merged but not built: it ships with versionCode 8. A5e step 2 in PR #79).
 Read this, then `CLAUDE.md`, `docs/design.md`, `docs/phase3-mobile-app-plan.md` and
 `docs/phase5-chat-plan.md`, before changing anything. The owner is returning to development:
@@ -12,10 +12,13 @@ tokens or keys in chat.
 
 **Newest first (2026-10-06):**
 - **Play versionCode 7 is live** on the owner's phone, built from `main` at b3c50df: the Search
-  link removal (#70) and the classifier's notes card (#77). The owner is running
-  `docs/phase5-a5d-step6-phone-checklist.md` on it; results not yet recorded here.
+  link removal (#70) and the classifier's notes card (#77). **Phone checklist passed in full**
+  (owner, 2026-10-06): `docs/phase5-a5d-step6-phone-checklist.md` minus its "Editing a note"
+  lines, which belong to versionCode 8. **A5d step 6 is done on phones** (notes card and the
+  Search link removal verified).
 - **#78 (edit a note's title and text) is merged to `main`, not built:** it ships with
-  versionCode 8.
+  versionCode 8, next when the owner says "build for Play"; then the checklist's "Editing a
+  note" lines.
 - **Step 6 server side is live:** migration `ai_cost_only` applied, `chat` version 4,
   classifier evaluation 28/28, 0 leaks (run 37351420880).
 - **A5e step 2** (speech package, RECORD_AUDIO, `src/lib/voice.ts` behind `VOICE_ENABLED =
@@ -62,8 +65,8 @@ at all (`placeLookup` null; two matches still go to Wilma, and vault words never
 classifier) asks the classifier; on `search` the app runs `search_items` (close matches, at most
 5) and writes the message, a line naming the notes and a **notes card** with **Ask Wilma
 instead**; anything else, no notes or any failure goes to Wilma. Not asked when the allowance is
-used up. **Merged and built as Play versionCode 7** (2026-10-06, with #70); the owner is running
-`docs/phase5-a5d-step6-phone-checklist.md`.
+used up. **Merged and built as Play versionCode 7** (2026-10-06, with #70);
+`docs/phase5-a5d-step6-phone-checklist.md` passed on it (2026-10-06).
 **A5e plan approved** (#73, Q1-Q8 as recommended): step 2 is PR #79 (above), `docs/phase5-a5e-voice-plan.md`.
 
 **A5b, the `chat` function** (`docs/phase5-a5b-chat-function-plan.md`):
