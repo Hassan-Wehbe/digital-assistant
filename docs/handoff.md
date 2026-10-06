@@ -1,8 +1,8 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-10-06 (Play **versionCode 8** live: note editing #78 and the speech package
-#79, mic still off; it started without a crash. versionCode 7's phone checklist passed in full,
-so A5d step 6 is done. Next: A5e step 3, the mic button).
+Last updated 2026-10-06 (A5e steps 3 and 4 merged: the mic button #86, privacy page and Data
+safety #87. **Play versionCode 9 building** with the mic on. Next: the owner runs
+`docs/phase5-a5e-phone-checklist.md` on versionCode 9).
 Read this, then `CLAUDE.md`, `docs/design.md`, `docs/phase3-mobile-app-plan.md` and
 `docs/phase5-chat-plan.md`, before changing anything. The owner is returning to development:
 explain steps plainly, keep PRs small, say clearly when they must act, never ask for passwords,
@@ -11,6 +11,16 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-06):**
+- **A5e, voice: steps 3 and 4 merged, versionCode 9 building.** #86 the mic button in the home
+  box and the chat box (`useDictation` / `createDictation` in `app/src/lib/voice.ts`,
+  `MicButton.tsx`, `VOICE_ENABLED = true`; words go into the box, never sent by voice; Send waits
+  while listening; 332 tests). #87 the privacy page (microphone and the phone's speech service)
+  and the Data safety answers (Audio → Voice or sound recordings, optional, ephemeral); the page
+  is live (Pages deploy of e7c15f8). The owner updates Data safety in Play Console (owner to
+  confirm it was sent for review). **Production build** started 2026-10-06 from `main` at
+  eaea7e4 (GitHub run 37405634042, auto-submit to internal testing): versionCode 9.
+  **Next: the owner runs `docs/phase5-a5e-phone-checklist.md`** (it also carries the versionCode
+  8 "Editing a note" lines). After that A5e is done; then `docs/places-plan.md` (step 2, server).
 - **Play versionCode 8 is live** (built from `main` at e0baa40, GitHub run 37398360636, Expo
   build https://expo.dev/accounts/zafnut/projects/wilma/builds/0d379900-fd0b-4571-963a-4b351de7a2e3 ,
   auto-submitted): note editing (#78) and the speech package (#79, mic still off). The owner
@@ -126,8 +136,8 @@ The A5c plan (for the owner's approval, 10 decisions): `docs/phase5-a5c-chat-scr
 | Database | migrations up to `ai_cost_only` applied (2026-10-05; `ai_usage` 2026-10-02) |
 | Chat function `chat` | **version 4, deployed 2026-10-05** (#72: the classifier request; 44/45 files identical, 401 without sign-in). Version 3, 2026-10-03 (#54: the `vault` event carries `secret_type` and `new_secret`; 43/44 files identical, 401 without sign-in), first deployed 2026-10-02 (version 2, #46) and live-checked; `OPENAI_API_KEY` and `LLM_ROUTES` set in Supabase secrets by the owner (2026-10-02) |
 | MCP server `mcp` | **version 8, server 0.6.0**, 22 tools, with the rule 9 credential check (PR #31, deployed 2026-10-01; deployed files checked identical to the repo, unsigned calls answer 401) |
-| Mobile app (Expo, `app/`) | merged to `main` up to PR #80 (#70 and #77 built as versionCode 7; #78 and #79 as versionCode 8). Earlier, up to PR #69: A0-A3, A5c (chat screen, delete and vault cards) and A5d (the one box) complete, built (versionCode 6) and phone-checked. A3b secrets (#23), **A3c** spaces (#25), vault setup / recovery / passphrase change (#26), **A4** privacy + deletion pages and Play guide (#27), change sign-in password (#28), mascot app icon (#29, from another session), A5c chat screen (#50-#54), layout fixes (#60, #61), A5d one box (#64-#67). `npm run check`: 256 tests |
-| Google Play | app created, **internal testing, versionCode 8 live** (2026-10-06, from `main` at e0baa40: #78, #79; started without a crash). versionCode 7 (from b3c50df: #70 and #77). Before it, versionCode 6 (built 2026-10-05 from `main` at 6bb1b8e, auto-submitted: https://expo.dev/accounts/zafnut/projects/wilma/builds/36ef55dd-3de7-43c5-b058-e68c47663ae1 ; A5d one box, chat screen, layout fixes #60/#61, mascot icon). Upload key reset done (see "Google Play and app updates"). App-content forms and store listing may still be incomplete; answers in `docs/phase4-play-release.md` |
+| Mobile app (Expo, `app/`) | merged to `main` up to PR #88 (#86, the mic button, building as versionCode 9; #70 and #77 built as versionCode 7; #78 and #79 as versionCode 8). Earlier, up to PR #69: A0-A3, A5c (chat screen, delete and vault cards) and A5d (the one box) complete, built (versionCode 6) and phone-checked. A3b secrets (#23), **A3c** spaces (#25), vault setup / recovery / passphrase change (#26), **A4** privacy + deletion pages and Play guide (#27), change sign-in password (#28), mascot app icon (#29, from another session), A5c chat screen (#50-#54), layout fixes (#60, #61), A5d one box (#64-#67). `npm run check`: 256 tests |
+| Google Play | app created, **versionCode 9 building** (2026-10-06, from `main` at eaea7e4, run 37405634042: the mic button #86; Data safety needs the audio answer, `docs/phase4-play-release.md`). Internal testing, versionCode 8 live (2026-10-06, from `main` at e0baa40: #78, #79; started without a crash). versionCode 7 (from b3c50df: #70 and #77). Before it, versionCode 6 (built 2026-10-05 from `main` at 6bb1b8e, auto-submitted: https://expo.dev/accounts/zafnut/projects/wilma/builds/36ef55dd-3de7-43c5-b058-e68c47663ae1 ; A5d one box, chat screen, layout fixes #60/#61, mascot icon). Upload key reset done (see "Google Play and app updates"). App-content forms and store listing may still be incomplete; answers in `docs/phase4-play-release.md` |
 | Web pages | `docs/legal/privacy.html`, `docs/legal/delete-account.html` live (contact zaftechlabs@gmail.com) |
 | Supabase | ACTIVE_HEALTHY, region us-west-2 |
 
