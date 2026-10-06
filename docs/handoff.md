@@ -26,8 +26,11 @@ tokens or keys in chat.
   saved place, since the chat does not know the phone's location (owner's question in
   `docs/places-plan.md`, "What the owner does"). 5 evaluation cases (72 in all, 20 traps, incl. a
   Wi-Fi password trap and a restricted bar next door); `mcp` 0.7.0. 267 Deno tests, app 370 (the app
-  only learns that `find_places` is read-only; ships with step 6). **Owner:** approve the
-  evaluation run (~$0.02), then merge, then the `mcp` + `chat` deploy.
+  only learns that `find_places` is read-only; ships with step 6). **Evaluation** (owner's OK):
+  run 37533843751, Luna, **71/72, 0 leaks, 0 unsafe**, $0.02; all 5 new cases and all 20 traps
+  pass. The one miss, `attach-photo-new-item` (not about places, passed in the last run): Wilma
+  saved the new item with save_item and attached to it by id, which the check does not accept.
+  **Owner:** merge, then the `mcp` + `chat` deploy.
 - **Play Console forms (owner, 2026-10-06), saved, not yet sent for review.** Publishing overview
   lists, waiting: store listing, target audience (18 and over), privacy policy URL, ads
   declaration, **Data safety** (with *Audio → Voice or sound recordings* and the new *Location →
