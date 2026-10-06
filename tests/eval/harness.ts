@@ -10,7 +10,7 @@ import {
   type ToolResult, type ToolSpec,
 } from "../../supabase/functions/_shared/llm/index.ts";
 import { World } from "./world.ts";
-import { systemPrompt } from "../../supabase/functions/_shared/assistant_prompt.ts";
+import { type SharedPoint, systemPrompt } from "../../supabase/functions/_shared/assistant_prompt.ts";
 
 export { ALL_TOOLS };
 
@@ -74,7 +74,7 @@ export interface Session {
 }
 
 /** A fresh pretend account with Wilma's tools connected to it, exactly as the chat function connects them. */
-export async function openSession(world = new World()): Promise<Session> {
+export async function openSession(world = new World(), here?: SharedPoint): Promise<Session> {
   const ctx: ToolContext = {
     db: world.client(), userId: "eval-user", accessToken: "eval-token", assistantName: world.assistantName,
   };
@@ -82,7 +82,8 @@ export async function openSession(world = new World()): Promise<Session> {
   return {
     world,
     tools: tools.specs,
-    system: systemPrompt(ctx.assistantName, tools.instructions),
+    // `here`: the 📍 location the chat function adds to a message's instructions (places step 7).
+    system: systemPrompt(ctx.assistantName, tools.instructions, new Date(), here),
     call: tools.call,
     close: tools.close,
   };
@@ -92,6 +93,8 @@ export interface RunOptions {
   /** Model calls allowed per user turn before giving up (a runaway loop fails the case). */
   maxStepsPerTurn?: number;
   setup?: (w: World) => void;
+  /** The phone's location shared with the messages (📍), as the chat function passes it. */
+  here?: SharedPoint;
 }
 
 /** Play the user's messages to the model, running its tool calls, and record everything. */
@@ -103,7 +106,7 @@ export async function runConversation(
 ): Promise<RunRecord> {
   const world = new World();
   opts.setup?.(world);
-  const session = await openSession(world);
+  const session = await openSession(world, opts.here);
   const started = performance.now();
   const record: RunRecord = { turns: [], world, costCents: 0, modelCalls: 0, ms: 0 };
   const messages: Message[] = [];

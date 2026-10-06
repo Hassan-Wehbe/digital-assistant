@@ -157,6 +157,27 @@ needs to *recommend* it, not only to find it:
    evaluation cases (a paid run with the owner's OK), one sentence on the privacy page and a check
    of the Data safety answer (owner approves both), then a deploy and the next build. Strongest
    model (location, privacy and the chat loop).
+   **Split into small PRs (plan 2026-10-06):**
+   - **7a, server** (this PR): `chat` accepts an optional `"here": {"lat", "lng"}` with the
+     messages (numbers in range, nothing else in it, else 400 before any model call). It becomes
+     one line at the end of that request's instructions (`hereLine` in
+     `_shared/assistant_prompt.ts`), never part of the conversation, so the next message does not
+     have it. Not stored, not in the log line (codes, ids, counts only), and a classifier body
+     carrying a point is refused. Wilma's instructions (`mcp/lib/assistant.ts`, `mcp` 0.7.1): with a
+     shared point, "near me / near here" calls `find_places` with exactly it; without one she asks
+     (a saved place, or tap 📍 in the app). She does not save the point into a note: saving where
+     you are stays **Save where I am**. 4 evaluation cases (a shared point, a restricted bar next
+     door, the point not stored, a door-code trap); the case without a point already exists.
+     Deno tests. Then a paid evaluation run (owner's OK) and a `chat` + `mcp` deploy (owner's OK).
+     Deploying first is safe: today's app never sends `here`.
+   - **7b, app:** a 📍 button by the chat box. Tap → `whereAmI` (`app/src/lib/location.ts`, the
+     same permission as Save where I am, asked only on that tap) → the button shows "📍 location
+     on" for the next message; Send carries `here` with that one message, then it is cleared. The
+     point is never written to the saved thread (`chatStore`). Refused or off: the same plain
+     sentences as Save where I am. **Owner's choice:** the home box too (Q10).
+   - **7c, privacy:** one sentence on the privacy page and a check of the Data safety answer
+     (`docs/phase4-play-release.md`); the owner approves both before anything is published.
+   - **7d, ship:** phone checklist lines, then the next build (owner says "build for Play").
 
 Step 2 covers the extension's fields too (validation of cuisine, price, occasions, dishes,
 visits; "add a visit" through `update_item`; evaluation cases such as "Italian date-night places
@@ -212,3 +233,8 @@ Q8 after A5e.
   permission as Save where I am, asked only on that tap) and sends it with that one message; it
   is never stored or kept. The privacy page would need one more sentence (owner approves).
   Until then Wilma asks which saved place you are near.
+- **Q10, open (step 7b):** should the **home box** get the 📍 button too, or only the chat?
+  *Recommend:* **chat only, for now.** The home box first asks the classifier whether a short
+  message is a search; with a point attached the app would have to skip that and go straight to
+  Wilma, which is a second path to build and test. In the chat the point simply rides with the
+  message. Alternative: both (the home box sends a 📍 message straight to the chat).
