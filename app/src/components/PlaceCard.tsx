@@ -5,6 +5,7 @@ import { Linking, Text, TextInput } from 'react-native';
 
 import { useAuth } from '@/lib/auth';
 import { editError } from '@/lib/noteEdit';
+import { coordsText } from '@/lib/location';
 import { localDate, mapsLink, OCCASION_LABELS, placeLine, visitArgs, type PlaceMetadata, type VisitForm } from '@/lib/places';
 
 import { Chips } from './PlaceFields';
@@ -42,6 +43,7 @@ export function PlaceCard({ itemId, place: p, onChanged }: { itemId: string; pla
     <Card>
       <Text style={[styles.title, { color: c.text }]}>📍 {placeLine(p)}</Text>
       {line('Address', p.address)}
+      {typeof p.lat === 'number' && typeof p.lng === 'number' ? line('Saved location', coordsText({ lat: p.lat, lng: p.lng })) : null}
       {line('Dishes', p.dishes_liked?.join(', '))}
       {line('Good for', p.occasions?.map((o) => OCCASION_LABELS[o] ?? o).join(', '))}
       {p.would_return !== undefined ? <Muted>{p.would_return ? 'Would go back' : 'Would not go back'}</Muted> : null}
@@ -61,7 +63,7 @@ export function PlaceCard({ itemId, place: p, onChanged }: { itemId: string; pla
         <Muted>Last visit {p.visited_on}</Muted>
       ) : null}
       {problem ? <Text style={{ color: c.danger, fontSize: 15 }}>{problem}</Text> : null}
-      {link ? <Button title="Open in Maps" onPress={openMaps} /> : <Muted>Add an address or a Google Maps link (Edit note) to open it in Maps.</Muted>}
+      {link ? <Button title="Open in Maps" onPress={openMaps} /> : <Muted>Add an address, a Google Maps link or your location (Edit note) to open it in Maps.</Muted>}
       {adding ? (
         <VisitFormCard
           itemId={itemId}

@@ -1,7 +1,10 @@
 // The place part of New note and Edit note (places.ts): address, Google Maps link, kind,
-// cuisine, price, occasions, dishes, want to go / been there with a rating, would go back.
+// cuisine, price, occasions, dishes, want to go / been there with a rating, would go back, and
+// the spot from "Save where I am" (location.ts: one reading, only when tapped).
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
+import { coordsText, deviceLocation, whereAmI } from '@/lib/location';
 import {
   KIND_LABELS,
   MAX_ADDRESS,
@@ -12,7 +15,7 @@ import {
   type PlaceForm,
 } from '@/lib/places';
 
-import { Muted, styles, useColors } from './ui';
+import { Button, Muted, styles, useColors } from './ui';
 
 /** A row of chips; `selected` says which are on. Tapping a chip calls onPress with its value. */
 export function Chips<T extends string | number | boolean>({
@@ -78,19 +81,24 @@ export function PlaceFields({
   onChange,
   disabled,
   hasVisits,
+  locateNow,
 }: {
   value: PlaceForm;
-  onChange: (next: PlaceForm) => void;
+  /** A state setter: changes merge into the latest form (the location arrives seconds later). */
+  onChange: (update: (current: PlaceForm) => PlaceForm) => void;
   disabled?: boolean;
   /** A place with visits cannot go back to "want to go". */
   hasVisits?: boolean;
+  /** Read the location as the form opens (the home screen's Save where I am tap). */
+  locateNow?: boolean;
 }) {
   const c = useColors();
-  const set = (change: Partial<PlaceForm>) => onChange({ ...f, ...change });
+  const set = (change: Partial<PlaceForm>) => onChange((current) => ({ ...current, ...change }));
   const input = [styles.input, { color: c.text, borderColor: c.line, backgroundColor: c.card }];
   const label = [styles.title, { color: c.text, fontSize: 15 }];
   return (
     <View style={{ gap: 10 }}>
+      <HereRow coords={f.coords} onChange={(coords) => set({ coords })} disabled={disabled} locateNow={locateNow} />
       <TextInput
         style={input}
         placeholder="Address (optional)"
@@ -165,6 +173,64 @@ export function PlaceFields({
           />
         </>
       ) : null}
+    </View>
+  );
+}
+
+/** The saved spot, or a button that reads where the phone is (asking for the permission only then). */
+function HereRow({
+  coords,
+  onChange,
+  disabled,
+  locateNow,
+}: {
+  coords: PlaceForm['coords'];
+  onChange: (coords: PlaceForm['coords']) => void;
+  disabled?: boolean;
+  locateNow?: boolean;
+}) {
+  const c = useColors();
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<{ text: string; problem: boolean } | null>(null);
+  const alive = useRef(true);
+
+  const locate = async () => {
+    setBusy(true);
+    setNote(null);
+    const out = await whereAmI(deviceLocation);
+    if (!alive.current) return;
+    setBusy(false);
+    if ('error' in out) return setNote({ text: out.error, problem: true });
+    onChange({ lat: out.here.lat, lng: out.here.lng });
+    setNote(out.here.accuracy ? { text: `Within about ${out.here.accuracy} m.`, problem: false } : null);
+  };
+
+  // Once, as the form opens from the home screen's Save where I am (that tap is the person's ask).
+  const started = useRef(false);
+  useEffect(() => {
+    alive.current = true;
+    if (locateNow && !started.current) {
+      started.current = true;
+      locate();
+    }
+    return () => {
+      alive.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <View style={{ gap: 6 }}>
+      {coords ? (
+        <>
+          <Text style={{ color: c.text, fontSize: 15 }}>📍 Location saved: {coordsText(coords)}</Text>
+          <Button title="Remove the location" kind="plain" onPress={() => onChange(null)} disabled={disabled || busy} />
+        </>
+      ) : (
+        <Button title={busy ? 'Finding where you are…' : '📍 Use where I am now'} kind="plain" onPress={locate} disabled={disabled || busy} />
+      )}
+      {note ? <Text style={{ color: note.problem ? c.danger : c.muted, fontSize: 14 }}>{note.text}</Text> : null}
+      {!coords && !note ? <Muted>Only when you tap: Wilma reads your location once and keeps it in this note only.</Muted> : null}
     </View>
   );
 }

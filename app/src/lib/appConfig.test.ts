@@ -43,6 +43,18 @@ describe('app.json', () => {
     expect(pluginOptions('expo-image-picker')?.microphonePermission).not.toBe(false);
   });
 
+  it('allows the location only while the app is in use, never in the background (places step 5)', () => {
+    for (const p of ['ACCESS_BACKGROUND_LOCATION', 'FOREGROUND_SERVICE_LOCATION', 'ACTIVITY_RECOGNITION']) {
+      expect(blocked).toContain(`android.permission.${p}`);
+    }
+    expect(blocked).not.toContain('android.permission.ACCESS_FINE_LOCATION');
+    const opts = pluginOptions('expo-location');
+    expect(opts).toBeDefined();
+    expect(opts?.isAndroidBackgroundLocationEnabled).toBe(false);
+    expect(opts?.isAndroidForegroundServiceEnabled).toBe(false);
+    expect(opts?.isIosBackgroundLocationEnabled).toBe(false);
+  });
+
   it('never lets the image picker record video (it would use the microphone)', () => {
     const src = readFileSync(resolve(__dirname, 'deviceFiles.ts'), 'utf8');
     const calls = src.match(/launch(Camera|ImageLibrary)Async\(\{[^}]*\}/g) ?? [];
@@ -121,5 +133,34 @@ describe('the speech package is loaded only by lib/voice.ts, and only on first u
     const lines = src.split('\n').filter((l) => l.includes("'expo-speech-recognition'") && !l.trim().startsWith('//'));
     expect(lines.length).toBeGreaterThan(0);
     for (const l of lines) expect(l).toMatch(/^import type |^type .*import\('expo-speech-recognition'\)|^\s+const \w+(: \w+)? = require\('expo-speech-recognition'\)/);
+  });
+});
+
+describe('the location package is loaded only by lib/location.ts, and only on use', () => {
+  const all: string[] = [];
+  const walk = (dir: string) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (/\.tsx?$/.test(e.name) && !/\.test\.tsx?$/.test(e.name)) all.push(p);
+    }
+  };
+  walk(SRC);
+
+  it('no other app file mentions it', () => {
+    const users = all.filter((f) => readFileSync(f, 'utf8').includes('expo-location'));
+    expect(users.map((f) => f.slice(SRC.length + 1))).toEqual(['lib/location.ts']);
+  });
+
+  it('location.ts imports it only as types, or with a require() inside a function', () => {
+    const src = readFileSync(join(SRC, 'lib/location.ts'), 'utf8');
+    const lines = src.split('\n').filter((l) => l.includes("'expo-location'") && !l.trim().startsWith('//'));
+    expect(lines.length).toBeGreaterThan(0);
+    for (const l of lines) expect(l).toMatch(/^type \w+ = typeof import\('expo-location'\);$|^\s+const \w+(: \w+)? = require\('expo-location'\);$/);
+  });
+
+  it('never asks for or reads the location in the background', () => {
+    const src = readFileSync(join(SRC, 'lib/location.ts'), 'utf8');
+    expect(src).not.toMatch(/Background|watchPosition|startLocationUpdates|Geofencing/);
   });
 });
