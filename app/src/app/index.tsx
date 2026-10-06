@@ -108,6 +108,7 @@ export default function Home() {
       {held ? <Muted>{held}</Muted> : chat.routing ? <Muted>One moment…</Muted> : null}
       {link('Conversation', () => router.push('/chat'))}
       <Button title="New note or photo" kind="plain" onPress={() => router.push('/new-item')} />
+      <Button title="📍 Save where I am" kind="plain" onPress={() => router.push({ pathname: '/new-item', params: { here: '1' } })} />
       {query ? (
         <Text style={[styles.title, { color: c.text }]}>{`Results for “${query}”`}</Text>
       ) : (

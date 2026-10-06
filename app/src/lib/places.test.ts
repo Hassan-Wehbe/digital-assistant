@@ -68,6 +68,13 @@ describe('mapsLink (Open in Maps)', () => {
     );
   });
 
+  it('uses the spot from Save where I am before the address', () => {
+    expect(mapsLink({ address: 'Armenia St', lat: 33.893791, lng: 35.501778 })).toBe(
+      'https://www.google.com/maps/search/?api=1&query=33.893791,35.501778',
+    );
+    expect(mapsLink({ maps_url: 'https://maps.app.goo.gl/AbC123', lat: 1, lng: 2 })).toBe('https://maps.app.goo.gl/AbC123');
+  });
+
   it('never opens a saved link that is not a Maps link, and has nothing to open without an address', () => {
     expect(mapsLink({ address: 'Armenia St', maps_url: 'javascript:alert(1)' })).toBe(
       'https://www.google.com/maps/search/?api=1&query=Armenia%20St',
@@ -100,6 +107,15 @@ describe('the place form', () => {
     const out = placeMetadata(placeForm(saved), saved);
     expect(out).toEqual({ metadata: saved });
     expect('metadata' in out && samePlace(out.metadata, saved)).toBe(true);
+  });
+
+  it('saves, keeps and removes the location from the form', () => {
+    expect(placeMetadata({ ...EMPTY_PLACE, coords: { lat: 33.893791, lng: 35.501778 } })).toEqual({
+      metadata: { status: 'want', lat: 33.893791, lng: 35.501778 },
+    });
+    const out = placeMetadata({ ...placeForm(saved), coords: null }, saved);
+    expect('metadata' in out && out.metadata.lat).toBeUndefined();
+    expect(placeMetadata({ ...EMPTY_PLACE, coords: { lat: 91, lng: 0 } })).toHaveProperty('error');
   });
 
   it('a new place with only a name is "want to go"', () => {

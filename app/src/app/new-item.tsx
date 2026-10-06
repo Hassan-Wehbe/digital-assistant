@@ -22,12 +22,13 @@ const KINDS_OF_NOTE = [
 export default function NewItem() {
   const c = useColors();
   const { wilma } = useAuth();
-  const params = useLocalSearchParams<{ space?: string }>();
+  // here=1: the home screen's Save where I am (a place that starts by reading the location).
+  const params = useLocalSearchParams<{ space?: string; here?: string }>();
   const spaces = useLoad('spaces', () => wilma.listSpaces());
   const [space, setSpace] = useState<string | undefined>(params.space);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const [isPlace, setIsPlace] = useState(false);
+  const [isPlace, setIsPlace] = useState(params.here === '1');
   const [place, setPlace] = useState<PlaceForm>(EMPTY_PLACE);
   const [files, setFiles] = useState<PickedFile[]>([]);
   const [busy, setBusy] = useState(false);
@@ -97,7 +98,9 @@ export default function NewItem() {
           onChangeText={setTitle}
           editable={!busy && !createdId}
         />
-        {isPlace ? <PlaceFields value={place} onChange={setPlace} disabled={busy || !!createdId} /> : null}
+        {isPlace ? (
+          <PlaceFields value={place} onChange={setPlace} disabled={busy || !!createdId} locateNow={params.here === '1'} />
+        ) : null}
         <TextInput
           style={[input, { minHeight: 140, textAlignVertical: 'top' }]}
           placeholder={isPlace ? 'Note (optional), e.g. try the fattoush' : 'Note (optional)'}

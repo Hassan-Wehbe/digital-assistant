@@ -86,12 +86,23 @@ export function isMapsLink(url: string): boolean {
   return false;
 }
 
-/** Where Open in Maps goes: the saved link, else a Google Maps search for the address. */
-export function mapsLink(place: Pick<PlaceMetadata, 'address' | 'maps_url'>): string | null {
+/**
+ * Where Open in Maps goes: the saved link; else the spot from "Save where I am" (exact); else a
+ * Google Maps search for the address.
+ */
+export function mapsLink(place: Pick<PlaceMetadata, 'address' | 'maps_url' | 'lat' | 'lng'>): string | null {
   if (place.maps_url && isMapsLink(place.maps_url)) return place.maps_url;
+  if (validCoords(place)) return `https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}`;
   const address = place.address?.trim();
   if (!address) return null;
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+}
+
+function validCoords(p: { lat?: unknown; lng?: unknown }): p is { lat: number; lng: number } {
+  return (
+    typeof p.lat === 'number' && typeof p.lng === 'number' && Number.isFinite(p.lat) && Number.isFinite(p.lng) &&
+    Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180
+  );
 }
 
 /** The place in an item's metadata, or null when the item is not a place. */
@@ -130,6 +141,8 @@ export interface PlaceForm {
   status: 'want' | 'been';
   rating: number | null;
   wouldReturn: boolean | null;
+  /** From "Save where I am" (or kept from the saved place); null for none. */
+  coords: { lat: number; lng: number } | null;
 }
 
 export const EMPTY_PLACE: PlaceForm = {
@@ -143,6 +156,7 @@ export const EMPTY_PLACE: PlaceForm = {
   status: 'want',
   rating: null,
   wouldReturn: null,
+  coords: null,
 };
 
 export function placeForm(p: PlaceMetadata | null): PlaceForm {
@@ -158,6 +172,7 @@ export function placeForm(p: PlaceMetadata | null): PlaceForm {
     status: been(p) ? 'been' : 'want',
     rating: p.rating ?? null,
     wouldReturn: p.would_return ?? null,
+    coords: validCoords(p) ? { lat: p.lat, lng: p.lng } : null,
   };
 }
 
@@ -182,7 +197,7 @@ function words(text: string, label: string, maxItems: number, maxLen: number): s
 
 /**
  * The metadata to save, or why it cannot be saved. Fields the form does not show (visits, the
- * latest visit date, coordinates, Google's place id) are kept from `base`.
+ * latest visit date, Google's place id) are kept from `base`; coordinates come from the form.
  */
 export function placeMetadata(form: PlaceForm, base: PlaceMetadata | null = null): { metadata: PlaceMetadata } | { error: string } {
   const out: PlaceMetadata = {};
@@ -224,13 +239,14 @@ export function placeMetadata(form: PlaceForm, base: PlaceMetadata | null = null
     if (form.wouldReturn !== null) out.would_return = form.wouldReturn;
   }
 
+  if (form.coords) {
+    if (!validCoords(form.coords)) return { error: 'That location is not a real place on the map.' };
+    out.lat = form.coords.lat;
+    out.lng = form.coords.lng;
+  }
   if (base) {
     if (base.visited_on) out.visited_on = base.visited_on;
     if (base.visits?.length) out.visits = base.visits;
-    if (typeof base.lat === 'number' && typeof base.lng === 'number') {
-      out.lat = base.lat;
-      out.lng = base.lng;
-    }
     if (base.google_place_id) out.google_place_id = base.google_place_id;
   }
   return { metadata: out };
