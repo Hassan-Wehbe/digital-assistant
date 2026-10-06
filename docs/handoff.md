@@ -17,6 +17,9 @@ tokens or keys in chat.
   chose to skip the step 2 preview .apk and let this build be the start-up test: **it did not
   crash** (owner, 2026-10-06). The checklist's "Editing a note" lines are not yet reported.
   **Next: A5e step 3, the mic button** (strongest model, fresh session).
+- **New idea, planned (2026-10-06): places**, a note type with a location for restaurants and
+  places to visit (`docs/places-plan.md`, design D26). **Approved 2026-10-06, Q1-Q8 as
+  recommended**; built after A5e (next there: step 2, server).
 - **Play versionCode 7** (before 8), built from `main` at b3c50df: the Search
   link removal (#70) and the classifier's notes card (#77). **Phone checklist passed in full**
   (owner, 2026-10-06): `docs/phase5-a5d-step6-phone-checklist.md` minus its "Editing a note"
