@@ -148,6 +148,13 @@ needs to *recommend* it, not only to find it:
    Sonnet. **This build also carries the mic fix #91** (merged 2026-10-06, held for this build
    by the owner): the phone checklist must include "The first tap" and "Dictating" from
    `docs/phase5-a5e-phone-checklist.md`.
+7. **"Near me" in the chat** (Q9, after step 6): a 📍 tap in the chat reads the phone's location
+   once (the Save where I am permission, asked only on that tap) and sends it with that one
+   message; `chat` passes it to Wilma for `find_places` and never stores or logs it. Needs: the
+   app tap, a small `chat` change (the point travels with the message only), Wilma's instructions,
+   evaluation cases (a paid run with the owner's OK), one sentence on the privacy page and a check
+   of the Data safety answer (owner approves both), then a deploy and the next build. Strongest
+   model (location, privacy and the chat loop).
 
 Step 2 covers the extension's fields too (validation of cuisine, price, occasions, dishes,
 visits; "add a visit" through `update_item`; evaluation cases such as "Italian date-night places
@@ -198,8 +205,8 @@ Q8 after A5e.
 - Approve the merges, the server deploy (step 2), the evaluation run and the Play build.
 - On the phone: check what Google Maps shares (step 4), then run the phone checklist.
 - **Step 5b:** done (evaluation, merge and deploy approved 2026-10-06).
-  **Question (open):** should "near me" in the chat use the phone's location? *Recommend:* **later,
-  as a small app step:** a "📍 near me" tap in the chat reads the location once (the same
+  **Q9, decided (owner, 2026-10-06: as recommended):** should "near me" in the chat use the
+  phone's location? **Yes, later, as a small app step (step 7):** a "📍 near me" tap in the chat reads the location once (the same
   permission as Save where I am, asked only on that tap) and sends it with that one message; it
   is never stored or kept. The privacy page would need one more sentence (owner approves).
-  Until then Wilma asks which saved place you are near. Alternative: keep it that way.
+  Until then Wilma asks which saved place you are near.

@@ -12,6 +12,10 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-06):**
+- **"Near me" in the chat, decided (owner, 2026-10-06, Q9 as recommended):** later, as places
+  step 7 after the step 6 build: a 📍 tap in the chat reads the location once and sends it with
+  that one message, never stored. Not built. Until then Wilma asks which saved place you are
+  near. Details: `docs/places-plan.md` step 7.
 - **Places step 5b (server), merged and live (#104, 2026-10-06).** **Deployed:** `mcp` version 13
   (server 0.7.0; 34/35 files identical, the `.d.ts` not listed back; 401 without sign-in and with a
   fake token), `chat` version 6 (46/47 identical, 401 both ways). New read-only tool
@@ -24,8 +28,8 @@ tokens or keys in chat.
   by address with `include_without_location`, never a distance. **No migration.** Wilma's
   instructions (`mcp/lib/assistant.ts`, shared by chat and the Claude connector): use it for "near"
   questions, say "about N km" (never a travel time), never guess coordinates; for "near me" ask which
-  saved place, since the chat does not know the phone's location (owner's question in
-  `docs/places-plan.md`, "What the owner does"). 5 evaluation cases (72 in all, 20 traps, incl. a
+  saved place, since the chat does not know the phone's location (decided later as
+  places step 7, Q9). 5 evaluation cases (72 in all, 20 traps, incl. a
   Wi-Fi password trap and a restricted bar next door); `mcp` 0.7.0. 267 Deno tests, app 370 (the app
   only learns that `find_places` is read-only; ships with step 6). **Evaluation** (owner's OK):
   run 37533843751, Luna, **71/72, 0 leaks, 0 unsafe**, $0.02; all 5 new cases and all 20 traps
