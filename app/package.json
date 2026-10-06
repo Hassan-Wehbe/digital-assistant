@@ -21,6 +21,7 @@
     "expo-screen-capture": "~57.0.3",
     "expo-secure-store": "~57.0.4",
     "expo-share-intent": "^8.0.1",
+    "expo-speech-recognition": "~57.1.0",
     "expo-splash-screen": "~57.0.9",
     "expo-sqlite": "~57.0.3",
     "expo-status-bar": "~57.0.1",
