@@ -112,7 +112,7 @@ export function dictationErrorMessage(code: ExpoSpeechRecognitionErrorCode): str
 /** The parts of the speech module dictation uses (a fake one in the tests). */
 export type SpeechApi = Pick<
   SpeechModule,
-  'start' | 'stop' | 'abort' | 'requestPermissionsAsync' | 'isRecognitionAvailable' | 'supportsOnDeviceRecognition' | 'getSupportedLocales'
+  'start' | 'stop' | 'abort' | 'getPermissionsAsync' | 'requestPermissionsAsync' | 'isRecognitionAvailable' | 'supportsOnDeviceRecognition' | 'getSupportedLocales'
 > & {
   addListener(event: 'result', listener: (e: ExpoSpeechRecognitionResultEvent) => void): { remove(): void };
   addListener(event: 'error', listener: (e: { error: ExpoSpeechRecognitionErrorCode; message: string }) => void): { remove(): void };
@@ -149,6 +149,8 @@ export function createDictation(load: () => Promise<SpeechApi>, onChange: (state
   let subs: { remove(): void }[] = [];
   // Words shown but not yet given to the box (no final result yet).
   let pending = '';
+  // True once the phone's recognizer has been started (not while asking for permission).
+  let recognizing = false;
   let onWords: (words: string) => void = () => {};
 
   const set = (next: Partial<DictationState>) => {
@@ -166,6 +168,7 @@ export function createDictation(load: () => Promise<SpeechApi>, onChange: (state
   };
   // Listening is over: the words still showing go into the box, so nothing seen vanishes.
   const finish = (error: string | null) => {
+    recognizing = false;
     detach();
     commit();
     set({ listening: false, partial: '', error });
@@ -185,7 +188,11 @@ export function createDictation(load: () => Promise<SpeechApi>, onChange: (state
       try {
         speech = speech ?? (await load());
         if (mine !== run) return;
-        const allowed = await speech.requestPermissionsAsync();
+        // Ask only when not yet allowed: Expo opens Android's permission screen even for a
+        // permission already granted, and that screen pauses the app for a moment.
+        let allowed = await speech.getPermissionsAsync();
+        if (mine !== run) return;
+        if (!allowed.granted) allowed = await speech.requestPermissionsAsync();
         if (mine !== run) return;
         if (!allowed.granted) {
           set({ listening: false, permission: 'denied', error: NOT_ALLOWED });
@@ -230,6 +237,7 @@ export function createDictation(load: () => Promise<SpeechApi>, onChange: (state
             finish(state.error);
           }),
         ];
+        recognizing = true;
         s.start(speechOptions(lang, onDevice));
       } catch (e) {
         if (mine !== run) return;
@@ -267,6 +275,15 @@ export function createDictation(load: () => Promise<SpeechApi>, onChange: (state
       finish(null);
     },
 
+    /**
+     * The app went to the background: stop, but only once the phone is really listening.
+     * Android's permission screen also sends the app to the background for a moment; that must
+     * not cancel the tap that opened it.
+     */
+    pause(): void {
+      if (recognizing) this.cancel();
+    },
+
     /** The person typed: an old error line goes away. */
     clearError(): void {
       if (state.error) set({ error: null });
@@ -291,7 +308,7 @@ export function useDictation(onWords: (words: string) => void, enabled: boolean)
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (s) => {
-      if (s !== 'active') d.cancel();
+      if (s !== 'active') d.pause();
     });
     return () => {
       sub.remove();
