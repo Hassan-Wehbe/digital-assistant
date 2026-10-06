@@ -1,8 +1,8 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-10-06 (places step 2, server, is **live**: migration `place_search`, `mcp` v12,
-`chat` v5, evaluation 67/67 with 0 leaks. Next: places step 3, the app. The mic fix #91 is
-merged, not built; it ships with the places build, step 6).
+Last updated 2026-10-06 (places step 3, the app, is **merged, not built** (#97), with Expo patch
+updates (#98). Step 2, server, is live. Next: places step 4, share from Google Maps. The mic fix
+#91, #97 and #98 ship together in the places build, step 6).
 Read this, then `CLAUDE.md`, `docs/design.md`, `docs/phase3-mobile-app-plan.md` and
 `docs/phase5-chat-plan.md`, before changing anything. The owner is returning to development:
 explain steps plainly, keep PRs small, say clearly when they must act, never ask for passwords,
@@ -11,6 +11,26 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-06):**
+- **Places step 3 (app) merged, not built (#97, `main` at 0a98886).** New note has a **Note /
+  📍 Place** choice (address, optional Google Maps link, kind, cuisine, price, dishes, occasions,
+  want to go / been there with rating and "would go back"); Edit note edits a place's fields or
+  turns a note into a place (fields the form does not show, visits, coordinates, Google place id,
+  are kept); the note view shows the place, **Open in Maps** (the saved link, else
+  `https://www.google.com/maps/search/?api=1&query=<address>`) and **We went again** (`update_item`
+  `add_visit`); lists show "Restaurant · italian · $$ · Been there ★4". Code: `app/src/lib/places.ts`
+  (pure, tested), `components/PlaceFields.tsx`, `components/PlaceCard.tsx`. **Links:** only Google
+  Maps / `geo:` links are accepted or opened; React Native's `URL` is incomplete, so the app's
+  `isMapsLink` reads links with patterns at least as strict as the server's (1,125 generated links
+  compared: none accepted by the app and refused by the server). A new place with photos is saved
+  with `save_item` first (the server checks its fields), then the photos go onto it. 355 tests;
+  `expo export --platform android` bundles. **Not yet seen on a phone:** add its lines to the
+  step 6 checklist (new place, edit, Open in Maps with and without a link, We went again, a
+  non-Maps link refused, lists).
+- **Expo patch updates (#98, merged, not built).** `expo-doctor` in the app checks turned red on
+  every branch when Expo published patches: expo 57.0.27, expo-constants 57.0.21, expo-linking
+  57.0.12, expo-router 57.0.25, expo-screen-capture 57.0.4, expo-sqlite 57.0.4. Taken as asked
+  (patch level only); checks green. Ships in the step 6 build. In this sandbox `npx expo install
+  --fix` cannot reach Expo's servers; install the versions the CI log names with `npm install`.
 - **Places step 2 (server) is live** (`docs/places-plan.md`). #93: `mcp/lib/places.ts` checks a
   place's fields (known fields only, Google Maps / geo: links, kinds, status/rating, real dates,
   visits newest first), `update_item` gets `add_visit`, `search_items` returns a place's fields,
