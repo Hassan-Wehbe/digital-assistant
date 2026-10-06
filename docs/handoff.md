@@ -1,8 +1,9 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-10-06 (places step 3, the app, is **merged, not built** (#97), with Expo patch
-updates (#98). Step 2, server, is live. Next: places step 4, share from Google Maps. The mic fix
-#91, #97 and #98 ship together in the places build, step 6).
+Last updated 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
+#102), with Expo patch updates (#98). Step 2, server, is live. Next: places step 5b ("places near
+me", server), then step 6, the places build, which also carries the mic fix #91. Play Console:
+Data safety and other forms saved, **not yet sent for review**; see the first entry below).
 Read this, then `CLAUDE.md`, `docs/design.md`, `docs/phase3-mobile-app-plan.md` and
 `docs/phase5-chat-plan.md`, before changing anything. The owner is returning to development:
 explain steps plainly, keep PRs small, say clearly when they must act, never ask for passwords,
@@ -11,6 +12,36 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-06):**
+- **Play Console forms (owner, 2026-10-06), saved, not yet sent for review.** Publishing overview
+  lists, waiting: store listing, target audience (18 and over), privacy policy URL, ads
+  declaration, **Data safety** (with *Audio → Voice or sound recordings* and the new *Location →
+  Precise location*; see `docs/phase4-play-release.md`) and App access (a separate **reviewer
+  account**, created by the owner in Supabase with a `+playreview` email alias; its password is
+  only in Supabase and Play Console). The page still says "complete the required steps in the app
+  dashboard": **next, the owner finds the unfinished Dashboard tasks** (likely content rating, the
+  other App content rows, store settings, screenshots), then **Send changes for review**. How to
+  reach the forms: Play Console search box ("Data safety"), or Dashboard → "Set up your app", or
+  App content (Actioned tab, **Manage**). Internal testing keeps working meanwhile.
+- **Places step 5c (privacy), merged and live (#102).** The privacy page says the location is read
+  only on the Save where I am / Use where I am now tap, once, stored in that place note only,
+  never in the background; Google Maps is used only when Open in Maps is tapped (GitHub Pages
+  deploy of d5b337e succeeded). Data safety answer added to `docs/phase4-play-release.md`.
+- **Places step 5a (app), merged, not built (#101).** Home screen **📍 Save where I am** opens New
+  note as a Place and reads the location once; the place form has **Use where I am now** and
+  **Remove the location**; Open in Maps uses the coordinates when there is no saved link.
+  Permission asked only on the tap and only when not already given (the #91 lesson); 20 s limit;
+  plain sentences when refused or location is off. `expo-location ~57.0.20` (version from the
+  installed SDK's `bundledNativeModules.json`; docs.expo.dev is blocked in this sandbox), loaded
+  only by `app/src/lib/location.ts` on use. `app.json`: foreground only; background location, the
+  location foreground service and activity recognition blocked (introspected manifest: only
+  FINE and COARSE location). 370 tests. **Phone checklist (step 6):** first tap asks, second tap
+  does not; refuse then allow in Settings; location off; Open in Maps with only coordinates.
+- **Places step 4 (app), merged, not built (#100).** A share whose text holds a Google Maps link
+  (and no files) opens the share screen as a Place with the name and link filled in. **Checked on
+  the owner's phone:** Maps shares only the short `maps.app.goo.gl` link as text, with the place's
+  name as the title, no address (the owner's Hinode Sushi and Lemongrass Thai Kitchen notes in
+  Restaurants are plain notes made that way; after the build they can become places with Edit
+  note → Make this a place). The link is never followed (Q3).
 - **Places step 3 (app) merged, not built (#97, `main` at 0a98886).** New note has a **Note /
   📍 Place** choice (address, optional Google Maps link, kind, cuisine, price, dishes, occasions,
   want to go / been there with rating and "would go back"); Edit note edits a place's fields or

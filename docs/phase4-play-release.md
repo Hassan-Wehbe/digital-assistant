@@ -62,7 +62,15 @@ no chat with other people). The result should be "Everyone" or the local equival
 **News app:** No. **COVID-19 contact tracing:** No. **Government app:** No.
 **Financial features:** None. **Health:** None.
 
-**Data safety.** Read each question on screen; these answers match what the app does today:
+**Data safety.** Read each question on screen; these answers match what the app does today.
+How to reach it (owner, 2026-10-06; Play Console menus move): the search box at the top
+("Data safety"), or Dashboard → "Set up your app", or **App content** (left menu; already
+completed forms are under the "Actioned" tab, button **Manage**). It cannot be submitted until
+**Target audience and content** is filled in. Saved forms then wait on **Publishing overview**
+until every required Dashboard task is done and **Send changes for review** is clicked.
+The account deletion questions take the same link (`legal/delete-account`); deleting single
+things without closing the account: **Yes** (in the app). **App access** uses a separate
+reviewer account (`+playreview` email alias), never the owner's own sign-in or Supabase login.
 - Does the app collect or share user data? **Yes, it collects** (it stores what you save).
   Nothing is **shared** with third parties (Supabase stores it on our behalf, which Google does
   not count as sharing).
