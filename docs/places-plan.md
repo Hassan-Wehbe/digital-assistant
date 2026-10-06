@@ -175,7 +175,7 @@ needs to *recommend* it, not only to find it:
      same permission as Save where I am, asked only on that tap) → the button shows "📍 location
      on" for the next message; Send carries `here` with that one message, then it is cleared. The
      point is never written to the saved thread (`chatStore`). Refused or off: the same plain
-     sentences as Save where I am. **Owner's choice:** the home box too (Q10).
+     sentences as Save where I am. Chat only, not the home box (Q10, owner 2026-10-06).
    - **7c, privacy:** one sentence on the privacy page and a check of the Data safety answer
      (`docs/phase4-play-release.md`); the owner approves both before anything is published.
    - **7d, ship:** phone checklist lines, then the next build (owner says "build for Play").
@@ -234,7 +234,7 @@ Q8 after A5e.
   permission as Save where I am, asked only on that tap) and sends it with that one message; it
   is never stored or kept. The privacy page would need one more sentence (owner approves).
   Until then Wilma asks which saved place you are near.
-- **Q10, open (step 7b):** should the **home box** get the 📍 button too, or only the chat?
+- **Q10, decided (owner, 2026-10-06: chat only, as recommended):** should the **home box** get the 📍 button too, or only the chat?
   *Recommend:* **chat only, for now.** The home box first asks the classifier whether a short
   message is a search; with a point attached the app would have to skip that and go straight to
   Wilma, which is a second path to build and test. In the chat the point simply rides with the
