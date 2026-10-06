@@ -10,7 +10,10 @@
 //
 // The mic is never offered in the vault, on sign-in or on the account screen
 // (appConfig.test.ts checks those screens cannot reach this file).
-import type { ExpoSpeechRecognitionErrorCode, ExpoSpeechRecognitionOptions } from 'expo-speech-recognition';
+import { useFocusEffect } from 'expo-router';
+import type { ExpoSpeechRecognitionErrorCode, ExpoSpeechRecognitionOptions, ExpoSpeechRecognitionResultEvent } from 'expo-speech-recognition';
+import { useCallback, useEffect, useState } from 'react';
+import { AppState } from 'react-native';
 
 type SpeechPackage = typeof import('expo-speech-recognition');
 export type SpeechModule = SpeechPackage['ExpoSpeechRecognitionModule'];
@@ -105,3 +108,208 @@ export function dictationErrorMessage(code: ExpoSpeechRecognitionErrorCode): str
       return 'Dictation stopped. Tap the mic to try again, or type.';
   }
 }
+
+/** The parts of the speech module dictation uses (a fake one in the tests). */
+export type SpeechApi = Pick<
+  SpeechModule,
+  'start' | 'stop' | 'abort' | 'requestPermissionsAsync' | 'isRecognitionAvailable' | 'supportsOnDeviceRecognition' | 'getSupportedLocales'
+> & {
+  addListener(event: 'result', listener: (e: ExpoSpeechRecognitionResultEvent) => void): { remove(): void };
+  addListener(event: 'error', listener: (e: { error: ExpoSpeechRecognitionErrorCode; message: string }) => void): { remove(): void };
+  addListener(event: 'end', listener: () => void): { remove(): void };
+};
+
+export interface DictationState {
+  /** The phone is listening: the mic shows "Stop dictating". */
+  listening: boolean;
+  /** Words heard so far, shown after the box's text while listening; not yet in the box (Q6). */
+  partial: string;
+  /** A short line for under the box, or null. */
+  error: string | null;
+  /** Whether Wilma may use the microphone, as far as the last tap found out. */
+  permission: 'unknown' | 'granted' | 'denied';
+}
+
+export const idleDictation: DictationState = { listening: false, partial: '', error: null, permission: 'unknown' };
+
+const NOT_ALLOWED = dictationErrorMessage('not-allowed');
+const NO_SERVICE = dictationErrorMessage('service-not-allowed');
+
+/**
+ * One mic, without React (the hook below wraps it). `start(onWords)`: onWords gets the words
+ * the phone heard, once per phrase, and is the only thing a result ever does: the screen
+ * appends them to its box. Nothing here can send a message (Q1).
+ */
+export function createDictation(load: () => Promise<SpeechApi>, onChange: (state: DictationState) => void) {
+  let state: DictationState = idleDictation;
+  // Each start gets a number; anything from an older start (a slow permission answer, a late
+  // event) is ignored once it has been stopped.
+  let run = 0;
+  let speech: SpeechApi | null = null;
+  let subs: { remove(): void }[] = [];
+  // Words shown but not yet given to the box (no final result yet).
+  let pending = '';
+  let onWords: (words: string) => void = () => {};
+
+  const set = (next: Partial<DictationState>) => {
+    state = { ...state, ...next };
+    onChange(state);
+  };
+  const detach = () => {
+    for (const s of subs) s.remove();
+    subs = [];
+  };
+  const commit = () => {
+    const words = pending;
+    pending = '';
+    if (words.trim()) onWords(words);
+  };
+  // Listening is over: the words still showing go into the box, so nothing seen vanishes.
+  const finish = (error: string | null) => {
+    detach();
+    commit();
+    set({ listening: false, partial: '', error });
+  };
+
+  return {
+    get state() {
+      return state;
+    },
+
+    async start(deliver: (words: string) => void): Promise<void> {
+      if (state.listening) return;
+      const mine = ++run;
+      onWords = deliver;
+      pending = '';
+      set({ listening: true, partial: '', error: null });
+      try {
+        speech = speech ?? (await load());
+        if (mine !== run) return;
+        const allowed = await speech.requestPermissionsAsync();
+        if (mine !== run) return;
+        if (!allowed.granted) {
+          set({ listening: false, permission: 'denied', error: NOT_ALLOWED });
+          return;
+        }
+        set({ permission: 'granted' });
+        if (!speech.isRecognitionAvailable()) {
+          set({ listening: false, error: NO_SERVICE });
+          return;
+        }
+        const lang = phoneLanguage();
+        let onDevice = false;
+        try {
+          if (speech.supportsOnDeviceRecognition() && lang) {
+            onDevice = chooseOnDevice(true, (await speech.getSupportedLocales({})).installedLocales, lang);
+          }
+        } catch {
+          // The list is not available on this phone (Android 12 and older): use its service.
+        }
+        if (mine !== run) return;
+        const s = speech;
+        subs = [
+          s.addListener('result', (e) => {
+            if (mine !== run) return;
+            const words = e.results[0]?.transcript ?? '';
+            if (e.isFinal) {
+              pending = words;
+              commit();
+              set({ partial: '' });
+            } else {
+              pending = words;
+              set({ partial: words.trim() });
+            }
+          }),
+          s.addListener('error', (e) => {
+            if (mine !== run) return;
+            if (e.error === 'not-allowed') set({ permission: 'denied' });
+            finish(dictationErrorMessage(e.error));
+          }),
+          s.addListener('end', () => {
+            if (mine !== run || !state.listening) return;
+            finish(state.error);
+          }),
+        ];
+        s.start(speechOptions(lang, onDevice));
+      } catch (e) {
+        if (mine !== run) return;
+        detach();
+        set({
+          listening: false,
+          partial: '',
+          error: e instanceof VoiceError ? e.message : dictationErrorMessage('unknown'),
+        });
+      }
+    },
+
+    /** The mic tapped again: the phone finishes the phrase, and its words go into the box. */
+    stop(): void {
+      if (!state.listening) return;
+      try {
+        speech?.stop();
+      } catch {
+        this.cancel();
+      }
+    },
+
+    /**
+     * The app went to the background, the screen was left, or the box can no longer send:
+     * stop at once. Words already showing still go into the box.
+     */
+    cancel(): void {
+      if (!state.listening) return;
+      run++;
+      try {
+        speech?.abort();
+      } catch {
+        // Already stopped.
+      }
+      finish(null);
+    },
+
+    /** The person typed: an old error line goes away. */
+    clearError(): void {
+      if (state.error) set({ error: null });
+    },
+  };
+}
+
+export type Dictation = ReturnType<typeof createDictation>;
+
+/**
+ * The mic for one message box. `onWords` is given the dictated words (the screen appends them
+ * to its text); `enabled` false (the box cannot send, or a reply streams) stops listening.
+ * Listening also stops when the app goes to the background or the screen is left.
+ */
+export function useDictation(onWords: (words: string) => void, enabled: boolean) {
+  const [state, setState] = useState<DictationState>(idleDictation);
+  const [d] = useState(() => createDictation(loadSpeech as () => Promise<SpeechApi>, setState));
+
+  useEffect(() => {
+    if (!enabled) d.cancel();
+  }, [enabled, d]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s !== 'active') d.cancel();
+    });
+    return () => {
+      sub.remove();
+      d.cancel();
+    };
+  }, [d]);
+
+  // Another screen opened on top (the chat from home, a space): stop listening.
+  useFocusEffect(useCallback(() => () => d.cancel(), [d]));
+
+  return {
+    ...state,
+    start: () => {
+      if (enabled) void d.start(onWords);
+    },
+    stop: () => d.stop(),
+    clearError: () => d.clearError(),
+  };
+}
+
+export type DictationControls = ReturnType<typeof useDictation>;

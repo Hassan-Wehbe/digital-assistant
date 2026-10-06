@@ -5,18 +5,23 @@ import { useRef, useState } from 'react';
 import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 
 import { ChatBubble } from '@/components/ChatBubble';
+import { MicButton } from '@/components/MicButton';
 import { Button, confirm, KeyboardScreen, Loading, Muted, styles, useColors } from '@/components/ui';
 import { useChat } from '@/lib/chat';
 import { cardActive, type Entry, type ErrorButton, lastUserText, notesActive } from '@/lib/chatThread';
+import { VOICE_ENABLED } from '@/lib/config';
+import { appendDictation, useDictation } from '@/lib/voice';
 
 export default function Chat() {
   const c = useColors();
   const { state, ready, canSend, routing, bannerVisible, send, askWilma, stop, retry, dismissBanner, clear, confirmDelete, cancelDelete } = useChat();
   const [text, setText] = useState('');
   const list = useRef<FlatList>(null);
+  // Dictated words are added to the box; only Send sends them (A5e Q1). No mic while a reply streams.
+  const mic = useDictation((words) => setText((t) => appendDictation(t, words)), canSend && !state.streaming);
 
   const submit = async () => {
-    if (!canSend || !text.trim()) return;
+    if (!canSend || !text.trim() || mic.listening) return;
     const out = await send(text);
     // Used up or not sent: the text stays in the box.
     if (out.to === 'none' || out.to === 'blocked') return;
@@ -107,20 +112,28 @@ export default function Chat() {
             style={input}
             placeholder="Message Wilma"
             placeholderTextColor={c.muted}
-            value={text}
-            onChangeText={setText}
+            value={mic.listening ? appendDictation(text, mic.partial) : text}
+            editable={!mic.listening}
+            onChangeText={(t) => {
+              setText(t);
+              mic.clearError();
+            }}
             multiline
             maxLength={20000}
           />
           {state.streaming ? (
             <Button title="Stop" kind="plain" onPress={stop} />
           ) : (
-            <Button title="Send" onPress={submit} disabled={!canSend || !text.trim()} />
+            <>
+              {VOICE_ENABLED ? <MicButton mic={mic} disabled={!canSend} /> : null}
+              <Button title="Send" onPress={submit} disabled={!canSend || !text.trim() || mic.listening} />
+            </>
           )}
         </View>
+        {mic.error ? <Muted>{mic.error}</Muted> : null}
         {/* Used up: names of spaces and secrets still work; anything else waits for next month. */}
         {state.blocked ? <Muted>{state.blocked}</Muted> : null}
-        <Muted>Never type passwords here. Use the Vault.</Muted>
+        <Muted>Never type or say passwords here. Use the Vault.</Muted>
       </View>
     </KeyboardScreen>
   );

@@ -7,11 +7,13 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, Text, TextInput, View } from 'react-native';
 
+import { MicButton } from '@/components/MicButton';
 import { ItemRow, SpaceRow } from '@/components/rows';
 import { Button, ErrorBox, KeyboardScreen, Loading, Muted, styles, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { useChat } from '@/lib/chat';
-import { versionLabel } from '@/lib/config';
+import { versionLabel, VOICE_ENABLED } from '@/lib/config';
+import { appendDictation, useDictation } from '@/lib/voice';
 import type { SearchResult, Space } from '@/lib/wilma';
 
 type Row = { kind: 'space'; space: Space } | { kind: 'item'; item: SearchResult };
@@ -51,8 +53,11 @@ export default function Home() {
 
   useReloadOnReturn(reload);
 
+  // Dictated words are added to the box; only Send sends them (A5e Q1).
+  const mic = useDictation((words) => setText((t) => appendDictation(t, words)), chat.canSend);
+
   const submit = async () => {
-    if (!chat.canSend || !text.trim()) return;
+    if (!chat.canSend || !text.trim() || mic.listening) return;
     const out = await chat.send(text);
     if (out.to === 'none') return;
     if (out.to === 'blocked') {
@@ -82,10 +87,12 @@ export default function Home() {
           style={[styles.input, { color: c.text, borderColor: c.line, backgroundColor: c.card, flex: 1 }]}
           placeholder="Ask Wilma, or type a name"
           placeholderTextColor={c.muted}
-          value={text}
+          value={mic.listening ? appendDictation(text, mic.partial) : text}
+          editable={!mic.listening}
           onChangeText={(t) => {
             setText(t);
             setHeld(null);
+            mic.clearError();
             if (!t.trim()) setQuery('');
           }}
           onSubmitEditing={submit}
@@ -93,8 +100,11 @@ export default function Home() {
           clearButtonMode="while-editing"
           maxLength={20000}
         />
-        <Button title="Send" onPress={submit} disabled={!chat.canSend || !text.trim()} />
+        {VOICE_ENABLED ? <MicButton mic={mic} disabled={!chat.canSend} /> : null}
+        <Button title="Send" onPress={submit} disabled={!chat.canSend || !text.trim() || mic.listening} />
       </View>
+      {mic.listening ? <Muted>Never type or say passwords here. Use the Vault.</Muted> : null}
+      {mic.error ? <Muted>{mic.error}</Muted> : null}
       {held ? <Muted>{held}</Muted> : chat.routing ? <Muted>One moment…</Muted> : null}
       {link('Conversation', () => router.push('/chat'))}
       <Button title="New note or photo" kind="plain" onPress={() => router.push('/new-item')} />
