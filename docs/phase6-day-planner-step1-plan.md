@@ -1,6 +1,8 @@
 # Day planner, step 1: connect Google Calendar and Google Tasks (read-only)
 
-Status: **plan, waiting for the owner's review** (decisions Q1-Q8 below). Parent decision:
+Status: **plan, waiting for the owner's review** (decisions Q1-Q8 below). **On hold until Wilma's
+commercial (company) account exists** (owner, 2026-10-05): the Google Cloud project, its sign-in
+screen and Google's verification belong to the company, not a personal account. Parent decision:
 `docs/design.md` D25. Nothing is built yet. Read `CLAUDE.md`, `docs/design.md` and
 `docs/phase5-a5b-chat-function-plan.md` (how `chat` runs tools) first.
 
@@ -125,14 +127,28 @@ because the server must use it (D25).
 > use of information received from Google APIs adheres to the Google API Services User Data
 > Policy, including the Limited Use requirements.
 
+## Before starting (owner, 2026-10-05)
+
+This step starts **after the move to the commercial account**, because everything Google shows
+users and verifies is tied to who owns the project:
+- **A company Google account** owns the Google Cloud project (ideally Google Workspace on Wilma's
+  own domain, e.g. `you@<wilma-domain>`), not a personal Gmail.
+- **Wilma's own domain** for the home page and privacy policy; Google's verification of the
+  sign-in screen requires a domain the company can prove it owns (a `github.io` address is a
+  poor fit).
+- The **Google Play organization account** (with its D-U-N-S number) uses the same company name,
+  so users see one consistent publisher.
+
+Doing the setup on a personal account first would mean redoing the sign-in screen, the
+verification and every user's connection later.
+
 ## What the owner does (Google Cloud setup, about 20 minutes)
 
 Never paste the client secret or the token key into a chat, an issue or the repository; each
 goes only into the website it belongs to. Google renames console pages from time to time; if a
 name below does not match, look for the closest one.
 
-1. Go to **console.cloud.google.com**, sign in with the Google account that should own Wilma's
-   Google setup, and create a project named **wilma** (top bar → project picker → New project).
+1. Go to **console.cloud.google.com**, sign in with the **company** Google account, and create a project named **wilma** (top bar → project picker → New project).
 2. **APIs & Services → Library:** search for and **Enable** the **Google Calendar API**, then the
    **Google Tasks API**.
 3. **Google Auth Platform** (formerly "OAuth consent screen") → **Get started**:
@@ -140,9 +156,8 @@ name below does not match, look for the closest one.
    - Audience: **External**.
    - Contact email: yours. Accept the policy, **Create**.
 4. **Branding:** add the app logo (`app/assets/brand/play-store-icon-512.png`), the privacy
-   policy link (`https://hassan-wehbe.github.io/digital-assistant/legal/privacy.html`) and the
-   home page. (Google later asks to verify the domain; a domain of Wilma's own will make the
-   public-launch verification easier. Not needed for testing.)
+   policy link and the home page, both on Wilma's own domain, and add that domain under
+   **Authorized domains** (verified in Google Search Console).
 5. **Data access → Add or remove scopes:** add
    `https://www.googleapis.com/auth/calendar.readonly` and
    `https://www.googleapis.com/auth/tasks.readonly`. Save.
