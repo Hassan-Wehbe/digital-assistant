@@ -1,12 +1,15 @@
 // Edit a note's title and text. Saving keeps the previous version in the note's history (the
 // server does that first) and refuses anything that looks like a password (CLAUDE.md rules 7, 9).
+// A place's fields are edited here too, and a note can become a place (places.ts).
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
 
+import { PlaceFields } from '@/components/PlaceFields';
 import { Button, ErrorBox, KeyboardScreen, Loading, Muted, styles, useColors, useLoad } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { editError, MAX_BODY, MAX_TITLE, noteChanges } from '@/lib/noteEdit';
+import { hasVisits, isPlace, placeForm, placeMetadata, placeOf, samePlace, type PlaceForm } from '@/lib/places';
 import type { Item } from '@/lib/wilma';
 
 export default function EditItem() {
@@ -30,12 +33,22 @@ function EditForm({ item }: { item: Item }) {
   const { wilma } = useAuth();
   const [title, setTitle] = useState(item.title);
   const [body, setBody] = useState(item.body_markdown ?? '');
+  const wasPlace = isPlace(item.item_type);
+  const base = placeOf(item);
+  const [asPlace, setAsPlace] = useState(wasPlace);
+  const [place, setPlace] = useState<PlaceForm>(() => placeForm(base));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const save = async () => {
     const out = noteChanges({ title: item.title, body: item.body_markdown }, { title, body });
     if ('error' in out) return setError(out.error);
+    if (asPlace) {
+      const fields = placeMetadata(place, base);
+      if ('error' in fields) return setError(fields.error);
+      if (!wasPlace) out.changes.item_type = 'place';
+      if (!wasPlace || !samePlace(fields.metadata, base)) out.changes.metadata = fields.metadata;
+    }
     if (!Object.keys(out.changes).length) return router.back();
     setBusy(true);
     setError(null);
@@ -62,6 +75,15 @@ function EditForm({ item }: { item: Item }) {
           onChangeText={setTitle}
           editable={!busy}
         />
+        {asPlace ? (
+          <>
+            <Text style={[styles.title, { color: c.text }]}>📍 Place</Text>
+            <PlaceFields value={place} onChange={setPlace} disabled={busy} hasVisits={hasVisits(base)} />
+            {!wasPlace ? <Button title="Keep it a plain note" kind="plain" onPress={() => setAsPlace(false)} disabled={busy} /> : null}
+          </>
+        ) : (
+          <Button title="📍 Make this a place" kind="plain" onPress={() => setAsPlace(true)} disabled={busy} />
+        )}
         <Text style={[styles.title, { color: c.text }]}>Note</Text>
         <TextInput
           style={[input, { minHeight: 200, textAlignVertical: 'top' }]}

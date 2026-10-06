@@ -1,15 +1,23 @@
-// Save a new note in a space, optionally with pictures or Visio files (saveNote.ts).
+// Save a new note in a space, optionally with pictures or Visio files (saveNote.ts). Choosing
+// Place adds an address, a Google Maps link, the kind and so on (places.ts).
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Text, TextInput } from 'react-native';
 
 import { AttachmentPicker } from '@/components/AttachmentPicker';
+import { Chips, PlaceFields } from '@/components/PlaceFields';
 import { SpaceChips } from '@/components/SpaceChips';
 import { Button, Card, KeyboardScreen, Muted, styles, useColors, useLoad } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { deviceUploadDeps } from '@/lib/deviceFiles';
+import { EMPTY_PLACE, placeMetadata, type PlaceForm } from '@/lib/places';
 import { saveNote } from '@/lib/saveNote';
 import type { PickedFile } from '@/lib/upload';
+
+const KINDS_OF_NOTE = [
+  { value: false, label: 'Note' },
+  { value: true, label: '📍 Place' },
+];
 
 export default function NewItem() {
   const c = useColors();
@@ -19,6 +27,8 @@ export default function NewItem() {
   const [space, setSpace] = useState<string | undefined>(params.space);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
+  const [isPlace, setIsPlace] = useState(false);
+  const [place, setPlace] = useState<PlaceForm>(EMPTY_PLACE);
   const [files, setFiles] = useState<PickedFile[]>([]);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -28,12 +38,14 @@ export default function NewItem() {
 
   const save = async () => {
     if (!space) return setError('Choose a space.');
-    if (!title.trim()) return setError('Give the note a title.');
+    if (!title.trim()) return setError(isPlace ? 'Give the place a name.' : 'Give the note a title.');
+    const fields = isPlace && !createdId ? placeMetadata(place) : null;
+    if (fields && 'error' in fields) return setError(fields.error);
     setBusy(true);
     setError(null);
     let itemId = createdId;
     try {
-      const target = itemId ? { itemId } : { space, title: title.trim(), body };
+      const target = itemId ? { itemId } : { space, title: title.trim(), body, ...(fields ? { place: fields.metadata } : {}) };
       const out = await saveNote(wilma, target, files, deviceUploadDeps, {
         onCreated: (id) => {
           itemId = id;
@@ -70,18 +82,25 @@ export default function NewItem() {
           disabled={busy || !!createdId}
         />
 
+        <Chips
+          options={KINDS_OF_NOTE}
+          selected={(v) => v === isPlace}
+          onPress={setIsPlace}
+          disabled={busy || !!createdId}
+        />
         <TextInput
           style={input}
-          placeholder="Title"
+          placeholder={isPlace ? 'Name of the place' : 'Title'}
           placeholderTextColor={c.muted}
           maxLength={300}
           value={title}
           onChangeText={setTitle}
           editable={!busy && !createdId}
         />
+        {isPlace ? <PlaceFields value={place} onChange={setPlace} disabled={busy || !!createdId} /> : null}
         <TextInput
           style={[input, { minHeight: 140, textAlignVertical: 'top' }]}
-          placeholder="Note (optional)"
+          placeholder={isPlace ? 'Note (optional), e.g. try the fattoush' : 'Note (optional)'}
           placeholderTextColor={c.muted}
           multiline
           maxLength={40000}

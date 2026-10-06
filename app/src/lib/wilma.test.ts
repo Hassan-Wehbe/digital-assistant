@@ -115,7 +115,7 @@ describe('wilma client', () => {
       'search_items', 'update_item', 'update_secret',
     ]);
     expect(Object.keys(setup([]).client).sort()).toEqual(
-      ['attachmentLink', 'createSpace', 'deleteAttachment', 'deleteItem', 'deleteSecret', 'deleteSpace', 'findSecrets', 'getItem', 'listSpaces',
+      ['addVisit', 'attachmentLink', 'createSpace', 'deleteAttachment', 'deleteItem', 'deleteSecret', 'deleteSpace', 'findSecrets', 'getItem', 'listSpaces',
         'newValueLink', 'purgeItem', 'recycleBin', 'restoreItem', 'revealLink', 'saveItem', 'saveSecret', 'search', 'updateItem',
         'updateSecret', 'uploadLink'],
     );
@@ -241,6 +241,25 @@ describe('editing a note', () => {
     expect(params).toEqual([
       { name: 'update_item', arguments: { item_id: 'i9', title: 'Lentil soup' } },
       { name: 'update_item', arguments: { item_id: 'i9', title: 'Lentil soup', body: 'Red lentils' } },
+    ]);
+  });
+});
+
+describe('places', () => {
+  it('saves a place with its fields, changes them, and adds a visit through update_item', async () => {
+    const { client, fetch } = setup([
+      reply(200, toolResult({ id: 'p1', space: 'Restaurants' })),
+      reply(200, toolResult({ id: 'p1', updated: true })),
+      reply(200, toolResult({ id: 'p1', updated: true, place: { status: 'been' } })),
+    ]);
+    const place = { address: 'Armenia St, Beirut', kind: 'restaurant' as const, status: 'want' as const };
+    await client.saveItem({ space: 's1', title: 'Tawlet', body: '', item_type: 'place', metadata: place });
+    await client.updateItem('p1', { item_type: 'place', metadata: { ...place, status: 'been', rating: 4 } });
+    await client.addVisit('p1', { on: '2026-10-03', with: 'Sarah' });
+    expect(fetch.mock.calls.map(([, init]) => JSON.parse(init.body as string).params)).toEqual([
+      { name: 'save_item', arguments: { space: 's1', title: 'Tawlet', body: '', item_type: 'place', metadata: place } },
+      { name: 'update_item', arguments: { item_id: 'p1', item_type: 'place', metadata: { ...place, status: 'been', rating: 4 } } },
+      { name: 'update_item', arguments: { item_id: 'p1', add_visit: { on: '2026-10-03', with: 'Sarah' } } },
     ]);
   });
 });
