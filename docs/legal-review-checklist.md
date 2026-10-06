@@ -16,6 +16,8 @@ and is a starting point, not legal advice.
       limits of liability, termination, governing law (Florida), changes to the terms.
 - [ ] **Subscriptions and billing terms**: monthly AI allowance, auto-renewal and cancellation
       (state auto-renewal laws, Google Play and Apple rules), refunds, price changes, free trial.
+- [ ] **Top-ups** (D28): one-time packs of extra requests; whether they expire, refunds, what
+      happens to unused credit when an account is deleted, store refund rules.
 - [ ] **Account deletion page** (`docs/legal/delete-account.html`) and what deletion really
       removes (backups, logs, revoked Google tokens).
 - [ ] **Google Play Data safety form** and, later, **Apple privacy labels**: match the privacy
