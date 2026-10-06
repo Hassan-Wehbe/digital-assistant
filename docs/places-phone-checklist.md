@@ -1,7 +1,7 @@
 # Phone checklist: places, Save where I am, and the mic fix (places step 6)
 
-For the owner, on the places build (**versionCode 10**, expected), built 2026-10-06 from `main` at
-537fff2. It carries places steps 3, 4 and 5a (#97, #100, #101), the Expo patch updates (#98) and
+For the owner, on the places build (**versionCode 10**), built 2026-10-06 from `main` at 537fff2
+(GitHub run 37540216475). It carries places steps 3, 4 and 5a (#97, #100, #101), the Expo patch updates (#98) and
 the mic fix (#91). About 20 minutes, with your own account, standing somewhere you don't mind
 saving as a test place. **Never say or type a real password or door code**: use the made-up
 ones below. *Restaurants* stands for one of your spaces.
