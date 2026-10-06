@@ -127,7 +127,9 @@ needs to *recommend* it, not only to find it:
    form with coordinates, `find_places` near a point (server-side distance), privacy page and
    Data safety wording for the owner's approval. Strongest model (permission and privacy).
 6. **Ship:** phone checklist (`docs/places-phone-checklist.md`), handoff, "build for Play".
-   Sonnet.
+   Sonnet. **This build also carries the mic fix #91** (merged 2026-10-06, held for this build
+   by the owner): the phone checklist must include "The first tap" and "Dictating" from
+   `docs/phase5-a5e-phone-checklist.md`.
 
 Step 2 covers the extension's fields too (validation of cuisine, price, occasions, dishes,
 visits; "add a visit" through `update_item`; evaluation cases such as "Italian date-night places
