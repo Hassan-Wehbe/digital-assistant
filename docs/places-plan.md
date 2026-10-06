@@ -2,8 +2,9 @@
 
 Status: **approved by the owner (2026-10-06): Q1-Q8 all as recommended; extended the same day**
 ("Extension: richer places" below: cuisine, price, occasions, dishes, visits, "save where I am"
-and coordinates; Q2 changed). Step 2 (server) is live (2026-10-06: #93, #94, #95; migration place_search, `mcp` v12, `chat` v5, evaluation 67/67). Steps 3, 4, 5a and 5c merged (app parts not built). **Step 5b ("places near me", server) in
-review, 2026-10-06:** the `find_places` tool, no migration; see "Near me" below. Comes **before
+and coordinates; Q2 changed). Step 2 (server) is live (2026-10-06: #93, #94, #95; migration place_search, `mcp` v12, `chat` v5, evaluation 67/67). Steps 3, 4, 5a and 5c merged (app parts not built). **Step 5b ("places near me", server) live,
+2026-10-06** (#104, `mcp` v13, `chat` v6, evaluation 71/72, 0 leaks): the `find_places` tool, no
+migration; see "Near me" below. Next: step 6 (the places build). Comes **before
 the company account and before the day planner** (owner, 2026-10-06). Asked by the
 owner 2026-10-06: "a note type that allows adding a location, for example for restaurants or
 places to visit". Design entry: `docs/design.md` D26. Comes **after A5e** (voice) unless the owner
@@ -139,7 +140,7 @@ needs to *recommend* it, not only to find it:
    metadata round trip, the form refuses a non-Maps link. Strongest model. **Merged (#97),
    not built**: ships in the step 6 build; its phone checks go in that checklist.
 4. **Share from Google Maps** into the place form (checked: the short link, the name as title). Strongest model (touches the share intake).
-5. **Save where I am** (5a app, merged; 5b `find_places`, server, in review; 5c privacy, live):
+5. **Save where I am** (5a app, merged; 5b `find_places`, server, live; 5c privacy, live):
    the location permission (asked on the tap only), one reading, the place
    form with coordinates, `find_places` near a point (server-side distance), privacy page and
    Data safety wording for the owner's approval. Strongest model (permission and privacy).
@@ -196,7 +197,7 @@ Q8 after A5e.
 - ~~Answer Q1-Q8.~~ Done 2026-10-06, all as recommended.
 - Approve the merges, the server deploy (step 2), the evaluation run and the Play build.
 - On the phone: check what Google Maps shares (step 4), then run the phone checklist.
-- **Step 5b:** approve the evaluation run (about $0.02), the merge and the `mcp` + `chat` deploy.
+- **Step 5b:** done (evaluation, merge and deploy approved 2026-10-06).
   **Question (open):** should "near me" in the chat use the phone's location? *Recommend:* **later,
   as a small app step:** a "📍 near me" tap in the chat reads the location once (the same
   permission as Save where I am, asked only on that tap) and sends it with that one message; it
