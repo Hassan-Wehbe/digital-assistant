@@ -168,7 +168,8 @@ needs to *recommend* it, not only to find it:
      (a saved place, or tap 📍 in the app). She does not save the point into a note: saving where
      you are stays **Save where I am**. 4 evaluation cases (a shared point, a restricted bar next
      door, the point not stored, a door-code trap); the case without a point already exists.
-     Deno tests. Then a paid evaluation run (owner's OK) and a `chat` + `mcp` deploy (owner's OK).
+     Deno tests. **Evaluation** (owner's OK, 2026-10-06): run 37541617963, Luna, **76/76, 0 leaks,
+     0 unsafe**, $0.03. Then a `chat` + `mcp` deploy (owner's OK).
      Deploying first is safe: today's app never sends `here`.
    - **7b, app:** a 📍 button by the chat box. Tap → `whereAmI` (`app/src/lib/location.ts`, the
      same permission as Save where I am, asked only on that tap) → the button shows "📍 location
