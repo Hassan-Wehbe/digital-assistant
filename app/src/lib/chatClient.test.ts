@@ -74,6 +74,18 @@ describe('chat client', () => {
     expect(JSON.parse(init.body)).toEqual({ messages: [{ role: 'user', content: 'Hello' }] });
   });
 
+  it('sends the 📍 location with that one message, lat and lng only', async () => {
+    const { client, fetch } = setup([streamed(200, answer), streamed(200, answer)]);
+    const here = { lat: 33.895123, lng: 35.517123, accuracy: 12 } as { lat: number; lng: number };
+    await all(client.send(hello, undefined, here));
+    expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({
+      messages: [{ role: 'user', content: 'Hello' }],
+      here: { lat: 33.895123, lng: 35.517123 },
+    });
+    await all(client.send(hello));
+    expect(JSON.parse(fetch.mock.calls[1][1].body)).not.toHaveProperty('here');
+  });
+
   it('sends only user and assistant text, at most 20, ending with the new message', async () => {
     const entries: Entry[] = [];
     for (let i = 0; i < 15; i++) {

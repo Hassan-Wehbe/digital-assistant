@@ -12,6 +12,12 @@ import { messagesToSend, type Entry } from './chatThread';
 import { WilmaError } from './wilma';
 
 /** The part of a streaming fetch the client uses. */
+/** Where the phone is, for one "near me" message (only lat and lng are sent). */
+export interface SharedPoint {
+  lat: number;
+  lng: number;
+}
+
 export type StreamingFetch = (
   url: string,
   init: { method: 'POST'; headers: Record<string, string>; body: string; signal?: AbortSignal },
@@ -53,10 +59,11 @@ export function chatClient({ url, token, refresh, fetch: f = expoFetch as unknow
    * Sends the thread (its last 20 user and assistant messages, ending with the newest user
    * message) and yields the answer's events, ending with `done`. Problems become the usual
    * connection error event; only an ended session throws (a WilmaError marked signed out).
-   * Aborting `signal` (Stop) ends the events quietly.
+   * Aborting `signal` (Stop) ends the events quietly. `here`: the phone's location from the 📍
+   * tap (places step 7), sent with this one message only; never with the classifier.
    */
-  async function* send(entries: Entry[], signal?: AbortSignal): AsyncGenerator<ChatEvent> {
-    const body = JSON.stringify({ messages: messagesToSend(entries) });
+  async function* send(entries: Entry[], signal?: AbortSignal, here?: SharedPoint): AsyncGenerator<ChatEvent> {
+    const body = JSON.stringify(here ? { messages: messagesToSend(entries), here: { lat: here.lat, lng: here.lng } } : { messages: messagesToSend(entries) });
     const post = (accessToken: string) =>
       f(url, {
         method: 'POST',

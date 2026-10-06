@@ -23,6 +23,18 @@ function play(events: ChatEvent[], opts: { throwAfter?: Error; abortAfter?: numb
 }
 
 describe('runTurn', () => {
+  it('passes the 📍 location to the client for this message, and none without it', async () => {
+    const seen: unknown[] = [];
+    async function* send(_e: unknown, _s?: AbortSignal, here?: unknown): AsyncGenerator<ChatEvent> {
+      seen.push(here);
+      yield { type: 'done', counted: true };
+    }
+    const entries = chatReducer(initialChat(), { type: 'send', text: 'near me?' }).entries;
+    await runTurn(send, entries, new AbortController().signal, () => {}, { lat: 1, lng: 2 });
+    await runTurn(send, entries, new AbortController().signal, () => {});
+    expect(seen).toEqual([{ lat: 1, lng: 2 }, undefined]);
+  });
+
   it('plays the events into the thread and ends with done', async () => {
     const t = play([
       { type: 'status', tool: 'search_items', text: 'Searching your notes…' },

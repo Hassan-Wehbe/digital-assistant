@@ -13,9 +13,14 @@
 // Wilma. Lookups also work when the month's allowance is used up. A short message that matches no
 // name may be a search: the server's classifier decides (step 6), and the notes found are shown
 // with "Ask Wilma instead". The classifier is not asked when the allowance is used up.
+//
+// A message sent with the 📍 location (places step 7) goes straight to Wilma, past the router and
+// the classifier, and the location goes with that one message only. It is kept in memory just for
+// Try again on that message, and is never saved with the thread.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { useAuth } from './auth';
+import type { SharedPoint } from './chatClient';
 import { MAX_NOTES, routeMessage, type MessageRoute } from './chatRoute';
 import { runConfirm, runTurn } from './chatRun';
 import { threadsToKeep } from './chatStore';
@@ -48,8 +53,9 @@ interface ChatContextValue {
   bannerVisible: boolean;
   /** A message is being routed (names read, maybe the classifier asked): Send waits. */
   routing: boolean;
-  /** Routes the message (a lookup, a search, or Wilma) and says what happened. */
-  send(text: string): Promise<SendOutcome>;
+  /** Routes the message (a lookup, a search, or Wilma) and says what happened. With `here` (📍),
+   * it goes straight to Wilma with the location. */
+  send(text: string, here?: SharedPoint): Promise<SendOutcome>;
   /** "Ask Wilma instead" on a notes card: sends that message to Wilma, past the router. */
   askWilma(text: string): Promise<SendOutcome>;
   stop(): void;
@@ -85,6 +91,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [routingNow, setRoutingNow] = useState(false);
 
   const request = useRef<AbortController | null>(null);
+  // The 📍 location of the last message sent to Wilma, for Try again on it. Memory only.
+  const lastHere = useRef<SharedPoint | undefined>(undefined);
   const abort = useCallback(() => {
     request.current?.abort();
     request.current = null;
@@ -97,6 +105,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     user.current = userId;
+    lastHere.current = undefined;
     abort();
     // Another account, or signed out: nothing of the previous thread stays in memory.
     act({ type: 'load', entries: [], noticeDismissed: null });
@@ -136,14 +145,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, [keep, queue]);
 
   const start = useCallback(
-    (entries: ChatState['entries']) => {
+    (entries: ChatState['entries'], here?: SharedPoint) => {
       const controller = new AbortController();
       request.current = controller;
+      lastHere.current = here;
       const forUser = user.current;
       runTurn(chat.send, entries, controller.signal, (a) => {
         // An answer for an account that has since signed out is dropped.
         if (user.current === forUser && !controller.signal.aborted) act(a);
-      }).then((end) => {
+      }, here).then((end) => {
         if (request.current === controller) request.current = null;
         if (end === 'signed_out') signOut();
       });
@@ -158,9 +168,18 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       canSend: canLookup(state) && !routingNow && loadedFor !== null && loadedFor === userId,
       routing: routingNow,
       bannerVisible: noticeVisible(state, monthKey(new Date())),
-      async send(text) {
+      async send(text, here) {
         const none: SendOutcome = { to: 'none' };
         if (!loadedFor || loadedFor !== userId || routing.current || !text.trim() || !canLookup(current.current)) return none;
+        if (here) {
+          // "Near me": straight to Wilma. The router and the classifier never see the location.
+          const before = current.current;
+          if (before.blocked !== null) return { to: 'blocked' };
+          const next = act({ type: 'send', text });
+          if (next === before) return none;
+          start(next.entries, here);
+          return { to: 'wilma' };
+        }
         const forUser = user.current;
         routing.current = true;
         setRoutingNow(true);
@@ -216,12 +235,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       retry() {
         const before = current.current;
         const next = act({ type: 'retry' });
-        if (next !== before) start(next.entries);
+        if (next !== before) start(next.entries, lastHere.current);
       },
       dismissBanner() {
         act({ type: 'dismiss_notice', month: monthKey(new Date()) });
       },
       clear() {
+        lastHere.current = undefined;
         abort();
         act({ type: 'clear' });
       },
