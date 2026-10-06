@@ -1,7 +1,8 @@
 # A5e: voice, speech to text (plan)
 
-Status: **approved by the owner (2026-10-05): Q1-Q8 all as recommended** (below). Nothing is
-built; next is step 2. Parent plan: `docs/phase5-chat-plan.md` (A5e). Builds on
+Status: **approved by the owner (2026-10-05): Q1-Q8 all as recommended** (below). Step 2
+merged (#79, live in Play versionCode 8, mic off). Step 3 (the mic button) is in review; see
+"As built: step 3" at the end. Next: step 4. Parent plan: `docs/phase5-chat-plan.md` (A5e). Builds on
 A5d, the one box (`docs/phase5-a5d-one-box-plan.md`). Design: `docs/design.md` D18 (one box and
 voice, no modes). Read `docs/handoff.md`, "Lessons from this session (read before adding native
 packages)", before step 2.
@@ -237,3 +238,26 @@ screen while listening, airplane mode, no mic in the vault, and "my wifi passwor
 - Approve the privacy wording; update Data safety in Play Console yourself (Claude cannot).
 - Run the phone checklist. Never dictate or paste passwords or keys to Wilma or to me; if you
   do, change them.
+
+## As built: step 3 (the mic button)
+
+- `app/src/lib/voice.ts`: `createDictation(load, onChange)` is the mic without React (start,
+  stop, cancel; partial words; permission state; short error lines), and `useDictation(onWords,
+  enabled)` wraps it for a screen. It stops listening when the app goes to the background
+  (`AppState`), when the screen loses focus (`useFocusEffect`), and when `enabled` turns false
+  (the box cannot send, or a reply streams). A result only ever calls `onWords`: the screens pass
+  `(words) => setText((t) => appendDictation(t, words))`.
+- Partial words are shown after the box's text while listening but are not in the box's state;
+  the final words are appended when the phone sends them. If listening ends without a final
+  result (stopped, or the app went to the background), the words already showing are kept.
+- While listening the box is read-only and **Send waits** (tap the mic to stop, then Send), so
+  the words sent are exactly the words in the box. Nothing is sent by voice (Q1).
+- Permission: asked on the first tap (`requestPermissionsAsync`); "denied" gives the Settings
+  line. No speech service on the phone (`isRecognitionAvailable()` false) gives its own line.
+- `app/src/components/MicButton.tsx`: 🎤 / ■, labels "Dictate" / "Stop dictating", between the
+  text and Send in both boxes, hidden in the chat while a reply streams, off when `canSend` is
+  false. Q8: the chat box's line reads "Never type or say passwords here. Use the Vault."; the
+  home box shows it while listening.
+- Tests: `dictation.test.ts` (tests 3, 4, 6 with a fake module), `micScreens.test.ts` (test 5:
+  loading both screens does not load the speech package; the mic only under `VOICE_ENABLED`;
+  only the two boxes use it), `appConfig.test.ts` (test 2, from step 2).

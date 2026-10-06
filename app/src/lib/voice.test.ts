@@ -31,9 +31,9 @@ describe('voice.ts loading (start-up safety, A3a lesson)', () => {
     expect(mockLoads.count).toBe(1);
   });
 
-  it('the flag keeps dictation off until the mic button exists (step 3)', () => {
+  it('the mic is on (step 3)', () => {
     const { VOICE_ENABLED } = require('./config');
-    expect(VOICE_ENABLED).toBe(false);
+    expect(VOICE_ENABLED).toBe(true);
   });
 });
 
