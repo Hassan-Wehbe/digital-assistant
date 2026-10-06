@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { draftFromShared, nothingUsable, parseShared, sourceFor, type Shared } from './shared';
+import { draftFromShared, nothingUsable, parseShared, placeFromShared, sourceFor, type Shared } from './shared';
 
 const CACHE = 'file:///data/user/0/com.zaf.wilma/cache/';
 
@@ -88,5 +88,43 @@ describe('sourceFor', () => {
 
   it('reads anything else in place', () => {
     expect(sourceFor({ uri: 'file:///group/x/IMG_1.jpg', copy: null }, CACHE)).toEqual({ how: 'read', uri: 'file:///group/x/IMG_1.jpg' });
+  });
+});
+
+describe('placeFromShared (Share in Google Maps -> Wilma)', () => {
+  const s = (over: Partial<Shared>): Shared => ({ files: [], text: null, title: null, ...over });
+
+  it("reads the owner's phone: the short link as text, the name as title", () => {
+    expect(placeFromShared(s({ text: 'https://maps.app.goo.gl/JMCEPYcXfULRqPyc6', title: 'Hinode Sushi' }))).toEqual({
+      name: 'Hinode Sushi',
+      mapsUrl: 'https://maps.app.goo.gl/JMCEPYcXfULRqPyc6',
+      address: '',
+    });
+    expect(placeFromShared(s({ text: 'https://maps.app.goo.gl/tmAtgRia88Gw9wbN9' }))).toEqual({
+      name: '',
+      mapsUrl: 'https://maps.app.goo.gl/tmAtgRia88Gw9wbN9',
+      address: '',
+    });
+  });
+
+  it('reads "Name / address / link" lines', () => {
+    expect(placeFromShared(s({ text: 'Tawlet\nArmenia St, Mar Mikhael\nBeirut\nhttps://maps.app.goo.gl/AbC123' }))).toEqual({
+      name: 'Tawlet',
+      mapsUrl: 'https://maps.app.goo.gl/AbC123',
+      address: 'Armenia St, Mar Mikhael, Beirut',
+    });
+    expect(placeFromShared(s({ title: 'Tawlet', text: 'Tawlet\nArmenia St\nhttps://maps.app.goo.gl/AbC123' }))).toEqual({
+      name: 'Tawlet',
+      mapsUrl: 'https://maps.app.goo.gl/AbC123',
+      address: 'Armenia St',
+    });
+  });
+
+  it('is not a place without a Google Maps link, or with files', () => {
+    expect(placeFromShared(s({ text: 'https://example.com/maps.app.goo.gl' }))).toBeNull();
+    expect(placeFromShared(s({ text: 'http://maps.app.goo.gl/AbC123' }))).toBeNull();
+    expect(placeFromShared(s({ text: 'lunch tomorrow?' }))).toBeNull();
+    expect(placeFromShared(s({ text: null }))).toBeNull();
+    expect(placeFromShared(s({ text: 'https://maps.app.goo.gl/AbC123', files: [{ uri: 'content://x', copy: null }] }))).toBeNull();
   });
 });

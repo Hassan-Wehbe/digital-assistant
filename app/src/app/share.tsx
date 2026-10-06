@@ -1,17 +1,20 @@
 // Share -> Wilma: save what another app shared (photos, Visio files, text or a link) as a
 // new note, or add the files to an existing note. Same checks and upload as "New note"
 // (picked.ts, saveNote.ts); the shared files are copied into the app's cache first.
+// A Google Maps share opens as a place (placeFromShared), with its name and link filled in.
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { AttachmentPicker } from '@/components/AttachmentPicker';
+import { Chips, PlaceFields } from '@/components/PlaceFields';
 import { SpaceChips } from '@/components/SpaceChips';
 import { Button, Card, ErrorBox, KeyboardScreen, Loading, Muted, styles, useColors, useLoad } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { deviceUploadDeps, prepareShared, removeCopies } from '@/lib/deviceFiles';
 import { saveNote, type SaveTarget } from '@/lib/saveNote';
-import { draftFromShared, TITLE_MAX, type Shared } from '@/lib/shared';
+import { EMPTY_PLACE, placeMetadata, type PlaceForm } from '@/lib/places';
+import { draftFromShared, placeFromShared, TITLE_MAX, type Shared } from '@/lib/shared';
 import { useShare } from '@/lib/shareIntake';
 import type { PickedFile } from '@/lib/upload';
 
@@ -37,15 +40,26 @@ export default function ShareScreen() {
 
 type Mode = 'new' | 'existing';
 
+const KINDS_OF_NOTE = [
+  { value: false, label: 'Note' },
+  { value: true, label: '📍 Place' },
+];
+
 function ShareForm({ shared, onDone, onCancel }: { shared: Shared; onDone: () => void; onCancel: () => void }) {
   const c = useColors();
   const { wilma } = useAuth();
   const draft = draftFromShared(shared);
+  const fromMaps = placeFromShared(shared);
   const spaces = useLoad('spaces', () => wilma.listSpaces());
   const [mode, setMode] = useState<Mode>('new');
   const [space, setSpace] = useState<string | undefined>();
-  const [title, setTitle] = useState(draft.title);
-  const [body, setBody] = useState(draft.body);
+  const [title, setTitle] = useState(fromMaps ? fromMaps.name : draft.title);
+  // A Maps share keeps its link in the place's map link, not in the note.
+  const [body, setBody] = useState(fromMaps ? '' : draft.body);
+  const [isPlace, setIsPlace] = useState(!!fromMaps);
+  const [place, setPlace] = useState<PlaceForm>(
+    fromMaps ? { ...EMPTY_PLACE, mapsUrl: fromMaps.mapsUrl, address: fromMaps.address } : EMPTY_PLACE,
+  );
   const [noteId, setNoteId] = useState<string | null>(null);
   const [files, setFiles] = useState<PickedFile[]>([]);
   const [preparing, setPreparing] = useState(shared.files.length > 0);
@@ -95,8 +109,12 @@ function ShareForm({ shared, onDone, onCancel }: { shared: Shared; onDone: () =>
       target = { itemId: noteId };
     } else {
       if (!space) return setError('Choose a space.');
-      if (!title.trim()) return setError('Give the note a title.');
-      target = { space, title: title.trim(), body };
+      if (!title.trim()) return setError(isPlace ? 'Give the place a name.' : 'Give the note a title.');
+      if (isPlace) {
+        const fields = placeMetadata(place);
+        if ('error' in fields) return setError(fields.error);
+        target = { space, title: title.trim(), body, place: fields.metadata };
+      } else target = { space, title: title.trim(), body };
     }
     setBusy(true);
     let savedId = createdId;
@@ -152,18 +170,31 @@ function ShareForm({ shared, onDone, onCancel }: { shared: Shared; onDone: () =>
 
         {mode === 'new' ? (
           <>
+            {!shared.files.length ? (
+              <Chips
+                options={KINDS_OF_NOTE}
+                selected={(v) => v === isPlace}
+                onPress={(v) => {
+                  setIsPlace(v);
+                  // Back to a plain note: the shared text (the Maps link) goes into the note.
+                  if (!v && !body.trim()) setBody(draft.body);
+                }}
+                disabled={locked}
+              />
+            ) : null}
             <TextInput
               style={input}
-              placeholder="Title"
+              placeholder={isPlace ? 'Name of the place' : 'Title'}
               placeholderTextColor={c.muted}
               maxLength={TITLE_MAX}
               value={title}
               onChangeText={setTitle}
               editable={!locked}
             />
+            {isPlace ? <PlaceFields value={place} onChange={setPlace} disabled={locked} /> : null}
             <TextInput
               style={[input, { minHeight: 120, textAlignVertical: 'top' }]}
-              placeholder="Note (optional)"
+              placeholder={isPlace ? 'Note (optional), e.g. try the fattoush' : 'Note (optional)'}
               placeholderTextColor={c.muted}
               multiline
               maxLength={40000}
