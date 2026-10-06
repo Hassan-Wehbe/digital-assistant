@@ -2,6 +2,7 @@
 import { Link } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
+import { isPlace, placeLine } from '@/lib/places';
 import type { SearchResult, Space } from '@/lib/wilma';
 
 import { Card, Muted, styles, useColors } from './ui';
@@ -31,7 +32,9 @@ export function SpaceRow({ space }: { space: Space }) {
 
 export function ItemRow({ item, showSpace = true }: { item: SearchResult; showSpace?: boolean }) {
   const c = useColors();
-  const meta = [showSpace ? item.space : null, item.item_type, ...(item.tags ?? []).map((t) => `#${t}`)]
+  // A place shows its kind and want / been instead of "place" ("Restaurant · $$ · Want to go").
+  const kind = isPlace(item.item_type) ? placeLine(item.place ?? {}) : item.item_type;
+  const meta = [showSpace ? item.space : null, kind, ...(item.tags ?? []).map((t) => `#${t}`)]
     .filter(Boolean)
     .join(' · ');
   return (

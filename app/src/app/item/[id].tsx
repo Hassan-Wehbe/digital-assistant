@@ -1,11 +1,14 @@
 // One item in full: text, tags, attachments (with a download button) and linked items; Edit note
-// changes its title and text (edit-item.tsx).
+// changes its title and text (edit-item.tsx). A place also shows its fields, Open in Maps and
+// We went again (PlaceCard).
 import { Link, router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 
+import { PlaceCard } from '@/components/PlaceCard';
 import { Button, Card, confirm, ErrorBox, Loading, Muted, styles, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { placeOf } from '@/lib/places';
 import { fileSize, type Attachment } from '@/lib/wilma';
 
 export default function ItemScreen() {
@@ -25,6 +28,7 @@ export default function ItemScreen() {
     );
   }
 
+  const place = placeOf(item);
   const meta = [item.space.path ?? item.space.name, item.item_type, ...item.tags.map((t) => `#${t}`)].join(' · ');
   return (
     <>
@@ -54,6 +58,7 @@ export default function ItemScreen() {
             {item.revision_count > 0 ? ` · ${item.revision_count} earlier version(s)` : ''}
           </Muted>
         </Card>
+        {place ? <PlaceCard itemId={item.id} place={place} onChanged={reload} /> : null}
 
         {item.attachments.length > 0 && (
           <>

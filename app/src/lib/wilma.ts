@@ -4,6 +4,8 @@
 // for the Claude app. Plain JSON-RPC `tools/call` requests: the server is
 // stateless and answers with JSON.
 
+import type { NewVisit, PlaceMetadata } from './places';
+
 /**
  * The tools this version of the app uses. The vault tools return metadata and one-time
  * links only; values are decrypted on the phone (vault.tsx), never passed through Wilma.
@@ -54,6 +56,8 @@ export interface SearchResult {
   tags: string[] | null;
   snippet: string | null;
   updated_at: string;
+  /** A place's fields (status, kind, cuisine...), only for places. */
+  place?: PlaceMetadata | null;
 }
 
 export interface Attachment {
@@ -89,6 +93,8 @@ export interface Item {
   attachments: Attachment[];
   links: ItemLink[];
   revision_count: number;
+  /** Extra fields; for a place, its checked fields (places.ts). */
+  metadata?: Record<string, unknown> | null;
 }
 
 export interface NewItem {
@@ -96,12 +102,18 @@ export interface NewItem {
   title: string;
   body: string;
   item_type?: string;
+  /** For a place, its fields (checked again by the server). */
+  metadata?: PlaceMetadata;
 }
 
 /** What the app may change on a note: only the fields given are sent. */
 export interface NoteChanges {
   title?: string;
   body?: string;
+  /** "place" turns a note into a place (with metadata). */
+  item_type?: string;
+  /** Replaces all of the item's metadata. */
+  metadata?: PlaceMetadata;
 }
 
 export interface UploadLink {
@@ -233,11 +245,14 @@ export function wilmaClient({ url, token, refresh, fetch: f = fetch }: ClientOpt
       (await call<{ results: SearchResult[] }>('search_items', opts)).results,
     getItem: (id: string) => call<Item>('get_item', { item_id: id }),
     attachmentLink: (id: string) => call<AttachmentLink>('get_attachment_link', { attachment_id: id }),
-    saveItem: ({ space, title, body, item_type = 'note' }: NewItem) =>
-      call<{ id: string; space: string }>('save_item', { space, title, body, item_type }),
-    /** Changes a note's title and/or text; the server keeps the previous version first. */
+    saveItem: ({ space, title, body, item_type = 'note', metadata }: NewItem) =>
+      call<{ id: string; space: string }>('save_item', { space, title, body, item_type, ...(metadata ? { metadata } : {}) }),
+    /** Changes a note's title, text or place fields; the server keeps the previous version first. */
     updateItem: (id: string, changes: NoteChanges) =>
       call<{ id: string; updated: boolean }>('update_item', { item_id: id, ...changes }),
+    /** "We went again": a visit goes first and the place counts as been (the server checks it). */
+    addVisit: (id: string, visit: NewVisit) =>
+      call<{ id: string; updated: boolean; place?: PlaceMetadata }>('update_item', { item_id: id, add_visit: visit }),
     /** A one-time upload link for an existing item, or for a new one (space + title + note). */
     uploadLink: (target: { item_id: string } | { space: string; title: string; note?: string }) =>
       call<UploadLink>('attach_file', target),

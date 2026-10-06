@@ -68,3 +68,25 @@ describe('saveNote', () => {
     expect(onCreated).toHaveBeenCalledWith('new-2');
   });
 });
+
+describe('saveNote: places', () => {
+  const place = { address: 'Armenia St, Beirut', kind: 'restaurant' as const, status: 'want' as const };
+
+  it('saves a place with save_item, with its fields', async () => {
+    const f = fakes();
+    const out = await saveNote(f.wilma, { space: 'Restaurants', title: 'Tawlet', body: '', place }, [], f.deps);
+    expect(f.saveItem).toHaveBeenCalledWith({ space: 'Restaurants', title: 'Tawlet', body: '', item_type: 'place', metadata: place });
+    expect(out).toEqual({ itemId: 'new-1', failed: [] });
+    expect(f.uploadLink).not.toHaveBeenCalled();
+  });
+
+  it('with photos, saves the place first (the server checks its fields), then adds the photos to it', async () => {
+    const f = fakes();
+    const onCreated = jest.fn();
+    const out = await saveNote(f.wilma, { space: 'Restaurants', title: 'Tawlet', body: '', place }, [photo], f.deps, { onCreated });
+    expect(f.saveItem).toHaveBeenCalledWith({ space: 'Restaurants', title: 'Tawlet', body: '', item_type: 'place', metadata: place });
+    expect(f.uploadLink).toHaveBeenCalledWith({ item_id: 'new-1' });
+    expect(onCreated).toHaveBeenCalledWith('new-1');
+    expect(out).toEqual({ itemId: 'new-1', failed: [] });
+  });
+});
