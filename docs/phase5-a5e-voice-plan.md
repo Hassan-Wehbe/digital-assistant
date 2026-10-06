@@ -1,8 +1,8 @@
 # A5e: voice, speech to text (plan)
 
 Status: **approved by the owner (2026-10-05): Q1-Q8 all as recommended** (below). Step 2
-merged (#79, live in Play versionCode 8, mic off). Step 3 (the mic button) is in review; see
-"As built: step 3" at the end. Next: step 4. Parent plan: `docs/phase5-chat-plan.md` (A5e). Builds on
+merged (#79, live in Play versionCode 8, mic off). Step 3 (the mic button) merged (#86), not
+built; see "As built: step 3" at the end. Step 4 (privacy page, Data safety) in review. Then step 5. Parent plan: `docs/phase5-chat-plan.md` (A5e). Builds on
 A5d, the one box (`docs/phase5-a5d-one-box-plan.md`). Design: `docs/design.md` D18 (one box and
 voice, no modes). Read `docs/handoff.md`, "Lessons from this session (read before adding native
 packages)", before step 2.
