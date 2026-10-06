@@ -75,12 +75,19 @@ no chat with other people). The result should be "Everyone" or the local equival
   - *Files and docs*. Collected, optional. Purpose: **App functionality**.
   - *App activity → Other user-generated content* (notes, spaces, vault entries). Collected,
     optional. Purpose: **App functionality**.
-  - Not collected: location, contacts, messages, audio, health, financial info, web
-    browsing, device IDs, analytics or crash data (the app has none of these).
+  - *Audio → Voice or sound recordings* (dictation, A5e, from versionCode 9). Collected,
+    optional, **processed ephemerally: Yes**, not shared. Purpose: **App functionality**.
+    Why declared although the app never sends or keeps audio itself: the phone's speech
+    service (usually Google's) may send it off the phone to turn it into text, and declaring it
+    is the safe reading of Google's form (declaring too much is allowed, too little is not).
+    The resulting text is covered by "Other user-generated content".
+  - Not collected: location, contacts, messages, health, financial info, web browsing,
+    device IDs, analytics or crash data (the app has none of these).
   - Vault values are end-to-end encrypted, so no one but the user can read them. Google's form
     still counts data that leaves the phone, so they are covered by "Other user-generated
     content" above. Do not claim the app collects no data.
-  - "Is this data processed ephemerally?" **No** for all of the above (it is stored).
+  - "Is this data processed ephemerally?" **No** for all of the above (it is stored), except
+    audio: **Yes**.
 
 **Store listing** (Grow → Store presence → Main store listing):
 - App name: `Wilma`
