@@ -94,8 +94,10 @@ needs to *recommend* it, not only to find it:
   `https://www.google.com/maps/search/?api=1&query=<address>` is a public link format that needs
   no API key and costs nothing. The app already may open https links (its manifest has that
   `<queries>` entry).
-- **Share from Google Maps:** the share arrives as text (usually the place name and a short
-  `maps.app.goo.gl` link; **to check** on the owner's phone). `shareIntake` recognises a Maps link
+- **Share from Google Maps:** the share arrives as text. **Checked on the owner's phone
+  (2026-10-06):** the text is only the short link (`https://maps.app.goo.gl/...`), with the
+  place's name as the title; no address. The app also reads "Name / address / link" lines, which
+  other versions send. `shareIntake` recognises a Maps link
   and opens the place form instead of the plain note form. The short link is kept as is: Wilma
   does not follow it to Google to find the address (that would be a call to Google from our
   server; Q3).
@@ -122,8 +124,7 @@ needs to *recommend* it, not only to find it:
    Want to go / Been there with rating, and the kind shown in lists. Tests: link building,
    metadata round trip, the form refuses a non-Maps link. Strongest model. **Merged (#97),
    not built**: ships in the step 6 build; its phone checks go in that checklist.
-4. **Share from Google Maps** into the place form (check first what Google Maps shares on the
-   owner's phone). Strongest model (touches the share intake).
+4. **Share from Google Maps** into the place form (checked: the short link, the name as title). Strongest model (touches the share intake).
 5. **Save where I am:** the location permission (asked on the tap only), one reading, the place
    form with coordinates, `find_places` near a point (server-side distance), privacy page and
    Data safety wording for the owner's approval. Strongest model (permission and privacy).
