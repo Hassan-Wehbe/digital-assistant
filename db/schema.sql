@@ -74,11 +74,11 @@ create table tag (
 create table item (
   id             uuid primary key default gen_random_uuid(),
   space_id       uuid not null references space (id) on delete cascade,
-  item_type      text not null,                 -- design, recipe, note, ...
+  item_type      text not null,                 -- design, recipe, note, place, ...
   title          text not null,
   body_markdown  text not null default '',
   summary        text,
-  metadata       jsonb not null default '{}'::jsonb,
+  metadata       jsonb not null default '{}'::jsonb,  -- place: checked fields (mcp/lib/places.ts)
   source         text not null default 'typed' check (source in ('typed','voice','import')),
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now(),

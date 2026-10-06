@@ -20,7 +20,9 @@ export const registerSearchItems: RegisterTool = (server, { db, assistantName })
         "Also matches attached files (file names, captions, picture descriptions, Visio text); " +
         "results are the items that hold them. " +
         "With no query, lists the most recently updated items matching the filters. " +
-        "Returns snippets; call get_item for the full text. Restricted spaces are never searched." +
+        "Returns snippets; call get_item for the full text. Places (item_type \"place\") also return " +
+        "their fields (address, kind, status, rating, cuisine, occasions, visits...). " +
+        "Restricted spaces are never searched." +
         addressedAs(assistantName, "what did I note about the Gartner sandbox?"),
       inputSchema: {
         query: z.string().max(500).optional().describe("What to look for, in plain words"),
@@ -58,6 +60,8 @@ export const registerSearchItems: RegisterTool = (server, { db, assistantName })
             tags: r.tags,
             snippet: r.snippet,
             updated_at: r.updated_at,
+            // A place's fields (status, rating, cuisine, visits...), so lists need no get_item.
+            ...(r.place ? { place: r.place } : {}),
           })),
         });
       }),
