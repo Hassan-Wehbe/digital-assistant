@@ -2,7 +2,8 @@
 
 Status: **approved by the owner (2026-10-06): Q1-Q8 all as recommended; extended the same day**
 ("Extension: richer places" below: cuisine, price, occasions, dishes, visits, "save where I am"
-and coordinates; Q2 changed). Step 2 (server) is live (2026-10-06: #93, #94, #95; migration place_search, `mcp` v12, `chat` v5, evaluation 67/67). Step 3 (app) merged, not built (#97, 2026-10-06). Next: step 4 (share from Google Maps). Comes **before
+and coordinates; Q2 changed). Step 2 (server) is live (2026-10-06: #93, #94, #95; migration place_search, `mcp` v12, `chat` v5, evaluation 67/67). Steps 3, 4, 5a and 5c merged (app parts not built). **Step 5b ("places near me", server) in
+review, 2026-10-06:** the `find_places` tool, no migration; see "Near me" below. Comes **before
 the company account and before the day planner** (owner, 2026-10-06). Asked by the
 owner 2026-10-06: "a note type that allows adding a location, for example for restaurants or
 places to visit". Design entry: `docs/design.md` D26. Comes **after A5e** (voice) unless the owner
@@ -113,6 +114,19 @@ needs to *recommend* it, not only to find it:
 - **Near me (once coordinates exist):** distance is computed on the server from stored
   coordinates (plain math, no map service, no cost); places without coordinates are listed by
   address. Restricted spaces stay out (rule 3).
+  **As built (step 5b):** a separate read-only tool, `find_places`
+  (`supabase/functions/mcp/tools/find_places.ts`), rather than a parameter on `search_items`:
+  `search_items` ranks by how well the words match and returns at most 50, so sorting its results
+  by distance would miss places, and changing its SQL would need another migration. `find_places`
+  reads the user's places in searchable spaces (the same `searchable_space_ids()` rule as search,
+  then checked again in the code), measures the straight-line ("as the crow flies") distance with
+  the haversine formula (`distanceKm` in `mcp/lib/places.ts`) and sorts nearest first. The point
+  is `lat`/`lng` the user gave or `near_place`, a saved place with a location (a restricted place
+  is "not found"). Filters: space, kind, status, cuisine, occasion, `within_km`. Places without a
+  location are only counted, or listed by address with `include_without_location`, never with a
+  distance. **No migration.** **Where "here" comes from in chat:** the chat does not know the
+  phone's location in this step; for "near me" Wilma asks which saved place the user is near, or
+  for a map link with coordinates (owner's question below: should the app send the location?).
 
 ## Steps (each a small PR; the owner approves merges, builds and deploys)
 
@@ -125,7 +139,8 @@ needs to *recommend* it, not only to find it:
    metadata round trip, the form refuses a non-Maps link. Strongest model. **Merged (#97),
    not built**: ships in the step 6 build; its phone checks go in that checklist.
 4. **Share from Google Maps** into the place form (checked: the short link, the name as title). Strongest model (touches the share intake).
-5. **Save where I am:** the location permission (asked on the tap only), one reading, the place
+5. **Save where I am** (5a app, merged; 5b `find_places`, server, in review; 5c privacy, live):
+   the location permission (asked on the tap only), one reading, the place
    form with coordinates, `find_places` near a point (server-side distance), privacy page and
    Data safety wording for the owner's approval. Strongest model (permission and privacy).
 6. **Ship:** phone checklist (`docs/places-phone-checklist.md`), handoff, "build for Play".
@@ -181,3 +196,9 @@ Q8 after A5e.
 - ~~Answer Q1-Q8.~~ Done 2026-10-06, all as recommended.
 - Approve the merges, the server deploy (step 2), the evaluation run and the Play build.
 - On the phone: check what Google Maps shares (step 4), then run the phone checklist.
+- **Step 5b:** approve the evaluation run (about $0.02), the merge and the `mcp` + `chat` deploy.
+  **Question (open):** should "near me" in the chat use the phone's location? *Recommend:* **later,
+  as a small app step:** a "📍 near me" tap in the chat reads the location once (the same
+  permission as Save where I am, asked only on that tap) and sends it with that one message; it
+  is never stored or kept. The privacy page would need one more sentence (owner approves).
+  Until then Wilma asks which saved place you are near. Alternative: keep it that way.

@@ -6,6 +6,7 @@ import { registerSaveItem } from "./save_item.ts";
 import { registerUpdateItem } from "./update_item.ts";
 import { registerGetItem } from "./get_item.ts";
 import { registerSearchItems } from "./search_items.ts";
+import { registerFindPlaces } from "./find_places.ts";
 import { registerLinkItems } from "./link_items.ts";
 import { registerSaveSecret } from "./save_secret.ts";
 import { registerFindSecret } from "./find_secret.ts";
@@ -29,6 +30,7 @@ export const ALL_TOOLS: RegisterTool[] = [
   registerUpdateItem,
   registerGetItem,
   registerSearchItems,
+  registerFindPlaces,
   registerLinkItems,
   registerSaveSecret,
   registerFindSecret,

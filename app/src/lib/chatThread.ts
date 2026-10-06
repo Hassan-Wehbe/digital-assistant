@@ -41,6 +41,7 @@ export const PARTIAL_NOTE = 'Part of this may already be done. Check your notes 
 const READ_ONLY_TOOLS = new Set([
   'list_spaces',
   'search_items',
+  'find_places',
   'get_item',
   'find_secret',
   'get_secret',
