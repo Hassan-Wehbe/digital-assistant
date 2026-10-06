@@ -1,6 +1,7 @@
 # Places: notes with a location (plan)
 
-Status: **plan, waiting for the owner's answers (Q1-Q8 below).** Nothing is built. Asked by the
+Status: **approved by the owner (2026-10-06): Q1-Q8 all as recommended.** Nothing is built; next
+is step 2, after A5e (Q8). Asked by the
 owner 2026-10-06: "a note type that allows adding a location, for example for restaurants or
 places to visit". Design entry: `docs/design.md` D26. Comes **after A5e** (voice) unless the owner
 says otherwise (Q8). Later feeds the day planner (D25, "saved places").
@@ -74,7 +75,7 @@ smaller one (Sonnet) for this plan's edits, step 5 (checklist, build, handoff) a
 
 ## Steps (each a small PR; the owner approves merges, builds and deploys)
 
-1. **Plan** (this PR). Owner answers Q1-Q8.
+1. **Plan** (#84). ~~Owner answers Q1-Q8.~~ Done 2026-10-06, all as recommended.
 2. **Server:** place metadata validation in `save_item` / `update_item` (Deno tests), place
    fields in the chunk text, the instructions, evaluation cases (a paid run with the owner's OK),
    then deploy `mcp` and `chat` (the owner approves the deploy). Strongest model.
@@ -90,7 +91,12 @@ Later, not in this plan: "near me" and a map with pins (needs coordinates, Q2), 
 now" (location permission), reminders when near a saved place, places in the day planner's
 travel times (D25 step 3), sharing a list of places with family (item sharing, D-roadmap).
 
-## Decisions (recommendations; the owner answers)
+## Decisions
+
+**Owner's answers (2026-10-06): all as recommended.** Q1 a real `place` type; Q2 no coordinates
+or "near me" now; Q3 short Maps links kept, not followed; Q4 a short fixed list of kinds; Q5 want to
+go / been there with a 1-5 rating; Q6 in the spaces you choose; Q7 share from Google Maps as step 4;
+Q8 after A5e.
 
 - **Q1. A new type, or a template on a normal note?** *Recommend:* **a real type** (`place`, with
   fields), so "want to go" lists, ratings and Open in Maps work reliably, and the day planner can
@@ -119,6 +125,6 @@ travel times (D25 step 3), sharing a list of places with family (item sharing, D
 
 ## What the owner does
 
-- Answer Q1-Q8 (or "all as recommended").
+- ~~Answer Q1-Q8.~~ Done 2026-10-06, all as recommended.
 - Approve the merges, the server deploy (step 2), the evaluation run and the Play build.
 - On the phone: check what Google Maps shares (step 4), then run the phone checklist.
