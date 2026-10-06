@@ -19,3 +19,9 @@ export function versionLabel(version?: string | null, build?: string | number | 
   if (!version) return 'Version unknown';
   return build ? `Version ${version} (build ${build})` : `Version ${version}`;
 }
+
+/**
+ * Dictation in the message boxes (A5e). False until the mic button exists (step 3), so the
+ * speech package can be built and started on a phone first without any screen using it.
+ */
+export const VOICE_ENABLED = false;
