@@ -1,14 +1,30 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-10-05 (A5d, the one box: done. Steps 1-5 merged, #63-#67; built as Play
-versionCode 6; the owner's phone checklist passed in full; step 6, the cheap classifier, deferred
-by the owner).
+Last updated 2026-10-06 (Play **versionCode 7** live on the owner's phone: the Search link removal
+#70 and the classifier's notes card #77; the owner is running the step 6 phone checklist on it.
+#78, edit a note, merged but not built: it ships with versionCode 8. A5e step 2 in PR #79).
 Read this, then `CLAUDE.md`, `docs/design.md`, `docs/phase3-mobile-app-plan.md` and
 `docs/phase5-chat-plan.md`, before changing anything. The owner is returning to development:
 explain steps plainly, keep PRs small, say clearly when they must act, never ask for passwords,
 tokens or keys in chat.
 
-## Where things stand (2026-10-05)
+## Where things stand (2026-10-06)
+
+**Newest first (2026-10-06):**
+- **Play versionCode 7 is live** on the owner's phone, built from `main` at b3c50df: the Search
+  link removal (#70) and the classifier's notes card (#77). The owner is running
+  `docs/phase5-a5d-step6-phone-checklist.md` on it; results not yet recorded here.
+- **#78 (edit a note's title and text) is merged to `main`, not built:** it ships with
+  versionCode 8.
+- **Step 6 server side is live:** migration `ai_cost_only` applied, `chat` version 4,
+  classifier evaluation 28/28, 0 leaks (run 37351420880).
+- **A5e step 2** (speech package, RECORD_AUDIO, `src/lib/voice.ts` behind `VOICE_ENABLED =
+  false`, no screen): PR #79, waiting for the owner's review; then a preview build to prove the
+  app still starts. Found while reading the packages: `expo-image-picker`'s
+  `microphonePermission: false` blocks RECORD_AUDIO itself, so #79 removes it (the picker stays
+  photos-only, guarded by a test).
+
+The notes below are from 2026-10-05.
 
 **A5d, the one box** (`docs/phase5-a5d-one-box-plan.md`; all 13 decisions "yes, as recommended"):
 steps 1-5 merged (#63 plan, #64 router rules, #65 lookups in the thread, #66 routing in `send`,
@@ -46,9 +62,9 @@ at all (`placeLookup` null; two matches still go to Wilma, and vault words never
 classifier) asks the classifier; on `search` the app runs `search_items` (close matches, at most
 5) and writes the message, a line naming the notes and a **notes card** with **Ask Wilma
 instead**; anything else, no notes or any failure goes to Wilma. Not asked when the allowance is
-used up. **Next:** merge, a Play build (it also carries #70), and
+used up. **Merged and built as Play versionCode 7** (2026-10-06, with #70); the owner is running
 `docs/phase5-a5d-step6-phone-checklist.md`.
-**A5e plan approved** (#73, Q1-Q8 as recommended): next is step 2, `docs/phase5-a5e-voice-plan.md`.
+**A5e plan approved** (#73, Q1-Q8 as recommended): step 2 is PR #79 (above), `docs/phase5-a5e-voice-plan.md`.
 
 **A5b, the `chat` function** (`docs/phase5-a5b-chat-function-plan.md`):
 1. **Done, merged (#43):** one tool list (`mcp/tools/all.ts`) and one set of instructions
@@ -99,8 +115,8 @@ The A5c plan (for the owner's approval, 10 decisions): `docs/phase5-a5c-chat-scr
 | Database | migrations up to `ai_cost_only` applied (2026-10-05; `ai_usage` 2026-10-02) |
 | Chat function `chat` | **version 4, deployed 2026-10-05** (#72: the classifier request; 44/45 files identical, 401 without sign-in). Version 3, 2026-10-03 (#54: the `vault` event carries `secret_type` and `new_secret`; 43/44 files identical, 401 without sign-in), first deployed 2026-10-02 (version 2, #46) and live-checked; `OPENAI_API_KEY` and `LLM_ROUTES` set in Supabase secrets by the owner (2026-10-02) |
 | MCP server `mcp` | **version 8, server 0.6.0**, 22 tools, with the rule 9 credential check (PR #31, deployed 2026-10-01; deployed files checked identical to the repo, unsigned calls answer 401) |
-| Mobile app (Expo, `app/`) | merged to `main` up to PR #69: A0-A3, A5c (chat screen, delete and vault cards) and A5d (the one box) complete, built (versionCode 6) and phone-checked. A3b secrets (#23), **A3c** spaces (#25), vault setup / recovery / passphrase change (#26), **A4** privacy + deletion pages and Play guide (#27), change sign-in password (#28), mascot app icon (#29, from another session), A5c chat screen (#50-#54), layout fixes (#60, #61), A5d one box (#64-#67). `npm run check`: 256 tests |
-| Google Play | app created, **internal testing, versionCode 6 live** (built 2026-10-05 from `main` at 6bb1b8e, auto-submitted: https://expo.dev/accounts/zafnut/projects/wilma/builds/36ef55dd-3de7-43c5-b058-e68c47663ae1 ; A5d one box, chat screen, layout fixes #60/#61, mascot icon). Upload key reset done (see "Google Play and app updates"). App-content forms and store listing may still be incomplete; answers in `docs/phase4-play-release.md` |
+| Mobile app (Expo, `app/`) | merged to `main` up to PR #78 (#70 and #77 built as versionCode 7; #78 not built yet). Earlier, up to PR #69: A0-A3, A5c (chat screen, delete and vault cards) and A5d (the one box) complete, built (versionCode 6) and phone-checked. A3b secrets (#23), **A3c** spaces (#25), vault setup / recovery / passphrase change (#26), **A4** privacy + deletion pages and Play guide (#27), change sign-in password (#28), mascot app icon (#29, from another session), A5c chat screen (#50-#54), layout fixes (#60, #61), A5d one box (#64-#67). `npm run check`: 256 tests |
+| Google Play | app created, **internal testing, versionCode 7 live** (2026-10-06, from `main` at b3c50df: #70 and #77). Before it, versionCode 6 (built 2026-10-05 from `main` at 6bb1b8e, auto-submitted: https://expo.dev/accounts/zafnut/projects/wilma/builds/36ef55dd-3de7-43c5-b058-e68c47663ae1 ; A5d one box, chat screen, layout fixes #60/#61, mascot icon). Upload key reset done (see "Google Play and app updates"). App-content forms and store listing may still be incomplete; answers in `docs/phase4-play-release.md` |
 | Web pages | `docs/legal/privacy.html`, `docs/legal/delete-account.html` live (contact zaftechlabs@gmail.com) |
 | Supabase | ACTIVE_HEALTHY, region us-west-2 |
 
@@ -122,7 +138,7 @@ phone checklist stays the final test before a Play build.
 
 ## Google Play and app updates (updated 2026-10-04)
 
-- Wilma is on **Internal testing**, currently **versionCode 6**. Testers are the owner plus family
+- Wilma is on **Internal testing**, currently **versionCode 7** (#78 waits for versionCode 8). Testers are the owner plus family
   and friends; the owner creates their Wilma accounts in Supabase.
 - **Server changes** (the `mcp` and `chat` functions, migrations) reach everyone without an app
   update.
