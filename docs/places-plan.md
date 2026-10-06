@@ -145,6 +145,8 @@ needs to *recommend* it, not only to find it:
    form with coordinates, `find_places` near a point (server-side distance), privacy page and
    Data safety wording for the owner's approval. Strongest model (permission and privacy).
 6. **Ship:** phone checklist (`docs/places-phone-checklist.md`), handoff, "build for Play".
+   **Built as versionCode 10 (2026-10-06, from `main` at 537fff2, run 37540216475),
+   submitted to internal testing.** Next: the owner runs the phone checklist.
    Sonnet. **This build also carries the mic fix #91** (merged 2026-10-06, held for this build
    by the owner): the phone checklist must include "The first tap" and "Dictating" from
    `docs/phase5-a5e-phone-checklist.md`.

@@ -12,6 +12,12 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-06):**
+- **Places step 6, the places build, started (owner: "build for Play", 2026-10-06).** Production
+  build from `main` at 537fff2 (GitHub run 37540216475), **versionCode 10**, Expo build
+  https://expo.dev/accounts/zafnut/projects/wilma/builds/28df2ba0-5a62-465d-b0d4-b83077ed29d1 ,
+  auto-submitted to internal testing (submission ad25f9fe): places steps 3, 4, 5a, the Expo patch updates #98 and the mic fix #91.
+  **Next: the owner runs `docs/places-phone-checklist.md`** on the phone (it also re-checks the
+  mic: "The first tap" and "Dictating" from the A5e checklist).
 - **"Near me" in the chat, decided (owner, 2026-10-06, Q9 as recommended):** later, as places
   step 7 after the step 6 build: a 📍 tap in the chat reads the location once and sends it with
   that one message, never stored. Not built. Until then Wilma asks which saved place you are
