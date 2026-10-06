@@ -1,8 +1,8 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-10-06 (A5e steps 3 and 4 merged: the mic button #86, privacy page and Data
-safety #87. **Play versionCode 9 building** with the mic on. Next: the owner runs
-`docs/phase5-a5e-phone-checklist.md` on versionCode 9).
+Last updated 2026-10-06 (versionCode 9, the mic button, is live but **its mic does not work**;
+the fix #91 is merged and **not built**: the owner wants it to ship with the next app build, the
+places plan's step 6. Next: places step 2, server).
 Read this, then `CLAUDE.md`, `docs/design.md`, `docs/phase3-mobile-app-plan.md` and
 `docs/phase5-chat-plan.md`, before changing anything. The owner is returning to development:
 explain steps plainly, keep PRs small, say clearly when they must act, never ask for passwords,
@@ -11,6 +11,18 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-06):**
+- **versionCode 9 mic bug, fixed in #91 (merged, not built).** On the owner's phone the mic
+  turned red for a split second and stopped, recording nothing, no message. Cause (from the
+  library code): every tap called `requestPermissionsAsync`; Expo opens Android's permission
+  screen even for a permission already granted; that pauses the app, `AppState` said
+  `background`, and `useDictation` cancelled the tap. Fix: `getPermissionsAsync` first, ask only
+  when not allowed; going to the background stops the mic only once the recognizer has started
+  (`pause()`). 335 tests. **Build decision (owner, 2026-10-06): no build for this fix alone;
+  it ships with the next app build** (places step 6, `docs/places-plan.md`). Until then the
+  mic on versionCode 9 does nothing (typing works). After that build: re-run "The first tap"
+  and "Dictating" in `docs/phase5-a5e-phone-checklist.md` (and the rest of it, not yet
+  reported). The owner's answer to "did the permission question appear on versionCode 9?" is
+  not recorded.
 - **A5e, voice: steps 3 and 4 merged, versionCode 9 building.** #86 the mic button in the home
   box and the chat box (`useDictation` / `createDictation` in `app/src/lib/voice.ts`,
   `MicButton.tsx`, `VOICE_ENABLED = true`; words go into the box, never sent by voice; Send waits
