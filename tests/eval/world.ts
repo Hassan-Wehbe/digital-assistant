@@ -412,6 +412,8 @@ function itemJson(w: World, i: Item) {
 
 const tagList = (t: unknown) => ((t as string[] | null) ?? []).map((x) => x.trim().toLowerCase()).filter(Boolean);
 const now = () => new Date().toISOString();
+/** Links expire minutes after they are made, as the real ones do (the model knows today's date). */
+const inMinutes = (m: number) => new Date(Date.now() + m * 60_000).toISOString();
 
 function rpc(w: World, name: string, p: Record<string, unknown>): Result {
   const item = (id: unknown) => w.items.find((i) => i.id === id);
@@ -528,17 +530,17 @@ function rpc(w: World, name: string, p: Record<string, unknown>): Result {
       w.secretEntries.push({
         secret_id, name: String(p.p_name), space_id: p.p_space_id as string, secret_type: String(p.p_secret_type),
       });
-      return ok({ token: w.token(), secret_id, expires_at: "2026-10-02T12:15:00Z" });
+      return ok({ token: w.token(), secret_id, expires_at: inMinutes(15) });
     }
     case "create_reveal_token": {
       if (!w.secrets.some((s) => s.id === p.p_secret_id)) return err("secret not found", "P0002");
       w.reveals.push(p.p_secret_id as string);
-      return ok({ token: w.token(), expires_at: "2026-10-02T12:10:00Z" });
+      return ok({ token: w.token(), expires_at: inMinutes(10) });
     }
     case "create_secret_reentry": {
       if (!w.secrets.some((s) => s.id === p.p_secret_id)) return err("secret not found", "P0002");
       w.secretEntries.push({ secret_id: p.p_secret_id as string, name: "(new value)", space_id: "", secret_type: "" });
-      return ok({ token: w.token(), expires_at: "2026-10-02T12:15:00Z" });
+      return ok({ token: w.token(), expires_at: inMinutes(15) });
     }
     case "update_secret_meta": {
       const s = w.secrets.find((x) => x.id === p.p_secret_id);
@@ -556,7 +558,7 @@ function rpc(w: World, name: string, p: Record<string, unknown>): Result {
     case "create_attachment_upload": {
       if (!live(p.p_item_id)) return err("item not found", "P0002");
       w.uploads.push(p.p_item_id as string);
-      return ok({ token: w.token(), expires_at: "2026-10-02T12:15:00Z" });
+      return ok({ token: w.token(), expires_at: inMinutes(15) });
     }
     case "get_attachment":
       return ok(null);
