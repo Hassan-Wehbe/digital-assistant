@@ -2,7 +2,7 @@
 
 Status: **approved by the owner (2026-10-06): Q1-Q8 all as recommended; extended the same day**
 ("Extension: richer places" below: cuisine, price, occasions, dishes, visits, "save where I am"
-and coordinates; Q2 changed). Step 2 (server) is live (2026-10-06: #93, #94, #95; migration place_search, `mcp` v12, `chat` v5, evaluation 67/67). Next: step 3 (app). Comes **before
+and coordinates; Q2 changed). Step 2 (server) is live (2026-10-06: #93, #94, #95; migration place_search, `mcp` v12, `chat` v5, evaluation 67/67). Step 3 (app) merged, not built (#97, 2026-10-06). Next: step 4 (share from Google Maps). Comes **before
 the company account and before the day planner** (owner, 2026-10-06). Asked by the
 owner 2026-10-06: "a note type that allows adding a location, for example for restaurants or
 places to visit". Design entry: `docs/design.md` D26. Comes **after A5e** (voice) unless the owner
@@ -120,7 +120,8 @@ needs to *recommend* it, not only to find it:
    then deploy `mcp` and `chat` (the owner approves the deploy). Strongest model.
 3. **App:** a Place choice on New note and Edit note, the place view with **Open in Maps**,
    Want to go / Been there with rating, and the kind shown in lists. Tests: link building,
-   metadata round trip, the form refuses a non-Maps link. Strongest model.
+   metadata round trip, the form refuses a non-Maps link. Strongest model. **Merged (#97),
+   not built**: ships in the step 6 build; its phone checks go in that checklist.
 4. **Share from Google Maps** into the place form (check first what Google Maps shares on the
    owner's phone). Strongest model (touches the share intake).
 5. **Save where I am:** the location permission (asked on the tap only), one reading, the place
