@@ -1,4 +1,5 @@
-// One item in full: text, tags, attachments (with a download button) and linked items.
+// One item in full: text, tags, attachments (with a download button) and linked items; Edit note
+// changes its title and text (edit-item.tsx).
 import { Link, router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
@@ -62,6 +63,11 @@ export default function ItemScreen() {
             ))}
           </>
         )}
+        <Button
+          title="Edit note"
+          kind="plain"
+          onPress={() => router.push({ pathname: '/edit-item', params: { id: item.id } })}
+        />
         <Button
           title="Add photos or files"
           kind="plain"

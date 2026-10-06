@@ -112,12 +112,12 @@ describe('wilma client', () => {
     expect([...APP_TOOLS].sort()).toEqual([
       'attach_file', 'create_space', 'delete_attachment', 'delete_item', 'delete_secret', 'delete_space', 'find_secret',
       'get_attachment_link', 'get_item', 'get_secret', 'list_deleted_items', 'list_spaces', 'purge_item', 'restore_item', 'save_item', 'save_secret',
-      'search_items', 'update_secret',
+      'search_items', 'update_item', 'update_secret',
     ]);
     expect(Object.keys(setup([]).client).sort()).toEqual(
       ['attachmentLink', 'createSpace', 'deleteAttachment', 'deleteItem', 'deleteSecret', 'deleteSpace', 'findSecrets', 'getItem', 'listSpaces',
-        'newValueLink', 'purgeItem', 'recycleBin', 'restoreItem', 'revealLink', 'saveItem', 'saveSecret', 'search', 'updateSecret',
-        'uploadLink'],
+        'newValueLink', 'purgeItem', 'recycleBin', 'restoreItem', 'revealLink', 'saveItem', 'saveSecret', 'search', 'updateItem',
+        'updateSecret', 'uploadLink'],
     );
   });
 
@@ -226,5 +226,21 @@ describe('fileSize', () => {
     expect(fileSize(120)).toBe('120 bytes');
     expect(fileSize(830 * 1024)).toBe('830 KB');
     expect(fileSize(2.4 * 1024 * 1024)).toBe('2.4 MB');
+  });
+});
+
+describe('editing a note', () => {
+  it('sends only the fields that changed, with the note id', async () => {
+    const { client, fetch } = setup([
+      reply(200, toolResult({ id: 'i9', updated: true })),
+      reply(200, toolResult({ id: 'i9', updated: true })),
+    ]);
+    await client.updateItem('i9', { title: 'Lentil soup' });
+    await client.updateItem('i9', { title: 'Lentil soup', body: 'Red lentils' });
+    const params = fetch.mock.calls.map(([, init]) => JSON.parse(init.body as string).params);
+    expect(params).toEqual([
+      { name: 'update_item', arguments: { item_id: 'i9', title: 'Lentil soup' } },
+      { name: 'update_item', arguments: { item_id: 'i9', title: 'Lentil soup', body: 'Red lentils' } },
+    ]);
   });
 });

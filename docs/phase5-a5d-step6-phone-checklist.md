@@ -25,6 +25,14 @@ Below, *lasagna* stands for a word from one of your notes, and *Recipes* for one
 - [ ] **A restricted space:** its exact name behaves like a word that is not there (Wilma, or
   notes from other spaces), and no note from it ever shows in a card.
 
+## Editing a note (if this build carries it)
+
+- [ ] Open a note, tap **Edit note**, change the title and the text, **Save**: the note shows the
+  new title and text, and "1 earlier version(s)" (or one more than before) under it.
+- [ ] Edit a note and type `the wifi password is Sunflower2024!` into the text, **Save**: it is
+  refused with "This looks like it holds a password…", and the note is unchanged.
+- [ ] **Cancel** leaves the note as it was.
+
 ## Allowance used up (optional)
 
 Set your `ai_monthly_limit_cents` to `0` as in the A5d checklist, then:
