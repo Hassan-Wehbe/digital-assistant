@@ -8,12 +8,14 @@ import { appendDictation, createDictation, type DictationState, type SpeechApi, 
 
 type Listener = (e?: unknown) => void;
 
-function fakeSpeech(opts: { granted?: boolean; available?: boolean; onDevice?: boolean; installed?: string[] } = {}) {
+function fakeSpeech(opts: { granted?: boolean; alreadyAllowed?: boolean; available?: boolean; onDevice?: boolean; installed?: string[] } = {}) {
   const listeners: Record<string, Listener[]> = {};
   const api = {
     start: jest.fn(),
     stop: jest.fn(),
     abort: jest.fn(),
+    // Not yet allowed until the person answers the question (requestPermissionsAsync).
+    getPermissionsAsync: jest.fn(async () => ({ granted: (opts.granted ?? true) && !!opts.alreadyAllowed })),
     requestPermissionsAsync: jest.fn(async () => ({ granted: opts.granted ?? true })),
     isRecognitionAvailable: jest.fn(() => opts.available ?? true),
     supportsOnDeviceRecognition: jest.fn(() => opts.onDevice ?? false),
@@ -84,6 +86,41 @@ describe('dictation never sends (Q1)', () => {
     speech.error('aborted');
     expect(b.text).toBe('note: call the plumber');
     expect(mic.state.error).toBeNull();
+  });
+
+  it('already allowed: no permission question (it would pause the app and stop the mic)', async () => {
+    const speech = fakeSpeech({ alreadyAllowed: true });
+    const { mic, start } = box(speech);
+    await start();
+    expect(speech.api.requestPermissionsAsync).not.toHaveBeenCalled();
+    expect(speech.api.start).toHaveBeenCalledTimes(1);
+    expect(mic.state.listening).toBe(true);
+  });
+
+  it("the permission screen pausing the app does not cancel the tap that opened it", async () => {
+    const speech = fakeSpeech();
+    let answer: (v: { granted: boolean }) => void = () => {};
+    speech.api.requestPermissionsAsync.mockImplementation(() => new Promise((r) => (answer = r)));
+    const { mic, start } = box(speech);
+    const started = start();
+    await Promise.resolve();
+    await Promise.resolve();
+    mic.pause(); // Android: the app is "in the background" while the question shows
+    answer({ granted: true });
+    await started;
+    expect(speech.api.start).toHaveBeenCalledTimes(1);
+    expect(mic.state.listening).toBe(true);
+  });
+
+  it('the app going to the background while listening stops the mic', async () => {
+    const speech = fakeSpeech({ alreadyAllowed: true });
+    const { b, mic, start } = box(speech);
+    await start();
+    speech.result('half a', false);
+    mic.pause();
+    expect(speech.api.abort).toHaveBeenCalledTimes(1);
+    expect(mic.state.listening).toBe(false);
+    expect(b.text).toBe('half a');
   });
 
   it('stop asks the phone to finish the phrase; its words still arrive', async () => {
