@@ -306,3 +306,12 @@ Deno.test("search_items returns a place's fields, and none for other items", asy
   assertEquals(results[0].place, { status: "want" });
   assertEquals("place" in results[1], false);
 });
+
+Deno.test("the instructions carry today's date (visits: 'last Friday') and the place rules", async () => {
+  const { systemPrompt } = await import("../../supabase/functions/_shared/assistant_prompt.ts");
+  const { serverInstructions } = await import("../../supabase/functions/mcp/lib/assistant.ts");
+  const p = systemPrompt("Wilma", serverInstructions("Wilma"), new Date("2026-10-06T08:00:00Z"));
+  assert(p.startsWith("You are Wilma"));
+  assert(p.endsWith("Today is Tuesday 2026-10-06 (UTC)."), p.slice(-80));
+  assert(p.includes('item_type "place"') && p.includes("add_visit") && p.includes("never invent an address"));
+});

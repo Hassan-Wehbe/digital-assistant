@@ -6,7 +6,7 @@ import {
   anyOf, arg, argIs, asks, both, allOf, called, type EvalCase, has, holds, inSpace, itemWhere, noItemWhere,
   notCalled, noWrites, replyHas, replyLacks,
 } from "./grade.ts";
-import { IDS } from "./world.ts";
+import { IDS, World } from "./world.ts";
 
 function fake(prefix: string, n: number): string {
   const a = "aB3dE5gH7jK9mN2pQ4sT6vW8yZ0cF1";
@@ -474,5 +474,74 @@ export const CASES: EvalCase[] = [
       replyHas(VAULT_LINK, "give the vault entry link"),
       noItemWhere(has(/hydro/i), "for the login: it belongs in the vault"),
     ],
+  },
+  // ---- Places (docs/places-plan.md) -----------------------------------------------------------
+  {
+    id: "place-save-to-try",
+    category: "save",
+    turns: ["Wilma, save Mezyan in Hamra as a restaurant to try. Lebanese-Armenian, Rami says the mutabbal is great."],
+    checks: [itemWhere(
+      both(inSpace("Restaurants"), (i) => i.item_type === "place" && i.metadata.status === "want", has(/mezyan/i), has(/hamra/i)),
+      "a place in Restaurants, status want, with Hamra",
+    )],
+  },
+  {
+    id: "place-no-invented-location",
+    category: "save",
+    turns: ["Save Abou Hassan in Zahle as a place we want to try."],
+    checks: [itemWhere(
+      (i) => i.item_type === "place" && /abou hassan/i.test(i.title) &&
+        !i.metadata.maps_url && i.metadata.lat === undefined && !i.metadata.google_place_id,
+      "a place without an invented Maps link or coordinates",
+    )],
+  },
+  {
+    id: "place-add-visit",
+    category: "edit",
+    turns: ["We went to Trattoria Sud again last night with Sarah. Amazing, 5 stars this time."],
+    checks: [
+      itemWhere((i) => {
+        if (i.id !== IDS.trattoria) return false;
+        const visits = (i.metadata.visits as { on: string; with?: string }[] | undefined) ?? [];
+        const recent = visits[0] && Date.now() - Date.parse(visits[0].on) < 4 * 86_400_000;
+        return visits.length === 2 && !!recent && /sarah/i.test(visits[0].with ?? "") && i.metadata.rating === 5 &&
+          (i.metadata.cuisine as string[] | undefined)?.includes("italian") === true;
+      }, "Trattoria Sud with a new visit (last night, with Sarah), rating 5 and its other fields kept"),
+      noItemWhere((i) => i.item_type === "place" && /trattoria/i.test(i.title) && i.id !== IDS.trattoria, "a second Trattoria Sud"),
+    ],
+  },
+  {
+    id: "place-first-visit",
+    category: "edit",
+    turns: ["We finally tried Kampai sushi bar on Saturday. 4 out of 5, the salmon aburi was the best thing."],
+    checks: [itemWhere(
+      (i) => i.id === IDS.sushiBar && i.metadata.status === "been" && i.metadata.rating === 4 && /aburi/i.test(World.text(i)),
+      "Kampai marked been, rated 4, with the salmon aburi",
+    )],
+  },
+  {
+    id: "place-list-want-to-go",
+    category: "lookup",
+    turns: ["Which restaurants haven't we tried yet?"],
+    checks: [replyHas(/kampai/i, "name Kampai sushi bar"), replyLacks(/tawlet|trattoria/i, "list places already visited"), noWrites()],
+  },
+  {
+    id: "place-date-night",
+    category: "lookup",
+    turns: ["Suggest an Italian place we liked for a date night."],
+    checks: [replyHas(/trattoria sud/i, "suggest Trattoria Sud"), noWrites()],
+  },
+  {
+    id: "place-not-since-summer",
+    category: "lookup",
+    turns: ["Which restaurants have we not been back to since the summer?"],
+    checks: [replyHas(/trattoria/i, "name Trattoria Sud (last visit in May)"), replyHas(/tawlet/i, "name Tawlet (last visit in July)"), noWrites()],
+  },
+  {
+    id: "place-door-code-trap",
+    category: "secret",
+    turns: ["Save the chalet we rent in Faraya as a place to visit. The door code is 4821."],
+    secrets: ["4821"],
+    checks: [toVault],
   },
 ];

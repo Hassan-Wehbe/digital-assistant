@@ -62,6 +62,11 @@ export const IDS = {
   gmail: "00000000-0000-4000-8000-0000000000c3",
   netflix: "00000000-0000-4000-8000-0000000000c4",
   lawyerPortal: "00000000-0000-4000-8000-0000000000c5",
+  restaurants: "00000000-0000-4000-8000-0000000000a8",
+  tawlet: "00000000-0000-4000-8000-0000000000d1",
+  trattoria: "00000000-0000-4000-8000-0000000000d2",
+  sushiBar: "00000000-0000-4000-8000-0000000000d3",
+  bistro: "00000000-0000-4000-8000-0000000000d4",
 } as const;
 
 const T0 = "2026-09-01T12:00:00Z";
@@ -149,6 +154,7 @@ export class World {
     sp(IDS.logins, "Logins");
     sp(IDS.finance, "Finance");
     sp(IDS.private, "Private", null, true);
+    sp(IDS.restaurants, "Restaurants");
 
     const it = (id: string, space_id: string, title: string, item_type: string, tags: string[], body: string) =>
       this.items.push({
@@ -180,6 +186,33 @@ export class World {
       "Roast 1 kg tomatoes with garlic, blend with stock. Replaced by a newer version.");
     it(IDS.books, IDS.home, "Reading list", "list", ["books"],
       "To read:\n- The Overstory\n- Piranesi\n- A Psalm for the Wild-Built");
+
+    // Places (docs/places-plan.md): metadata as the server stores it after its checks.
+    const place = (id: string, title: string, body: string, metadata: Record<string, unknown>) =>
+      this.items.push({
+        id, space_id: IDS.restaurants, title, item_type: "place", summary: null, body_markdown: body, metadata,
+        tags: [], created_at: T0, updated_at: T0, deleted_at: null, revisions: 0,
+      });
+    place(IDS.tawlet, "Tawlet", "Farmers' kitchen, a different cook every day.", {
+      status: "been", rating: 5, visited_on: "2026-07-12", address: "Armenia St, Mar Mikhael, Beirut",
+      kind: "restaurant", cuisine: ["lebanese"], price_level: 2, would_return: true,
+      dishes_liked: ["kibbeh nayeh", "fattoush"], occasions: ["kids", "group"],
+      visits: [{ on: "2026-07-12", with: "the kids" }, { on: "2026-03-02", with: "Sarah" }],
+    });
+    place(IDS.trattoria, "Trattoria Sud", "Small Italian place, book ahead on weekends.", {
+      status: "been", rating: 4, visited_on: "2026-05-23", address: "Gemmayze, Beirut",
+      kind: "restaurant", cuisine: ["italian"], price_level: 3, would_return: true,
+      dishes_liked: ["carbonara"], occasions: ["date_night"],
+      visits: [{ on: "2026-05-23", with: "Sarah", note: "anniversary" }],
+    });
+    place(IDS.sushiBar, "Kampai sushi bar", "Recommended by Rami.", {
+      status: "want", address: "Badaro, Beirut", kind: "restaurant", cuisine: ["japanese", "sushi"], price_level: 3,
+    });
+    place(IDS.bistro, "Café Younes", "", {
+      status: "been", rating: 3, visited_on: "2026-09-28", address: "Hamra, Beirut", kind: "cafe",
+      cuisine: ["coffee"], occasions: ["quick_lunch", "business"], would_return: true,
+      visits: [{ on: "2026-09-28", with: "a client" }],
+    });
 
     const se = (id: string, space_id: string, name: string, secret_type: string, url: string | null) =>
       this.secrets.push({
@@ -335,7 +368,9 @@ function words(q: string): string[] {
 function score(item: Item, query: string, spacePath: string): number {
   const title = item.title.toLowerCase();
   const tags = `${item.tags.join(" ")} ${item.item_type} ${spacePath}`.toLowerCase();
-  const body = `${item.summary ?? ""} ${item.body_markdown}`.toLowerCase();
+  // Places: keyword search also reads their metadata text (migration place_search).
+  const fields = item.item_type === "place" ? ` ${metadataText(item.metadata)}` : "";
+  const body = `${item.summary ?? ""} ${item.body_markdown}${fields}`.toLowerCase();
   let total = 0;
   for (const w of words(query)) {
     const stem = w.length > 5 ? w.slice(0, w.length - 2) : w.replace(/s$/, "");
@@ -344,6 +379,14 @@ function score(item: Item, query: string, spacePath: string): number {
     if (body.includes(stem)) total += 1;
   }
   return total;
+}
+
+/** Every string value in a place's metadata, like jsonb_to_tsvector(..., '["string"]'). */
+function metadataText(v: unknown): string {
+  if (typeof v === "string") return v.replace(/_/g, " ");
+  if (Array.isArray(v)) return v.map(metadataText).join(" ");
+  if (v && typeof v === "object") return Object.values(v).map(metadataText).join(" ");
+  return "";
 }
 
 function itemJson(w: World, i: Item) {
@@ -421,6 +464,7 @@ function rpc(w: World, name: string, p: Record<string, unknown>): Result {
         .map(({ i, s }) => ({
           item_id: i.id, title: i.title, item_type: i.item_type, space_id: i.space_id,
           snippet: i.body_markdown.slice(0, 200), tags: i.tags, score: s, updated_at: i.updated_at,
+          place: i.item_type === "place" ? i.metadata : null,
         }));
       return ok(rows);
     }
