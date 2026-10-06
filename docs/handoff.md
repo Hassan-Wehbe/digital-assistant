@@ -1,8 +1,8 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-10-06 (versionCode 9, the mic button, is live but **its mic does not work**;
-the fix #91 is merged and **not built**: the owner wants it to ship with the next app build, the
-places plan's step 6. Next: places step 2, server).
+Last updated 2026-10-06 (places step 2, server, is **live**: migration `place_search`, `mcp` v12,
+`chat` v5, evaluation 67/67 with 0 leaks. Next: places step 3, the app. The mic fix #91 is
+merged, not built; it ships with the places build, step 6).
 Read this, then `CLAUDE.md`, `docs/design.md`, `docs/phase3-mobile-app-plan.md` and
 `docs/phase5-chat-plan.md`, before changing anything. The owner is returning to development:
 explain steps plainly, keep PRs small, say clearly when they must act, never ask for passwords,
@@ -11,6 +11,23 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-06):**
+- **Places step 2 (server) is live** (`docs/places-plan.md`). #93: `mcp/lib/places.ts` checks a
+  place's fields (known fields only, Google Maps / geo: links, kinds, status/rating, real dates,
+  visits newest first), `update_item` gets `add_visit`, `search_items` returns a place's fields,
+  migration `20261006120000_place_search.sql` (keyword search reads a place's metadata text;
+  `search_items` returns `place`). #94: Wilma's instructions for places, **today's date in the
+  chat prompt** (UTC), 8 evaluation cases. #95: the evaluation's pretend links now expire minutes
+  ahead (they had a fixed 2026-10-02 date, which Wilma, now knowing the date, refused).
+  **Migration:** dry run 12/12 in a rolled-back transaction, then **applied by the owner in the
+  SQL editor** (the connector cancels scripts with `drop`, and `apply_migration` timed out), so
+  Supabase's migration history does not list `place_search`; the repo's file is the record.
+  Checked after: `search_items` returns `place`, anon refused. **Evaluation:** run 37497829851
+  65/67 (the two link cases, fixed by #95), run 37499607450 **67/67, 0 leaks, 0 unsafe**, $0.02.
+  **Deployed:** `mcp` version 12 (33/34 files identical, the `.d.ts` not listed back, 401 without
+  sign-in and with a fake token), `chat` version 5 (45/46 identical, 401). This deploy also
+  carries the `mcp` 0.6.1 vault-search change that was waiting for a deploy.
+  **Mic, owner's answer (2026-10-06):** on versionCode 9 the permission question did appear on
+  the first tap; later taps stopped silently. Fits the #91 explanation.
 - **versionCode 9 mic bug, fixed in #91 (merged, not built).** On the owner's phone the mic
   turned red for a split second and stopped, recording nothing, no message. Cause (from the
   library code): every tap called `requestPermissionsAsync`; Expo opens Android's permission

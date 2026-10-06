@@ -2,7 +2,7 @@
 
 Status: **approved by the owner (2026-10-06): Q1-Q8 all as recommended; extended the same day**
 ("Extension: richer places" below: cuisine, price, occasions, dishes, visits, "save where I am"
-and coordinates; Q2 changed). Nothing is built; next is step 2, after A5e (Q8). Comes **before
+and coordinates; Q2 changed). Step 2 (server) is live (2026-10-06: #93, #94, #95; migration place_search, `mcp` v12, `chat` v5, evaluation 67/67). Next: step 3 (app). Comes **before
 the company account and before the day planner** (owner, 2026-10-06). Asked by the
 owner 2026-10-06: "a note type that allows adding a location, for example for restaurants or
 places to visit". Design entry: `docs/design.md` D26. Comes **after A5e** (voice) unless the owner
