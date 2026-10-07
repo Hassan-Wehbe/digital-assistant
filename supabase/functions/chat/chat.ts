@@ -17,6 +17,8 @@
 //             {"type":"confirm",...}                                  delete card (confirm.ts)
 //             {"type":"vault","action":"reveal"|"enter","secret_id":...,"name":...,"secret_type":...,
 //              "new_secret":bool,"link":...}
+//             {"type":"places","cards":[...]}                          place cards (actions.ts)
+//             {"type":"location_request"}                             📍 Share where I am card
 //             {"type":"error","code":"allowance_used"|"service_paused"|"connection","message":...}
 //             {"type":"done","counted":true|false}                    always last
 //
@@ -36,6 +38,7 @@ import { type Llm, LlmError, type Message, QUOTA_EXCEEDED, RoutesConfigError, ty
 import { loadUserSettings } from "../mcp/lib/assistant.ts";
 import { type CredentialKind, findCredential } from "../mcp/lib/credentials.ts";
 import { classify, classifyBody, type ClassifyLog } from "./classify.ts";
+import { ACTION_NAMES, ACTION_SPECS, ChatActions } from "./actions.ts";
 import { CONFIRM_TOOLS, confirmCard } from "./confirm.ts";
 import {
   ALLOWANCE_LOW, allowanceUsed, type ChatErrorCode, ERROR_TEXT, heldText, REMOVED_TEXT, STATUS, STATUS_DEFAULT,
@@ -314,6 +317,9 @@ async function runChat({ deps, token, userId, messages, here, emit, signal }: Ru
     const { assistantName, distanceUnit } = await loadUserSettings(db, userId);
     tools = await connectTools({ db, userId, accessToken: token, assistantName, distanceUnit });
     const system = systemPrompt(assistantName, tools.instructions, new Date(), here);
+    // The MCP tools plus the chat-only actions (never offered to the Claude connector).
+    const specs = [...tools.specs, ...ACTION_SPECS];
+    const actions = new ChatActions({ db, distanceUnit, here });
     const cards = new Set<string>();
     let lastStatus = "";
     let wrote = false; // text already sent this message: the next round's text starts a new paragraph
@@ -325,7 +331,7 @@ async function runChat({ deps, token, userId, messages, here, emit, signal }: Ru
       }
       let done;
       let roundWrote = false;
-      for await (const ev of llm.stream("default", { system, messages, tools: tools.specs, signal })) {
+      for await (const ev of llm.stream("default", { system, messages, tools: specs, signal })) {
         if (ev.type === "done") {
           done = ev;
         } else if (ev.text) {
@@ -344,6 +350,13 @@ async function runChat({ deps, token, userId, messages, here, emit, signal }: Ru
         log.tools.push(call.name);
         if (call.invalidInput) {
           results.push({ callId: call.id, content: "The tool arguments were not a JSON object.", isError: true });
+          continue;
+        }
+        if (ACTION_NAMES.has(call.name)) {
+          // Cards for the app; the log keeps the action's name only, never its ids or a point.
+          const out = await actions.run(call.name, call.input);
+          for (const ev of out.events) emit(ev);
+          results.push({ callId: call.id, content: out.text, isError: out.isError });
           continue;
         }
         if (CONFIRM_TOOLS.has(call.name)) {

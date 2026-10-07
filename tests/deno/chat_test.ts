@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import "../eval/harness.ts"; // Edge runtime stand-ins (Supabase.ai, EdgeRuntime, embed-pending fetch)
 import { IDS, World } from "../eval/world.ts";
 import { type ChatDeps, createHandler, type LogEntry, MAX_HISTORY, MAX_ROUNDS } from "../../supabase/functions/chat/chat.ts";
+import { ACTION_SPECS, MAX_PLACE_CARDS } from "../../supabase/functions/chat/actions.ts";
 import { CONFIRM_TOOLS } from "../../supabase/functions/chat/confirm.ts";
 import {
   ALLOWANCE_LOW, CONNECTION_TROUBLE, heldText, REMOVED_TEXT, SERVICE_PAUSED, STATUS, TOO_MANY_STEPS,
@@ -27,6 +28,8 @@ class Account {
   limitCents = 100;
   requests = 0;
   allowanceFails = false;
+  /** Space ids searchable_space_ids also returns (a stand-in for a database that got it wrong). */
+  extraSearchable: string[] = [];
   rpcs: string[] = [];
   removedFiles: string[] = [];
 
@@ -57,6 +60,11 @@ class Account {
           this.usedCents += c;
           this.requests += 1;
           return Promise.resolve({ data: this.allowance(), error: null });
+        }
+        if (name === "searchable_space_ids" && this.extraSearchable.length) {
+          return (base.rpc(name, params) as Promise<{ data: string[] }>).then((r) => ({
+            data: [...r.data, ...this.extraSearchable], error: null,
+          }));
         }
         if (name === "get_attachment" && params.p_attachment_id === ATTACHMENT_ID) {
           return Promise.resolve({
@@ -256,7 +264,7 @@ Deno.test("chat: the evaluated loop: instructions, the real tools, status lines,
   const req = s.model.requests[0];
   assert(req.system.startsWith("You are Wilma"));
   assert(req.system.includes("save_secret"), "the MCP server's instructions are included");
-  assertEquals(req.tools.length, ALL_TOOLS.length);
+  assertEquals(req.tools.length, ALL_TOOLS.length + ACTION_SPECS.length, "the MCP tools plus the chat-only actions");
   assertEquals(req.messages, [{ role: "user", content: "How long do I bake my sourdough?" }]);
   assertEquals(s.model.requests.length, 3);
   assert(s.model.seen[0].includes(IDS.sourdough), "search results went back to the model");
@@ -615,7 +623,8 @@ Deno.test("chat: a message that looks like a password gets the decided answer, w
     assertEquals(s.logs[0].counted, false);
     for (const v of [PW, "0937", "4111"]) {
       assertFalse(JSON.stringify(events).includes(v), "the reply never repeats the value");
-      assertFalse(JSON.stringify(s.logs).includes(v), "the log never holds the value");
+      // (The request id is random hex: it can contain "0937" by chance.)
+      assertFalse(JSON.stringify(s.logs.map((l) => ({ ...l, request: "" }))).includes(v), "the log never holds the value");
     }
   }
 });
@@ -776,4 +785,187 @@ Deno.test("chat: the shared point never appears in a log line, whatever happens"
     Object.assign(console, saved);
   }
   for (const d of HERE_DIGITS) assertFalse(printed.some((l) => l.includes(d)), printed.join("\n"));
+});
+
+// ---- Place cards and the 📍 card (places step 8 part 2, PR 2; chat/actions.ts) --------------
+// show_places and ask_for_location are chat-only: the model may call them, the chat function runs
+// them, the app gets {"type":"places"} and {"type":"location_request"} events. Every id is checked
+// as the user; anything not visible is the same "not found" (rule 3).
+
+const OTHER_USERS_SPACE = "00000000-0000-4000-8000-0000000000f1";
+const OTHER_USERS_PLACE = "00000000-0000-4000-8000-0000000000f2";
+const DELETED_PLACE = "00000000-0000-4000-8000-0000000000f3";
+const NO_SUCH_ID = "00000000-0000-4000-8000-0000000000f4";
+
+/** The pretend account plus a place in someone else's space (as an item shared with the user
+ * would be readable) and a deleted place. */
+function withOddPlaces(s: Setup): Setup {
+  const w = s.account.world;
+  const t = w.items.find((i) => i.id === IDS.trattoria)!;
+  w.items.push({ ...structuredClone(t), id: OTHER_USERS_PLACE, title: "Someone else's bistro", space_id: OTHER_USERS_SPACE });
+  w.items.push({ ...structuredClone(t), id: DELETED_PLACE, title: "Closed bakery", deleted_at: "2026-09-30T10:00:00Z" });
+  return s;
+}
+
+const showPlaces = (input: Record<string, unknown>) => ({ calls: [{ name: "show_places", input }] });
+
+Deno.test("chat: show_places sends place cards with the server's distances, before done", async () => {
+  const s = setup([
+    { text: ["Trattoria Sud and Tawlet are close."], calls: [{ name: "show_places", input: { item_ids: [IDS.trattoria, IDS.tawlet, IDS.sushiBar] } }] },
+    { text: ["Enjoy!"] },
+  ]);
+  const events = await chatHere(s, { messages: [{ role: "user", content: "What's near me?" }], here: HERE });
+  assertEquals(events.map((e) => e.type), ["text", "places", "text", "done"]);
+  const cards = ofType(events, "places")[0].cards as Record<string, unknown>[];
+  assertEquals(cards.map((c) => c.id), [IDS.trattoria, IDS.tawlet, IDS.sushiBar], "in the model's order");
+  assertEquals(cards[0], {
+    id: IDS.trattoria, title: "Trattoria Sud", kind: "restaurant", cuisine: ["italian"], address: "Gemmayze, Beirut",
+    maps_url: null, lat: 33.8945, lng: 35.5165, distance: { value: 0.1, unit: "mi" },
+  });
+  assertEquals(cards[1].distance, { value: 0.5, unit: "mi" }, "Tawlet, measured by the server from the shared point");
+  assertFalse("distance" in cards[2], "Kampai has no saved location: no distance");
+  assertEquals(cards[2].lat, null);
+  // The model is told what was shown, and to still name the places.
+  assert(s.model.seen[0].includes("Still name each place"), s.model.seen[0]);
+  assertFalse(s.model.seen[0].includes(String(HERE.lat)), "the shared point is not handed back");
+  assertEquals(s.logs[0].tools, ["show_places"]);
+  assertEquals(s.logs[0].outcome, "ok");
+});
+
+Deno.test("chat: card distances match find_places, in the user's unit, and only from a point the server has", async () => {
+  // find_places and the card say the same number.
+  const a = setup([
+    { calls: [{ name: "find_places", input: { lat: HERE.lat, lng: HERE.lng } }] },
+    showPlaces({ item_ids: [IDS.bistro] }),
+    { text: ["Café Younes."] },
+  ]);
+  const ev = await chatHere(a, { messages: [{ role: "user", content: "Is Café Younes near me?" }], here: HERE });
+  const found = JSON.parse(a.model.seen[0]).results.find((r: { id: string }) => r.id === IDS.bistro);
+  const card = (ofType(ev, "places")[0].cards as Record<string, unknown>[])[0];
+  assertEquals(card.distance, { value: found.distance, unit: "mi" });
+
+  // A km user.
+  const b = setup([showPlaces({ item_ids: [IDS.bistro] }), { text: ["ok"] }]);
+  b.account.world.distanceUnit = "km";
+  const evKm = await chatHere(b, { messages: [{ role: "user", content: "near me?" }], here: HERE });
+  assertEquals(((ofType(evKm, "places")[0].cards as Record<string, unknown>[])[0].distance as { unit: string }).unit, "km");
+
+  // No shared point and no near_place_id: no distances, whatever the model passes.
+  const c = setup([showPlaces({ item_ids: [IDS.bistro], distance: 0.1, lat: 33.9, lng: 35.5 }), { text: ["ok"] }]);
+  const evNone = await chat(c, "Show me Café Younes");
+  assertFalse("distance" in (ofType(evNone, "places")[0].cards as Record<string, unknown>[])[0]);
+
+  // near_place_id: measured from that saved place (Tawlet to Trattoria Sud, about 0.5 miles).
+  const d = setup([showPlaces({ item_ids: [IDS.trattoria], near_place_id: IDS.tawlet }), { text: ["ok"] }]);
+  const evNear = await chatHere(d, { messages: [{ role: "user", content: "near Tawlet?" }], here: HERE });
+  assertEquals((ofType(evNear, "places")[0].cards as Record<string, unknown>[])[0].distance, { value: 0.5, unit: "mi" });
+
+  // near_place_id without a saved location: cards without distances, and the model is told why.
+  const e = setup([showPlaces({ item_ids: [IDS.trattoria], near_place_id: IDS.sushiBar }), { text: ["ok"] }]);
+  const evUnlocated = await chatHere(e, { messages: [{ role: "user", content: "near Kampai?" }], here: HERE });
+  assertFalse("distance" in (ofType(evUnlocated, "places")[0].cards as Record<string, unknown>[])[0]);
+  assert(e.model.seen[0].includes("no saved location"), e.model.seen[0]);
+});
+
+Deno.test("chat: show_places refuses restricted, someone else's, deleted, non-place and unknown ids alike", async () => {
+  const refused = [IDS.hiddenBar, OTHER_USERS_PLACE, DELETED_PLACE, IDS.sourdough, NO_SUCH_ID, "not-an-id"];
+  const answers: string[] = [];
+  for (const id of refused) {
+    const s = withOddPlaces(setup([showPlaces({ item_ids: [id] }), { text: ["Sorry."] }]));
+    const events = await chat(s, "show it");
+    assertEquals(ofType(events, "places"), [], id);
+    const result = s.model.requests[1].messages.at(-1) as { results: { content: string; isError?: boolean }[] };
+    assertEquals(result.results[0].isError, true, id);
+    answers.push(result.results[0].content.replace(id, "<id>"));
+    assertEquals(s.logs[0].tools, ["show_places"]);
+    assertFalse(JSON.stringify(s.logs[0]).includes(id), "no id in the log line");
+  }
+  assertEquals(new Set(answers).size, 1, answers.join(" | "));
+  assertFalse(answers[0].toLowerCase().includes("restricted"), answers[0]);
+
+  // Mixed with a visible place: only that one gets a card, the rest the same "not found".
+  const s = withOddPlaces(setup([showPlaces({ item_ids: [IDS.tawlet, IDS.hiddenBar, NO_SUCH_ID] }), { text: ["ok"] }]));
+  const events = await chat(s, "show them");
+  assertEquals((ofType(events, "places")[0].cards as { id: string }[]).map((c) => c.id), [IDS.tawlet]);
+  const seen = JSON.parse(s.model.seen[0]);
+  assertEquals(seen.not_found, [IDS.hiddenBar, NO_SUCH_ID]);
+  assertFalse(s.model.seen[0].includes("Hidden courtyard"), "nothing about the restricted place");
+
+  // near_place_id: a restricted place and an unknown id give the same answer.
+  const near: string[] = [];
+  for (const id of [IDS.hiddenBar, NO_SUCH_ID, OTHER_USERS_PLACE]) {
+    const t = withOddPlaces(setup([showPlaces({ item_ids: [IDS.tawlet], near_place_id: id }), { text: ["ok"] }]));
+    const ev = await chat(t, "near it");
+    assertEquals(ofType(ev, "places"), []);
+    near.push(t.model.seen[0]);
+  }
+  assertEquals(new Set(near).size, 1, near.join(" | "));
+});
+
+Deno.test("chat: someone else's place stays out even if the searchable spaces were wrong", async () => {
+  const s = withOddPlaces(setup([showPlaces({ item_ids: [OTHER_USERS_PLACE] }), { text: ["ok"] }]));
+  s.account.extraSearchable = [OTHER_USERS_SPACE];
+  const events = await chat(s, "show them");
+  assertEquals(ofType(events, "places"), [], "not one of the user's own spaces: refused");
+});
+
+Deno.test("chat: at most 5 place cards per message, never the same place twice", async () => {
+  const s = setup([
+    showPlaces({ item_ids: [IDS.tawlet, IDS.tawlet, IDS.trattoria] }),
+    showPlaces({ item_ids: [IDS.trattoria, IDS.sushiBar, IDS.bistro, "00000000-0000-4000-8000-0000000000e1", "00000000-0000-4000-8000-0000000000e2", "00000000-0000-4000-8000-0000000000e3"] }),
+    { text: ["Here they are."] },
+  ]);
+  const w = s.account.world;
+  const t = w.items.find((i) => i.id === IDS.trattoria)!;
+  for (const n of [1, 2, 3]) w.items.push({ ...structuredClone(t), id: `00000000-0000-4000-8000-0000000000e${n}`, title: `Eatery ${n}` });
+  const events = await chat(s, "Show me all of them");
+  const cards = ofType(events, "places").flatMap((e) => e.cards as { id: string }[]);
+  assertEquals(cards.length, MAX_PLACE_CARDS);
+  assertEquals(new Set(cards.map((c) => c.id)).size, cards.length, "no duplicates");
+  assertEquals(cards.map((c) => c.id).slice(0, 4), [IDS.tawlet, IDS.trattoria, IDS.sushiBar, IDS.bistro]);
+  assert(s.model.seen[1].includes("At most 5 cards"), s.model.seen[1]);
+  assertEquals(events.at(-1)?.type, "done");
+  assert(events.findIndex((e) => e.type === "places") < events.length - 1);
+});
+
+Deno.test("chat: ask_for_location shows the 📍 card once, and never when a point was shared", async () => {
+  const s = setup([
+    { text: ["Where are you?"], calls: [{ name: "ask_for_location", input: {} }] },
+    { calls: [{ name: "ask_for_location", input: {} }] },
+    { text: [" Tap 📍 Share where I am."] },
+  ]);
+  const events = await chat(s, "What restaurants are near me?");
+  assertEquals(events.map((e) => e.type), ["text", "location_request", "text", "done"]);
+  assertEquals(ofType(events, "location_request"), [{ type: "location_request" }]);
+  assert(s.model.seen[0].includes("waiting_for_user"));
+  assertEquals(s.logs[0].tools, ["ask_for_location", "ask_for_location"]);
+
+  const shared = setup([{ calls: [{ name: "ask_for_location", input: {} }] }, { text: ["ok"] }]);
+  const ev = await chatHere(shared, { messages: [{ role: "user", content: "near me?" }], here: HERE });
+  assertEquals(ofType(ev, "location_request"), []);
+  assert(shared.model.seen[0].includes("already shared"), shared.model.seen[0]);
+});
+
+Deno.test("chat: the actions are offered in the chat, described for the chat, and never logged with ids or points", async () => {
+  const printed: string[] = [];
+  const saved = { log: console.log, error: console.error, warn: console.warn, info: console.info };
+  for (const k of ["log", "error", "warn", "info"] as const) console[k] = (...a: unknown[]) => printed.push(a.map(String).join(" "));
+  try {
+    const s = setup([
+      showPlaces({ item_ids: [IDS.trattoria, IDS.hiddenBar], near_place_id: IDS.tawlet }),
+      { calls: [{ name: "ask_for_location", input: {} }] },
+      { text: ["ok"] },
+    ]);
+    await chatHere(s, { messages: [{ role: "user", content: "near me?" }], here: HERE });
+    const names = s.model.requests[0].tools.map((t) => t.name);
+    assert(names.includes("show_places") && names.includes("ask_for_location"));
+    assert(s.model.requests[0].system.includes("call show_places"), "the chat's instructions explain them");
+    const line = JSON.stringify(s.logs[0]);
+    printed.push(line);
+    assertEquals(s.logs[0].tools, ["show_places", "ask_for_location"]);
+    for (const x of [IDS.trattoria, IDS.hiddenBar, IDS.tawlet, ...HERE_DIGITS]) assertFalse(line.includes(x), line);
+  } finally {
+    Object.assign(console, saved);
+  }
+  for (const x of [IDS.trattoria, IDS.hiddenBar, ...HERE_DIGITS]) assertFalse(printed.some((l) => l.includes(x)), printed.join("\n"));
 });

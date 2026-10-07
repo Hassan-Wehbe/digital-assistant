@@ -1,12 +1,14 @@
 import { z } from "zod";
-import { loadSpaces, resolveSpace, type Space } from "../lib/spaces.ts";
+import { resolveSpace, type Space } from "../lib/spaces.ts";
 import { addressedAs, DEFAULT_DISTANCE_UNIT, type DistanceUnit } from "../lib/assistant.ts";
-import { distanceKm, normalizePlace, PlaceError, PLACE_TYPE, placePoint, type Point } from "../lib/places.ts";
+import {
+  distanceKm, inUnit as toUnit, KM_PER_MILE, normalizePlace, PlaceError, PLACE_TYPE, placePoint, placeScope, type Point,
+} from "../lib/places.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
 /** At most this many places are read per call; plenty for one person's saved places. */
 export const MAX_PLACES_SCANNED = 1000;
-export const KM_PER_MILE = 1.609344;
+export { KM_PER_MILE };
 /** "Near" without a distance: 10 miles (about 16 km; places step 8, Q12), for km users too. */
 export const NEARBY_KM = 10 * KM_PER_MILE;
 /** Places without a saved location listed with every answer, by name and address only. */
@@ -62,7 +64,7 @@ function findAnchor(rows: PlaceRow[], ref: string): PlaceRow {
 export const registerFindPlaces: RegisterTool = (server, { db, assistantName, distanceUnit }) => {
   const unit: DistanceUnit = distanceUnit ?? DEFAULT_DISTANCE_UNIT;
   const unitName = unit === "mi" ? "miles" : "km";
-  const inUnit = (km: number) => Math.round((unit === "mi" ? km / KM_PER_MILE : km) * 10) / 10;
+  const inUnit = (km: number) => toUnit(km, unit);
   server.registerTool(
     "find_places",
     {
@@ -126,19 +128,10 @@ export const registerFindPlaces: RegisterTool = (server, { db, assistantName, di
           throw e;
         }
 
-        const spaces = await loadSpaces(db);
+        // Only the user's own searchable spaces (rule 3): lib/places.ts placeScope, shared with the
+        // chat's show_places.
+        const { spaces, allowed } = await placeScope(db);
         const scope = space ? subtree(spaces, resolveSpace(spaces, space).id) : null;
-        // The same rule as search_items: only the user's own spaces that are not restricted and
-        // not under a restricted space (searchable_space_ids, migration knowledge_path).
-        const { data: ids, error: idsError } = await db.rpc("searchable_space_ids");
-        if (idsError) throw dbError("Finding places failed", idsError);
-        const searchable = new Set(
-          ((ids ?? []) as unknown[]).map((v) =>
-            typeof v === "string" ? v : String((v as Record<string, unknown>)?.searchable_space_ids)
-          ),
-        );
-        const own = new Set(spaces.map((s) => s.id));
-        const allowed = [...searchable].filter((id) => own.has(id));
 
         let rows: PlaceRow[] = [];
         if (allowed.length) {

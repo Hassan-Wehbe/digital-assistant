@@ -284,6 +284,21 @@ Step 3 shows them (cuisine chips, price, occasions, dishes, **We went again** ad
         only. Eval cases: cards for an answer, never a restricted place, near me asks for the
         location, at most 5, no ask when a point is there. **One paid evaluation run and one
         deploy (`mcp` + `chat`) for PRs 1 and 2 together** (owner's OK).
+        **As built (PR 2):** `chat/actions.ts` (`ACTION_SPECS`, `ChatActions`, one per message),
+        used by `chat.ts` and `tests/eval/harness.ts`; the MCP tool list is unchanged (the
+        connector's `tools/list` test still lists exactly 24 tools). Ids are checked by
+        `visiblePlaces` in `mcp/lib/places.ts`, next to `placeScope` (the searchable-spaces check
+        moved there from `find_places`; `inUnit` and `KM_PER_MILE` too, so a card and
+        `find_places` give the same number). Any refused id (restricted, someone else's, deleted,
+        not a place, unknown) gets the same "not found"; ids already shown are skipped; at most 5
+        cards per message, further ones refused with a note to the model. Card distance: from
+        `near_place_id` when given (none if that place has no location), else this message's
+        `here`, else none; anything the model passes is ignored. `ask_for_location` with `here`
+        emits nothing and tells the model to use the point; asked twice, one card. Instructions:
+        `CHAT_ACTIONS` in `_shared/assistant_prompt.ts`. Log: action names only. `mcp` 0.9.1
+        (refactor only, no behaviour change). Eval cases: `place-cards-for-an-answer`,
+        `place-cards-never-restricted`, `place-near-me-asks-location`, `place-cards-at-most-five`,
+        `place-no-ask-when-shared` (91 cases, 22 traps).
      3. **App: Distances Miles / km** on Settings (`lib/units.ts`, reads and updates
         `app_user.distance_unit`).
      4. **App: the cards** on the ChatCard shell: place card (📍, name, kind and cuisine, "about

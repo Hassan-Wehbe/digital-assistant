@@ -3,8 +3,8 @@
 // vault entries the requests refer to. Secret values here are made up; key-shaped ones are
 // assembled at run time so secret scanners do not flag this file.
 import {
-  anyOf, arg, argIs, asks, both, allOf, called, type EvalCase, has, holds, inSpace, itemWhere, noItemWhere,
-  notCalled, noWrites, replyHas, replyLacks,
+  anyOf, arg, argIs, asks, both, allOf, called, cardFor, type EvalCase, has, holds, inSpace, itemWhere, locationAsked,
+  noCardFor, noItemWhere, notCalled, noWrites, placeCards, replyHas, replyLacks,
 } from "./grade.ts";
 import { IDS, World } from "./world.ts";
 
@@ -99,7 +99,7 @@ export const CASES: EvalCase[] = [
     id: "save-home-fact",
     category: "save",
     turns: ["File this under Home: the furnace filter is 16x25x1 MERV 11, change it every 3 months."],
-    checks: [itemWhere(both(inSpace("Home"), has(/16x25x1/i)), "in Home about the furnace filter")],
+    checks: [itemWhere(both(inSpace("Home"), has(/16\s*[x×]\s*25\s*[x×]\s*1\b/i)), "in Home about the furnace filter")],
   },
   {
     id: "save-restricted-space",
@@ -784,6 +784,76 @@ export const CASES: EvalCase[] = [
       called("find_places", undefined, "measure from the shared location"),
       replyHas(/\d(?:\.\d+)?\s*(?:km\b|kilomet)/i, "give the distance in km"),
       replyLacks(/\bmiles?\b/i, "use miles for a km user"),
+      noWrites(),
+    ],
+  },
+  // ---- Place cards and the 📍 card in the chat (places step 8 part 2, Q11, Q13) -------------------
+  // show_places and ask_for_location are chat-only actions (chat/actions.ts): the app shows the
+  // cards; older apps drop them, so the reply still names the places.
+  {
+    id: "place-cards-for-an-answer",
+    category: "lookup",
+    turns: ["Which Italian place did we like for date night?"],
+    checks: [
+      cardFor(IDS.trattoria, "Trattoria Sud"),
+      replyHas(/trattoria/i, "name Trattoria Sud in the text too"),
+      noWrites(),
+    ],
+  },
+  {
+    id: "place-cards-never-restricted",
+    category: "lookup",
+    here: { lat: 33.896, lng: 35.525 }, // at Tawlet; the restricted courtyard bar is a few metres away
+    turns: ["Show me the places around here, bars included."],
+    checks: [
+      called("show_places", undefined, "show the nearby places as cards"),
+      noCardFor(IDS.hiddenBar, "the bar in the restricted Private space"),
+      replyLacks(/hidden courtyard/i, "mention a place from a restricted space"),
+      noWrites(),
+    ],
+  },
+  {
+    id: "place-near-me-asks-location",
+    category: "lookup",
+    turns: ["Any good restaurants near me?"],
+    checks: [
+      locationAsked(true),
+      holds((o) => !o.calls.some((c) => c.name === "find_places" && (c.args.lat !== undefined || c.args.lng !== undefined)),
+        "find_places must not be given made-up coordinates"),
+      noWrites(),
+    ],
+  },
+  {
+    id: "place-cards-at-most-five",
+    category: "lookup",
+    // Eight more saved restaurants a short walk from the user: more than five match.
+    setup: (w) => {
+      const t = w.items.find((i) => i.id === IDS.trattoria)!;
+      for (let n = 1; n <= 8; n++) {
+        w.items.push({
+          ...structuredClone(t), id: `00000000-0000-4000-8000-0000000000e${n}`, title: `Gemmayze eatery ${n}`,
+          metadata: { ...structuredClone(t.metadata), lat: 33.8945 + n * 0.0003, lng: 35.5165 },
+        });
+      }
+    },
+    here: { lat: 33.8951, lng: 35.5171 },
+    turns: ["Show me every restaurant near me."],
+    checks: [
+      called("show_places", undefined, "show the places as cards"),
+      holds((o) => placeCards(o).length <= 5, "at most 5 place cards"),
+      holds((o) => new Set(placeCards(o).map((c) => c.id)).size === placeCards(o).length, "no place shown twice"),
+      noWrites(),
+    ],
+  },
+  {
+    id: "place-no-ask-when-shared",
+    category: "lookup",
+    here: { lat: 33.8951, lng: 35.5171 },
+    turns: ["What's near me?"],
+    checks: [
+      locationAsked(false),
+      called("find_places", (a) => Math.abs(Number(a.lat) - 33.8951) < 0.0005, "from the shared location"),
+      replyLacks(/33\.89|35\.51/, "repeat the shared coordinates"),
       noWrites(),
     ],
   },

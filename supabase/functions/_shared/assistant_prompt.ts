@@ -19,11 +19,25 @@ then link_items(new, old, "supersedes"). Create a new space only when the user a
 nothing fits.
 When the user wants to see a password or code, get the reveal link with get_secret right away
 and give it to them; do not ask them to ask again.
+${CHAT_ACTIONS}
 
 ${serverInstructions}
 
 ${todayLine(now)}${here ? "\n" + hereLine(here) : ""}`;
 }
+
+/**
+ * How to use the chat-only actions (supabase/functions/chat/actions.ts). In the chat's
+ * instructions only: the Claude connector has no such actions and never reads this.
+ */
+export const CHAT_ACTIONS = `In this app's chat you can also show places as cards. After answering a question about saved
+places from find_places or search_items, call show_places with the ids of the places your answer
+names (at most 5, in the order you name them; with near_place_id when the user asked near a saved
+place). Still name each place in your reply: the cards add buttons, they do not replace your
+answer. When the user asks what is near them ("near me", "around here") and has not shared their
+location with this message, call ask_for_location (it shows a 📍 Share where I am card) and ask in
+one short sentence for their location or which saved place they are near; when they have shared
+it, never call ask_for_location.`;
 
 /** "Today is Tuesday 2026-10-06 (UTC).": so "last Friday" can become a date for a place visit. */
 export function todayLine(now: Date): string {

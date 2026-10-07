@@ -58,7 +58,7 @@ function unauthorized(detail: string): Response {
 
 function buildServer(ctx: ToolContext): McpServer {
   const server = new McpServer(
-    { name: "digital-assistant", version: "0.9.0" },
+    { name: "digital-assistant", version: "0.9.1" },
     { instructions: serverInstructions(ctx.assistantName, ctx.distanceUnit) },
   );
   for (const register of ALL_TOOLS) register(server, ctx);
