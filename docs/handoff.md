@@ -28,12 +28,12 @@ tokens or keys in chat.
   without sign-in and with a fake token). **`chat` NOT deployed, still version 12** (old
   `find_places`, old `credentials.ts`; 401 checked): the connector's `deploy_edge_function` call
   was cut off at about 68 KB of the 214 KB payload and changed nothing. So the Claude connector
-  has the fix, **the app's Wilma chat does not yet.** **Owner's step to finish:** deploy `chat`
-  with the Supabase CLI (no size limit), from the repo root on `main`:
-  `supabase functions deploy chat --project-ref motvckmpusxiuelpwqxy --no-verify-jwt`
-  (the CLI bundles the sibling `_shared/` and `mcp/` imports itself); or add a
-  `SUPABASE_ACCESS_TOKEN` repository secret so a small GitHub Actions workflow can run that
-  command (the fallback named in `phase5-a5b-chat-function-plan.md`). Then check with
+  has the fix, **the app's Wilma chat does not yet.** **Deploy route for `chat` (owner's choice,
+  option A):** the manual GitHub workflow `deploy chat` (`.github/workflows/deploy-chat.yml`, runs
+  `supabase functions deploy chat` from `main` only, then checks 401 without sign-in and with a
+  fake token). It needs the repository secret `SUPABASE_ACCESS_TOKEN`; a Supabase access token
+  cannot be limited to one project and must be able to write, so **the owner deletes it in
+  Supabase right after each deploy** and makes a new one next time. After a run, check with
   `get_edge_function` that every file matches `main`. Next: job 3 (🔒 vault entries in a space,
   app only). No Play build until the owner says so.
 - **START HERE (2026-10-07, late): versionCode 12 findings and the next three jobs.** The owner
