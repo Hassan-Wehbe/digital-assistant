@@ -7,14 +7,31 @@ import { useEffect, useRef, useState } from 'react';
 import { FlatList, RefreshControl, Text, TextInput, View } from 'react-native';
 
 import { MicButton } from '@/components/MicButton';
-import { ItemRow, SpaceRow } from '@/components/rows';
-import { UsageMeter } from '@/components/UsageMeter';
-import { Button, ErrorBox, KeyboardScreen, Loading, Muted, styles, TextLink, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
+import { ItemRow } from '@/components/rows';
+import {
+  ErrorBox,
+  GroupList,
+  GroupRow,
+  IconButton,
+  KeyboardScreen,
+  Loading,
+  Muted,
+  Panel,
+  space,
+  styles,
+  TextLink,
+  Tile,
+  useColors,
+  useLoad,
+  useReloadOnReturn,
+} from '@/components/ui';
+import { BoxCounter, WilmaBox } from '@/components/WilmaBox';
 import { useAuth } from '@/lib/auth';
 import { useChat } from '@/lib/chat';
+import { lastUserText } from '@/lib/chatThread';
 import { VOICE_ENABLED } from '@/lib/config';
 import { supabase } from '@/lib/supabase';
-import { loadAllowance, usageSummary } from '@/lib/usage';
+import { loadAllowance, usageCounterText, usageSummary } from '@/lib/usage';
 import { appendDictation, useDictation } from '@/lib/voice';
 import type { SearchResult, Space } from '@/lib/wilma';
 
@@ -28,6 +45,8 @@ export default function Home() {
   const [query, setQuery] = useState('');
   // Shown under the box when a message for Wilma could not be sent (allowance used up).
   const [held, setHeld] = useState<string | null>(null);
+  // The ＋ menu under the box: a photo, pictures or a plain new note.
+  const [menu, setMenu] = useState(false);
   // "Search" from a chat message comes back here with the last question (q) and runs the note
   // search on it, or, with no question, puts the cursor in the box.
   const { focus, q } = useLocalSearchParams<{ focus?: string; q?: string }>();
@@ -86,38 +105,76 @@ export default function Home() {
     else router.push('/chat');
   };
 
-  const header = (
-    <View style={{ gap: 12 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <TextInput
-          ref={search}
-          style={[styles.input, { color: c.text, borderColor: c.line, backgroundColor: c.card, flex: 1 }]}
-          placeholder="Ask Wilma, or type a name"
-          placeholderTextColor={c.muted}
-          value={mic.listening ? appendDictation(text, mic.partial) : text}
-          editable={!mic.listening}
-          onChangeText={(t) => {
-            setText(t);
-            setHeld(null);
-            mic.clearError();
-            if (!t.trim()) setQuery('');
-          }}
-          onSubmitEditing={submit}
-          returnKeyType="send"
-          clearButtonMode="while-editing"
-          maxLength={20000}
-        />
-        {VOICE_ENABLED ? <MicButton mic={mic} disabled={!chat.canSend} /> : null}
-        <Button title="Send" onPress={submit} disabled={!chat.canSend || !text.trim() || mic.listening} />
-      </View>
+  const left = (
+    <IconButton icon="＋" label="Add a note or a photo" selected={menu} onPress={() => setMenu((m) => !m)} />
+  );
+  const counter = usage.data ? (
+    <BoxCounter
+      text={usageCounterText(usage.data)}
+      low={usage.data.low}
+      usedUp={usage.data.usedUp}
+      onPress={() => router.push('/settings')}
+    />
+  ) : null;
+  const go = (params?: Record<string, string>) => {
+    setMenu(false);
+    router.push({ pathname: '/new-item', params });
+  };
+  const asked = lastUserText(chat.state.entries);
+
+  // The top panel: the one box, then what you can do (UI tidy-up, home A2). It stays put while the
+  // spaces below scroll.
+  const panel = (
+    <Panel>
+      <WilmaBox
+        inputRef={search}
+        onPanel
+        placeholder="Ask Wilma, or type a name"
+        value={mic.listening ? appendDictation(text, mic.partial) : text}
+        editable={!mic.listening}
+        onChangeText={(t) => {
+          setText(t);
+          setHeld(null);
+          mic.clearError();
+          if (!t.trim()) setQuery('');
+        }}
+        onSend={submit}
+        sendDisabled={!chat.canSend || !text.trim() || mic.listening}
+        left={left}
+        center={counter}
+        mic={VOICE_ENABLED ? <MicButton mic={mic} disabled={!chat.canSend} /> : null}
+      />
       {mic.listening ? <Muted>Never type or say passwords here. Use the Vault.</Muted> : null}
       {mic.error ? <Muted>{mic.error}</Muted> : null}
       {held ? <Muted>{held}</Muted> : chat.routing ? <Muted>One moment…</Muted> : null}
-      {/* Under the box only when it matters: from 80% of the month's allowance. */}
-      {usage.data?.low && !held ? <UsageMeter usage={usage.data} /> : null}
-      <TextLink title="Conversation" onPress={() => router.push('/chat')} />
-      <Button title="New note or photo" kind="plain" onPress={() => router.push('/new-item')} />
-      <Button title="📍 Save where I am" kind="plain" onPress={() => router.push({ pathname: '/new-item', params: { here: '1' } })} />
+      {menu ? (
+        <GroupList>
+          <GroupRow first title="📷 Take a photo" onPress={() => go({ pick: 'camera' })} />
+          <GroupRow title="🖼 Choose pictures" onPress={() => go({ pick: 'pictures' })} />
+          <GroupRow title="📝 New note" onPress={() => go()} />
+        </GroupList>
+      ) : null}
+      <View style={{ flexDirection: 'row', gap: space.s }}>
+        <Tile
+          grow={1.6}
+          icon="💬"
+          title={asked ? 'Continue' : 'Chat'}
+          subtitle={asked ?? undefined}
+          accessibilityLabel={asked ? 'Continue the conversation' : 'Open the conversation'}
+          onPress={() => router.push('/chat')}
+        />
+        {/* Reads the location only after this tap, on the New note screen (places Q10). */}
+        <Tile icon="📍" title="Save here" accessibilityLabel="Save where I am" onPress={() => go({ here: '1' })} />
+        <Tile icon="🔒" title="Vault" onPress={() => router.push('/vault')} />
+      </View>
+    </Panel>
+  );
+
+  const spaces = data?.flatMap((r) => (r.kind === 'space' ? [r.space] : [])) ?? [];
+  const items = data?.flatMap((r) => (r.kind === 'item' ? [r.item] : [])) ?? [];
+
+  const header = (
+    <View style={{ gap: space.m }}>
       {query ? (
         <Text style={[styles.title, { color: c.text }]}>{`Results for “${query}”`}</Text>
       ) : (
@@ -127,20 +184,30 @@ export default function Home() {
         </View>
       )}
       {error ? <ErrorBox message={error} onRetry={reload} /> : null}
-    </View>
-  );
-
-  // The account, the recycle bin and the full meter are on Settings (⚙). The Vault stays here
-  // until it becomes a tile under the box (UI tidy-up step 3).
-  const footer = (
-    <View style={{ marginTop: 16 }}>
-      <Button title="Vault" kind="plain" onPress={() => router.push('/vault')} />
+      {!query && spaces.length ? (
+        <GroupList>
+          {spaces.map((sp, i) =>
+            sp.restricted ? (
+              // Listed, never opened or searched here (CLAUDE.md rule 3).
+              <GroupRow key={sp.id} first={i === 0} dimmed title={`🔒 ${sp.path}`} subtitle="Restricted" />
+            ) : (
+              <GroupRow
+                key={sp.id}
+                first={i === 0}
+                title={sp.path}
+                subtitle={sp.description ?? undefined}
+                onPress={() => router.push({ pathname: '/space/[id]', params: { id: sp.id, path: sp.path } })}
+              />
+            ),
+          )}
+        </GroupList>
+      ) : null}
     </View>
   );
 
   const empty = loading ? (
     <Loading />
-  ) : error ? null : (
+  ) : error || spaces.length ? null : (
     <Muted>{query ? 'Nothing found.' : 'No spaces yet. Tap “+ New space” to create one.'}</Muted>
   );
 
@@ -149,15 +216,15 @@ export default function Home() {
       <Stack.Screen
         options={{ headerRight: () => <TextLink title="⚙ Settings" onPress={() => router.push('/settings')} /> }}
       />
+      {panel}
       <FlatList
         style={{ backgroundColor: c.background }}
         contentContainerStyle={styles.list}
-        data={data ?? []}
-        keyExtractor={(r) => (r.kind === 'space' ? r.space.id : r.item.id)}
-        renderItem={({ item: r }) => (r.kind === 'space' ? <SpaceRow space={r.space} /> : <ItemRow item={r.item} />)}
+        data={items}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => <ItemRow item={item} />}
         ListHeaderComponent={header}
         ListEmptyComponent={empty}
-        ListFooterComponent={footer}
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={loading && !!data} onRefresh={reloadAll} />}
       />

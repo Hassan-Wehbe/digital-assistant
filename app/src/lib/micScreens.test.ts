@@ -44,7 +44,8 @@ describe('the mic never sends (test 3)', () => {
     expect(src).toContain('useDictation((words) => setText((t) => appendDictation(t, words)),');
     // Send waits while listening, so the words in the box are the ones that get sent.
     // (The chat's Send also waits while 📍 reads the location, places step 7.)
-    expect(src).toMatch(/disabled=\{!(chat\.)?canSend \|\| !text\.trim\(\) \|\| mic\.listening( \|\| locating)?\}/);
+    // (On the Wilma box, Send's prop is sendDisabled.)
+    expect(src).toMatch(/(disabled|sendDisabled)=\{!(chat\.)?canSend \|\| !text\.trim\(\) \|\| mic\.listening( \|\| locating)?\}/);
   });
 
   it('the mic button and voice.ts have no way to send', () => {

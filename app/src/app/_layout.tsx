@@ -40,7 +40,8 @@ function Screens() {
     <Stack screenOptions={{ contentStyle: { backgroundColor: c.background, paddingBottom: insets.bottom } }}>
       <Stack.Protected guard={signedIn}>
         <Stack.Screen name="index" options={{ title: 'Wilma' }} />
-        <Stack.Screen name="chat" options={{ title: 'Ask Wilma' }} />
+        {/* The chat slides up from the bottom, as if the home box grew into it. */}
+        <Stack.Screen name="chat" options={{ title: 'Ask Wilma', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="space/[id]" options={{ title: 'Space' }} />
         <Stack.Screen name="item/[id]" options={{ title: 'Item' }} />
         <Stack.Screen name="new-item" options={{ title: 'New note' }} />

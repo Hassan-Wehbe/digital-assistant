@@ -23,7 +23,9 @@ export default function NewItem() {
   const c = useColors();
   const { wilma } = useAuth();
   // here=1: the home screen's Save where I am (a place that starts by reading the location).
-  const params = useLocalSearchParams<{ space?: string; here?: string }>();
+  // pick=camera|pictures: home's ＋ menu, which opens the camera or the picture picker at once.
+  const params = useLocalSearchParams<{ space?: string; here?: string; pick?: string }>();
+  const pick = params.pick === 'camera' || params.pick === 'pictures' ? params.pick : undefined;
   const spaces = useLoad('spaces', () => wilma.listSpaces());
   const [space, setSpace] = useState<string | undefined>(params.space);
   const [title, setTitle] = useState('');
@@ -114,7 +116,7 @@ export default function NewItem() {
         <Muted>Passwords and other secrets belong in the vault, not in notes.</Muted>
 
         <Text style={[styles.title, { color: c.text }]}>Photos and files (optional)</Text>
-        <AttachmentPicker files={files} onChange={setFiles} disabled={busy} />
+        <AttachmentPicker files={files} onChange={setFiles} disabled={busy} start={pick} />
 
         {error ? (
           <Card>
