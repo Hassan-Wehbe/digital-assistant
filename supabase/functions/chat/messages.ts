@@ -34,6 +34,7 @@ export const ERROR_TEXT: Record<Exclude<ChatErrorCode, "allowance_used">, string
 export const STATUS: Record<string, string> = {
   list_spaces: "Checking your spaces…",
   create_space: "Creating the space…",
+  update_space: "Updating the space…",
   save_item: "Saving…",
   update_item: "Updating your note…",
   get_item: "Reading your note…",
