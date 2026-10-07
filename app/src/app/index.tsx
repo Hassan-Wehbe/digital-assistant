@@ -2,8 +2,7 @@
 // here with no model call, anything else goes to Wilma. When Wilma can't answer (allowance used
 // up, or the chat's Search button), the old note search runs on the text instead, never the model
 // (restricted spaces are never searched); spaces to browse below.
-import * as Application from 'expo-application';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { FlatList, RefreshControl, Text, TextInput, View } from 'react-native';
 
@@ -13,7 +12,7 @@ import { UsageMeter } from '@/components/UsageMeter';
 import { Button, ErrorBox, KeyboardScreen, Loading, Muted, styles, TextLink, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { useChat } from '@/lib/chat';
-import { versionLabel, VOICE_ENABLED } from '@/lib/config';
+import { VOICE_ENABLED } from '@/lib/config';
 import { supabase } from '@/lib/supabase';
 import { loadAllowance, usageSummary } from '@/lib/usage';
 import { appendDictation, useDictation } from '@/lib/voice';
@@ -23,7 +22,7 @@ type Row = { kind: 'space'; space: Space } | { kind: 'item'; item: SearchResult 
 
 export default function Home() {
   const c = useColors();
-  const { wilma, session, signOut } = useAuth();
+  const { wilma, session } = useAuth();
   const chat = useChat();
   const [text, setText] = useState('');
   const [query, setQuery] = useState('');
@@ -131,15 +130,11 @@ export default function Home() {
     </View>
   );
 
+  // The account, the recycle bin and the full meter are on Settings (⚙). The Vault stays here
+  // until it becomes a tile under the box (UI tidy-up step 3).
   const footer = (
-    <View style={{ gap: 8, marginTop: 16 }}>
-      {usage.data && !usage.data.low ? <UsageMeter usage={usage.data} /> : null}
-      <Muted>Signed in as {session?.user.email ?? 'you'}</Muted>
+    <View style={{ marginTop: 16 }}>
       <Button title="Vault" kind="plain" onPress={() => router.push('/vault')} />
-      <Button title="Recycle bin" kind="plain" onPress={() => router.push('/bin')} />
-      <Button title="Change sign-in password" kind="plain" onPress={() => router.push('/account')} />
-      <Button title="Sign out" kind="plain" onPress={signOut} />
-      <Muted>{versionLabel(Application.nativeApplicationVersion, Application.nativeBuildVersion)}</Muted>
     </View>
   );
 
@@ -151,6 +146,9 @@ export default function Home() {
 
   return (
     <KeyboardScreen>
+      <Stack.Screen
+        options={{ headerRight: () => <TextLink title="⚙ Settings" onPress={() => router.push('/settings')} /> }}
+      />
       <FlatList
         style={{ backgroundColor: c.background }}
         contentContainerStyle={styles.list}
