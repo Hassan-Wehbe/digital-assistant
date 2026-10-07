@@ -242,6 +242,16 @@ Step 3 shows them (cuisine chips, price, occasions, dishes, **We went again** ad
    - **Honest "nothing near" answers** (Q16, same testing): when matching places have no saved
      location, Wilma names them ("Hinode Sushi might be near, but it has no saved location") and
      offers Open in Maps or to add the location, instead of "nothing close by".
+   - **Location by name from an open map** (Q17, owner 2026-10-07, after Q15 (b)): when a place
+     arrives from a Google Maps share with no coordinates, Wilma looks its name up in
+     OpenStreetMap's place search near where the phone is (or near the user's other places), and
+     shows a card "Is this it? <name>, <address>" with Yes / Not this one. Only a Yes stores the
+     location; Not this one keeps the place as it is (Use where I am now or a long link still
+     work). Free, no Google account, and the result may be stored (OpenStreetMap's licence; credit
+     shown on the card). Sent: the place's name and a rough area, nothing else; one new privacy
+     sentence (owner approves). Search service and its usage rules (a named app, at most one
+     request a second) to be chosen when the step is built. If too many places are not found,
+     Google's Places search is the upgrade (paid account; coordinates may be kept only 30 days).
    - PRs: server (the two chat-only actions, the unit setting, instructions, Deno tests,
      evaluation cases, a paid run with the owner's OK, deploy), then app (the place card, the share
      card, the units setting), then a phone checklist. Strongest model (location, privacy, chat
@@ -310,3 +320,7 @@ Q8 after A5e.
   address through a paid service, stays for the day planner). Revises Q3. Existing places get a
   one-off pass. **Q16:** Wilma names matching places that have no location instead of saying
   nothing is near.
+- **Q17, decided (owner, 2026-10-07, step 8):** a place shared from Google Maps gets its location
+  from a name lookup in OpenStreetMap near the user, confirmed by the user on a card (option 1 of
+  five: also considered Google's Places search, the phone opening the short link, sharing from
+  another maps app, and a one-off Google Takeout import). Short links are still not followed (Q3).
