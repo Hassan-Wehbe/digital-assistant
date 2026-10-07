@@ -12,8 +12,9 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **Places step 8, part 1: coordinates from Google Maps links (Q15), server, in PRs, not
-  deployed.** Why: on versionCode 11 "sushi near me" found nothing because the owner's 2 places
+- **Places step 8, part 1: coordinates from Google Maps links (Q15), server live (#124 merged;
+  deployed 2026-10-07: `mcp` version 16, 36/37 files identical, `chat` version 9, 48/49 identical,
+  the `.d.ts` not listed back; 401 without sign-in and with a fake token, both).** Why: on versionCode 11 "sushi near me" found nothing because the owner's 2 places
   (both shared from Google Maps: short link and name only) have no location. **#124**: when a
   place is saved or edited with a Maps link and no location, `mcp/lib/maps_link.ts` reads the
   coordinates from a long link (no request) or opens a short link (`maps.app.goo.gl`,
@@ -29,8 +30,8 @@ tokens or keys in chat.
   request), `{"apply": true}` fills; service-role key only, run by the owner from the Supabase
   dashboard (Edge Functions → place-locations → Test, role service role), then deleted. **#126**:
   privacy page wording (owner approves; merging publishes; also removes "Wilma's servers do not
-  contact Google about your places"). **Owner's next steps:** approve the wording, then "merge and
-  deploy" #124 (`mcp` + `chat`), then the backfill (deploy `place-locations`, dry run, apply,
+  contact Google about your places"). Wording approved by the owner (2026-10-07). **Owner's next steps:**
+  the backfill (deploy `place-locations`, dry run, apply,
   delete), then merge #126. Part 2 (honest near answers, 10-mile radius, miles, cards) is next.
 - **UI tidy-up of home and chat: decided, build next (owner, 2026-10-07).** `docs/ui-review.md`
   section 3 is the plan: Home A2 (a 3-line Wilma box with ＋, usage counter, 🎤 and ↑ in a top
