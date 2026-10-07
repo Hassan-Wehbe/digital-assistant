@@ -68,17 +68,12 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
             }
           }
         }
-        // A Maps link and no location: read the location from the link (Q15). Not when the place
-        // had a location and keeps the same link: then the user removed it on purpose.
+        // A Maps link with coordinates and no location: the location is read from the link (Q15).
+        // Not when the place had a location and keeps the same link: the user removed it on purpose.
         let locationFromLink = false;
         if (place && fieldsChanged && current) {
           const removed = placePoint(current.metadata) !== null && current.metadata?.maps_url === place.maps_url;
-          if (!removed) {
-            const r = await withLinkLocation(place);
-            ({ place, filled: locationFromLink } = r);
-            // Codes and counts only (never the link or the point), to see how Google answers.
-            if (r.log) console.log(r.log);
-          }
+          if (!removed) ({ place, filled: locationFromLink } = withLinkLocation(place));
         }
         const newMetadata = place && fieldsChanged ? place : metadata ?? null;
 

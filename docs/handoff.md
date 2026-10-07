@@ -42,6 +42,19 @@ tokens or keys in chat.
   owner changes one place field in the app and the log line says which pattern matched
   (`found`); then check the location with Open in Maps, run the backfill for the other place (or
   edit it), delete `place-locations`, merge #126.
+  **Outcome (2026-10-07): (a) gave a wrong location, so withdrawn; owner chose (b).** `mcp` v18
+  read the page (`found: page_image`) and stored a point about 800 miles from Hinode Sushi
+  (Oviedo, FL): Google's page for a server has no pin, only a preview image centred elsewhere.
+  Cleared by SQL with the owner's OK (history kept, change note "Removed a wrong location...").
+  The server now opens no link at all: only coordinates written in a long Maps link or `geo:`
+  link are read (`mcp` 0.8.5, `maps_link.ts` cut down; `place-locations` code removed). #126
+  (privacy) closed unpublished: the page's "Wilma's servers do not contact Google about your
+  places" stays true. Both places still have no location: the owner adds it with **Use where I
+  am now** at the place, or pastes a long Google Maps link from a computer's browser. **To do
+  after the `mcp` deploy:** the owner deletes the `place-locations` function in the dashboard
+  (the connector cannot delete functions; it was replaced by a stub that answers 410). `chat`
+  still runs the #124 code (v9, follows short links but never reads pages): redeploy `chat` with
+  part 2 or sooner.
 - **UI tidy-up of home and chat: decided, build next (owner, 2026-10-07).** `docs/ui-review.md`
   section 3 is the plan: Home A2 (a 3-line Wilma box with ＋, usage counter, 🎤 and ↑ in a top
   panel; tiles Continue/Chat, Save here, Vault; Settings behind ⚙), the chat sliding up from the
