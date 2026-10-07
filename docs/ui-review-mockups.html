@@ -1,0 +1,468 @@
+<title>Wilma Screen Options</title>
+<style>
+/* Layout: a reading column of options; each option is a row of phone frames drawn in the app's own colours (app/src/constants/theme.ts). */
+:root {
+  --page: #eef0f3; --ink: #1c1f24; --soft: #5d6570; --rule: #d3d8de;
+  --bg: #f6f7f9; --card: #ffffff; --line: #dde1e6; --accent: #2754c5; --danger: #b3261e; --warn: #9a6400;
+  --tint: #e8eefb; --good: #1d6b3a; --good-bg: #e3f2e8; --bad-bg: #fbe7e5;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --page: #0c0e11; --ink: #e8eaed; --soft: #9aa2ad; --rule: #2a2f36;
+  --bg: #121417; --card: #1b1e23; --line: #2e333a; --accent: #7aa2ff; --danger: #ff8a80; --warn: #f0b44c;
+  --tint: #1d2638; --good: #8fd6a6; --good-bg: #16261c; --bad-bg: #2c1a19; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --page: #0c0e11; --ink: #e8eaed; --soft: #9aa2ad; --rule: #2a2f36;
+  --bg: #121417; --card: #1b1e23; --line: #2e333a; --accent: #7aa2ff; --danger: #ff8a80; --warn: #f0b44c;
+  --tint: #1d2638; --good: #8fd6a6; --good-bg: #16261c; --bad-bg: #2c1a19; color-scheme: dark }
+body { background: var(--page); color: var(--ink); font: 15px/1.55 var(--sans); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 64px; display: grid; gap: 40px; }
+h1 { font-size: 28px; line-height: 1.2; margin: 0; text-wrap: balance; }
+h2 { font-size: 21px; margin: 0; text-wrap: balance; }
+h3 { font-size: 16px; margin: 0; }
+p { margin: 0; max-width: 68ch; }
+.lede { color: var(--soft); }
+.eyebrow { font: 600 12px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--soft); }
+nav { display: flex; flex-wrap: wrap; gap: 8px; }
+nav a { color: var(--accent); text-decoration: none; border: 1px solid var(--rule); border-radius: 999px; padding: 4px 12px; font-size: 14px; }
+nav a:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+section { display: grid; gap: 20px; }
+.option { display: grid; gap: 16px; border-top: 1px solid var(--rule); padding-top: 20px; }
+.option header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; }
+.tag { font: 600 11px/1 var(--mono); letter-spacing: .05em; text-transform: uppercase; padding: 5px 8px; border-radius: 4px; background: var(--tint); color: var(--accent); }
+.tag.rec { background: var(--good-bg); color: var(--good); }
+.tag.now { background: var(--bad-bg); color: var(--danger); }
+.row { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+.notes { flex: 1 1 300px; min-width: 0; display: grid; gap: 10px; align-content: start; }
+.notes ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.notes b { font-weight: 600; }
+.cost { font: 13px/1.5 var(--mono); color: var(--soft); }
+
+/* Phone frame */
+.phone { flex: 0 0 300px; max-width: 100%; border: 1px solid var(--line); border-radius: 22px; background: var(--bg); overflow: hidden; box-shadow: 0 1px 0 var(--rule); font-size: 13px; line-height: 1.4; display: flex; flex-direction: column; min-height: 560px; }
+.bar { display: flex; align-items: center; gap: 8px; padding: 12px 14px; background: var(--card); border-bottom: 1px solid var(--line); font-weight: 600; font-size: 15px; }
+.bar .sp { flex: 1; }
+.bar .lnk { color: var(--accent); font-weight: 500; font-size: 13px; }
+.scr { padding: 12px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.box { display: flex; gap: 6px; align-items: center; }
+.in { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 8px 10px; color: var(--soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.in.tall { border-radius: 20px; padding: 9px 12px; }
+.btn { border-radius: 8px; padding: 8px 10px; font-weight: 600; text-align: center; border: 1px solid var(--line); color: var(--accent); background: transparent; white-space: nowrap; }
+.btn.pri { background: var(--accent); color: var(--card); border-color: var(--accent); }
+.btn.dng { color: var(--danger); }
+.btn.full { display: block; }
+.ico { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line); background: var(--card); flex: 0 0 auto; font-size: 14px; }
+.ico.plain { border-color: transparent; background: transparent; }
+.ico.send { background: var(--accent); border-color: var(--accent); color: var(--card); font-weight: 700; }
+.link { color: var(--accent); font-weight: 600; }
+.muted { color: var(--soft); font-size: 12px; }
+.h { font-weight: 600; font-size: 14px; }
+.hrow { display: flex; justify-content: space-between; align-items: baseline; }
+.card { border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 10px; display: grid; gap: 3px; }
+.group { border: 1px solid var(--line); background: var(--card); border-radius: 10px; overflow: hidden; }
+.group > div { padding: 9px 10px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 8px; }
+.group > div:first-child { border-top: 0; }
+.group .chev { color: var(--soft); }
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.tiles.two { grid-template-columns: repeat(2, 1fr); }
+.tile { border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 8px 4px; text-align: center; display: grid; gap: 2px; font-size: 11px; color: var(--ink); }
+.tile span { font-size: 16px; }
+.meter { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.meter i { display: block; height: 100%; width: 84%; background: var(--warn); }
+.meter.ok i { width: 38%; background: var(--accent); }
+.dim { opacity: .55; }
+.flag { outline: 2px dashed var(--danger); outline-offset: 2px; border-radius: 6px; }
+.tabs { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); background: var(--card); text-align: center; font-size: 11px; color: var(--soft); }
+.tabs div { padding: 8px 0 10px; display: grid; gap: 2px; }
+.tabs .on { color: var(--accent); font-weight: 600; }
+.tabs span { font-size: 16px; }
+/* chat */
+.thread { flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.me { align-self: flex-end; max-width: 80%; background: var(--accent); color: var(--card); border-radius: 14px; padding: 8px 10px; }
+.her { align-self: flex-start; max-width: 85%; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 8px 10px; }
+.cc { align-self: flex-start; width: 85%; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px; display: grid; gap: 8px; }
+.cc .top { display: flex; gap: 8px; align-items: flex-start; }
+.cc .top > span:first-child { font-size: 15px; }
+.cc .acts { display: flex; gap: 6px; justify-content: flex-end; }
+.cc .acts .btn { padding: 6px 10px; }
+.old { align-self: flex-start; width: 85%; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 6px; }
+.comp { border-top: 1px solid var(--line); padding: 10px; display: grid; gap: 6px; background: var(--bg); }
+.chip { display: inline-flex; align-items: center; gap: 6px; align-self: start; justify-self: start; border-radius: 999px; padding: 4px 10px; background: var(--tint); color: var(--accent); font-size: 12px; }
+.banner { display: flex; gap: 8px; padding: 8px 12px; background: var(--card); border-bottom: 1px solid var(--line); font-size: 12px; }
+.tray { display: flex; gap: 8px; padding: 6px 2px 0; }
+.tray .tile { flex: 1; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.tbl { overflow-x: auto; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font: 600 12px/1.3 var(--mono); letter-spacing: .04em; text-transform: uppercase; color: var(--soft); }
+ol.plan { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 76ch; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:12px">
+    <div class="eyebrow">Design review · 2026-10-07 · nothing built yet</div>
+    <h1>Wilma: home screen and chat, three ways each</h1>
+    <p class="lede">Sketches for choosing, not a build. Each phone is about 300px wide and uses the app's own colours, so it follows your light or dark setting. Dashed red outlines on the "today" screens mark what feels clunky. Full write-up: <code>docs/ui-review.md</code>.</p>
+    <nav>
+      <a href="#home">Home</a><a href="#chat">Chat</a><a href="#cards">Chat cards</a><a href="#plan">Recommended plan</a><a href="#questions">Your choices</a>
+    </nav>
+  </header>
+
+  <!-- ===================== HOME ===================== -->
+  <section id="home">
+    <h2>Home screen</h2>
+
+    <div class="option">
+      <header><span class="tag now">Today</span><h3>What the app shows now</h3></header>
+      <div class="row">
+        <div class="phone">
+          <div class="bar">Wilma</div>
+          <div class="scr">
+            <div class="box"><div class="in">Ask Wilma, or type a name</div><div class="ico">🎤</div><div class="btn pri">Send</div></div>
+            <div class="link flag">Conversation</div>
+            <div class="btn full flag">New note or photo</div>
+            <div class="btn full flag">📍 Save where I am</div>
+            <div class="hrow"><span class="h">Spaces</span><span class="link">+ New space</span></div>
+            <div class="card"><b>Recipes</b><span class="muted">Family dinners and baking</span></div>
+            <div class="card"><b>Work/Designs</b><span class="muted">Architecture notes</span></div>
+            <div class="card flag"><b>🔒 Health</b><span class="muted">Restricted space. Opening restricted spaces in the app comes later.</span></div>
+            <div class="card"><b>Places</b></div>
+            <div class="meter ok"><i></i></div><span class="muted">About 180 requests left · resets Nov 1</span>
+            <span class="muted">Signed in as owner@example.com</span>
+            <div class="flag" style="display:grid;gap:6px">
+              <div class="btn full">Vault</div>
+              <div class="btn full">Recycle bin</div>
+              <div class="btn full">Change sign-in password</div>
+              <div class="btn full">Sign out</div>
+            </div>
+            <span class="muted">1.0.0 (11)</span>
+          </div>
+        </div>
+        <div class="notes">
+          <ul>
+            <li><b>Three styles for the same kind of action:</b> "Conversation" is a text link, "New note" and "Save where I am" are full-width outlined buttons, "+ New space" is a text link again.</li>
+            <li><b>Settings mixed into home:</b> six footer lines, four of them full-width buttons of equal weight. The Vault, which you use often, looks exactly like Sign out.</li>
+            <li><b>Things move:</b> the usage meter sits under the box at 80% and in the footer otherwise.</li>
+            <li><b>Spaces are tall cards</b> with one shared look, so the list is long and the footer ends up far down.</li>
+            <li><b>A restricted space repeats a long sentence</b> every time it is listed.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="option">
+      <header><span class="tag rec">Option A · recommended</span><h3>Tidy home + a Settings screen</h3></header>
+      <div class="row">
+        <div class="phone">
+          <div class="bar">Wilma<span class="sp"></span><span class="lnk">⚙ Settings</span></div>
+          <div class="scr">
+            <div class="box"><div class="in">Ask Wilma, or type a name</div><div class="ico">🎤</div><div class="ico send">↑</div></div>
+            <div class="tiles">
+              <div class="tile"><span>💬</span>Chat</div>
+              <div class="tile"><span>＋</span>New note</div>
+              <div class="tile"><span>📍</span>Save here</div>
+              <div class="tile"><span>🔒</span>Vault</div>
+            </div>
+            <div class="hrow"><span class="h">Spaces</span><span class="link">＋ New</span></div>
+            <div class="group">
+              <div><span><b>Recipes</b><br><span class="muted">Family dinners and baking</span></span><span class="chev">›</span></div>
+              <div><span><b>Work/Designs</b><br><span class="muted">Architecture notes</span></span><span class="chev">›</span></div>
+              <div><span><b>Places</b></span><span class="chev">›</span></div>
+              <div class="dim"><span>🔒 Health <span class="muted">· restricted</span></span></div>
+            </div>
+          </div>
+        </div>
+        <div class="phone">
+          <div class="bar"><span class="lnk">‹</span>Settings</div>
+          <div class="scr">
+            <span class="h">This month</span>
+            <div class="card"><div class="meter ok"><i></i></div><span class="muted">About 180 requests left · resets Nov 1</span></div>
+            <span class="h">Account</span>
+            <div class="group">
+              <div><span>Signed in as<br><span class="muted">owner@example.com</span></span></div>
+              <div><span>Change sign-in password</span><span class="chev">›</span></div>
+              <div><span>Recycle bin</span><span class="chev">›</span></div>
+            </div>
+            <span class="h">Later here</span>
+            <div class="group dim">
+              <div><span>Distances: miles / km</span></div>
+              <div><span>Delete my account</span></div>
+            </div>
+            <div class="btn full dng">Sign out</div>
+            <span class="muted">Wilma 1.0.0 (11)</span>
+          </div>
+        </div>
+        <div class="notes">
+          <ul>
+            <li><b>Moves:</b> the four actions become one row of equal tiles (Chat, New note, Save here, Vault). The footer moves to a new Settings screen behind ⚙.</li>
+            <li><b>Fixes:</b> one style per kind of action. The box stays first, then actions, then spaces. The Vault becomes easier to reach than today. The meter has one fixed home in Settings, and still shows under the box from 80%.</li>
+            <li><b>Spaces</b> become one grouped list with thin dividers. A restricted space is one dimmed line.</li>
+            <li><b>Ready for later:</b> Settings is where the miles/km choice (places Q14) and account deletion (D29) go.</li>
+          </ul>
+          <p class="cost">Cost: small. 3 app PRs, no new libraries, no server change. Every screen stays where it is; only home gets lighter and one screen is added.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="option">
+      <header><span class="tag">Option B</span><h3>Bottom tab bar</h3></header>
+      <div class="row">
+        <div class="phone">
+          <div class="bar">Wilma</div>
+          <div class="scr">
+            <div class="box"><div class="in">Ask Wilma, or type a name</div><div class="ico">🎤</div><div class="ico send">↑</div></div>
+            <div class="tiles two">
+              <div class="tile"><span>＋</span>New note</div>
+              <div class="tile"><span>📍</span>Save where I am</div>
+            </div>
+            <span class="h">Recent</span>
+            <div class="group">
+              <div><span><b>Lasagne</b> <span class="muted">· Recipes</span></span><span class="chev">›</span></div>
+              <div><span><b>Luigi's</b> <span class="muted">· Places</span></span><span class="chev">›</span></div>
+              <div><span><b>Auth flow</b> <span class="muted">· Work/Designs</span></span><span class="chev">›</span></div>
+            </div>
+          </div>
+          <div class="tabs"><div class="on"><span>🏠</span>Home</div><div><span>💬</span>Chat</div><div><span>🗂</span>Spaces</div><div><span>🔒</span>Vault</div></div>
+        </div>
+        <div class="notes">
+          <ul>
+            <li><b>Moves:</b> Home, Chat, Spaces and Vault become tabs at the bottom. Settings sits behind ⚙ on the Home tab, as in A. Home gains a "Recent" list, because the spaces get their own tab.</li>
+            <li><b>Fixes:</b> the familiar phone pattern. Chat and Vault are always one tap away, from any screen.</li>
+            <li><b>Downsides:</b> the chat becomes a tab, so the "one box" on home and the chat box sit side by side as two places to type. "Recent" needs a new list. Four tabs is a lot for an app built around one box.</li>
+          </ul>
+          <p class="cost">Cost: medium to large. The app's screens move into an expo-router tabs group. Back behaviour, the share intake, and the chat's "Search" (which returns to home) all need re-testing. About 5 PRs plus a full phone checklist.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="option">
+      <header><span class="tag">Option C</span><h3>The chat is the home screen</h3></header>
+      <div class="row">
+        <div class="phone">
+          <div class="bar">☰<span class="sp" style="text-align:center">Wilma</span>🔒</div>
+          <div class="thread">
+            <div class="her">Hi! Ask me anything, or tell me something to remember.</div>
+            <div class="tiles two" style="width:100%">
+              <div class="tile"><span>＋</span>New note</div>
+              <div class="tile"><span>📍</span>Save where I am</div>
+            </div>
+            <div class="me">recipes</div>
+            <div class="her">Opening <b>Recipes</b>…</div>
+          </div>
+          <div class="comp">
+            <div class="box"><div class="in tall">Message Wilma</div><div class="ico plain">📍</div><div class="ico plain">🎤</div><div class="ico send">↑</div></div>
+            <span class="muted">🔒 Passwords go in the Vault, never here.</span>
+          </div>
+        </div>
+        <div class="notes">
+          <ul>
+            <li><b>Moves:</b> the app opens straight into the conversation. Spaces, Recycle bin and Settings go into a side menu (☰). The Vault is a 🔒 in the header.</li>
+            <li><b>Fixes:</b> a single box everywhere, as in D18 ("one Wilma, no modes"). No home/chat split to explain.</li>
+            <li><b>Downsides:</b> it reopens one-box decisions that are settled and tested: typing a space name opens it without the model, and the old note search is the fallback when the allowance is used up. Browsing spaces becomes two taps away. Needs a drawer library.</li>
+          </ul>
+          <p class="cost">Cost: large. It reworks the home routing (index.tsx and chat.tsx merge), adds a drawer, and needs new A5d-style phone checklists. Better as a later product step than as a tidy-up.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== CHAT ===================== -->
+  <section id="chat">
+    <h2>Chat</h2>
+
+    <div class="option">
+      <header><span class="tag now">Today</span><h3>What the chat shows now</h3></header>
+      <div class="row">
+        <div class="phone">
+          <div class="bar"><span class="lnk">‹</span>Ask Wilma<span class="sp"></span><span class="lnk">New</span></div>
+          <div class="banner"><span style="flex:1">You have used 80% of this month's requests.</span><span class="muted">✕</span></div>
+          <div class="thread">
+            <div class="me">where's the wifi note?</div>
+            <div class="old">
+              <span class="link">Home wifi setup</span><span class="muted">Home</span><span>Router in the hall cupboard…</span>
+              <div class="btn full">Ask Wilma instead</div>
+            </div>
+            <div class="me">delete the old shopping list</div>
+            <div class="old flag">
+              <span>Delete “Shopping list (May)”?</span>
+              <div class="btn full dng">Delete</div>
+              <div class="btn full">Cancel</div>
+            </div>
+          </div>
+          <div class="comp">
+            <div class="box flag"><div class="in">Message Wilma</div><div class="btn">📍</div><div class="btn">🎤</div><div class="btn pri">Send</div></div>
+            <div class="flag" style="display:grid;gap:2px">
+              <span class="muted">Your location goes with your next message, to find saved places near you. Tap 📍 again to remove it.</span>
+              <span class="muted">Never type or say passwords here. Use the Vault.</span>
+            </div>
+          </div>
+        </div>
+        <div class="notes">
+          <ul>
+            <li><b>The box is squeezed:</b> three outlined buttons plus Send take about half the width of a phone, so the text field is narrow.</li>
+            <li><b>Up to four grey lines stack under the box</b> (📍 on, mic error, allowance used up, the password reminder), and they push the thread up.</li>
+            <li><b>Cards and bubbles don't match:</b> bubbles have radius 16 and padding 12; cards have radius 12 and padding 16. Card buttons are full width and stacked, so Delete/Cancel takes three rows.</li>
+            <li><b>"New"</b> in the header doesn't say what it does (it clears the conversation).</li>
+            <li><b>The allowance banner and the line under the box</b> can show at the same time.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="option">
+      <header><span class="tag rec">Option A · recommended</span><h3>Compact composer, one status line, one card style</h3></header>
+      <div class="row">
+        <div class="phone">
+          <div class="bar"><span class="lnk">‹</span>Wilma<span class="sp"></span><span class="lnk">New chat</span></div>
+          <div class="thread">
+            <div class="me">where's the wifi note?</div>
+            <div class="cc">
+              <div class="top"><span>🗒</span><span><span class="link">Home wifi setup</span><br><span class="muted">Home · Router in the hall cupboard…</span></span></div>
+              <div class="acts"><span class="btn">Ask Wilma instead</span></div>
+            </div>
+            <div class="me">delete the old shopping list</div>
+            <div class="cc">
+              <div class="top"><span>🗑</span><span>Delete “Shopping list (May)”?</span></div>
+              <div class="acts"><span class="btn">Cancel</span><span class="btn dng">Delete</span></div>
+            </div>
+          </div>
+          <div class="comp">
+            <span class="chip">📍 Location goes with your next message ✕</span>
+            <div class="box"><div class="in tall">Message Wilma</div><div class="ico plain">📍</div><div class="ico plain">🎤</div><div class="ico send">↑</div></div>
+            <span class="muted">🔒 Passwords go in the <span class="link">Vault</span>, never here.</span>
+          </div>
+        </div>
+        <div class="notes">
+          <ul>
+            <li><b>Composer:</b> 📍 and 🎤 become small round icons, and Send becomes a round ↑. The text field gets roughly 40% more room. Each control keeps its accessibility label ("Send your location with the next message", "Dictate", "Send").</li>
+            <li><b>One status line:</b> only the most important state shows, as a chip above the box (allowance used up, then finding your location, then 📍 on, then a mic error). Its ✕ removes the 📍.</li>
+            <li><b>The password reminder stays visible all the time</b>, shorter, and "Vault" opens the vault.</li>
+            <li><b>Cards:</b> see "Chat cards" below. Buttons sit side by side, right-aligned, with Cancel before Delete.</li>
+            <li><b>Header:</b> "New chat" instead of "New". The allowance shows in one place only: the banner while it can be dismissed, the line in the composer once it is used up.</li>
+          </ul>
+          <p class="cost">Cost: small to medium. 2 app PRs (composer, cards). No server change, no new libraries. The 📍 privacy logic is reused as is: the location is read only on the tap.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="option">
+      <header><span class="tag">Option B</span><h3>"+" tray, mic turns into Send</h3></header>
+      <div class="row">
+        <div class="phone">
+          <div class="bar"><span class="lnk">‹</span>Wilma<span class="sp"></span><span class="lnk">New chat</span></div>
+          <div class="thread">
+            <div class="me">anything good for lunch near me?</div>
+            <div class="cc">
+              <div class="top"><span>📍</span><span>To find places near you, I need where you are, just this once.</span></div>
+              <div class="acts"><span class="btn pri">📍 Share where I am</span></div>
+            </div>
+          </div>
+          <div class="comp">
+            <div class="tray">
+              <div class="tile"><span>📍</span>Near me</div>
+              <div class="tile dim"><span>📎</span>Photo (later)</div>
+            </div>
+            <div class="box"><div class="ico">＋</div><div class="in tall">Message Wilma</div><div class="ico send">🎤</div></div>
+            <span class="muted">🔒 Passwords go in the <span class="link">Vault</span>, never here.</span>
+          </div>
+        </div>
+        <div class="notes">
+          <ul>
+            <li><b>Moves:</b> 📍 (and later photos) go into a tray behind ＋. With an empty box the round button is 🎤; once you type, it becomes ↑ Send. This is the WhatsApp pattern.</li>
+            <li><b>Fixes:</b> the cleanest composer, and room for attachments later.</li>
+            <li><b>Downsides:</b> 📍 is one tap deeper. That matters less once places step 8 adds Wilma's "📍 Share where I am" card (shown). The mic/Send swap is new behaviour to test, including with dictation running.</li>
+          </ul>
+          <p class="cost">Cost: medium. 3 app PRs (tray, mic/Send swap, cards). The step 7 phone checklist needs redoing.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="option">
+      <header><span class="tag">Option C</span><h3>Light polish only</h3></header>
+      <div class="row">
+        <div class="phone">
+          <div class="bar"><span class="lnk">‹</span>Ask Wilma<span class="sp"></span><span class="lnk">New chat</span></div>
+          <div class="thread">
+            <div class="me">where's the wifi note?</div>
+            <div class="her">It's in <b>Home wifi setup</b>: router in the hall cupboard.</div>
+          </div>
+          <div class="comp">
+            <div class="box"><div class="in">Message Wilma</div><div class="btn" style="padding:8px 6px">📍</div><div class="btn" style="padding:8px 6px">🎤</div><div class="btn pri">Send</div></div>
+            <span class="muted">📍 on for your next message · Never type or say passwords here.</span>
+          </div>
+        </div>
+        <div class="notes">
+          <ul>
+            <li><b>Keeps</b> today's layout. It narrows the 📍 and 🎤 buttons, joins the grey lines into one line, renames "New", and matches the card radius and padding to the bubbles.</li>
+            <li><b>Fixes:</b> the worst of the squeeze and the stacked lines.</li>
+            <li><b>Downside:</b> still four controls in a row, and cards still stack their buttons.</li>
+          </ul>
+          <p class="cost">Cost: very small. 1 PR.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== CARDS ===================== -->
+  <section id="cards">
+    <h2>Chat cards: one shell for every kind</h2>
+    <p class="lede">Every card gets the same frame: an icon for the kind of card, the text, then a right-aligned row of buttons. The 📍 place cards from places step 8 use the same frame, so they won't add a fifth style.</p>
+    <div class="row">
+      <div class="phone" style="min-height:0">
+        <div class="thread">
+          <div class="cc"><div class="top"><span>🔒</span><span><b>Netflix</b><br><span class="muted">Login · in your vault</span></span></div><div class="acts"><span class="btn pri">Open in Vault</span></div></div>
+          <div class="cc"><div class="top"><span>🗒</span><span><span class="link">Lasagne</span><br><span class="muted">Recipes · Layer the ragù…</span></span></div><div class="acts"><span class="btn">Ask Wilma instead</span></div></div>
+          <div class="cc"><div class="top"><span>📍</span><span><b>Luigi's</b> · 1.2 mi<br><span class="muted">Italian · $$ · Been, 4★</span></span></div><div class="acts"><span class="btn">Open in Maps</span><span class="btn">Open note</span></div></div>
+          <div class="cc"><div class="top"><span>🗑</span><span>Delete “Shopping list (May)”?</span></div><div class="acts"><span class="btn">Cancel</span><span class="btn dng">Delete</span></div></div>
+          <div class="cc"><div class="top"><span>⚠️</span><span>Wilma couldn't answer just now.</span></div><div class="acts"><span class="btn">Search notes</span><span class="btn pri">Try again</span></div></div>
+          <div class="cc dim"><div class="top"><span>✓</span><span class="muted">Deleted “Shopping list (May)”</span></div></div>
+        </div>
+      </div>
+      <div class="notes">
+        <ul>
+          <li><b>Icon per kind:</b> 🔒 vault, 🗒 notes, 📍 place, 🗑 delete, ⚠️ problem. You can tell what a card is before you read it.</li>
+          <li><b>One main action</b> is filled. A destructive one is red text, never filled. Cancel always comes first.</li>
+          <li><b>Finished cards</b> (deleted, left alone, not done) shrink to one dimmed line.</li>
+          <li><b>Unchanged:</b> a vault card still opens the app's own vault screen, never a link from the server, and shows only the name and kind.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PLAN ===================== -->
+  <section id="plan">
+    <h2>Recommended: Home A + Chat A, in six small PRs</h2>
+    <p class="lede">App only, no server change. Each PR passes <code>npm run check</code> and is tried in the browser preview. All six ship together in one Play build, with one short phone checklist.</p>
+    <ol class="plan">
+      <li><b>Shared pieces</b> in <code>ui.tsx</code>: <code>IconButton</code>, <code>TextLink</code>, <code>Tile</code>, <code>GroupList</code>, and one spacing scale. Nothing on screen changes yet. <span class="cost">Model: Sonnet</span></li>
+      <li><b>Settings screen</b> (<code>/settings</code>): meter, signed in as, change password, recycle bin, sign out, version. Home gets ⚙ and drops its footer. <span class="cost">Sonnet</span></li>
+      <li><b>Home tidy:</b> the action tiles (Chat, New note, Save here, Vault), round mic and send, spaces as a grouped list, and a one-line restricted row. <span class="cost">Sonnet</span></li>
+      <li><b>Chat composer:</b> icon buttons, one status chip, the always-visible password line with its Vault link, and "New chat". It touches the password guidance and the 📍 wiring. <span class="cost">Strongest model</span></li>
+      <li><b>Chat cards:</b> one <code>ChatCard</code> shell for vault, notes, delete and error cards; buttons side by side. It touches the vault and delete cards. <span class="cost">Strongest model</span></li>
+      <li><b>Phone checklist</b> (<code>docs/ui-tidy-phone-checklist.md</code>), then "build for Play" when you say so. <span class="cost">Sonnet</span></li>
+    </ol>
+    <p>Places step 8 (place cards and the "📍 Share where I am" card) then builds on the card shell from PR 5. Doing PR 5 first saves building those cards twice.</p>
+  </section>
+
+  <!-- ===================== QUESTIONS ===================== -->
+  <section id="questions">
+    <h2>Your choices</h2>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Question</th><th>Recommendation</th><th>Alternative</th></tr></thead>
+        <tbody>
+          <tr><td>U1. Home layout</td><td>A: tidy home and a Settings screen</td><td>B tab bar; C chat as home</td></tr>
+          <tr><td>U2. Chat layout</td><td>A: compact composer, one status line</td><td>B "+" tray; C polish only</td></tr>
+          <tr><td>U3. Where do Vault, Recycle bin, password and Sign out go?</td><td>Vault as a home tile; the rest on Settings (⚙)</td><td>Everything on Settings; or a Vault tab (B)</td></tr>
+          <tr><td>U4. Where does "📍 Save where I am" live?</td><td>A home tile ("Save here"). The location is still read only on that tap.</td><td>Inside New note as "Use where I am"</td></tr>
+          <tr><td>U5. How do chat cards look?</td><td>One shell: icon, text, buttons side by side</td><td>Keep today's cards and only match the bubble shape</td></tr>
+          <tr><td>U6. Password reminder in the chat</td><td>Always visible, one short line, "Vault" can be tapped</td><td>Shown only while typing or dictating (as home does)</td></tr>
+          <tr><td>U7. Password reminder on home</td><td>Keep it as today: shown while dictating. The chat carries the permanent line.</td><td>Also show it while the box has focus</td></tr>
+          <tr><td>U8. Order of work</td><td>This tidy-up first, then places step 8 on the new cards</td><td>Places step 8 first, tidy-up after</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

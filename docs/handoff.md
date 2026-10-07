@@ -12,6 +12,11 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **UI review of home and chat (owner: "clunky and all over the place"), suggestions only.**
+  `docs/ui-review.md` lists what feels clunky, three layouts for each screen, a recommendation
+  (tidy home with a Settings screen, compact chat composer, one card shell) and six small app-only
+  PRs. Mockups: https://claude.ai/artifact/PgrfNQnowFu3w5M4mHYQQA. **Next: the owner answers U1-U8;**
+  nothing is built until then.
 - **versionCode 11 building (owner: "build for Play", 2026-10-07).** Production build from `main`
   at 87f5ec4 (GitHub run 37556372279, checks passed), Expo build dbf2331f-0def-462d-8672-a78c8cd6cfd8,
   auto-submit scheduled (https://expo.dev/accounts/zafnut/projects/wilma/submissions/242901fc-5ec6-4e85-b20d-f79ae3289171).
