@@ -24,6 +24,7 @@ import type { SharedPoint } from './chatClient';
 import { MAX_NOTES, routeMessage, type MessageRoute } from './chatRoute';
 import { runConfirm, runTurn } from './chatRun';
 import { threadsToKeep } from './chatStore';
+import { findCredential } from './credentials';
 import { canLookup, chatReducer, initialChat, monthKey, noticeVisible, type ChatAction, type ChatState } from './chatThread';
 import { deviceChatStore } from './deviceStorage';
 import { useVault } from './vault';
@@ -171,6 +172,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       async send(text, here) {
         const none: SendOutcome = { to: 'none' };
         if (!loadedFor || loadedFor !== userId || routing.current || !text.trim() || !canLookup(current.current)) return none;
+        // A password never leaves the phone, whichever screen sent it (plan step 4; the screens
+        // show the card, this is the backstop).
+        if (findCredential(text)) return none;
         if (here) {
           // "Near me": straight to Wilma. The router and the classifier never see the location.
           const before = current.current;
@@ -221,6 +225,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       async askWilma(text) {
         const none: SendOutcome = { to: 'none' };
         if (!loadedFor || loadedFor !== userId || routing.current || !text.trim()) return none;
+        if (findCredential(text)) return none;
         const before = current.current;
         if (before.blocked !== null) return { to: 'blocked' };
         const next = act({ type: 'send', text });
