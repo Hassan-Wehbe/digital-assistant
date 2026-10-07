@@ -12,6 +12,12 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Places part 2: lookup skipped for now (owner, 2026-10-07).** OpenStreetMap does not know the
+  owner's two places, so PRs 5-7 (privacy wording, server lookup, Find on the map) are on hold;
+  draft #148 closed unmerged (approved wording kept on its branch). PRs 1-4 are merged (server
+  live as `mcp` v20 / `chat` v12; the app parts wait for the build). **Next: part 2 PR 8**, the
+  phone checklist for the next Play build (UI tidy-up and places part 2), Sonnet, then the build;
+  the owner's parked to-dos join that "super checklist".
 - **Places part 2 PR 4 (app: place cards and the 📍 Share where I am card in the chat): PR open.**
   App only (the server sends the events since `chat` v12). Details: `places-plan.md` step 8, "As
   built (PR 4)". 517 app tests. Ships with the next Play build. PR 3 (#146, Settings → Distances)
