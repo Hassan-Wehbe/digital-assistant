@@ -12,6 +12,26 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Places step 8, part 1: coordinates from Google Maps links (Q15), server, in PRs, not
+  deployed.** Why: on versionCode 11 "sushi near me" found nothing because the owner's 2 places
+  (both shared from Google Maps: short link and name only) have no location. **#124**: when a
+  place is saved or edited with a Maps link and no location, `mcp/lib/maps_link.ts` reads the
+  coordinates from a long link (no request) or opens a short link (`maps.app.goo.gl`,
+  `goo.gl/maps`) once: https only, at most 5 manual redirects, every hop on `maps.app.goo.gl`,
+  `goo.gl/maps`, `maps.google.com` or `(www.)google.com/maps` (others refused unrequested; Google's
+  EU consent page is read for its `continue=` link, never requested), 5 s in all, no cookies, body
+  never read, nothing logged. Never replaces a location; does not put back one the user removed
+  (same link); any failure leaves the place as it was and the save succeeds. No instruction
+  change, so no evaluation run. `mcp` 0.8.2; `chat` carries the tools, so deploy both. **Not
+  checked against Google yet** (this sandbox gets 403 for Google): the first real check is after
+  the deploy. **#125** (stacked on #124): one-off admin function `place-locations` for places
+  already saved (today 2, one owner, both short links): dry run by default (counts only, no
+  request), `{"apply": true}` fills; service-role key only, run by the owner from the Supabase
+  dashboard (Edge Functions → place-locations → Test, role service role), then deleted. **#126**:
+  privacy page wording (owner approves; merging publishes; also removes "Wilma's servers do not
+  contact Google about your places"). **Owner's next steps:** approve the wording, then "merge and
+  deploy" #124 (`mcp` + `chat`), then the backfill (deploy `place-locations`, dry run, apply,
+  delete), then merge #126. Part 2 (honest near answers, 10-mile radius, miles, cards) is next.
 - **UI tidy-up of home and chat: decided, build next (owner, 2026-10-07).** `docs/ui-review.md`
   section 3 is the plan: Home A2 (a 3-line Wilma box with ＋, usage counter, 🎤 and ↑ in a top
   panel; tiles Continue/Chat, Save here, Vault; Settings behind ⚙), the chat sliding up from the
