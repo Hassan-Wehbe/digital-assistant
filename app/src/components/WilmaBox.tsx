@@ -18,6 +18,7 @@ export function WilmaBox({
   editable = true,
   onSend,
   sendDisabled,
+  onStop,
   left,
   center,
   mic,
@@ -33,6 +34,8 @@ export function WilmaBox({
   editable?: boolean;
   onSend: () => void;
   sendDisabled?: boolean;
+  /** While an answer is being written: a ■ Stop button in Send's place. */
+  onStop?: () => void;
   left?: ReactNode;
   center?: ReactNode;
   mic?: ReactNode;
@@ -84,7 +87,11 @@ export function WilmaBox({
         {left}
         <View style={{ flex: 1, minWidth: 0, alignItems: 'center' }}>{center}</View>
         {mic}
-        <IconButton icon="↑" label="Send" kind="primary" onPress={onSend} disabled={sendDisabled} />
+        {onStop ? (
+          <IconButton icon="■" label="Stop" onPress={onStop} />
+        ) : (
+          <IconButton icon="↑" label="Send" kind="primary" onPress={onSend} disabled={sendDisabled} />
+        )}
       </View>
     </View>
   );

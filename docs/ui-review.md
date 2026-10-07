@@ -175,6 +175,12 @@ Small PRs. Each passes `npm run check` and is tried in the browser preview (`doc
 5. **Chat with `WilmaBox`:** ＋ menu with 📍 "Send where I am" (replaces the 📍 button; the
    location is still read only on that tap and sent with one message), the counter, one status
    chip, "New chat". *Strongest model.*
+   **As built:** `chat.tsx` uses `WilmaBox` (2 lines, growing to 6; ■ Stop in Send's place while
+   Wilma writes, new `onStop` prop). ＋ opens 📍 Send where I am (Don't send where I am when on),
+   Take a photo, Choose pictures, New note. The chip (`chatChip` in `lib/chatHere.ts`): used up >
+   finding the location / its error > 📍 on > mic error, with ✕ for the 📍 and the mic error. The
+   allowance banner hides while the chip says used up. "Never type or say passwords here" shows
+   only while the mic is on, as on home; a typed password gets PR 4's card.
 6. **Chat cards:** one `ChatCard` shell for vault, notes, delete and error cards (section 2,
    "Chat cards"). *Strongest model.*
 7. **Server: the same check in the `chat` function** before any model call (and before the

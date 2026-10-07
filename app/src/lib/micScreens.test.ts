@@ -56,9 +56,9 @@ describe('the mic never sends (test 3)', () => {
     }
   });
 
-  it('the boxes warn against saying passwords (Q8)', () => {
-    expect(read('app/chat.tsx')).toContain('Never type or say passwords here. Use the Vault.');
-    expect(read('app/index.tsx')).toMatch(/mic\.listening \? <Muted>Never type or say passwords here\. Use the Vault\.<\/Muted>/);
+  // Both boxes say it while the mic is on (UI tidy-up U6/U7: typed passwords get the card instead).
+  it.each(SCREENS)('%s warns against saying passwords while the mic is on (Q8)', (f) => {
+    expect(read(f)).toMatch(/mic\.listening \? <Muted>Never type or say passwords here\. Use the Vault\.<\/Muted>/);
   });
 });
 

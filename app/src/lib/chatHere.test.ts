@@ -1,6 +1,6 @@
 import { describe, expect, it, jest } from '@jest/globals';
 
-import { pinPoint, tapPin } from './chatHere';
+import { chatChip, LOCATING, PIN_ON, pinPoint, tapPin } from './chatHere';
 import { NO_PERMISSION, SERVICES_OFF, type LocationDeps } from './location';
 
 function phone(o: { granted?: boolean; canAskAgain?: boolean; askGrants?: boolean; on?: boolean } = {}) {
@@ -49,5 +49,29 @@ describe('the 📍 tap in the chat', () => {
   it('after a refusal, the next tap tries again', async () => {
     const deps = phone();
     expect(pinPoint(await tapPin({ error: NO_PERMISSION }, deps))).toBeDefined();
+  });
+});
+
+describe('the one status chip above the chat box', () => {
+  const none = { blocked: null, locating: false, pin: null, micError: null };
+  const on = { here: { lat: 1, lng: 2 } };
+
+  it('shows nothing when nothing is going on', () => {
+    expect(chatChip(none)).toBeNull();
+  });
+
+  it('shows the most important state only', () => {
+    const all = { blocked: 'Used up.', locating: true, pin: on, micError: 'Mic off.' };
+    expect(chatChip(all)).toEqual({ text: 'Used up.', tone: 'danger' });
+    expect(chatChip({ ...all, blocked: null })).toEqual({ text: LOCATING, tone: 'muted' });
+    expect(chatChip({ ...all, blocked: null, locating: false })).toEqual({ text: PIN_ON, tone: 'muted', clears: 'pin' });
+    expect(chatChip({ ...none, pin: { error: 'No permission.' }, micError: 'Mic off.' })).toEqual({
+      text: 'No permission.', tone: 'warn', clears: 'pin',
+    });
+    expect(chatChip({ ...none, micError: 'Mic off.' })).toEqual({ text: 'Mic off.', tone: 'warn', clears: 'mic' });
+  });
+
+  it('never shows the location itself', () => {
+    expect(JSON.stringify(chatChip({ ...none, pin: on }))).not.toMatch(/\b[12]\b/);
   });
 });
