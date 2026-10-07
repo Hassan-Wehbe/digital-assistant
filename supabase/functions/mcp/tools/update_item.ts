@@ -2,7 +2,8 @@ import { z } from "zod";
 import { type Chunk, chunkAndEmbed, hasPending, scheduleEmbedPending } from "../lib/embed.ts";
 import { loadSpaces, resolveSpace } from "../lib/spaces.ts";
 import { rejectCredentials } from "../lib/credentials.ts";
-import { addVisit, isPlace, normalizePlace, type PlaceMetadata, withPlace } from "../lib/places.ts";
+import { addVisit, isPlace, normalizePlace, type PlaceMetadata, placePoint, withPlace } from "../lib/places.ts";
+import { withLinkLocation } from "../lib/maps_link.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
 export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assistantName }) => {
@@ -67,6 +68,13 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
             }
           }
         }
+        // A Maps link and no location: read the location from the link (Q15). Not when the place
+        // had a location and keeps the same link: then the user removed it on purpose.
+        let locationFromLink = false;
+        if (place && fieldsChanged && current) {
+          const removed = placePoint(current.metadata) !== null && current.metadata?.maps_url === place.maps_url;
+          if (!removed) ({ place, filled: locationFromLink } = await withLinkLocation(place));
+        }
         const newMetadata = place && fieldsChanged ? place : metadata ?? null;
 
         // Text or place fields changed: re-chunk the new current version (only it is searchable).
@@ -98,6 +106,7 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
           updated: true,
           reindexed: chunks !== null,
           ...(place && fieldsChanged ? { place: newMetadata } : {}),
+          ...(locationFromLink ? { location: "read from the Google Maps link" } : {}),
         });
       }),
   );

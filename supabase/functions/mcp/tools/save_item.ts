@@ -4,6 +4,7 @@ import { loadSpaces, resolveSpace } from "../lib/spaces.ts";
 import { addressedAs } from "../lib/assistant.ts";
 import { rejectCredentials } from "../lib/credentials.ts";
 import { isPlace, normalizePlace, PLACE_KINDS, withPlace } from "../lib/places.ts";
+import { withLinkLocation } from "../lib/maps_link.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
 export const registerSaveItem: RegisterTool = (server, { db, accessToken, assistantName }) => {
@@ -37,8 +38,11 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
         // Rule 9: enforced here, not left to the model.
         rejectCredentials({ title, body, summary, tags, metadata, item_type }, assistantName);
         // A place's fields are checked by the server and added to the searchable text.
-        const place = isPlace(item_type) ? normalizePlace(metadata) : null;
+        let place = isPlace(item_type) ? normalizePlace(metadata) : null;
         const target = resolveSpace(await loadSpaces(db), space);
+        // A Maps link and no location: read the location from the link (Q15). Never fails the save.
+        let locationFromLink = false;
+        if (place) ({ place, filled: locationFromLink } = await withLinkLocation(place));
         const chunks = await chunkAndEmbed({ title, summary, body: withPlace(body, place) });
         const { data, error } = await db.rpc("save_item", {
           p_space_id: target.id,
@@ -59,6 +63,7 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
           restricted_space: target.is_restricted,
           chunks: chunks.length,
           search_index: pending ? "keyword search now; meaning search within a few seconds" : "ready",
+          ...(locationFromLink ? { location: "read from the Google Maps link" } : {}),
         });
       }),
   );
