@@ -1,13 +1,15 @@
 // Share -> Wilma: save what another app shared (photos, Visio files, text or a link) as a
 // new note, or add the files to an existing note. Same checks and upload as "New note"
 // (picked.ts, saveNote.ts); the shared files are copied into the app's cache first.
-// A Google Maps share opens as a place (placeFromShared), with its name and link filled in.
+// A Google Maps share opens as a place (placeFromShared), with its name and link filled in, and
+// "Is this it?" from the phone's map lookup of its name and address (PlaceLookup; Yes only).
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { AttachmentPicker } from '@/components/AttachmentPicker';
 import { Chips, PlaceFields } from '@/components/PlaceFields';
+import { PlaceLookup } from '@/components/PlaceLookup';
 import { SpaceChips } from '@/components/SpaceChips';
 import { Button, Card, ErrorBox, KeyboardScreen, Loading, Muted, styles, useColors, useLoad } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
@@ -191,6 +193,14 @@ function ShareForm({ shared, onDone, onCancel }: { shared: Shared; onDone: () =>
               onChangeText={setTitle}
               editable={!locked}
             />
+            {fromMaps ? (
+              <PlaceLookup
+                name={fromMaps.name}
+                address={fromMaps.address}
+                hidden={!isPlace || !!place.coords || locked}
+                onYes={(coords) => setPlace((current) => ({ ...current, coords }))}
+              />
+            ) : null}
             {isPlace ? <PlaceFields value={place} onChange={setPlace} disabled={locked} /> : null}
             <TextInput
               style={[input, { minHeight: 120, textAlignVertical: 'top' }]}

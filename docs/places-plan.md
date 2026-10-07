@@ -361,6 +361,26 @@ Step 3 shows them (cuisine chips, price, occasions, dishes, **We went again** ad
      `places-part2-pr5-osm-privacy` keeps the text. Revisit with the day planner, when the company
      Google account exists (Google's place search, Q17's upgrade, or OpenStreetMap if coverage
      improves).
+     **Replaced by job 4 (owner, 2026-10-07): the phone's own map lookup.** The owner's Expo Go
+     test found "Hinode Sushi, Oviedo FL", "Lemongrass Thai Kitchen, Oviedo FL", "Hinode Sushi"
+     alone and a Starbucks with `expo-location` `geocodeAsync` (checked with Open in Maps), so the
+     OpenStreetMap lookup (PRs 5-7) stays dropped.
+     **As built (job 4, app only, no server or schema change):** on the share screen, a place from
+     Google Maps is looked up once by "name, address" (the name alone when Maps shares no address,
+     as on the owner's phone) with the phone's geocoder (`lib/placeLookup.ts`; the phone call is
+     `deviceGeocoder` in `lib/location.ts`, still the only file that loads `expo-location`).
+     `components/PlaceLookup.tsx` shows "Is this it? <name>, <address>" with Open in Maps (a
+     Google Maps search for the point found) and Yes / No; only Yes puts `lat`/`lng` into the form,
+     where "📍 Location saved … / Remove the location" shows it before Save. No, nothing found, a
+     failure or 10 s without an answer: saved without a location, as before. The phone's position
+     is never read (a test checks that the lookup code cannot reach it). **Android needs the
+     location permission for its map lookup** even though no position is read: the lookup runs
+     by itself only when the permission is already given; otherwise a "🔎 Find it on the map" tap
+     asks for it (or, if refused for good, a line says where to allow it). Privacy: the owner's
+     approved wording (outside-services entry and Location paragraph). Data safety unchanged:
+     the user's own location is not involved, and a place's location stored with its note is
+     already declared (*Location → Precise location*). No new regex on the phone. 541 app tests.
+     Ships with the next Play build.
      8. **Phone checklist** (Sonnet), then the Play build carrying the UI tidy-up and places.
         **As built:** `docs/versioncode12-phone-checklist.md`, one list with the UI tidy-up's and
         the owner's parked to-dos (it also replaces the unrecorded versionCode 10 and 11 lists).
