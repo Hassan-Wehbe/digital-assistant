@@ -50,11 +50,13 @@ tokens or keys in chat.
   link are read (`mcp` 0.8.5, `maps_link.ts` cut down; `place-locations` code removed). #126
   (privacy) closed unpublished: the page's "Wilma's servers do not contact Google about your
   places" stays true. Both places still have no location: the owner adds it with **Use where I
-  am now** at the place, or pastes a long Google Maps link from a computer's browser. **To do
-  after the `mcp` deploy:** the owner deletes the `place-locations` function in the dashboard
-  (the connector cannot delete functions; it was replaced by a stub that answers 410). `chat`
-  still runs the #124 code (v9, follows short links but never reads pages): redeploy `chat` with
-  part 2 or sooner.
+  am now** at the place, or pastes a long Google Maps link from a computer's browser. **Deployed
+  2026-10-07:** `mcp` version 19 (36/37 identical), `chat` version 10 (48/49 identical; v9 still
+  had the #124 link-following code), the `.d.ts` not listed back, 401 without sign-in and with a
+  fake token, both. `place-locations` replaced by a stub (version 2, does nothing, 401 without
+  sign-in). **Owner to do:** delete `place-locations` in the dashboard (Edge Functions →
+  place-locations → Delete; the connector cannot delete functions), and give the two places a
+  location (Use where I am now, or paste a long Google Maps link). Next: part 2.
 - **UI tidy-up of home and chat: decided, build next (owner, 2026-10-07).** `docs/ui-review.md`
   section 3 is the plan: Home A2 (a 3-line Wilma box with ＋, usage counter, 🎤 and ↑ in a top
   panel; tiles Continue/Chat, Save here, Vault; Settings behind ⚙), the chat sliding up from the
