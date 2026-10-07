@@ -201,6 +201,22 @@ Step 3 shows them (cuisine chips, price, occasions, dishes, **We went again** ad
      location are mentioned by address only, never with a distance.
    - **Units:** distances in **miles by default**, with a setting to use km (Q14). One account
      setting read by the server, so Wilma's replies, the cards and "nearby" all agree.
+   - **Coordinates from a Google Maps link** (Q15, owner 2026-10-07, after testing: "sushi near me"
+     found nothing because both saved places came from a Maps share, link only, no coordinates).
+     When a place is saved or edited with a short Maps link (`maps.app.goo.gl`, `goo.gl/maps`),
+     the **server** follows that link once, reads the coordinates from the Google Maps address it
+     leads to (`@lat,lng` or `!3d…!4d…`), and stores them as the place's `lat`/`lng` (never
+     overwriting a location the user set). A one-off pass does the same for places already saved.
+     Safety: only those two hosts, https only, at most 5 redirects and every hop must stay on a
+     Google Maps host (`google.com/maps`, `maps.google.com`, `maps.app.goo.gl`), a 5-second limit,
+     no cookies, the page body is never read or stored; failures leave the place as it is.
+     Privacy: one sentence on the privacy page (owner approves): "When you save a place with a
+     Google Maps link, Wilma's server opens that link once to read the place's location."
+     Data safety unchanged (location stored with the note, already declared). Revises Q3 (which
+     kept the link without following it).
+   - **Honest "nothing near" answers** (Q16, same testing): when matching places have no saved
+     location, Wilma names them ("Hinode Sushi might be near, but it has no saved location") and
+     offers Open in Maps or to add the location, instead of "nothing close by".
    - PRs: server (the two chat-only actions, the unit setting, instructions, Deno tests,
      evaluation cases, a paid run with the owner's OK, deploy), then app (the place card, the share
      card, the units setting), then a phone checklist. Strongest model (location, privacy, chat
@@ -264,3 +280,8 @@ Q8 after A5e.
   "📍 Share where I am" card (not by reading it automatically on "near me"); Q12 "nearby" means
   within 10 miles; Q13 Wilma picks which places get a card (at most 5); Q14 distances in miles by
   default, with a setting for km.
+- **Q15, decided (owner, 2026-10-07, step 8):** places saved from a Google Maps short link get
+  their coordinates by the server following that link once (option A; option B, geocoding the
+  address through a paid service, stays for the day planner). Revises Q3. Existing places get a
+  one-off pass. **Q16:** Wilma names matching places that have no location instead of saying
+  nothing is near.
