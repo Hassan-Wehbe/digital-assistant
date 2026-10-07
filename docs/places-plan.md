@@ -214,6 +214,12 @@ Step 3 shows them (cuisine chips, price, occasions, dishes, **We went again** ad
      Google Maps link, Wilma's server opens that link once to read the place's location."
      Data safety unchanged (location stored with the note, already declared). Revises Q3 (which
      kept the link without following it).
+     **As built (part 1, in PRs, 2026-10-07):** #124 (`mcp/lib/maps_link.ts`, used by `save_item`
+     and `update_item`; also reads coordinates from a long link or a `geo:` link with no request;
+     Google's EU consent page is read for its `continue=` address, never requested; country Google
+     domains are refused as hops because they cannot be listed strictly; a location the user
+     removed is not put back from the same link), #125 (the one-off pass: admin function
+     `place-locations`, dry run first, counts only, deleted after), #126 (privacy wording).
    - **Honest "nothing near" answers** (Q16, same testing): when matching places have no saved
      location, Wilma names them ("Hinode Sushi might be near, but it has no saved location") and
      offers Open in Maps or to add the location, instead of "nothing close by".
