@@ -12,6 +12,18 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Job 5 ("restaurants close by" said none): PR open, server only (`mcp` 0.9.2).** Checked (read
+  only): both real restaurants are `kind` restaurant, `status` been, cuisines japanese / thai, with
+  numeric `lat`/`lng`, so a plain `kind: "restaurant"` call would have found them; the first call
+  most likely sent `"restaurants"` (refused until now as "Filter not understood"), `status: "want"`,
+  a cuisine like "sushi", or a small `within`. Fix, details in `places-plan.md` step 5 "Fix
+  (2026-10-07)": `summary` sentence, forgiving filters (`other_nearby` with `not_matching`, plural
+  kinds), one `find_places` log line (filter names and counts only), prompt ("close by" = near,
+  only the filters the user said), 5 new Deno tests (309 in all), 2 new evaluation cases (93; dry run on Luna: at most about $0.33).
+  **Owner's next steps:** merge; OK and cap for **one** evaluation run (GitHub Actions → model
+  evaluation, models `luna`, cases `all`); OK to deploy `mcp` and `chat` (both carry the
+  `find_places` change and #152's server `credentials.ts`). Then job 3 (🔒 vault entries in a
+  space, app only). No Play build until the owner says so.
 - **START HERE (2026-10-07, late): versionCode 12 findings and the next three jobs.** The owner
   ran part of the versionCode 12 checklist (stub deleted, update installed, both restaurants now
   have a location, start-up fine) and found:

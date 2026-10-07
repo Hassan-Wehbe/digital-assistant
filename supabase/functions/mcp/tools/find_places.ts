@@ -14,6 +14,28 @@ export const NEARBY_KM = 10 * KM_PER_MILE;
 /** Places without a saved location listed with every answer, by name and address only. */
 export const MAX_WITHOUT_LOCATION = 10;
 
+/** One log line per call: which filters were set and how many places came out, never names or points. */
+export interface FindPlacesLog {
+  event: "find_places";
+  from: "point" | "place";
+  within: number;
+  unit: DistanceUnit;
+  filters: string[];
+  scanned: number;
+  matching: number;
+  results: number;
+  other_nearby: number;
+  nearest_outside: boolean;
+  without_location: number;
+  /** Set when the call was refused before any place was read: "filter_not_understood". */
+  error?: string;
+}
+
+const defaultLog = (entry: FindPlacesLog) => console.log(JSON.stringify(entry));
+
+/** "Restaurants" -> "restaurant", "cafés" -> "café": the kind as one word, the way it is stored. */
+const singular = (k: string) => k.trim().replace(/(?<=[a-zé])s$/i, "");
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 interface PlaceRow {
@@ -61,10 +83,15 @@ function findAnchor(rows: PlaceRow[], ref: string): PlaceRow {
  * map service is called. Only the user's own places in searchable spaces are read: restricted
  * spaces (and spaces under them) are never included, not even as the starting point (rule 3).
  */
-export const registerFindPlaces: RegisterTool = (server, { db, assistantName, distanceUnit }) => {
+export const registerFindPlaces: RegisterTool = (server, { db, assistantName, distanceUnit, log = defaultLog }) => {
   const unit: DistanceUnit = distanceUnit ?? DEFAULT_DISTANCE_UNIT;
   const unitName = unit === "mi" ? "miles" : "km";
   const inUnit = (km: number) => toUnit(km, unit);
+  const say = (km: number) => {
+    const d = inUnit(km);
+    const name = unit === "mi" ? (d === 1 ? "mile" : "miles") : "km";
+    return d === 0 ? `less than 0.1 ${unit === "mi" ? "miles" : "km"}` : `${d} ${name}`;
+  };
   server.registerTool(
     "find_places",
     {
@@ -76,7 +103,9 @@ export const registerFindPlaces: RegisterTool = (server, { db, assistantName, di
         "has a location. Never guess coordinates from an address, a street or a city name. Without within, " +
         `only places within ${unit === "mi" ? "10 miles" : "16 km"} count ("near", "nearby"); when none is, ` +
         "nearest_outside is the closest one further away. Matching places without a saved location are " +
-        "always listed in without_location (name and address, never a distance). " +
+        "always listed in without_location (name and address, never a distance). When the filters (kind, " +
+        "status, cuisine, occasion) leave nothing nearby, other_nearby lists the nearby places they ruled out, " +
+        "each with why (not_matching). summary says the answer in one plain sentence: start from it. " +
         "Results carry each place's fields (status, rating, cuisine, occasions, visits...). " +
         "Restricted spaces are never searched." +
         addressedAs(assistantName, "which restaurants are near Tawlet?"),
@@ -115,16 +144,29 @@ export const registerFindPlaces: RegisterTool = (server, { db, assistantName, di
               "a point, ask the user which saved place they are near or to share their location.",
           );
         }
+        // The log line's parts: filter names and counts only, never their values, a name or a point.
+        const filtersSet = [
+          kind && "kind", status && "status", cuisine && "cuisine", occasion && "occasion", space && "space",
+          (within !== undefined || within_km !== undefined) && "within",
+        ].filter(Boolean) as string[];
+        const counts = {
+          event: "find_places" as const, from: hasPoint ? "point" as const : "place" as const,
+          within: inUnit(radiusKm), unit, matching: 0, results: 0, other_nearby: 0, nearest_outside: false,
+          without_location: 0,
+        };
         // Filters, written the way places are stored ("Date night" -> date_night, "Café" -> cafe).
         let wanted;
         try {
           wanted = normalizePlace({
-            kind: kind || undefined,
+            kind: kind ? singular(kind) : undefined,
             occasions: occasion ? [occasion] : undefined,
             cuisine: cuisine ? [cuisine] : undefined,
           });
         } catch (e) {
-          if (e instanceof PlaceError) throw new Error(e.message.replace(/^Place not saved: /, "Filter not understood: "));
+          if (e instanceof PlaceError) {
+            log({ ...counts, filters: filtersSet, scanned: 0, error: "filter_not_understood" });
+            throw new Error(e.message.replace(/^Place not saved: /, "Filter not understood: "));
+          }
           throw e;
         }
 
@@ -173,17 +215,18 @@ export const registerFindPlaces: RegisterTool = (server, { db, assistantName, di
         }
 
         const pathOf = new Map(spaces.map((s) => [s.id, s.path]));
-        const matching = rows.filter((r) => {
-          if (r.id === anchorId) return false;
-          if (scope && !scope.has(r.space_id)) return false;
-          const m = r.metadata ?? {};
-          const list = (v: unknown) => (Array.isArray(v) ? v.map((x) => String(x).toLowerCase()) : []);
-          if (wanted.kind && m.kind !== wanted.kind) return false;
-          if (status && (m.status ?? "want") !== status) return false;
-          if (wanted.cuisine && !list(m.cuisine).includes(wanted.cuisine[0])) return false;
-          if (wanted.occasions && !list(m.occasions).includes(wanted.occasions[0])) return false;
-          return true;
-        });
+        const list = (v: unknown) => (Array.isArray(v) ? v.map((x) => String(x).toLowerCase()) : []);
+        /** The filters a place does not meet, as the user would read them ("cuisine sushi"). */
+        const misses = (m: Record<string, unknown>): string[] => {
+          const out: string[] = [];
+          if (wanted.kind && m.kind !== wanted.kind) out.push(`kind ${wanted.kind}`);
+          if (status && (m.status ?? "want") !== status) out.push(`status ${status}`);
+          if (wanted.cuisine && !list(m.cuisine).includes(wanted.cuisine[0])) out.push(`cuisine ${wanted.cuisine[0]}`);
+          if (wanted.occasions && !list(m.occasions).includes(wanted.occasions[0])) out.push(`occasion ${wanted.occasions[0]}`);
+          return out;
+        };
+        const inScope = rows.filter((r) => r.id !== anchorId && (!scope || scope.has(r.space_id)));
+        const matching = inScope.filter((r) => !misses(r.metadata ?? {}).length);
 
         const located: { row: PlaceRow; km: number }[] = [];
         const unlocated: PlaceRow[] = [];
@@ -203,11 +246,30 @@ export const registerFindPlaces: RegisterTool = (server, { db, assistantName, di
           place: row.metadata,
         });
 
+        // Forgiving filters: when they leave nothing nearby, the nearby places they ruled out still
+        // come back, each with the filters it does not meet, so a word stored differently ("sushi"
+        // vs "japanese") never turns into "there is nothing near you".
+        const otherNearby: { row: PlaceRow; km: number; not: string[] }[] = [];
+        if (!inside.length) {
+          for (const row of inScope) {
+            const not = misses(row.metadata ?? {});
+            const p = placePoint(row.metadata);
+            if (!not.length || !p) continue;
+            const km = distanceKm(origin, p);
+            if (km <= radiusKm) otherNearby.push({ row, km, not });
+          }
+          otherNearby.sort((a, b) => a.km - b.km);
+        }
+
         const out: Record<string, unknown> = {
+          summary: "",
           from,
           within: { distance: inUnit(radiusKm), unit },
           results: inside.slice(0, limit).map(measured),
         };
+        if (otherNearby.length) {
+          out.other_nearby = otherNearby.slice(0, limit).map((o) => ({ ...measured(o), not_matching: o.not }));
+        }
         // Nothing that close: the nearest one further away, so Wilma can offer it (Q12).
         if (!inside.length && located.length) out.nearest_outside = measured(located[0]);
         // Always named, never with a distance: they have no saved position (Q16).
@@ -219,6 +281,43 @@ export const registerFindPlaces: RegisterTool = (server, { db, assistantName, di
         }));
         if (unlocated.length > MAX_WITHOUT_LOCATION) out.without_location_more = unlocated.length - MAX_WITHOUT_LOCATION;
         if (rows.length >= MAX_PLACES_SCANNED) out.note = `Only the ${MAX_PLACES_SCANNED} most recently changed places were checked.`;
+
+        // One plain sentence the model can say as it is.
+        const filterWords = [
+          wanted.kind && wanted.kind, status && `status ${status}`, wanted.cuisine && `cuisine ${wanted.cuisine[0]}`,
+          wanted.occasions && `occasion ${wanted.occasions[0]}`,
+        ].filter(Boolean) as string[];
+        const what = (n: number) => `saved place${n === 1 ? "" : "s"}${filterWords.length ? ` (${filterWords.join(", ")})` : ""}`;
+        const radius = say(radiusKm);
+        const about = (km: number) => (inUnit(km) === 0 ? say(km) : `about ${say(km)}`);
+        const parts: string[] = [];
+        if (inside.length) {
+          const n = inside.length;
+          parts.push(`${n} ${what(n)} ${n === 1 ? "is" : "are"} within ${radius}; the nearest is ${inside[0].row.title}, ${about(inside[0].km)} away.`);
+        } else {
+          parts.push(`No ${what(1)} within ${radius}.`);
+          if (otherNearby.length) {
+            const named = otherNearby.slice(0, 5).map((o) => `${o.row.title} (${about(o.km)}, not ${o.not.join(", not ")})`);
+            parts.push(`Within ${radius} but not matching every filter: ${named.join("; ")}.`);
+          }
+          if (located.length) parts.push(`The nearest matching one is ${located[0].row.title}, ${about(located[0].km)} away.`);
+        }
+        if (unlocated.length) {
+          parts.push(`${unlocated.length} matching place${unlocated.length === 1 ? " has" : "s have"} no saved location, so no distance: ` +
+            `${unlocated.slice(0, 5).map((r) => r.title).join(", ")}${unlocated.length > 5 ? ", ..." : ""}.`);
+        }
+        out.summary = parts.join(" ");
+
+        log({
+          ...counts,
+          filters: filtersSet,
+          scanned: rows.length,
+          matching: matching.length,
+          results: inside.length,
+          other_nearby: otherNearby.length,
+          nearest_outside: "nearest_outside" in out,
+          without_location: unlocated.length,
+        });
         return ok(out);
       }),
   );

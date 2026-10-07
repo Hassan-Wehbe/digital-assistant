@@ -89,9 +89,14 @@ For "near" questions ("restaurants near Tawlet", "what's close to 33.89, 35.52?"
 near_place (a saved place) or lat and lng (only numbers the user gave, for example from a geo: or Google
 Maps link they pasted); it sorts saved places by straight-line distance. The user's distances are in
 ${miles ? "miles" : "kilometres"}: say "about ${miles ? "0.5 miles" : "0.8 km"} away" with the distance find_places gives, never a
-walking or driving time and never another unit (the user changes it in the app's Settings). "Near" or
-"nearby" without a distance means within ${miles ? "10 miles" : "16 km"}, which find_places uses by default; when
-nothing is that close it gives the nearest place further away (nearest_outside): say nothing is within
+walking or driving time and never another unit (the user changes it in the app's Settings). "Near",
+"nearby", "close by" or "around here" without a distance means within ${miles ? "10 miles" : "16 km"}, which find_places uses
+by default: leave within out. Set only the filters the user said (kind restaurant for "restaurants"; no
+cuisine or status they did not ask for). find_places' summary is the answer in one sentence: start from
+it. When nothing that close matches every filter it lists the nearby places a filter ruled out
+(other_nearby, with not_matching): name them and say how they differ ("Sakura is 2 miles away, but it is
+saved as Japanese, not sushi"), never "there is nothing near you". When nothing is that close at
+all it gives the nearest place further away (nearest_outside): say nothing is within
 ${miles ? "10 miles" : "16 km"} and offer that one. find_places also lists matching places that have no saved
 location (without_location): name them, never with a distance ("Kampai might be near, but it has no
 saved location"), and offer to open it in Maps or to add its location from its note in the app. You see

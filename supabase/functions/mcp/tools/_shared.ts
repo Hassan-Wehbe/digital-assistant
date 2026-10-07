@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DistanceUnit } from "../lib/assistant.ts";
+import type { FindPlacesLog } from "./find_places.ts";
 
 /** What every tool gets: a database client acting as the signed-in user. */
 export interface ToolContext {
@@ -10,6 +11,8 @@ export interface ToolContext {
   accessToken: string; // to schedule background embedding as the same user
   assistantName: string; // what the user calls the assistant (lib/assistant.ts)
   distanceUnit?: DistanceUnit; // miles (the default) or km (app_user.distance_unit)
+  /** Where tools write their one log line (counts and codes only); console by default. */
+  log?: (entry: FindPlacesLog) => void;
 }
 
 export type RegisterTool = (server: McpServer, ctx: ToolContext) => void;

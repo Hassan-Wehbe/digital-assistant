@@ -84,6 +84,7 @@ export async function openSession(world = new World(), here?: SharedPoint): Prom
   const ctx: ToolContext = {
     db: world.client(), userId: "eval-user", accessToken: "eval-token", assistantName: world.assistantName,
     distanceUnit: world.distanceUnit,
+    log: () => {}, // the pretend account's tool log lines would only clutter the run's output
   };
   const tools = await connectTools(ctx, "eval");
   return {

@@ -8,7 +8,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { distanceKm, placePoint } from "../../supabase/functions/mcp/lib/places.ts";
-import { MAX_WITHOUT_LOCATION, registerFindPlaces } from "../../supabase/functions/mcp/tools/find_places.ts";
+import { type FindPlacesLog, MAX_WITHOUT_LOCATION, registerFindPlaces } from "../../supabase/functions/mcp/tools/find_places.ts";
 import { IDS, World } from "../eval/world.ts";
 
 // ---- distanceKm, placePoint --------------------------------------------------------------------
@@ -43,9 +43,14 @@ Deno.test("placePoint: only a real lat/lng pair counts", () => {
 
 const TAWLET = { lat: 33.8959, lng: 35.5249 };
 
-async function call(db: SupabaseClient, args: Record<string, unknown>, distanceUnit?: "mi" | "km") {
+async function call(
+  db: SupabaseClient,
+  args: Record<string, unknown>,
+  distanceUnit?: "mi" | "km",
+  logs: FindPlacesLog[] = [],
+) {
   const server = new McpServer({ name: "test", version: "0" });
-  registerFindPlaces(server, { db, userId: "u", accessToken: "t", assistantName: "Wilma", distanceUnit });
+  registerFindPlaces(server, { db, userId: "u", accessToken: "t", assistantName: "Wilma", distanceUnit, log: (e) => logs.push(e) });
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
   await server.connect(transport);
   const res = await transport.handleRequest(new Request("http://localhost/mcp", {
@@ -262,4 +267,93 @@ Deno.test("find_places: at most 10 places without a location are named, and the 
   const out = await call(w.client(), { ...TAWLET });
   assertEquals(out.json.without_location.length, MAX_WITHOUT_LOCATION);
   assertEquals(out.json.without_location_more, 13 - MAX_WITHOUT_LOCATION);
+});
+
+// ---- "Restaurants close by" said none (handoff 2026-10-07, job 5) -------------------------------
+// The owner's two restaurants were within 10 miles, yet the first find_places answer was "none":
+// a filter matched nothing. Now kinds are read in the plural too, nearby places a filter ruled out
+// still come back (other_nearby, with why), every answer has a plain summary, and one log line says
+// which filters were set and the counts, never a name or a point.
+
+Deno.test("find_places: a kind in the plural is read as stored", async () => {
+  const out = await call(world(), { ...TAWLET, kind: "Restaurants" });
+  assertEquals(out.isError, false, out.text);
+  assertEquals(titles(out.json.results), ["Tawlet", "Trattoria Sud"]);
+  const cafes = await call(world(), { ...TAWLET, kind: "cafés" });
+  assertEquals(titles(cafes.json.results), ["Café Younes"]);
+});
+
+Deno.test("find_places: when filters leave nothing nearby, the nearby places they ruled out come back", async () => {
+  // "Sushi close by": the only sushi place has no location; the located restaurants are not sushi.
+  const sushi = await call(world(), { ...TAWLET, cuisine: "sushi" });
+  assertEquals(sushi.isError, false, sushi.text);
+  assertEquals(sushi.json.results, []);
+  assertEquals(titles(sushi.json.other_nearby), ["Tawlet", "Trattoria Sud", "Café Younes"]);
+  assertEquals(sushi.json.other_nearby[1].not_matching, ["cuisine sushi"]);
+  assertAlmostEquals(sushi.json.other_nearby[1].distance, 0.5, 0.1);
+  assertEquals(titles(sushi.json.without_location), ["Kampai sushi bar"]);
+  assert(sushi.json.summary.startsWith("No saved place (cuisine sushi) within 10 miles."), sushi.json.summary);
+  assert(sushi.json.summary.includes("Trattoria Sud (about 0.5 miles, not cuisine sushi)"), sushi.json.summary);
+  assert(sushi.json.summary.includes("no saved location, so no distance: Kampai sushi bar"), sushi.json.summary);
+  assertNoHidden(sushi.text);
+
+  // Every restaurant is "been": "want" rules them all out, and they still come back, with why.
+  const want = await call(world(), { ...TAWLET, kind: "restaurant", status: "want" });
+  assertEquals(titles(want.json.other_nearby), ["Tawlet", "Trattoria Sud", "Café Younes"]);
+  assertEquals(want.json.other_nearby[2].not_matching, ["kind restaurant", "status want"]);
+
+  // Something matches: no other_nearby.
+  const italian = await call(world(), { ...TAWLET, cuisine: "italian" });
+  assertEquals(titles(italian.json.results), ["Trattoria Sud"]);
+  assertEquals("other_nearby" in italian.json, false);
+
+  // Ruled out and too far: not "nearby", so not listed.
+  const far = await call(world(), { lat: 33.61, lng: 35.45, cuisine: "sushi" });
+  assertEquals("other_nearby" in far.json, false);
+  assertEquals(far.json.summary, "No saved place (cuisine sushi) within 10 miles. 1 matching place has no saved location, so no distance: Kampai sushi bar.");
+});
+
+Deno.test("find_places: other_nearby never reaches a restricted space (rule 3)", async () => {
+  // Next to the restricted courtyard bar, with a filter nothing open matches.
+  const out = await call(world(), { lat: 33.89601, lng: 35.52508, kind: "hotel" });
+  assertEquals(out.isError, false, out.text);
+  assertEquals(titles(out.json.other_nearby), ["Tawlet", "Trattoria Sud", "Café Younes"]);
+  assertNoHidden(out.text);
+  const inPrivate = await call(world(), { ...TAWLET, space: "Private", kind: "restaurant" });
+  assertEquals("other_nearby" in inPrivate.json, false);
+  assertNoHidden(inPrivate.text);
+});
+
+Deno.test("find_places: a plain summary sentence with every answer", async () => {
+  const near = await call(world(), { ...TAWLET });
+  assertEquals(near.json.summary,
+    "3 saved places are within 10 miles; the nearest is Tawlet, less than 0.1 miles away. " +
+      "1 matching place has no saved location, so no distance: Kampai sushi bar.");
+  const one = await call(world(), { near_place: "Tawlet", kind: "cafe" });
+  assert(one.json.summary.startsWith("1 saved place (cafe) is within 10 miles; the nearest is Café Younes, about 2.4 miles away."), one.json.summary);
+  const far = await call(world(), { lat: 33.61, lng: 35.45, kind: "restaurant" });
+  assert(far.json.summary.startsWith("No saved place (restaurant) within 10 miles. The nearest matching one is Trattoria Sud, about 2"), far.json.summary);
+  const km = await call(world(), { ...TAWLET, kind: "cafe" }, "km");
+  assert(km.json.summary.includes("within 16.1 km") && km.json.summary.includes("about 3.9 km away"), km.json.summary);
+});
+
+Deno.test("find_places: one log line with the filters set and the counts, never names or points", async () => {
+  const logs: FindPlacesLog[] = [];
+  await call(world(), { ...TAWLET, kind: "restaurant", cuisine: "sushi", within: 5 }, undefined, logs);
+  assertEquals(logs, [{
+    event: "find_places", from: "point", within: 5, unit: "mi", filters: ["kind", "cuisine", "within"],
+    scanned: 4, matching: 1, results: 0, other_nearby: 3, nearest_outside: false, without_location: 1,
+  }]);
+  const line = JSON.stringify(logs);
+  for (const s of ["Tawlet", "Trattoria", "Kampai", "33.89", "35.52", "sushi", "restaurant\""]) {
+    assert(!line.includes(s), `log line holds ${s}: ${line}`);
+  }
+  await call(world(), { near_place: "Tawlet" }, undefined, logs);
+  assertEquals(logs[1].from, "place");
+  assertEquals(logs[1].filters, []);
+  // A filter refused before any place is read still leaves its line.
+  await call(world(), { ...TAWLET, occasion: "romantic" }, undefined, logs);
+  assertEquals(logs[2].error, "filter_not_understood");
+  assertEquals(logs[2].filters, ["occasion"]);
+  assert(!JSON.stringify(logs[2]).includes("romantic"), JSON.stringify(logs[2]));
 });

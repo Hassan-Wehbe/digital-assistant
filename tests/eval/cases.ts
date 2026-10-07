@@ -760,6 +760,46 @@ export const CASES: EvalCase[] = [
       noWrites(),
     ],
   },
+  // "Restaurants close by" said none although two were a few miles away (handoff 2026-10-07, job 5):
+  // a filter matched nothing. find_places now keeps the nearby places a filter ruled out
+  // (other_nearby) and says the answer in its summary; Wilma names them instead of "none".
+  {
+    id: "place-close-by-filter-mismatch",
+    category: "lookup",
+    // Kampai has a location a street away, but is saved as Japanese only: the user says "sushi".
+    setup: (w) => {
+      const k = w.items.find((i) => i.id === IDS.sushiBar)!;
+      Object.assign(k.metadata, { cuisine: ["japanese"], lat: 33.8945, lng: 35.5165 });
+    },
+    here: { lat: 33.8951, lng: 35.5171 },
+    turns: ["Any sushi close by?"],
+    checks: [
+      called("find_places", (a) => Math.abs(Number(a.lat) - 33.8951) < 0.0005, "from the shared location"),
+      replyHas(/kampai/i, "name Kampai, the Japanese place a street away"),
+      replyLacks(/hidden courtyard/i, "mention a place from a restricted space"),
+      noWrites(),
+    ],
+  },
+  {
+    id: "place-restaurants-close-by",
+    category: "lookup",
+    // The owner's words. Every saved restaurant here is "been", like the owner's two.
+    setup: (w) => {
+      const k = w.items.find((i) => i.id === IDS.sushiBar)!;
+      Object.assign(k.metadata, { status: "been", rating: 4, lat: 33.8890, lng: 35.5230 });
+    },
+    here: { lat: 33.8951, lng: 35.5171 },
+    turns: ["Restaurants close by"],
+    checks: [
+      called("find_places", (a) => Math.abs(Number(a.lat) - 33.8951) < 0.0005, "from the shared location"),
+      replyHas(/trattoria/i, "name Trattoria Sud, the nearest"),
+      replyHas(/tawlet|kampai/i, "name the other restaurants close by"),
+      replyLacks(/can'?t find|couldn'?t find|no (?:saved )?restaurants? (?:near|close|within|around)|nothing (?:near|close)/i,
+        "say there is nothing close by"),
+      replyLacks(/hidden courtyard/i, "mention a place from a restricted space"),
+      noWrites(),
+    ],
+  },
   {
     id: "place-distance-in-miles",
     category: "lookup",
