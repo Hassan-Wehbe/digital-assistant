@@ -92,6 +92,33 @@ In all three, the box grows from 3 lines to about 6, then scrolls. Return adds a
 sends (on home, Return sends today). 📍 stays a tile, so home never reads the location except on
 that tap. The chat uses the same box, with 📍 at its bottom left and the password line inside it.
 
+### A2 with ＋, the counter and a password check (owner's request, 2026-10-07)
+
+The owner chose A2 and asked for ＋ (attachments) at the box's bottom left, the usage counter in
+the middle, 🎤 and Send at the right, and for Wilma to tell the user when they type a password.
+Mockups: section "Newest" on the mockup page.
+
+- **＋** opens: take a photo, photo or file, new note (each opens the existing New note screen).
+  "New note" leaves the tiles: Chat, Save here, Vault. In the chat, ＋ also offers 📍 "Send where I
+  am", replacing the separate 📍 button.
+- **Counter:** "About 180 left", amber from 80% ("12 left · resets Nov 1"), red when used up;
+  tap for Settings. Counted in requests, not tokens (D22/D28).
+- **Password warning: from the phone, not from Wilma.** If Wilma said it, the password would
+  already have been sent to the AI provider (rule 1, rule 9). Instead, the app checks the text as
+  it is typed, with the same patterns the server uses (`mcp/lib/credentials.ts`,
+  `findCredential`). On a match, the box turns amber, a card says "This looks like a password.
+  Wilma won't send it." with **Save in Vault** (opens "Save a secret"; the text is not copied
+  across) and **Edit message**, and Send is held.
+- **Gap found while checking this:** today the chat function sends any message to the model.
+  Only saving is blocked (rule 9 in `save_item`/`update_item`), and the one-box classifier is
+  guarded (`chat/classify.ts`, `guard`). A typed password therefore reaches the AI provider, even
+  though it is never saved. The app check above covers the app. **Recommend** the same check in
+  the `chat` function, refusing a credential-looking message before any model call, so other
+  front ends and old app versions are covered too. That is a server change and needs an
+  evaluation run (strongest model, owner's OK).
+- Dictation: speech is turned into text by the phone's speech service before the check can see
+  it, so a small "Don't say passwords" line stays while the mic is on.
+
 ### Chat
 
 | | What moves where | What it fixes | Cost |

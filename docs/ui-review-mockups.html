@@ -109,6 +109,14 @@ ol.plan { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 76c
 .pill { border: 1px solid var(--line); border-radius: 999px; padding: 5px 10px; font-size: 12px; color: var(--ink); background: var(--card); }
 .lbl { font: 600 10px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--soft); }
 .new { outline: 2px solid var(--good); outline-offset: 3px; }
+.warnbox { border: 1px solid var(--warn); background: var(--card); border-radius: 12px; padding: 10px; display: grid; gap: 8px; }
+.warnbox .acts { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+.big.caught { border-color: var(--warn); }
+.ctr { flex: 1; min-width: 0; text-align: center; color: var(--soft); font-size: 11px; font-variant-numeric: tabular-nums; }
+.ctr.low { color: var(--warn); font-weight: 600; }
+.menu { border: 1px solid var(--line); background: var(--card); border-radius: 12px; overflow: hidden; width: 78%; }
+.menu div { padding: 9px 12px; border-top: 1px solid var(--line); }
+.menu div:first-child { border-top: 0; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 
@@ -118,9 +126,45 @@ ol.plan { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 76c
     <h1>Wilma: home screen and chat, three ways each</h1>
     <p class="lede">Sketches for choosing, not a build. Each phone is about 300px wide and uses the app's own colours, so it follows your light or dark setting. Dashed red outlines on the "today" screens mark what feels clunky. Full write-up: <code>docs/ui-review.md</code>.</p>
     <nav>
-      <a href="#bigbox">New: big box</a><a href="#home">Home</a><a href="#chat">Chat</a><a href="#cards">Chat cards</a><a href="#plan">Recommended plan</a><a href="#questions">Your choices</a>
+      <a href="#a2plus">Newest: A2 with + and counter</a><a href="#bigbox">Big box</a><a href="#home">Home</a><a href="#chat">Chat</a><a href="#cards">Chat cards</a><a href="#plan">Recommended plan</a><a href="#questions">Your choices</a>
     </nav>
   </header>
+
+  <!-- ===================== A2 WITH + AND COUNTER ===================== -->
+  <section id="a2plus">
+    <h2>A2 with a + button, the counter, and a password check</h2>
+    <p class="lede">Your request: ＋ for attachments at the bottom left of the box, the usage counter in the middle, 🎤 and Send at the right, and a warning when someone types a password. The fixed password hint line goes away.</p>
+    <div class="row">
+      <div style="display:grid;gap:8px;flex:0 0 300px;max-width:100%"><span class="tag rec">1 · Home, at rest</span><div class="phone"><div class="bar">Wilma<span class="sp"></span><span class="lnk">⚙ Settings</span></div><div class="zone"><div class="big"><div class="txt">Ask Wilma, or type a name…</div><div class="foot"><div class="ico">＋</div><span class="ctr ">About 180 left</span><div class="ico">🎤</div><div class="ico send">↑</div></div></div><div class="tiles" style="grid-template-columns:repeat(3,1fr)">
+              <div class="tile"><span>💬</span>Chat</div>
+              <div class="tile"><span>📍</span>Save here</div>
+              <div class="tile"><span>🔒</span>Vault</div>
+            </div></div><div class="scr"><div class="hrow"><span class="h">Spaces</span><span class="link">＋ New</span></div><div class="group">
+              <div><span><b>Recipes</b><br><span class="muted">Family dinners and baking</span></span><span class="chev">›</span></div>
+              <div><span><b>Work/Designs</b></span><span class="chev">›</span></div>
+              <div class="dim"><span>🔒 Health <span class="muted">· restricted</span></span></div>
+            </div></div></div></div>
+      <div style="display:grid;gap:8px;flex:0 0 300px;max-width:100%"><span class="tag">2 · ＋ tapped</span><div class="phone"><div class="bar">Wilma<span class="sp"></span><span class="lnk">⚙ Settings</span></div><div class="zone"><div class="big"><div class="txt">Ask Wilma, or type a name…</div><div class="foot"><div class="ico">＋</div><span class="ctr ">About 180 left</span><div class="ico">🎤</div><div class="ico send">↑</div></div></div><div class="menu"><div>📷 Take a photo</div><div>🖼 Photo or file</div><div>＋ New note</div></div></div><div class="scr dim"><div class="hrow"><span class="h">Spaces</span></div><div class="group">
+              <div><span><b>Recipes</b><br><span class="muted">Family dinners and baking</span></span><span class="chev">›</span></div>
+              <div><span><b>Work/Designs</b></span><span class="chev">›</span></div>
+              <div class="dim"><span>🔒 Health <span class="muted">· restricted</span></span></div>
+            </div></div></div></div>
+      <div style="display:grid;gap:8px;flex:0 0 300px;max-width:100%"><span class="tag">3 · A password was typed</span><div class="phone"><div class="bar">Wilma<span class="sp"></span><span class="lnk">⚙ Settings</span></div><div class="zone"><div class="warnbox"><span><b>🔒 This looks like a password.</b> Wilma won't send it. Passwords belong in the Vault, where the AI never sees them.</span><div class="acts"><span class="btn">Edit message</span><span class="btn pri">Save in Vault</span></div></div><div class="big caught"><div class="txt" style="color:var(--ink)">the garage door code is 4821</div><div class="foot"><div class="ico">＋</div><span class="ctr ">About 180 left</span><div class="ico">🎤</div><div class="ico send">↑</div></div></div></div><div class="scr dim"><div class="hrow"><span class="h">Spaces</span></div><div class="group">
+              <div><span><b>Recipes</b><br><span class="muted">Family dinners and baking</span></span><span class="chev">›</span></div>
+              <div><span><b>Work/Designs</b></span><span class="chev">›</span></div>
+              <div class="dim"><span>🔒 Health <span class="muted">· restricted</span></span></div>
+            </div></div></div></div>
+      <div style="display:grid;gap:8px;flex:0 0 300px;max-width:100%"><span class="tag">4 · Chat, same box, counter low</span><div class="phone" style="min-height:420px"><div class="bar"><span class="lnk">‹</span>Wilma<span class="sp"></span><span class="lnk">New chat</span></div><div class="thread"><div class="me">where's the wifi note?</div><div class="her">It's in <b>Home wifi setup</b>: the router is in the hall cupboard.</div></div><div class="comp"><div class="big"><div class="txt">Message Wilma…</div><div class="foot"><div class="ico">＋</div><span class="ctr low">12 left · resets Nov 1</span><div class="ico">🎤</div><div class="ico send">↑</div></div></div></div></div></div>
+    </div>
+    <div class="notes" style="max-width:76ch">
+      <ul>
+        <li><b>＋ (bottom left)</b> opens a small menu: take a photo, choose a photo or file, or a new note. Each one opens the existing New note screen with the photo attached. "New note" moves from a tile into this menu, which leaves three tiles: Chat, Save here, Vault.</li>
+        <li><b>The counter (centre)</b> shows "About 180 left" and turns amber from 80% used ("12 left · resets Nov 1"). Tap it to open Settings for the full meter. It counts <b>requests</b>, not tokens, as decided in D22/D28: a request is something you understand, and tokens differ by model. When the allowance is used up it reads "Used up · resets Nov 1" in red. This replaces the meter line that appears under the box today.</li>
+        <li><b>The password check (3)</b> runs on the phone as you type, before anything is sent. When the text looks like a password, PIN or key, the box turns amber, a card appears above it, and Send does nothing. "Save in Vault" opens the vault's own "Save a secret" screen. The text is not copied over, so you type the password there, where it's encrypted. Ordinary questions such as "what's my Netflix password?" are not caught, and still open the vault entry.</li>
+        <li><b>In the chat</b> the box is the same. In the chat, ＋ also offers 📍 "Send where I am", replacing the separate 📍 button.</li>
+      </ul>
+    </div>
+  </section>
 
   <!-- ===================== BIG BOX VARIATIONS ===================== -->
   <section id="bigbox">
