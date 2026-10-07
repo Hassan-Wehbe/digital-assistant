@@ -301,6 +301,13 @@ Step 3 shows them (cuisine chips, price, occasions, dishes, **We went again** ad
         `place-no-ask-when-shared` (91 cases, 22 traps).
      3. **App: Distances Miles / km** on Settings (`lib/units.ts`, reads and updates
         `app_user.distance_unit`).
+        **As built (PR 3):** Settings → **Distances**: Miles / Kilometres rows (✓ on the chosen
+        one, read out as radio buttons; `GroupRow` gained `checked`). A tap saves at once as the
+        user (`saveDistanceUnit`: counts only when the database returns the new value); a failed
+        save puts the old choice back and says "That wasn't saved". Unreadable (offline): "Your
+        setting cannot be read right now", rows not tappable. Miles when nothing usable is stored.
+        `distanceText` ("about 0.5 miles", "about 1 mile", "about 0.8 km") is ready for PR 4's cards.
+        No server change (the column and its grants came with PR 1). Ships with the next Play build.
      4. **App: the cards** on the ChatCard shell: place card (📍, name, kind and cuisine, "about
         N miles", Open in Maps via `mapsLink`, Open note) and the Share where I am card (Not now /
         📍 Share where I am: one reading on the tap, then the last question again with the
