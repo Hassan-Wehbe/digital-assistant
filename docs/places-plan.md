@@ -252,10 +252,61 @@ Step 3 shows them (cuisine chips, price, occasions, dishes, **We went again** ad
      sentence (owner approves). Search service and its usage rules (a named app, at most one
      request a second) to be chosen when the step is built. If too many places are not found,
      Google's Places search is the upgrade (paid account; coordinates may be kept only 30 days).
-   - PRs: server (the two chat-only actions, the unit setting, instructions, Deno tests,
-     evaluation cases, a paid run with the owner's OK, deploy), then app (the place card, the share
-     card, the units setting), then a phone checklist. Strongest model (location, privacy, chat
-     loop). Needs step 7's app part (#110) first.
+   - **Part 2 build plan (owner, 2026-10-07: all as recommended).** Strongest model for each PR
+     except the checklist. In order:
+     1. **Server + migration: units, radius, honest answers (Q12, Q14, Q16).** Migration
+        `app_user.distance_unit text not null default 'mi' check (in ('mi','km'))`, column grants
+        to `authenticated` only, SQL test. `mcp/lib/assistant.ts` loads name and unit (default
+        `mi`); `distanceUnit` in `ToolContext` (mcp, chat, eval world). `find_places`: `distance`
+        + `unit`, input `within` + `unit` (`within_km` kept as an alias), default 10 mi (16.1 km),
+        `nearest_outside` when nothing is within, always `without_location` (at most 10: title,
+        space, address, never a distance; searchable spaces only). Instructions: the user's unit,
+        nearby = 10 mi, say so and offer the nearest, name places with no location and offer to
+        add one; fix "tap 📍" to "＋ → 📍 Send where I am". Eval cases: default radius (a place
+        about 20 miles away added to the world), nothing within offers nearest, names unlocated,
+        miles, km; update the step 5b/7 cases. Owner applies the migration.
+     2. **Server: chat-only actions (Q11, Q13)** in a new `chat/actions.ts` shared with
+        `tests/eval/harness.ts` (the Claude connector never sees them): `show_places({item_ids
+        ≤5, near_place_id?})` checks each id as the user (place, not deleted, searchable space;
+        the same "not found" for any failure, rule 3) and emits `{"type":"places","cards":[...]}`
+        with distances computed by the server from this message's point or `near_place_id`,
+        never from the model; `ask_for_location()` emits `{"type":"location_request"}` only
+        without a point. Instructions for them in `systemPrompt` (chat only). Logs: action names
+        only. Eval cases: cards for an answer, never a restricted place, near me asks for the
+        location, at most 5, no ask when a point is there. **One paid evaluation run and one
+        deploy (`mcp` + `chat`) for PRs 1 and 2 together** (owner's OK).
+     3. **App: Distances Miles / km** on Settings (`lib/units.ts`, reads and updates
+        `app_user.distance_unit`).
+     4. **App: the cards** on the ChatCard shell: place card (📍, name, kind and cuisine, "about
+        N miles", Open in Maps via `mapsLink`, Open note) and the Share where I am card (Not now /
+        📍 Share where I am: one reading on the tap, then the last question again with the
+        point). Older app versions drop unknown events safely; Wilma's text names the places
+        anyway. The saved thread keeps no distances or coordinates.
+     5. **Docs and privacy for Q17:** privacy sentence (owner approves): "When you tap *Find on
+        the map* on a place, Wilma's server sends the place's name and your approximate area (to
+        about 10 km) to OpenStreetMap's search service (Nominatim, run by the OpenStreetMap
+        Foundation). Nothing else about you is sent, and a location is saved only if you confirm
+        it." OpenStreetMap in the list of services; the Data safety question in
+        `docs/legal-review-checklist.md`.
+     6. **Server: the lookup** as a `{"place_lookup": {...}}` body of `chat` (like `classify`):
+        Nominatim, one identifying User-Agent (`NOMINATIM_CONTACT` in Supabase secrets, name in
+        `.env.example`), a tap only, at most 1 request a second, 5 s, up to 3 candidates, the
+        credit "© OpenStreetMap contributors". Sent: the name (≤100 characters) and the area:
+        the phone's location rounded to 1 decimal (about 10 km) on that tap, else a typed city;
+        the server rounds again. No model change, no evaluation run; deploy `chat` (owner's OK).
+     7. **App: 🔎 Find on the map** in `PlaceFields` (share form, New and Edit note) and on a
+        place note without a location: "Is this it? <name>, <address>", Yes / Not this one; only
+        Yes saves the location, marked `location_source: "osm"` (small `normalizePlace` change).
+     8. **Phone checklist** (Sonnet), then the Play build carrying the UI tidy-up and places.
+     Decided with it: distances on cards only from a shared point or a named place; no
+     distances or coordinates in the saved thread; the lookup runs on the server; Nominatim;
+     the area from a rounded tap or a typed city; `location_source` stored; no lookup from the
+     chat for now (Open note leads to the button); the unit changes on Settings only, not by
+     chat; nearby is 16 km for km users. **Before PR 6: the coverage check** (does
+     OpenStreetMap know Hinode Sushi and Lemongrass Thai Kitchen near Oviedo, FL?): this
+     sandbox's network blocks `nominatim.openstreetmap.org`, so the owner checks on
+     openstreetmap.org or allows the host in the environment's network settings. If they are
+     missing, Photon or Google's Places search (Q17's upgrade) is the fallback to decide then.
 
 Later, not in this plan: a map with pins, live opening hours and travel times (Google, with the
 company account and the day planner), the **date planner**, geocoding typed addresses, reminders when near a saved place, places in the day planner's
