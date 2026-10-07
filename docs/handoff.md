@@ -12,6 +12,14 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Job 3 (🔒 vault entries in a space): PR open, app only.** A space screen now lists its vault
+  entries (that space and its sub-spaces; restricted spaces never, as `find_secret` already does)
+  under its notes as 🔒 rows: name and website only. A tap opens the same entry screen as the
+  Vault list (`/vault/[id]`), which shows the unlock card only when locked. "Nothing in this space
+  yet" only when there are no notes and no entries. Home is unchanged (Logins stays listed). New
+  `app/src/lib/secretRows.ts` (+ 14 tests; 532 app tests). No server, schema or privacy change.
+  Ships with the next Play build (versionCode 13). **Next:** job 4's small geocoder test build,
+  when the owner says so; `chat` deploy (owner, Supabase CLI) still pending from job 5.
 - **Job 5 ("restaurants close by" said none): PR open, server only (`mcp` 0.9.2).** Checked (read
   only): both real restaurants are `kind` restaurant, `status` been, cuisines japanese / thai, with
   numeric `lat`/`lng`, so a plain `kind: "restaurant"` call would have found them; the first call

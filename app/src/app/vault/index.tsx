@@ -7,6 +7,7 @@ import { FlatList, Pressable, RefreshControl, Text, TextInput, View } from 'reac
 import { UnlockCard } from '@/components/UnlockCard';
 import { Button, Card, ErrorBox, KeyboardScreen, Loading, Muted, styles, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { secretRoute } from '@/lib/secretRows';
 import { useVault } from '@/lib/vault';
 import { TYPE_LABELS } from '@/lib/vaultCrypto';
 
@@ -91,11 +92,7 @@ export default function VaultScreen() {
         ListFooterComponent={footer}
         ListEmptyComponent={secrets.loading ? <Loading /> : secrets.error ? null : <Muted>{query ? 'No secret matches.' : 'No secrets yet.'}</Muted>}
         renderItem={({ item: s }) => (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() =>
-              router.push({ pathname: '/vault/[id]', params: { id: s.id, name: s.name, type: s.secret_type, space: s.space ?? '', url: s.url ?? '' } })
-            }>
+          <Pressable accessibilityRole="button" onPress={() => router.push(secretRoute(s))}>
             <Card>
               <Text style={[styles.title, { color: c.text }]}>{s.name}</Text>
               <Muted>{[TYPE_LABELS[s.secret_type] ?? s.secret_type, s.space, s.url].filter(Boolean).join(' · ')}</Muted>
