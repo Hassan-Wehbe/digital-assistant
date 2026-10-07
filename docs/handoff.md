@@ -12,6 +12,16 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **versionCode 12 building (owner: "build for Play", 2026-10-07).** Production build from `main`
+  at 4d9e55e (GitHub run 37660106229, checks passed), Expo build
+  3e11a3c6-35d5-47fd-950e-1d207625ab55, auto-submit scheduled (submission
+  c892d53c-2c19-4ead-82f4-1d0f7e9c066f). Carries the UI tidy-up and places part 2 (PRs 1-4).
+  **Next: the owner runs `docs/versioncode12-phone-checklist.md` and reports back.**
+  **Order after that (owner, 2026-10-07):** fixes from the checklist, then **day planner step 1,
+  the phone's calendar** (`docs/phase6-day-planner-step1-plan.md`, Q2-Q8 as recommended unless the
+  owner changes them; strongest model for its steps 1-2), then **invite-only sign-up**
+  (`docs/signup-plan.md`). The calendar needs no company account; testers' accounts stay manual
+  until sign-up ships.
 - **Next build's checklist ready (part 2 PR 8): `docs/versioncode12-phone-checklist.md`.** One
   "super checklist" for versionCode 12: the UI tidy-up, places part 2 (Miles/km, place cards, 📍
   Share where I am), the key lines of the unrecorded versionCode 10/11 lists, and the owner's
