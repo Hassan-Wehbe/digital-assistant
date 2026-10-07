@@ -1,5 +1,5 @@
 // Pick pictures or Visio files (camera, gallery, files), with a caption per file.
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { pickFiles, pickPictures, takePhoto, type PickOutcome } from '@/lib/deviceFiles';
@@ -14,10 +14,13 @@ export function AttachmentPicker({
   files,
   onChange,
   disabled,
+  start,
 }: {
   files: PickedFile[];
   onChange: (files: PickedFile[]) => void;
   disabled?: boolean;
+  /** Open the camera or the picture picker once, as the screen opens (home's ＋ menu). */
+  start?: 'camera' | 'pictures';
 }) {
   const c = useColors();
   const [errors, setErrors] = useState<string[]>([]);
@@ -39,6 +42,15 @@ export function AttachmentPicker({
       setBusy(false);
     }
   };
+
+  const started = useRef(false);
+  useEffect(() => {
+    if (!start || started.current) return;
+    started.current = true;
+    add(start === 'camera' ? takePhoto : () => pickPictures(room));
+    // Once, when the screen opens; `add` and `room` are read at that moment.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [start]);
 
   const off = disabled || busy || room <= 0;
   return (

@@ -1,34 +1,11 @@
-// List rows for spaces and items.
+// List rows for items (spaces are a GroupList on home).
 import { Link } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
 import { isPlace, placeLine } from '@/lib/places';
-import type { SearchResult, Space } from '@/lib/wilma';
+import type { SearchResult } from '@/lib/wilma';
 
 import { Card, Muted, styles, useColors } from './ui';
-
-export function SpaceRow({ space }: { space: Space }) {
-  const c = useColors();
-  if (space.restricted) {
-    // Restricted spaces are listed but never opened or searched here (CLAUDE.md rule 3).
-    return (
-      <Card>
-        <Text style={[styles.title, { color: c.text }]}>🔒 {space.path}</Text>
-        <Muted>Restricted space. Opening restricted spaces in the app comes later.</Muted>
-      </Card>
-    );
-  }
-  return (
-    <Link href={{ pathname: '/space/[id]', params: { id: space.id, path: space.path } }} asChild>
-      <Pressable accessibilityRole="button">
-        <Card>
-          <Text style={[styles.title, { color: c.text }]}>{space.path}</Text>
-          {space.description ? <Muted>{space.description}</Muted> : null}
-        </Card>
-      </Pressable>
-    </Link>
-  );
-}
 
 export function ItemRow({ item, showSpace = true }: { item: SearchResult; showSpace?: boolean }) {
   const c = useColors();
