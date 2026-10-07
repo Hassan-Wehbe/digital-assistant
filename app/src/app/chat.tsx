@@ -8,8 +8,10 @@ import { ChatBubble } from '@/components/ChatBubble';
 import { MicButton } from '@/components/MicButton';
 import { Button, confirm, KeyboardScreen, Loading, Muted, styles, useColors } from '@/components/ui';
 import { useChat } from '@/lib/chat';
+import { PIN_ON, pinPoint, tapPin, type PinState } from '@/lib/chatHere';
 import { cardActive, type Entry, type ErrorButton, lastUserText, notesActive } from '@/lib/chatThread';
 import { VOICE_ENABLED } from '@/lib/config';
+import { deviceLocation } from '@/lib/location';
 import { appendDictation, useDictation } from '@/lib/voice';
 
 export default function Chat() {
@@ -17,15 +19,28 @@ export default function Chat() {
   const { state, ready, canSend, routing, bannerVisible, send, askWilma, stop, retry, dismissBanner, clear, confirmDelete, cancelDelete } = useChat();
   const [text, setText] = useState('');
   const list = useRef<FlatList>(null);
+  // 📍 "near me" (places step 7): the location for the next message only, read on the tap.
+  const [pin, setPin] = useState<PinState>(null);
+  const [locating, setLocating] = useState(false);
+  const onPin = async () => {
+    if (locating) return;
+    setLocating(true);
+    try {
+      setPin(await tapPin(pin, deviceLocation));
+    } finally {
+      setLocating(false);
+    }
+  };
   // Dictated words are added to the box; only Send sends them (A5e Q1). No mic while a reply streams.
   const mic = useDictation((words) => setText((t) => appendDictation(t, words)), canSend && !state.streaming);
 
   const submit = async () => {
-    if (!canSend || !text.trim() || mic.listening) return;
-    const out = await send(text);
-    // Used up or not sent: the text stays in the box.
+    if (!canSend || !text.trim() || mic.listening || locating) return;
+    const out = await send(text, pinPoint(pin));
+    // Used up or not sent: the text (and the 📍) stays.
     if (out.to === 'none' || out.to === 'blocked') return;
     setText('');
+    setPin(null);
     if (out.to === 'space') router.push({ pathname: '/space/[id]', params: { id: out.id, path: out.path } });
   };
 
@@ -125,12 +140,28 @@ export default function Chat() {
             <Button title="Stop" kind="plain" onPress={stop} />
           ) : (
             <>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={pinPoint(pin) ? 'Remove your location' : 'Send your location with the next message'}
+                accessibilityState={{ selected: !!pinPoint(pin), busy: locating, disabled: !canSend || locating }}
+                onPress={onPin}
+                disabled={!canSend || locating}
+                hitSlop={4}
+                style={({ pressed }) => [
+                  styles.button,
+                  { paddingHorizontal: 12 },
+                  pinPoint(pin) ? { backgroundColor: c.accent } : { borderColor: c.line, borderWidth: 1 },
+                  (pressed || !canSend || locating) && { opacity: 0.6 },
+                ]}>
+                <Text style={styles.buttonText}>📍</Text>
+              </Pressable>
               {VOICE_ENABLED ? <MicButton mic={mic} disabled={!canSend} /> : null}
-              <Button title="Send" onPress={submit} disabled={!canSend || !text.trim() || mic.listening} />
+              <Button title="Send" onPress={submit} disabled={!canSend || !text.trim() || mic.listening || locating} />
             </>
           )}
         </View>
         {mic.error ? <Muted>{mic.error}</Muted> : null}
+        {locating ? <Muted>Finding where you are…</Muted> : pin && 'error' in pin ? <Muted>{pin.error}</Muted> : pinPoint(pin) ? <Muted>{PIN_ON}</Muted> : null}
         {/* Used up: names of spaces and secrets still work; anything else waits for next month. */}
         {state.blocked ? <Muted>{state.blocked}</Muted> : null}
         <Muted>Never type or say passwords here. Use the Vault.</Muted>
