@@ -73,7 +73,12 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
         let locationFromLink = false;
         if (place && fieldsChanged && current) {
           const removed = placePoint(current.metadata) !== null && current.metadata?.maps_url === place.maps_url;
-          if (!removed) ({ place, filled: locationFromLink } = await withLinkLocation(place));
+          if (!removed) {
+            const r = await withLinkLocation(place);
+            ({ place, filled: locationFromLink } = r);
+            // Codes and counts only (never the link or the point), to see how Google answers.
+            if (r.log) console.log(r.log);
+          }
         }
         const newMetadata = place && fieldsChanged ? place : metadata ?? null;
 

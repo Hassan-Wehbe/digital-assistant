@@ -11,14 +11,20 @@
 //   Maps host (GOOGLE_MAPS_HOP); anything else is refused without being requested;
 // - one TIMEOUT_MS limit for the whole chain; no cookies, credentials or custom headers are sent;
 // - the response body is never read (it is cancelled) and nothing is stored but lat/lng;
-// - nothing is logged here: callers log codes and counts only, never the link or the point.
+// - nothing is logged here: callers log codes and counts only (linkLogLine), never the link or
+//   the point.
 // Any failure returns a code and the place stays as it was.
 import { isMapsLink, type PlaceMetadata, placePoint, type Point } from "./places.ts";
 
 export const MAX_REDIRECTS = 5;
 export const TIMEOUT_MS = 5000;
 
-export type LinkLocation = { point: Point } | { code: LinkFailure };
+/** What happened, for the log: requests made and the last HTTP status (0: none). Never the link. */
+export interface LinkTrace {
+  requests: number;
+  status: number;
+}
+export type LinkLocation = ({ point: Point } | { code: LinkFailure }) & { trace?: LinkTrace };
 export type LinkFailure =
   | "not_a_short_link" // nothing to follow (and the link itself has no coordinates)
   | "off_google" // a redirect left Google Maps: not requested
@@ -112,6 +118,17 @@ export async function locationFromMapsLink(
   fetchFn: typeof fetch = globalThis.fetch,
   timeoutMs = TIMEOUT_MS,
 ): Promise<LinkLocation> {
+  const trace: LinkTrace = { requests: 0, status: 0 };
+  const found = await follow(url, fetchFn, timeoutMs, trace);
+  return { ...found, trace };
+}
+
+async function follow(
+  url: string,
+  fetchFn: typeof fetch,
+  timeoutMs: number,
+  trace: LinkTrace,
+): Promise<{ point: Point } | { code: LinkFailure }> {
   const direct = coordinatesInLink(url);
   if (direct) return { point: direct };
   if (!isShortMapsLink(url)) return { code: "not_a_short_link" };
@@ -129,10 +146,12 @@ export async function locationFromMapsLink(
     let current = new URL(url);
     for (let redirects = 0;; redirects++) {
       if (!isGoogleMapsHop(current)) return { code: "off_google" };
+      trace.requests++;
       const res = await Promise.race([
         fetchFn(current.href, { method: "GET", redirect: "manual", credentials: "omit", signal: controller.signal }),
         deadline,
       ]);
+      trace.status = res.status;
       // The page itself is never read.
       res.body?.cancel().catch(() => {});
       if (!REDIRECT.has(res.status)) return { code: res.ok ? "no_coordinates" : "http_status" };
@@ -171,9 +190,20 @@ export async function locationFromMapsLink(
 export async function withLinkLocation(
   place: PlaceMetadata,
   fetchFn: typeof fetch = globalThis.fetch,
-): Promise<{ place: PlaceMetadata; filled: boolean; code?: LinkFailure }> {
+): Promise<{ place: PlaceMetadata; filled: boolean; code?: LinkFailure; log?: string }> {
   if (place.lat !== undefined || place.lng !== undefined || !place.maps_url) return { place, filled: false };
   const found = await locationFromMapsLink(place.maps_url, fetchFn);
-  if ("code" in found) return { place, filled: false, code: found.code };
-  return { place: { ...place, lat: found.point.lat, lng: found.point.lng }, filled: true };
+  const log = linkLogLine(found);
+  if ("code" in found) return { place, filled: false, code: found.code, log };
+  return { place: { ...place, lat: found.point.lat, lng: found.point.lng }, filled: true, log };
+}
+
+/**
+ * The one log line about a link lookup: the outcome code, how many requests were made and the
+ * last HTTP status. Built only from those, so it can never hold the link or the point.
+ */
+export function linkLogLine(found: LinkLocation): string {
+  const code = "code" in found ? found.code : "ok";
+  const { requests, status } = found.trace ?? { requests: 0, status: 0 };
+  return JSON.stringify({ event: "maps_link", code, requests, status });
 }

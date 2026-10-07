@@ -42,7 +42,12 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
         const target = resolveSpace(await loadSpaces(db), space);
         // A Maps link and no location: read the location from the link (Q15). Never fails the save.
         let locationFromLink = false;
-        if (place) ({ place, filled: locationFromLink } = await withLinkLocation(place));
+        if (place) {
+          const r = await withLinkLocation(place);
+          ({ place, filled: locationFromLink } = r);
+          // Codes and counts only (never the link or the point), to see how Google answers.
+          if (r.log) console.log(r.log);
+        }
         const chunks = await chunkAndEmbed({ title, summary, body: withPlace(body, place) });
         const { data, error } = await db.rpc("save_item", {
           p_space_id: target.id,
