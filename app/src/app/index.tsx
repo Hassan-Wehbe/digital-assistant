@@ -9,10 +9,13 @@ import { FlatList, Pressable, RefreshControl, Text, TextInput, View } from 'reac
 
 import { MicButton } from '@/components/MicButton';
 import { ItemRow, SpaceRow } from '@/components/rows';
+import { UsageMeter } from '@/components/UsageMeter';
 import { Button, ErrorBox, KeyboardScreen, Loading, Muted, styles, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { useChat } from '@/lib/chat';
 import { versionLabel, VOICE_ENABLED } from '@/lib/config';
+import { supabase } from '@/lib/supabase';
+import { loadAllowance, usageSummary } from '@/lib/usage';
 import { appendDictation, useDictation } from '@/lib/voice';
 import type { SearchResult, Space } from '@/lib/wilma';
 
@@ -51,7 +54,18 @@ export default function Home() {
       : (await wilma.listSpaces()).map((space) => ({ kind: 'space', space })),
   );
 
+  // This month's allowance (D28), read again whenever the home screen comes back into view.
+  const usage = useLoad(`usage:${session?.user.id ?? ''}`, async () => {
+    const a = await loadAllowance((fn) => supabase.rpc(fn));
+    return a ? usageSummary(a) : null;
+  });
+  // Two stable reload functions: useReloadOnReturn re-runs whenever its function changes.
   useReloadOnReturn(reload);
+  useReloadOnReturn(usage.reload);
+  const reloadAll = () => {
+    reload();
+    usage.reload();
+  };
 
   // Dictated words are added to the box; only Send sends them (A5e Q1).
   const mic = useDictation((words) => setText((t) => appendDictation(t, words)), chat.canSend);
@@ -106,6 +120,8 @@ export default function Home() {
       {mic.listening ? <Muted>Never type or say passwords here. Use the Vault.</Muted> : null}
       {mic.error ? <Muted>{mic.error}</Muted> : null}
       {held ? <Muted>{held}</Muted> : chat.routing ? <Muted>One moment…</Muted> : null}
+      {/* Under the box only when it matters: from 80% of the month's allowance. */}
+      {usage.data?.low && !held ? <UsageMeter usage={usage.data} /> : null}
       {link('Conversation', () => router.push('/chat'))}
       <Button title="New note or photo" kind="plain" onPress={() => router.push('/new-item')} />
       <Button title="📍 Save where I am" kind="plain" onPress={() => router.push({ pathname: '/new-item', params: { here: '1' } })} />
@@ -125,6 +141,7 @@ export default function Home() {
 
   const footer = (
     <View style={{ gap: 8, marginTop: 16 }}>
+      {usage.data && !usage.data.low ? <UsageMeter usage={usage.data} /> : null}
       <Muted>Signed in as {session?.user.email ?? 'you'}</Muted>
       <Button title="Vault" kind="plain" onPress={() => router.push('/vault')} />
       <Button title="Recycle bin" kind="plain" onPress={() => router.push('/bin')} />
@@ -152,7 +169,7 @@ export default function Home() {
         ListEmptyComponent={empty}
         ListFooterComponent={footer}
         keyboardShouldPersistTaps="handled"
-        refreshControl={<RefreshControl refreshing={loading && !!data} onRefresh={reload} />}
+        refreshControl={<RefreshControl refreshing={loading && !!data} onRefresh={reloadAll} />}
       />
     </KeyboardScreen>
   );
