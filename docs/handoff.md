@@ -12,6 +12,14 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **versionCode 11 building (owner: "build for Play", 2026-10-07).** Production build from `main`
+  at 87f5ec4 (GitHub run 37556372279, checks passed), Expo build dbf2331f-0def-462d-8672-a78c8cd6cfd8,
+  auto-submit scheduled (https://expo.dev/accounts/zafnut/projects/wilma/submissions/242901fc-5ec6-4e85-b20d-f79ae3289171).
+  Carries: 📍 "near me" in the chat (#110; server live since `chat` v7), Edit space and moving a
+  note (#115; server live since `mcp` v15), the usage meter (#118, D28 part 1). Privacy sentence
+  (#111) is live. **Next: the owner updates from Play and runs `docs/places-step7-phone-checklist.md`**
+  (📍, spaces, usage meter). Then places step 8 (`docs/places-plan.md`), then invite-only sign-up
+  (`docs/signup-plan.md`, Q1-Q8 decided). The versionCode 10 checklist results are not yet recorded.
 - **Places step 7 ("near me" in the chat, Q9), server live; app, privacy and checklist in PRs.**
   #108 merged (`chat` accepts `here: {lat, lng}` with one message; it becomes one line in that
   request's instructions only, never stored, logged or sent to the classifier; Wilma's
