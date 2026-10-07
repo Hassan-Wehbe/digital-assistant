@@ -1,8 +1,9 @@
 // Settings (docs/ui-review.md, plan step 2): what used to fill the bottom of the home screen.
-// This month's AI allowance in full (D28), the account, the recycle bin, sign out, the version.
-// Later: miles or km (places Q14) and deleting the account (D29).
+// This month's AI allowance in full (D28), distances in miles or km (places Q14), the account,
+// the recycle bin, sign out, the version. Later: deleting the account (D29).
 import * as Application from 'expo-application';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { ScrollView, Text } from 'react-native';
 
 import { UsageMeter } from '@/components/UsageMeter';
@@ -10,6 +11,7 @@ import { Button, Card, GroupList, GroupRow, Muted, space, styles, useColors, use
 import { useAuth } from '@/lib/auth';
 import { versionLabel } from '@/lib/config';
 import { supabase } from '@/lib/supabase';
+import { type DistanceUnit, loadDistanceUnit, saveDistanceUnit, UNIT_CHOICES, type UnitsDb } from '@/lib/units';
 import { loadAllowance, usageSummary } from '@/lib/usage';
 
 export default function Settings() {
@@ -20,6 +22,25 @@ export default function Settings() {
     return a ? usageSummary(a) : null;
   });
   useReloadOnReturn(usage.reload);
+  const userId = session?.user.id ?? '';
+  const db = supabase as unknown as UnitsDb;
+  const stored = useLoad(`unit:${userId}`, () => loadDistanceUnit(db, userId));
+  // The choice just tapped, shown at once; dropped again if the save fails.
+  const [picked, setPicked] = useState<DistanceUnit | null>(null);
+  const [unitNote, setUnitNote] = useState<string | null>(null);
+  const unit = picked ?? stored.data;
+
+  const pickUnit = async (u: DistanceUnit) => {
+    if (u === unit || !userId) return;
+    setPicked(u);
+    setUnitNote(null);
+    if (await saveDistanceUnit(db, userId, u)) {
+      stored.reload();
+    } else {
+      setPicked(null);
+      setUnitNote("That wasn't saved. Check your connection and try again.");
+    }
+  };
 
   const heading = (title: string) => <Text style={[styles.title, { color: c.text }]}>{title}</Text>;
 
@@ -31,6 +52,26 @@ export default function Settings() {
         {usage.data ? <UsageMeter usage={usage.data} /> : <Muted>{usage.loading ? 'Reading your allowance…' : 'Your allowance cannot be read right now.'}</Muted>}
         <Muted>Finding a space or a password by its name never counts.</Muted>
       </Card>
+
+      {heading('Distances')}
+      <GroupList>
+        {UNIT_CHOICES.map((choice, i) => (
+          <GroupRow
+            key={choice.unit}
+            first={i === 0}
+            title={choice.title}
+            checked={unit === choice.unit}
+            onPress={unit ? () => void pickUnit(choice.unit) : undefined}
+          />
+        ))}
+      </GroupList>
+      <Muted>
+        {unit
+          ? (unitNote ?? 'How Wilma gives distances to your places. "Nearby" means within 10 miles (16 km).')
+          : stored.loading
+            ? 'Reading your setting…'
+            : 'Your setting cannot be read right now.'}
+      </Muted>
 
       {heading('Account')}
       <GroupList>

@@ -12,6 +12,11 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Places part 2 PR 3 (app: Settings → Distances, Miles / Kilometres): PR open.** `app/src/lib/units.ts`
+  (+ tests), Settings section, `GroupRow` `checked`. App only, no server change; ships with the
+  next Play build. 501 app tests. **Next: part 2 PR 4** (app: the place cards and the Share where I
+  am card on the ChatCard shell; it reads the phone's location on a tap), fresh session, strongest
+  model (the plan's choice for every part 2 PR except the checklist).
 - **Places part 2 PRs 1 and 2 merged (#142, #144) and live (deployed 2026-10-07): `mcp` version
   20 (36/37 files identical to `main` at 2bac3ad), `chat` version 12 (49/50 identical); in both,
   `supabase-ai.d.ts` is not listed back as usual; 401 without sign-in and with a fake token, both

@@ -269,6 +269,7 @@ export function GroupRow({
   onPress,
   first,
   dimmed,
+  checked,
 }: {
   title: string;
   subtitle?: string;
@@ -276,7 +277,10 @@ export function GroupRow({
   /** The first row has no line above it. */
   first?: boolean;
   dimmed?: boolean;
+  /** One of a set of choices (Settings → Distances): a ✓ instead of ›, read out as a radio button. */
+  checked?: boolean;
 }) {
+  const choice = checked !== undefined;
   const c = useColors();
   const body = (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.s, paddingVertical: space.m, paddingHorizontal: space.m }}>
@@ -284,12 +288,21 @@ export function GroupRow({
         <Text style={{ color: c.text, fontSize: 16, fontWeight: onPress ? '600' : '400' }}>{title}</Text>
         {subtitle ? <Muted>{subtitle}</Muted> : null}
       </View>
-      {onPress ? <Text style={{ color: c.muted, fontSize: 20 }}>›</Text> : null}
+      {choice ? (
+        <Text style={{ color: c.accent, fontSize: 18, fontWeight: '700' }}>{checked ? '✓' : ''}</Text>
+      ) : onPress ? (
+        <Text style={{ color: c.muted, fontSize: 20 }}>›</Text>
+      ) : null}
     </View>
   );
   const frame = [!first && { borderTopWidth: 1, borderTopColor: c.line }, dimmed && { opacity: 0.6 }];
   return onPress ? (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [...frame, pressed && { opacity: 0.6 }]}>
+    <Pressable
+      accessibilityRole={choice ? 'radio' : 'button'}
+      accessibilityState={choice ? { checked } : undefined}
+      onPress={onPress}
+      style={({ pressed }) => [...frame, pressed && { opacity: 0.6 }]}
+    >
       {body}
     </Pressable>
   ) : (
