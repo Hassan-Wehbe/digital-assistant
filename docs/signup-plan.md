@@ -1,6 +1,8 @@
 # Registration: invite-only sign-up and in-app account deletion (plan, stage 1)
 
-Status: **plan, approved** (owner, 2026-10-07: Q1-Q8 all as recommended; see Decisions). Not built. Design entry:
+Status: **plan, approved** (owner, 2026-10-07: Q1-Q8 all as recommended; see Decisions). Not built.
+**Order (owner, 2026-10-07): after day planner step 1, the phone's calendar**
+(`docs/phase6-day-planner-step1-plan.md`); until then the owner creates testers' accounts by hand. Design entry:
 `docs/design.md` D29. Nothing is built. Stage 2 (open sign-up, Google and Apple sign-in) is
 at the end and waits for the company account and the legal review (D27).
 
