@@ -117,6 +117,12 @@ ol.plan { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 76c
 .menu { border: 1px solid var(--line); background: var(--card); border-radius: 12px; overflow: hidden; width: 78%; }
 .menu div { padding: 9px 12px; border-top: 1px solid var(--line); }
 .menu div:first-child { border-top: 0; }
+.stage { position: relative; flex: 0 0 300px; max-width: 100%; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; top: 34%; background: var(--bg); border: 1px solid var(--line); border-radius: 18px 18px 22px 22px; display: flex; flex-direction: column; box-shadow: 0 -6px 18px rgba(0,0,0,.18); overflow: hidden; }
+.grab { width: 36px; height: 4px; border-radius: 2px; background: var(--line); margin: 6px auto 0; }
+.cont { text-align: left; padding: 8px 10px; }
+.cont small { display: block; color: var(--soft); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.typing { color: var(--soft); letter-spacing: 2px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 
@@ -126,9 +132,36 @@ ol.plan { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 76c
     <h1>Wilma: home screen and chat, three ways each</h1>
     <p class="lede">Sketches for choosing, not a build. Each phone is about 300px wide and uses the app's own colours, so it follows your light or dark setting. Dashed red outlines on the "today" screens mark what feels clunky. Full write-up: <code>docs/ui-review.md</code>.</p>
     <nav>
-      <a href="#a2plus">Newest: A2 with + and counter</a><a href="#bigbox">Big box</a><a href="#home">Home</a><a href="#chat">Chat</a><a href="#cards">Chat cards</a><a href="#plan">Recommended plan</a><a href="#questions">Your choices</a>
+      <a href="#flow">Newest: into the chat</a><a href="#a2plus">A2 with + and counter</a><a href="#bigbox">Big box</a><a href="#home">Home</a><a href="#chat">Chat</a><a href="#cards">Chat cards</a><a href="#plan">Recommended plan</a><a href="#questions">Your choices</a>
     </nav>
   </header>
+
+  <!-- ===================== INTO THE CHAT ===================== -->
+  <section id="flow">
+    <h2>From the home box into the full chat</h2>
+    <p class="lede">Decided 2026-10-07: A2 with ＋ and the counter, and the chat slides up from the bottom when it opens, so the box seems to grow into the full window. This is the next thing to build.</p>
+    <div class="row">
+      <div style="display:grid;gap:8px;flex:0 0 300px;max-width:100%"><span class="tag">1 · Type on home, tap ↑</span><div class="phone"><div class="bar">Wilma<span class="sp"></span><span class="lnk">⚙ Settings</span></div><div class="zone"><div class="big"><div class="txt" style="color:var(--ink)">any good lunch spots I saved near work?</div><div class="foot"><div class="ico">＋</div><span class="ctr">About 180 left</span><div class="ico">🎤</div><div class="ico send">↑</div></div></div><div class="tiles" style="grid-template-columns:1.6fr 1fr 1fr"><div class="tile cont"><b>💬 Continue</b><small>where’s the wifi note?</small></div><div class="tile"><span>📍</span>Save here</div><div class="tile"><span>🔒</span>Vault</div></div></div><div class="scr"><div class="hrow"><span class="h">Spaces</span><span class="link">＋ New</span></div><div class="group">
+              <div><span><b>Recipes</b><br><span class="muted">Family dinners and baking</span></span><span class="chev">›</span></div>
+              <div><span><b>Work/Designs</b></span><span class="chev">›</span></div>
+              <div class="dim"><span>🔒 Health <span class="muted">· restricted</span></span></div>
+            </div></div></div></div>
+      <div style="display:grid;gap:8px;flex:0 0 300px;max-width:100%"><span class="tag">2 · The chat slides up</span><div class="stage"><div class="phone dim"><div class="bar">Wilma<span class="sp"></span><span class="lnk">⚙ Settings</span></div><div class="zone"><div class="big"><div class="txt" style="color:var(--ink)">any good lunch spots I saved near work?</div><div class="foot"><div class="ico">＋</div><span class="ctr">About 180 left</span><div class="ico">🎤</div><div class="ico send">↑</div></div></div><div class="tiles" style="grid-template-columns:1.6fr 1fr 1fr"><div class="tile cont"><b>💬 Continue</b><small>where’s the wifi note?</small></div><div class="tile"><span>📍</span>Save here</div><div class="tile"><span>🔒</span>Vault</div></div></div><div class="scr"><div class="hrow"><span class="h">Spaces</span><span class="link">＋ New</span></div><div class="group">
+              <div><span><b>Recipes</b><br><span class="muted">Family dinners and baking</span></span><span class="chev">›</span></div>
+              <div><span><b>Work/Designs</b></span><span class="chev">›</span></div>
+              <div class="dim"><span>🔒 Health <span class="muted">· restricted</span></span></div>
+            </div></div></div><div class="sheet"><div class="grab"></div><div class="bar"><span class="lnk">‹</span>Wilma<span class="sp"></span><span class="lnk">New chat</span></div><div class="thread"><div class="me">any good lunch spots I saved near work?</div><div class="her"><span class="typing">●●●</span></div></div><div class="comp"><div class="big"><div class="txt">Message Wilma…</div><div class="foot"><div class="ico">＋</div><span class="ctr">About 179 left</span><div class="ico">🎤</div><div class="ico send">↑</div></div></div></div></div></div></div>
+      <div style="display:grid;gap:8px;flex:0 0 300px;max-width:100%"><span class="tag rec">3 · Full chat, Wilma answers</span><div class="phone"><div class="bar"><span class="lnk">‹</span>Wilma<span class="sp"></span><span class="lnk">New chat</span></div><div class="thread"><div class="me">any good lunch spots I saved near work?</div><div class="her">Two in your <b>Places</b> space: <b>Luigi’s</b> (Italian, been, 4★) and <b>Pho Bar</b> (want to go).</div></div><div class="comp"><div class="big"><div class="txt">Message Wilma…</div><div class="foot"><div class="ico">＋</div><span class="ctr">About 179 left</span><div class="ico">🎤</div><div class="ico send">↑</div></div></div></div></div></div>
+    </div>
+    <div class="notes" style="max-width:76ch">
+      <ul>
+        <li><b>Tap ↑ on home:</b> the chat slides up over home (frame 2) and shows your message, then Wilma's answer as it arrives. The box at the bottom is the same box, so you just keep typing.</li>
+        <li><b>The Chat tile</b> is wider and shows the last thing you asked ("💬 Continue · where’s the wifi note?"). With no conversation it just says "💬 Chat". Tapping it slides the chat up without sending anything.</li>
+        <li><b>Coming back:</b> ‹ (or Android back) slides the chat away, and the conversation stays. "New chat" clears it.</li>
+        <li><b>Unchanged:</b> a space's name still opens that space, without the AI. When the allowance is used up, home still searches your notes instead of opening the chat.</li>
+      </ul>
+    </div>
+  </section>
 
   <!-- ===================== A2 WITH + AND COUNTER ===================== -->
   <section id="a2plus">
@@ -593,22 +626,25 @@ ol.plan { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 76c
 
   <!-- ===================== PLAN ===================== -->
   <section id="plan">
-    <h2>Recommended: Home A + Chat A, in six small PRs</h2>
-    <p class="lede">App only, no server change. Each PR passes <code>npm run check</code> and is tried in the browser preview. All six ship together in one Play build, with one short phone checklist.</p>
+    <h2>The plan: build next, in small PRs</h2>
+    <p class="lede">Decided by you on 2026-10-07: Home A2 with ＋ and the counter, the phone's password check, and the chat sliding up. App only, except PR 7. Each PR passes <code>npm run check</code> and is tried in the browser preview. PRs 1-6 ship together in one Play build with one phone checklist.</p>
     <ol class="plan">
-      <li><b>Shared pieces</b> in <code>ui.tsx</code>: <code>IconButton</code>, <code>TextLink</code>, <code>Tile</code>, <code>GroupList</code>, and one spacing scale. Nothing on screen changes yet. <span class="cost">Model: Sonnet</span></li>
-      <li><b>Settings screen</b> (<code>/settings</code>): meter, signed in as, change password, recycle bin, sign out, version. Home gets ⚙ and drops its footer. <span class="cost">Sonnet</span></li>
-      <li><b>Home tidy:</b> the action tiles (Chat, New note, Save here, Vault), round mic and send, spaces as a grouped list, and a one-line restricted row. <span class="cost">Sonnet</span></li>
-      <li><b>Chat composer:</b> icon buttons, one status chip, the always-visible password line with its Vault link, and "New chat". It touches the password guidance and the 📍 wiring. <span class="cost">Strongest model</span></li>
-      <li><b>Chat cards:</b> one <code>ChatCard</code> shell for vault, notes, delete and error cards; buttons side by side. It touches the vault and delete cards. <span class="cost">Strongest model</span></li>
+      <li><b>Shared pieces</b> in <code>ui.tsx</code>: <code>IconButton</code>, <code>TextLink</code>, <code>Tile</code>, <code>GroupList</code>, a <code>WilmaBox</code> (3 lines growing to 6, ＋ at the left, counter in the centre, 🎤 and ↑ at the right) and one spacing scale. Nothing on screen changes yet. <span class="cost">Model: Sonnet</span></li>
+      <li><b>Settings screen</b> behind ⚙: full meter, signed in as, change password, recycle bin, sign out, version. Home drops its footer. <span class="cost">Sonnet</span></li>
+      <li><b>Home A2</b>: the top panel with <code>WilmaBox</code>, the tiles (wide "Continue" Chat tile, Save here, Vault), the ＋ menu (new note, photo), spaces as a grouped list, and the chat sliding up from the bottom (<code>animation: 'slide_from_bottom'</code> on the chat screen). <span class="cost">Sonnet</span></li>
+      <li><b>The password check on the phone</b>, on home and in the chat: the same patterns as the server (a copy of <code>findCredential</code>, with a test that both give the same answers), the amber card, Send held, "Save in Vault" opening "Save a secret". <span class="cost">Strongest model</span></li>
+      <li><b>Chat with <code>WilmaBox</code></b>: ＋ menu with 📍 "Send where I am", the counter, one status chip, "New chat". <span class="cost">Strongest model</span></li>
+      <li><b>Chat cards</b>: one <code>ChatCard</code> shell for vault, notes, delete and error cards. <span class="cost">Strongest model</span></li>
+      <li><b>Server: the same password check in the <code>chat</code> function</b>, before any model call, plus an evaluation run. It covers the Claude connector and older app versions. Needs your OK to deploy. <span class="cost">Strongest model</span></li>
       <li><b>Phone checklist</b> (<code>docs/ui-tidy-phone-checklist.md</code>), then "build for Play" when you say so. <span class="cost">Sonnet</span></li>
     </ol>
-    <p>Places step 8 (place cards and the "📍 Share where I am" card) then builds on the card shell from PR 5. Doing PR 5 first saves building those cards twice.</p>
+    <p>Places step 8 then builds its place cards on the shell from PR 6.</p>
   </section>
 
   <!-- ===================== QUESTIONS ===================== -->
   <section id="questions">
     <h2>Your choices</h2>
+    <p class="lede">Decided 2026-10-07: U1 = A, variation A2 with ＋ and the counter; the password warning comes from the phone (and the server), not from Wilma; the chat slides up. Still open: U5 (card look; the plan assumes the one shell) and U8 (order; the plan does this before places step 8).</p>
     <div class="tbl">
       <table>
         <thead><tr><th>Question</th><th>Recommendation</th><th>Alternative</th></tr></thead>

@@ -2,8 +2,9 @@
 
 The owner finds the home screen and the chat "very clunky and all over the place". This is a
 design review: what feels clunky today, two or three layouts for each screen, a recommendation
-and a plan of small app-only PRs. **Nothing is built yet.** The owner picks (questions U1-U8 at the
-end), then the work starts.
+and a plan of small app-only PRs. **Decided 2026-10-07 (owner): Home A2 with ＋ and
+the usage counter, the password check on the phone (and in the `chat` function), and the chat
+sliding up from the bottom. Build next: the plan in section 3.** Nothing is built yet.
 
 **Mockups (light and dark, phone width):** https://claude.ai/artifact/PgrfNQnowFu3w5M4mHYQQA
 (private to the owner; source: `docs/ui-review-mockups.html`).
@@ -137,36 +138,56 @@ vault screen only, shows name and kind only, and never uses a server link; a del
 server's own question and labels; nothing runs until Delete is tapped. Places step 8's place
 cards and "📍 Share where I am" card use the same shell.
 
-## 3. Recommendation and plan
+## 3. Plan (decided 2026-10-07, build next)
 
-**Home A + Chat A + the card shell.** These fix the clunkiness the owner describes (stacked
-buttons, mixed styles, settings on home, stacked warnings) without moving any screen or reopening
-the one-box decisions. They also prepare the Settings screen and the card shell that places step 8,
-the miles/km setting and account deletion need anyway.
+**Into the full chat:** tapping ↑ on home slides the chat up from the bottom (mockup section
+"Newest: into the chat"), showing your message and then Wilma's answer; the box at the bottom
+is the same box. The Chat tile becomes wide and shows the last question ("💬 Continue · where's
+the wifi note?"; `lastUserText` in `lib/chatThread.ts`), or "💬 Chat" when empty, and opens the
+chat without sending. ‹ or Android back slides it away and keeps the conversation. Space names
+and the used-up note search work as today.
 
-Six small PRs, app only, no server change. Each passes `npm run check` and is tried in the browser
-preview (`docs/handoff.md`, "Trying the app in a browser"). They ship together in one Play build.
+Small PRs. Each passes `npm run check` and is tried in the browser preview (`docs/handoff.md`,
+"Trying the app in a browser"). PRs 1-6 are app only and ship together in one Play build.
 
-1. **Shared pieces** in `components/ui.tsx`: `IconButton`, `TextLink`, `Tile`, `GroupList`, and
-   a spacing scale (4/8/12/16/24). No visible change. *Model: Sonnet.*
-2. **Settings screen** (`app/src/app/settings.tsx`): meter, signed in as, change sign-in password
-   (the existing `/account` screen), recycle bin, sign out, version. Home gets ⚙ in its header and
-   drops the footer. *Sonnet.*
-3. **Home tidy:** action tiles (Chat, New note, Save here, Vault), round mic and Send, spaces as
-   a grouped list, one-line restricted row (`rows.tsx`). The 📍 tile opens the same
-   `/new-item?here=1` as today, so the location is still read only on that tap. *Sonnet.*
-4. **Chat composer:** icon buttons, one status chip, always-visible short password line with its
-   Vault link, "New chat", allowance shown once. Touches the password guidance and the 📍 wiring.
-   *Strongest model.*
-5. **Chat cards:** `ChatCard` shell used by vault, notes, delete and error cards; side-by-side
-   buttons; finished cards as one line. Touches the vault and delete cards. *Strongest model.*
-6. **Phone checklist** `docs/ui-tidy-phone-checklist.md` (home tiles, Settings, composer, 📍 on
-   and off, dictation, a delete card, a vault card, light and dark), then "build for Play" when
-   the owner says so. *Sonnet.*
+1. **Shared pieces** in `components/ui.tsx`: `IconButton`, `TextLink`, `Tile`, `GroupList`,
+   `WilmaBox` (3 lines growing to about 6; ＋ bottom left, counter centre, 🎤 and ↑ bottom right;
+   Return adds a line, only ↑ sends) and a spacing scale (4/8/12/16/24). No visible change.
+   *Model: Sonnet.*
+2. **Settings screen** (`app/src/app/settings.tsx`) behind ⚙: full meter, signed in as, change
+   sign-in password (the existing `/account` screen), recycle bin, sign out, version. Home drops
+   its footer. *Sonnet.*
+3. **Home A2:** the top panel with `WilmaBox`, the tiles (wide Continue/Chat, 📍 Save here, 🔒
+   Vault), the ＋ menu (new note; photo or file opens New note, which attaches after saving as
+   today), spaces as a grouped list with a one-line restricted row, the counter (amber from 80%,
+   red when used up; tap for Settings), and the chat screen's `animation: 'slide_from_bottom'`.
+   📍 Save here still opens `/new-item?here=1`, so the location is read only on that tap. *Sonnet.*
+4. **Password check on the phone** (home and chat): an app copy of the server's `findCredential`
+   (`supabase/functions/mcp/lib/credentials.ts`) with a test that both give the same answers on
+   the same cases; the amber card ("This looks like a password. Wilma won't send it.", **Save in
+   Vault** opening "Save a secret" without copying the text, **Edit message**); Send held; a
+   "Don't say passwords" line while the mic is on. *Strongest model.*
+5. **Chat with `WilmaBox`:** ＋ menu with 📍 "Send where I am" (replaces the 📍 button; the
+   location is still read only on that tap and sent with one message), the counter, one status
+   chip, "New chat". *Strongest model.*
+6. **Chat cards:** one `ChatCard` shell for vault, notes, delete and error cards (section 2,
+   "Chat cards"). *Strongest model.*
+7. **Server: the same check in the `chat` function** before any model call (and before the
+   classifier, which already has it), with an evaluation run; covers the Claude connector and
+   older app versions. Deploy needs the owner's OK. *Strongest model.*
+8. **Phone checklist** `docs/ui-tidy-phone-checklist.md` (home panel, ＋ menu, counter, Settings,
+   slide-up, Continue tile, password card on home and chat, 📍 on and off, dictation, a delete
+   card, a vault card, light and dark), then "build for Play" when the owner says so. *Sonnet.*
 
-Places step 8 then builds its cards on the shell from PR 5 (U8).
+Places step 8 then builds its place cards on the `ChatCard` shell from PR 6.
 
 ## 4. Questions for the owner
+
+**Decided 2026-10-07:** U1 (A, variation A2 with ＋ and the counter), U3 (Vault as a tile, the
+rest on Settings), U4 (📍 Save here stays a tile), U6/U7 (replaced: the password check on the
+phone shows a card when needed; no fixed hint line, except while the mic is on), U2 (chat A,
+with `WilmaBox`). Still open, with the plan assuming the recommendation: U5 (one card shell) and
+U8 (this before places step 8).
 
 - **U1. Home layout?** *Recommend:* A (tidy home + Settings), variation A2 (big box in a top panel). Alternatives: B tab bar, C chat as home.
 - **U2. Chat layout?** *Recommend:* A (compact composer, one status line). Alternatives: B "+" tray, C polish only.
