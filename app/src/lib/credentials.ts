@@ -212,9 +212,14 @@ function looksSecret(
 }
 
 function findLabelled(text: string): CredentialKind | null {
-  for (const m of text.matchAll(LABEL_RE)) {
-    const groups = m.groups!;
+  // exec, not matchAll: the phone's JavaScript engine (Hermes) leaves out named groups in
+  // matchAll's results, which crashed the app on "password" (versionCode 12). A fresh copy of the
+  // pattern, so its position never carries over between calls.
+  const re = new RegExp(LABEL_RE.source, LABEL_RE.flags);
+  for (let m = re.exec(text); m; m = re.exec(text)) {
+    const groups = m.groups ?? {};
     const idx = LABELS.findIndex((_, i) => groups[`l${i}`] !== undefined);
+    if (idx < 0) continue;
     const kind = LABELS[idx][0];
     const end = m.index! + m[0].length;
     const rest = text.slice(end, end + 200);

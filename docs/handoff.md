@@ -12,6 +12,17 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **versionCode 12 stop-ship: the app crashes when a message contains a label word** ("password",
+  "PIN", "token", "secret", "code"…), found by the owner typing "supabase pass…" in the chat. Cause:
+  on the phone's JavaScript engine (Hermes), `matchAll` results have no named `groups`, so the
+  password check (`findLabelled` in `credentials.ts`, new on the phone in UI PR 4) threw. Node and
+  Deno return the groups, so no test caught it. Reproduced and verified with the Hermes 0.13 CLI
+  (GitHub release). Fix: an `exec` loop on a fresh copy of the pattern, same change in the server
+  and app copies, plus a Jest test that strips `groups` from `matchAll` (it fails on the old code).
+  Needs a new build (versionCode 13); the server copy behaves the same under Deno, so its deploy
+  can wait for the next server change. **Lesson: run new phone-side regex code on Hermes**
+  (download `hermes-cli-linux.tar.gz` from github.com/facebook/hermes releases; `hermesc` in
+  `node_modules` only compiles).
 - **versionCode 12 building (owner: "build for Play", 2026-10-07).** Production build from `main`
   at 4d9e55e (GitHub run 37660106229, checks passed), Expo build
   3e11a3c6-35d5-47fd-950e-1d207625ab55, auto-submit scheduled (submission

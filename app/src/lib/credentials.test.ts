@@ -152,3 +152,28 @@ describe('credentialLabel', () => {
     expect(credentialLabel('access code')).toBe('an access code');
   });
 });
+
+describe("on the phone's JavaScript engine (Hermes)", () => {
+  // Hermes leaves `groups` out of matchAll's results (versionCode 12 crashed on "password").
+  // Imitate that here: the check must still work, and never throw, while text is typed.
+  it('works when matchAll drops named groups', () => {
+    const real = String.prototype.matchAll;
+    // eslint-disable-next-line no-extend-native -- put back in `finally` below
+    String.prototype.matchAll = function (this: string, re: RegExp) {
+      return Array.from(real.call(this, re), (m) => {
+        const copy = Object.assign([...m], { index: m.index, input: m.input }) as unknown as RegExpMatchArray;
+        return copy;
+      })[Symbol.iterator]() as unknown as RegExpStringIterator<RegExpExecArray>;
+    } as typeof String.prototype.matchAll;
+    try {
+      const typed = 'supabase password is Sunflower2024!';
+      for (let i = 1; i <= typed.length; i++) expect(() => findCredential(typed.slice(0, i))).not.toThrow();
+      expect(findCredential(typed)).toBe('password');
+      expect(findCredential('PIN 4821')).toBe('PIN');
+      expect(findCredential(`the door code is 1234`)).toBe('access code');
+    } finally {
+      // eslint-disable-next-line no-extend-native
+      String.prototype.matchAll = real;
+    }
+  });
+});
