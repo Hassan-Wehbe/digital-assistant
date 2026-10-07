@@ -1,4 +1,4 @@
-# Phone checklist: "near me" in the chat (places step 7)
+# Phone checklist: "near me" in the chat (places step 7), editing spaces
 
 For the owner, on the **next build after versionCode 10**. That build carries the chat's 📍
 button (#110). Before the build: #108 is merged and `chat` + `mcp` are deployed (otherwise a 📍
@@ -48,9 +48,25 @@ with your own account, somewhere near one of your saved places that has a locati
 - [ ] Close Wilma fully and open it again: the conversation is there, but there's **no 📍 on**
   and nothing about your location in the thread.
 
+## Editing a space and moving a note (#114, #115)
+
+- [ ] Open a space: the header has **Edit** (Delete is still at the bottom). Edit opens with the
+  name and description filled in.
+- [ ] Make a test space "Test box", then Edit: rename it "Test crate" and add a description. Save:
+  you are back in the space with the **new name** in the title; the home list shows it too.
+- [ ] Edit again, clear the description, Save: it is gone. Its notes are still inside.
+- [ ] Try the name `Test/crate`: **refused** with a plain sentence. Try the name of another space
+  next to it: refused ("already a space called ..."). Nothing changed.
+- [ ] Description `gate code 7719`: **refused**, pointing to the Vault.
+- [ ] Open a note, **Edit note**: a **Space** row with chips (no 🔒 restricted spaces). Pick
+  "Test crate", Save: the note is now in Test crate, and no longer in its old space.
+- [ ] In the chat: "rename Test crate to Test bin". Wilma does it; the space shows the new name.
+  "Make my Private space unrestricted": she says she can't do that, and nothing changes.
+
 ## Clean up
 
 - [ ] Delete "Test bench" if it was made, and any other test place (they go to the recycle bin).
+- [ ] Move the test note back to its space, then delete the empty "Test bin" space.
 
 ## Report back
 
@@ -59,5 +75,6 @@ Tell me which lines failed, what you did and what you saw. These are stop-ships:
 - the location asked at start-up, or read without a 📍 tap;
 - the location sent with a second message you didn't tap 📍 for;
 - a restricted place shown, or hinted at, in a "near me" answer;
-- your location or a code saved in a note;
+- your location or a code saved in a note or a space description;
+- a space's restricted setting changed;
 - Wilma giving a distance for a place without a location.
