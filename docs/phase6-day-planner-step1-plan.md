@@ -1,6 +1,8 @@
 # Day planner, step 1: the phone's calendar (Android and iPhone)
 
-Status: **plan, waiting for the owner's review** (decisions Q1-Q8 below). Parent decision:
+Status: **approved by the owner (2026-10-07); build after Places (D26) and the UI tidy-up
+(`docs/ui-review.md`)** are done. Decisions Q1-Q8 below (Q1 decided; the rest as recommended unless
+the owner changes them when the build starts). Parent decision:
 `docs/design.md` D25 (changed 2026-10-07: the calendar is read **on the phone**). Comes **after
 Places** (D26) and needs **no company account and no Google setup**. The earlier Google-connection
 plan is kept, deferred, in `docs/day-planner-google-connection-plan.md`. Nothing is built. Read

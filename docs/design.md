@@ -160,7 +160,7 @@ Either way: libsodium / Web Crypto primitives only, no home-grown crypto,
 6. **Day planner (D25):** the phone's calendar (Android and iPhone, read on the device), Wilma tasks
    with assignment, prioritized timed plan with traffic and weather, then morning briefing and
    leave-by alerts; a **date planner** built on saved places (D26). Step 1 (phone calendar) starts
-   after Places and needs no company account; Google Tasks, traffic/hours and Google services come
+   after Places and the UI tidy-up (`docs/ui-review.md`) and needs no company account; Google Tasks, traffic/hours and Google services come
    with the company account.
    Voice listens for a wake word built from `assistant_name` ("Hey Wilma"), e.g. a
    custom openWakeWord model; renaming the assistant means training a new wake word.
