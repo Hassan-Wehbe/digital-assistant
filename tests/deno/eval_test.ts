@@ -49,7 +49,7 @@ const caseById = (id: string) => CASES.find((c) => c.id === id)!;
 Deno.test("eval world: the real tools save, search and read through the pretend account", async () => {
   const s = await openSession();
   assertEquals(s.tools.length, ALL_TOOLS.length);
-  assertEquals(s.tools.length, 23);
+  assertEquals(s.tools.length, 24);
   assert(s.system.includes("You are Wilma"));
   assert(s.system.includes("save_secret"), "the server instructions are part of the system prompt");
   assert(s.system.includes("update_item"), "update an existing note rather than creating a duplicate");

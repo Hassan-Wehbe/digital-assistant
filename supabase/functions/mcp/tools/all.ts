@@ -2,6 +2,7 @@
 // evaluation (tests/eval/harness.ts) all register exactly these, so they cannot drift apart.
 import { registerListSpaces } from "./list_spaces.ts";
 import { registerCreateSpace } from "./create_space.ts";
+import { registerUpdateSpace } from "./update_space.ts";
 import { registerSaveItem } from "./save_item.ts";
 import { registerUpdateItem } from "./update_item.ts";
 import { registerGetItem } from "./get_item.ts";
@@ -26,6 +27,7 @@ import type { RegisterTool } from "./_shared.ts";
 export const ALL_TOOLS: RegisterTool[] = [
   registerListSpaces,
   registerCreateSpace,
+  registerUpdateSpace,
   registerSaveItem,
   registerUpdateItem,
   registerGetItem,
