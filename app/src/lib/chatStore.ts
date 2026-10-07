@@ -8,7 +8,10 @@
 //
 // The pieces are passed in so the logic can be unit-tested without a phone.
 
-import { errorButtons, MAX_ENTRIES, MAX_TEXT, noteRef, PARTIAL_NOTE, type ConfirmState, type Entry, type NoteRef } from './chatThread';
+import { toPlaceCard } from './chatStream';
+import {
+  errorButtons, MAX_ENTRIES, MAX_TEXT, noteRef, PARTIAL_NOTE, type ConfirmState, type Entry, type LocationState, type NoteRef, type PlaceRef,
+} from './chatThread';
 import type { AuthStorage } from './sessionStorage';
 
 const PREFIX = 'wilma.chat.';
@@ -36,6 +39,24 @@ const str = (v: unknown): v is string => typeof v === 'string';
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const cut = (text: string) => (text.length > MAX_TEXT ? text.slice(0, MAX_TEXT) : text);
 const CONFIRM_STATES: ConfirmState[] = ['pending', 'running', 'deleted', 'cancelled', 'not_done', 'failed'];
+const LOCATION_STATES: LocationState[] = ['pending', 'locating', 'shared', 'dismissed', 'not_done'];
+
+/**
+ * A place card as saved: what it shows and opens, never the place's position or the distance
+ * measured from where the user was (places plan step 8: the saved thread keeps neither).
+ */
+export function savedPlace(raw: unknown): PlaceRef | null {
+  const c = toPlaceCard(raw);
+  if (!c) return null;
+  return {
+    id: c.id,
+    title: cut(c.title),
+    ...(c.kind ? { kind: c.kind } : {}),
+    cuisine: c.cuisine,
+    ...(c.address ? { address: c.address } : {}),
+    ...(c.maps_url ? { maps_url: c.maps_url } : {}),
+  };
+}
 
 /** A card saved while its delete was under way (the app closed): it may or may not have happened. */
 export const INTERRUPTED = 'The app closed before this finished. Check whether it was deleted before trying again.';
@@ -104,6 +125,17 @@ export function toEntry(raw: unknown): Entry | null {
           ...(str(n.snippet) ? { snippet: n.snippet } : {}),
         }));
       return notes.length ? { kind: 'notes', id, query: cut(raw.query), notes } : null;
+    }
+    case 'places': {
+      if (!Array.isArray(raw.cards)) return null;
+      const cards = raw.cards.map(savedPlace).filter((c): c is PlaceRef => c !== null).slice(0, 5);
+      return cards.length ? { kind: 'places', id, cards } : null;
+    }
+    case 'location': {
+      if (!str(raw.question) || !raw.question || !LOCATION_STATES.includes(raw.state as LocationState)) return null;
+      // Closed while reading the location: it waits again (nothing was sent).
+      const state = raw.state === 'locating' ? 'pending' : (raw.state as LocationState);
+      return { kind: 'location', id, question: cut(raw.question), state };
     }
     default:
       return null;

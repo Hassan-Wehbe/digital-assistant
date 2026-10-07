@@ -313,6 +313,17 @@ Step 3 shows them (cuisine chips, price, occasions, dishes, **We went again** ad
         📍 Share where I am: one reading on the tap, then the last question again with the
         point). Older app versions drop unknown events safely; Wilma's text names the places
         anyway. The saved thread keeps no distances or coordinates.
+        **As built (PR 4):** `chatStream.ts` reads `places` (each card copied field by field, at
+        most 5, a position or distance only when valid) and `location_request`. The thread gets a
+        `places` entry (📍 card: name; kind and cuisine with "about N miles" from `distanceText`;
+        address; Open in Maps via `mapsLink`, Google Maps or `geo:` links only; Open note) and a
+        `location` entry (Not now / 📍 Share where I am, once per answer, holding the question it
+        answers). The tap (`shareFromCard` in `chatHere.ts`): one reading with `whereAmI` (the
+        permission asked only then), then that question goes to Wilma again with the point, for
+        that message only; refused or location off: the reason on the card, nothing sent; a message
+        sent meanwhile wins (the card becomes "Location not shared"). Saved thread
+        (`chatStore.ts`): place cards keep name, kind, cuisine, address and Maps link only, never a
+        position or distance; a 📍 card keeps its question and state. Ships with the next Play build.
      5. **Docs and privacy for Q17:** privacy sentence (owner approves): "When you tap *Find on
         the map* on a place, Wilma's server sends the place's name and your approximate area (to
         about 10 km) to OpenStreetMap's search service (Nominatim, run by the OpenStreetMap

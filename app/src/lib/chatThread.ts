@@ -10,7 +10,7 @@
 // A search the classifier recognised (step 6) is written the same way, with a notes card.
 
 import { cancelledMessage, checkDelete, deletedMessage } from './chatDeletes';
-import type { ChatEvent } from './chatStream';
+import type { ChatEvent, PlaceCardData } from './chatStream';
 import type { Route } from './router';
 
 /** At most this many entries are kept (oldest dropped). */
@@ -79,6 +79,20 @@ export function lastUserText(entries: Entry[]): string | null {
  */
 export type ConfirmState = 'pending' | 'running' | 'deleted' | 'cancelled' | 'not_done' | 'failed';
 
+/**
+ * The "📍 Share where I am" card: waiting (pending, maybe with why the last try failed), reading
+ * the location once (locating), then shared (the question went again with the point), Not now,
+ * or not done (the conversation moved on).
+ */
+export type LocationState = 'pending' | 'locating' | 'shared' | 'dismissed' | 'not_done';
+
+/**
+ * A place card. While the app runs it may hold the place's position and the distance the server
+ * measured; the saved thread keeps neither (chatStore.ts), so no trace of where the user was is
+ * written to the phone.
+ */
+export type PlaceRef = PlaceCardData;
+
 export type Entry =
   | { kind: 'user'; id: string; text: string }
   | { kind: 'assistant'; id: string; text: string }
@@ -108,7 +122,11 @@ export type Entry =
     }
   | { kind: 'error'; id: string; code: string; message: string; buttons: ErrorButton[]; note?: string }
   /** The notes found for a search the classifier recognised (step 6), with "Ask Wilma instead". */
-  | { kind: 'notes'; id: string; query: string; notes: NoteRef[] };
+  | { kind: 'notes'; id: string; query: string; notes: NoteRef[] }
+  /** Places Wilma's answer names (places step 8): Open in Maps, Open note. */
+  | { kind: 'places'; id: string; cards: PlaceRef[] }
+  /** Wilma asked where the user is: Not now / 📍 Share where I am, which sends `question` again. */
+  | { kind: 'location'; id: string; question: string; state: LocationState; error?: string };
 
 export interface ChatState {
   entries: Entry[];
@@ -159,7 +177,15 @@ export type ChatAction =
   /** The card's delete failed; Delete and Cancel stay. */
   | { type: 'confirm_failed'; id: string; error: string }
   /** Cancel tapped on a card. */
-  | { type: 'confirm_cancel'; id: string };
+  | { type: 'confirm_cancel'; id: string }
+  /** "📍 Share where I am" tapped: the location is being read (once). */
+  | { type: 'location_start'; id: string }
+  /** It could not be read: the card waits again, saying why. */
+  | { type: 'location_failed'; id: string; error: string }
+  /** It was read: the card is done (the caller then sends the question again with the point). */
+  | { type: 'location_shared'; id: string }
+  /** "Not now" tapped. */
+  | { type: 'location_dismiss'; id: string };
 
 /** A thread as loaded from the phone (or empty). Status, banner and limits start fresh. */
 export function initialChat(entries: Entry[] = [], noticeDismissed: string | null = null): ChatState {
@@ -230,6 +256,11 @@ export function cardActive(state: ChatState, entry: Entry): boolean {
   );
 }
 
+/** A "📍 Share where I am" card can be tapped: it waits, and a message can go to Wilma now. */
+export function locationActive(state: ChatState, entry: Entry): boolean {
+  return entry.kind === 'location' && entry.state === 'pending' && canSend(state);
+}
+
 /**
  * What goes to the server: user and assistant text only, up to and including the last user
  * message (a half-written answer before a Try again is left out), at most the last 20.
@@ -246,9 +277,13 @@ export function messagesToSend(entries: Entry[]): { role: 'user' | 'assistant'; 
 const cut = (text: string) => (text.length > MAX_TEXT ? text.slice(0, MAX_TEXT) : text);
 const cap = (entries: Entry[]) => (entries.length > MAX_ENTRIES ? entries.slice(-MAX_ENTRIES) : entries);
 
-/** The conversation moved on: a delete card left unanswered can no longer be tapped. */
+/** The conversation moved on: a delete or 📍 card left unanswered can no longer be tapped. */
 function moveOn(entries: Entry[]): Entry[] {
   return entries.map((e) => {
+    if (e.kind === 'location' && (e.state === 'pending' || e.state === 'locating')) {
+      const { error: _, ...rest } = e;
+      return { ...rest, state: 'not_done' as const };
+    }
     if (e.kind !== 'confirm' || (e.state !== 'pending' && e.state !== 'failed')) return e;
     const { error: _, ...rest } = e;
     return { ...rest, state: 'not_done' as const };
@@ -278,6 +313,17 @@ function add(state: ChatState, entry: Entry): ChatState {
 }
 
 type ConfirmEntry = Extract<Entry, { kind: 'confirm' }>;
+type LocationEntry = Extract<Entry, { kind: 'location' }>;
+
+/** Replaces one 📍 card (by id) with its next state; unchanged when there is none or `change` says no. */
+function withLocation(state: ChatState, id: string, change: (card: LocationEntry) => LocationEntry | null): ChatState {
+  const at = state.entries.findIndex((e) => e.id === id);
+  const card = state.entries[at];
+  if (!card || card.kind !== 'location') return state;
+  const next = change(card);
+  if (!next) return state;
+  return { ...state, entries: state.entries.map((e, i) => (i === at ? next : e)) };
+}
 
 /** Replaces one card (by id) with its next state; unchanged when there is no such card or `change` says no. */
 function withCard(state: ChatState, id: string, change: (card: ConfirmEntry) => ConfirmEntry | null): ChatState {
@@ -341,6 +387,15 @@ function onEvent(state: ChatState, event: ChatEvent): ChatState {
         ...(event.secret_type ? { secretType: event.secret_type } : {}),
         ...(event.new_secret ? { newSecret: true as const } : {}),
       });
+    case 'places':
+      return add(state, { kind: 'places', id, cards: event.cards.map((c) => ({ ...c, title: cut(c.title) })) });
+    case 'location_request': {
+      // One card per answer, for the question it answers; nothing to ask again without one.
+      const question = lastUserText(state.entries);
+      const lastUser = state.entries.findLastIndex((e) => e.kind === 'user');
+      if (!question || state.entries.slice(lastUser + 1).some((e) => e.kind === 'location')) return state;
+      return add(state, { kind: 'location', id, question, state: 'pending' });
+    }
     case 'error': {
       const partial = event.code === 'connection' && state.tools.some((t) => !READ_ONLY_TOOLS.has(t));
       const entry: Entry = {
@@ -421,5 +476,23 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       if (!card || card.kind !== 'confirm' || state.streaming) return state;
       return answerCard(state, action.id, ['pending', 'failed'], 'cancelled', cancelledMessage);
     }
+    case 'location_start': {
+      const card = state.entries.find((e) => e.id === action.id);
+      if (!card || !locationActive(state, card)) return state;
+      return withLocation(state, action.id, (c) => {
+        const { error: _, ...rest } = c;
+        return { ...rest, state: 'locating' };
+      });
+    }
+    case 'location_failed':
+      return withLocation(state, action.id, (c) => (c.state === 'locating' ? { ...c, state: 'pending', error: cut(action.error) } : null));
+    case 'location_shared':
+      return withLocation(state, action.id, (c) => (c.state === 'locating' ? { ...c, state: 'shared' } : null));
+    case 'location_dismiss':
+      return withLocation(state, action.id, (c) => {
+        if (c.state !== 'pending') return null;
+        const { error: _, ...rest } = c;
+        return { ...rest, state: 'dismissed' };
+      });
   }
 }

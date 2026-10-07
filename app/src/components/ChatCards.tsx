@@ -6,17 +6,23 @@
 // A vault card opens the app's own vault screen when tapped (never by itself, so a reply still
 // being written is not interrupted), and never the server's link (lib/chatVault.ts).
 //
+// A place card (places step 8) lists the places Wilma's answer names, each with Open in Maps and
+// Open note; the "📍 Share where I am" card reads the location only when its button is tapped.
+//
 // All of them use the one ChatCard shell (plan step 6): Cancel first, one filled main action,
 // Delete as red text, finished cards as one dimmed line.
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Linking, Pressable, Text, View } from 'react-native';
 
 import { ChatCard, ChatCardDone, ChatCardText } from '@/components/ChatCard';
 import { UnlockCard } from '@/components/UnlockCard';
-import { Button, Muted, useColors } from '@/components/ui';
+import { Button, Muted, TextLink, useColors } from '@/components/ui';
 import { CANT_DO, checkDelete, needsVault } from '@/lib/chatDeletes';
+import { LOCATION_ASK, LOCATION_DONE } from '@/lib/chatHere';
 import type { Entry } from '@/lib/chatThread';
+import { mapsLink, placeCardDetail } from '@/lib/places';
+import { distanceText } from '@/lib/units';
 import { vaultCardText, vaultRoute } from '@/lib/chatVault';
 import { useVault } from '@/lib/vault';
 
@@ -147,6 +153,81 @@ export function NotesCard({
           </View>
         </Pressable>
       ))}
+    </ChatCard>
+  );
+}
+
+/** The places Wilma's answer names: name, kind and cuisine, about how far, Open in Maps, Open note. */
+export function PlacesCard({ entry }: { entry: Extract<Entry, { kind: 'places' }> }) {
+  const c = useColors();
+  const [problem, setProblem] = useState<string | null>(null);
+  const openMaps = async (link: string) => {
+    setProblem(null);
+    try {
+      await Linking.openURL(link);
+    } catch {
+      setProblem('Could not open Google Maps on this phone.');
+    }
+  };
+  return (
+    <ChatCard icon="📍">
+      {entry.cards.map((p) => {
+        const detail = placeCardDetail(p);
+        const far = p.distance ? distanceText(p.distance.value, p.distance.unit) : '';
+        const link = mapsLink({ address: p.address, maps_url: p.maps_url, lat: p.lat, lng: p.lng });
+        return (
+          <View key={p.id} style={{ gap: 2 }}>
+            <Text style={{ color: c.text, fontSize: 16, fontWeight: '600' }}>{p.title}</Text>
+            {detail || far ? <Muted>{[detail, far].filter(Boolean).join(' · ')}</Muted> : null}
+            {p.address ? <Muted>{p.address}</Muted> : null}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginTop: 2 }}>
+              {link ? <TextLink title="Open in Maps" accessibilityLabel={`Open ${p.title} in Maps`} onPress={() => void openMaps(link)} /> : null}
+              <TextLink
+                title="Open note"
+                accessibilityLabel={`Open the note for ${p.title}`}
+                onPress={() => router.push({ pathname: '/item/[id]', params: { id: p.id } })}
+              />
+            </View>
+          </View>
+        );
+      })}
+      {problem ? <Text style={{ color: c.danger, fontSize: 15 }}>{problem}</Text> : null}
+    </ChatCard>
+  );
+}
+
+/**
+ * Wilma asks where the user is (Q11). Nothing is read until "📍 Share where I am" is tapped; then
+ * one reading, and the question goes to Wilma again with it. Not now leaves it.
+ */
+export function LocationCard({
+  entry,
+  active,
+  onShare,
+  onNotNow,
+}: {
+  entry: Extract<Entry, { kind: 'location' }>;
+  /** Its buttons can be tapped (it waits, and a message can go to Wilma now). */
+  active: boolean;
+  onShare: () => void;
+  onNotNow: () => void;
+}) {
+  const c = useColors();
+  if (entry.state === 'shared' || entry.state === 'dismissed' || entry.state === 'not_done') {
+    return <ChatCardDone icon="📍" text={LOCATION_DONE[entry.state]} />;
+  }
+  const locating = entry.state === 'locating';
+  return (
+    <ChatCard
+      icon="📍"
+      actions={
+        <>
+          <Button title="Not now" kind="plain" onPress={onNotNow} disabled={!active} />
+          <Button title={locating ? 'Finding where you are…' : '📍 Share where I am'} onPress={onShare} disabled={!active} />
+        </>
+      }>
+      <ChatCardText>{LOCATION_ASK}</ChatCardText>
+      {entry.error ? <Text style={{ color: c.warn, fontSize: 15 }}>{entry.error}</Text> : null}
     </ChatCard>
   );
 }

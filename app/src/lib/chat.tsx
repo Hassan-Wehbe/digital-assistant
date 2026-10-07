@@ -16,17 +16,21 @@
 //
 // A message sent with the 📍 location (places step 7) goes straight to Wilma, past the router and
 // the classifier, and the location goes with that one message only. It is kept in memory just for
-// Try again on that message, and is never saved with the thread.
+// Try again on that message, and is never saved with the thread. The same holds for Wilma's
+// "📍 Share where I am" card (places step 8): one reading on the tap, then the card's question
+// goes to Wilma again with the point.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { useAuth } from './auth';
 import type { SharedPoint } from './chatClient';
 import { MAX_NOTES, routeMessage, type MessageRoute } from './chatRoute';
+import { shareFromCard } from './chatHere';
 import { runConfirm, runTurn } from './chatRun';
 import { threadsToKeep } from './chatStore';
 import { findCredential } from './credentials';
 import { canLookup, chatReducer, initialChat, monthKey, noticeVisible, type ChatAction, type ChatState } from './chatThread';
 import { deviceChatStore } from './deviceStorage';
+import { deviceLocation } from './location';
 import { useVault } from './vault';
 
 /** What happened to a message, so the screen can follow it. */
@@ -69,6 +73,10 @@ interface ChatContextValue {
   confirmDelete(id: string): void;
   /** Cancel tapped on a card: nothing runs. */
   cancelDelete(id: string): void;
+  /** "📍 Share where I am" tapped on Wilma's card: one reading, then the question again with it. */
+  shareLocation(id: string): void;
+  /** "Not now" tapped on that card. */
+  dismissLocation(id: string): void;
 }
 
 const ChatContext = createContext<ChatContextValue | null>(null);
@@ -266,6 +274,20 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       },
       cancelDelete(id) {
         act({ type: 'confirm_cancel', id });
+      },
+      shareLocation(id) {
+        if (!loadedFor || loadedFor !== userId) return;
+        const forUser = user.current;
+        shareFromCard(() => current.current, act, id, deviceLocation, () => user.current === forUser).then((out) => {
+          if (!out || user.current !== forUser || findCredential(out.question)) return;
+          const before = current.current;
+          if (before.blocked !== null) return;
+          const next = act({ type: 'send', text: out.question });
+          if (next !== before) start(next.entries, out.here);
+        });
+      },
+      dismissLocation(id) {
+        act({ type: 'location_dismiss', id });
       },
     }),
     [state, routingNow, loadedFor, userId, act, start, abort, wilma, chat, removeSecret, signOut],
