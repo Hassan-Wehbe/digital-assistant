@@ -40,14 +40,9 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
         // A place's fields are checked by the server and added to the searchable text.
         let place = isPlace(item_type) ? normalizePlace(metadata) : null;
         const target = resolveSpace(await loadSpaces(db), space);
-        // A Maps link and no location: read the location from the link (Q15). Never fails the save.
+        // A Maps link with coordinates and no location: the location is read from the link (Q15).
         let locationFromLink = false;
-        if (place) {
-          const r = await withLinkLocation(place);
-          ({ place, filled: locationFromLink } = r);
-          // Codes and counts only (never the link or the point), to see how Google answers.
-          if (r.log) console.log(r.log);
-        }
+        if (place) ({ place, filled: locationFromLink } = withLinkLocation(place));
         const chunks = await chunkAndEmbed({ title, summary, body: withPlace(body, place) });
         const { data, error } = await db.rpc("save_item", {
           p_space_id: target.id,

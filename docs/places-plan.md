@@ -229,6 +229,16 @@ Step 3 shows them (cuisine chips, price, occasions, dishes, **We went again** ad
      view), then drop it; the log line says which pattern matched and how many bytes were read.
      Alternatives turned down: (b) no link following (locations only from Use where I am now or a
      long link), (c) a paid address lookup (shared places have no address).
+     **Result of (a), 2026-10-07: wrong, so withdrawn.** `mcp` v18 read the page and found only
+     the preview image's centre (`found: page_image`), which put Hinode Sushi (Oviedo, Florida)
+     about 800 miles away, in northern Virginia: the page Google sends a server does not hold the
+     place's pin. The wrong location was cleared (history kept). **Owner's decision: (b).** The
+     server no longer opens any link: only coordinates written in a long Maps link or a `geo:`
+     link are read (`mcp` 0.8.5); short share links are kept as they are. A shared place gets its
+     location from **Use where I am now**, or by pasting a long Google Maps link (from a
+     computer's browser address bar). The one-off `place-locations` function and its code are
+     removed; the privacy sentence (#126) was closed unpublished. Q3 stands again: short links are
+     not followed.
    - **Honest "nothing near" answers** (Q16, same testing): when matching places have no saved
      location, Wilma names them ("Hinode Sushi might be near, but it has no saved location") and
      offers Open in Maps or to add the location, instead of "nothing close by".
