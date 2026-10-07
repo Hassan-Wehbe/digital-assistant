@@ -161,6 +161,148 @@ export function Muted({ children }: { children: ReactNode }) {
   return <Text style={{ color: c.muted, fontSize: 14 }}>{children}</Text>;
 }
 
+/** The spacing scale (docs/ui-review.md): gaps and padding use these, nothing in between. */
+export const space = { xs: 4, s: 8, m: 12, l: 16, xl: 24 } as const;
+
+/** A link-styled button: "+ New space", "Conversation". */
+export function TextLink({ title, onPress, accessibilityLabel }: { title: string; onPress: () => void; accessibilityLabel?: string }) {
+  const c = useColors();
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel} onPress={onPress} hitSlop={8} style={{ alignSelf: 'flex-start' }}>
+      <Text style={{ color: c.accent, fontSize: 16, fontWeight: '600' }}>{title}</Text>
+    </Pressable>
+  );
+}
+
+/**
+ * A round button holding one symbol (＋, 🎤, ↑). `label` is what a screen reader says, so it must
+ * name the action ("Send", "Dictate"), never the symbol. kind: plain (no outline), outline,
+ * primary (filled accent: Send), danger (filled red: the mic while listening).
+ */
+export function IconButton({
+  icon,
+  label,
+  onPress,
+  disabled,
+  kind = 'outline',
+  selected,
+  busy,
+}: {
+  icon: string;
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  kind?: 'plain' | 'outline' | 'primary' | 'danger';
+  selected?: boolean;
+  busy?: boolean;
+}) {
+  const c = useColors();
+  const filled = kind === 'primary' || kind === 'danger' || selected;
+  const fill = kind === 'danger' ? c.danger : c.accent;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !!disabled, selected: !!selected, busy: !!busy }}
+      onPress={onPress}
+      disabled={disabled}
+      hitSlop={4}
+      style={({ pressed }) => [
+        styles.iconButton,
+        filled ? { backgroundColor: fill } : kind === 'outline' ? { borderColor: c.line, borderWidth: 1, backgroundColor: c.card } : null,
+        (pressed || disabled) && { opacity: 0.5 },
+      ]}>
+      <Text style={{ fontSize: 17, fontWeight: '700', color: filled ? '#ffffff' : c.accent }}>{icon}</Text>
+    </Pressable>
+  );
+}
+
+/** One action tile (💬 Chat, 📍 Save here, 🔒 Vault); tiles sit in a row and share its width. */
+export function Tile({
+  icon,
+  title,
+  subtitle,
+  onPress,
+  accessibilityLabel,
+  grow = 1,
+}: {
+  icon: string;
+  title: string;
+  /** A second, muted line ("where's the wifi note?"), cut to one line. */
+  subtitle?: string;
+  onPress: () => void;
+  accessibilityLabel?: string;
+  /** Share of the row's width (the Continue tile is wider). */
+  grow?: number;
+}) {
+  const c = useColors();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      onPress={onPress}
+      style={({ pressed }) => [
+        { flex: grow, minWidth: 0, borderWidth: 1, borderRadius: 12, borderColor: c.line, backgroundColor: c.card, padding: space.s, gap: 2 },
+        subtitle ? { alignItems: 'flex-start' } : { alignItems: 'center' },
+        pressed && { opacity: 0.6 },
+      ]}>
+      <Text style={{ color: c.text, fontSize: 14, fontWeight: '600' }} numberOfLines={1}>
+        {subtitle ? `${icon} ${title}` : icon}
+      </Text>
+      <Text style={{ color: subtitle ? c.muted : c.text, fontSize: 13 }} numberOfLines={1}>
+        {subtitle ?? title}
+      </Text>
+    </Pressable>
+  );
+}
+
+/** Rows in one rounded box with thin lines between them (spaces on home, Settings). */
+export function GroupList({ children }: { children: ReactNode }) {
+  const c = useColors();
+  return <View style={{ borderWidth: 1, borderRadius: 12, borderColor: c.line, backgroundColor: c.card, overflow: 'hidden' }}>{children}</View>;
+}
+
+/** A row of a GroupList. Without onPress it is plain text (a restricted space, "Signed in as"). */
+export function GroupRow({
+  title,
+  subtitle,
+  onPress,
+  first,
+  dimmed,
+}: {
+  title: string;
+  subtitle?: string;
+  onPress?: () => void;
+  /** The first row has no line above it. */
+  first?: boolean;
+  dimmed?: boolean;
+}) {
+  const c = useColors();
+  const body = (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.s, paddingVertical: space.m, paddingHorizontal: space.m }}>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={{ color: c.text, fontSize: 16, fontWeight: onPress ? '600' : '400' }}>{title}</Text>
+        {subtitle ? <Muted>{subtitle}</Muted> : null}
+      </View>
+      {onPress ? <Text style={{ color: c.muted, fontSize: 20 }}>›</Text> : null}
+    </View>
+  );
+  const frame = [!first && { borderTopWidth: 1, borderTopColor: c.line }, dimmed && { opacity: 0.6 }];
+  return onPress ? (
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [...frame, pressed && { opacity: 0.6 }]}>
+      {body}
+    </Pressable>
+  ) : (
+    <View style={frame}>{body}</View>
+  );
+}
+
+/** The white top panel on home that holds the Wilma box and the tiles, apart from what is below. */
+export function Panel({ children }: { children: ReactNode }) {
+  const c = useColors();
+  return <View style={{ backgroundColor: c.card, borderBottomWidth: 1, borderBottomColor: c.line, padding: space.m, gap: space.m }}>{children}</View>;
+}
+
 export const styles = StyleSheet.create({
   card: { borderWidth: 1, borderRadius: 12, padding: 16, gap: 8 },
   button: { borderRadius: 8, paddingVertical: 12, paddingHorizontal: 16, alignItems: 'center' },
@@ -170,4 +312,5 @@ export const styles = StyleSheet.create({
   title: { fontSize: 17, fontWeight: '600' },
   body: { fontSize: 16, lineHeight: 24 },
   input: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16 },
+  iconButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
 });
