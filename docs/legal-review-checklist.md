@@ -34,6 +34,8 @@ and is a starting point, not legal advice.
       after a waiting period; consent wording, incapacity or death, estate questions.
 - [ ] **Item sharing and task assignment** (D14, D25): users store and share details about other
       people (names, visits "with Sarah"); responsibilities in the terms.
+- [ ] **Calendar** (D25): read on the phone, chosen calendars only, needed lines sent to the AI
+      provider, nothing stored; later Google connection under Google's Limited Use policy.
 - [ ] **Location** (D26 "Save where I am"): on-tap only, stored in the note; consent wording.
 - [ ] **AI**: disclosure that answers come from AI providers, provider data terms (no training on
       API data), any AI-disclosure laws in force at launch.
