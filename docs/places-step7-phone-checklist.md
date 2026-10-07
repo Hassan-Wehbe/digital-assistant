@@ -1,6 +1,6 @@
-# Phone checklist: "near me" in the chat (places step 7), editing spaces
+# Phone checklist: "near me" in the chat (places step 7), editing spaces, usage meter
 
-For the owner, on the **next build after versionCode 10**. That build carries the chat's 📍
+For the owner, on **versionCode 11** (started 2026-10-07 from `main` at 87f5ec4), the next build after versionCode 10. That build carries the chat's 📍
 button (#110). Before the build: #108 is merged and `chat` + `mcp` are deployed (otherwise a 📍
 message gets "trouble connecting"), and the privacy sentence (#111) is merged. About 10 minutes,
 with your own account, somewhere near one of your saved places that has a location (the
@@ -62,6 +62,14 @@ with your own account, somewhere near one of your saved places that has a locati
   "Test crate", Save: the note is now in Test crate, and no longer in its old space.
 - [ ] In the chat: "rename Test crate to Test bin". Wilma does it; the space shows the new name.
   "Make my Private space unrestricted": she says she can't do that, and nothing changes.
+
+## Usage meter (#118)
+
+- [ ] Home screen, at the bottom: a thin bar and "About N requests left this month · resets Nov 1".
+- [ ] Send two or three messages to Wilma, come back to the home screen (or pull down): the number
+  is the same or lower, never higher.
+- [ ] No dollar amounts anywhere. (From 80% used the meter moves under the box and turns amber;
+  you won't see that unless your month is nearly used.)
 
 ## Clean up
 
