@@ -178,11 +178,24 @@ Small PRs. Each passes `npm run check` and is tried in the browser preview (`doc
 6. **Chat cards:** one `ChatCard` shell for vault, notes, delete and error cards (section 2,
    "Chat cards"). *Strongest model.*
 7. **Server: the same check in the `chat` function** before any model call (and before the
-   classifier, which already has it), with an evaluation run; covers the Claude connector and
-   older app versions. Deploy needs the owner's OK. *Strongest model.*
+   classifier, which already has it), with an evaluation run; covers older app versions and
+   any other front end that uses the chat function. Deploy needs the owner's OK. *Strongest model.*
    Found while building PR 4: neither check catches a very casual "i think its Kitten77" ("its"
    without the apostrophe, after "pw?"); look at it with the evaluation, then copy any change to
    the app.
+   **As built:** `chat.ts` `screenCredentials` runs before the allowance check and any model call.
+   A new message that looks like a credential gets a fixed answer (`messages.ts` `heldText`,
+   naming the kind, never the value; plain text, so every app version shows it), nothing is
+   counted, and the log line says `credential_held` with the kind only. Earlier messages in the
+   history that look like one, and Wilma's reply right after such a message, become
+   `REMOVED_TEXT` before the conversation reaches the model (older app versions keep them in the
+   thread and resend them). **Correction:** this does not cover the Claude connector: there the
+   Claude app sends the conversation to Anthropic itself and Wilma's server only sees tool calls,
+   so rule 9's check in `save_item`/`update_item` stays the guard. **Evaluation:** the harness
+   (`tests/eval/harness.ts`) runs the model loop without this step, so the secret traps still
+   measure the model on its own, and a run would show the same results; nothing changes for
+   messages without a credential. The "its Kitten77" case is left as is: catching "its <word>"
+   would also flag ordinary sentences.
 8. **Phone checklist** `docs/ui-tidy-phone-checklist.md` (home panel, ＋ menu, counter, Settings,
    slide-up, Continue tile, password card on home and chat, 📍 on and off, dictation, a delete
    card, a vault card, light and dark), then "build for Play" when the owner says so. *Sonnet.*
