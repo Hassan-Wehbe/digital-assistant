@@ -339,6 +339,15 @@ Step 3 shows them (cuisine chips, price, occasions, dishes, **We went again** ad
      7. **App: 🔎 Find on the map** in `PlaceFields` (share form, New and Edit note) and on a
         place note without a location: "Is this it? <name>, <address>", Yes / Not this one; only
         Yes saves the location, marked `location_source: "osm"` (small `normalizePlace` change).
+     **PRs 5-7 on hold (owner, 2026-10-07): skip the lookup for now.** The coverage check failed:
+     the owner could not find Hinode Sushi or Lemongrass Thai Kitchen (Oviedo, FL) on
+     openstreetmap.org, and Photon would not help (it searches the same OpenStreetMap data). So no
+     new outside service and no privacy change: a shared place gets its location as before (Use
+     where I am now at the place, or a long Maps link with coordinates). PR 5's draft (#148, the
+     privacy sentence the owner approved) is closed unmerged; its branch
+     `places-part2-pr5-osm-privacy` keeps the text. Revisit with the day planner, when the company
+     Google account exists (Google's place search, Q17's upgrade, or OpenStreetMap if coverage
+     improves).
      8. **Phone checklist** (Sonnet), then the Play build carrying the UI tidy-up and places.
      Decided with it: distances on cards only from a shared point or a named place; no
      distances or coordinates in the saved thread; the lookup runs on the server; Nominatim;
