@@ -12,6 +12,43 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **START HERE (2026-10-07, late): versionCode 12 findings and the next three jobs.** The owner
+  ran part of the versionCode 12 checklist (stub deleted, update installed, both restaurants now
+  have a location, start-up fine) and found:
+  1. **Crash on "password"** (stop-ship): fixed and merged (#152, entry below). **No build yet**
+     (owner): versionCode 13 waits for "build for Play". Until then, typing a label word (password,
+     PIN, token, secret, code) in Wilma crashes versionCode 12; skip the checklist's password card
+     and door/gate-code lines.
+  2. **"Logins" shown with the other spaces:** not a bug. It is a normal space (not restricted)
+     holding 0 notes and 2 vault entries; restricted means notes hidden from search, Wilma and the
+     app until unlocked.
+  3. **Vault entries in a space (owner: go, as recommended):** a space screen lists its vault
+     entries under its notes as 🔒 rows (name and website only, never values); a tap opens that
+     entry in the Vault (unlock only if locked). Password-only spaces like Logins stay on the home
+     list. App only, no server or privacy change. Strongest model (vault).
+  4. **Locations for shared places (owner: go, as recommended):** no scraping of Google pages (their
+     terms forbid it, servers are blocked, and an earlier page read gave a point ~800 miles off).
+     Instead the phone's own geocoder (`expo-location` `geocodeAsync`, Android's built-in lookup):
+     from a Google Maps share, look up "name + address" on the phone, show "Is this it? <name>,
+     <address>" with Open in Maps, save only on Yes. Free, no key, no server. Sends the place's
+     name and address to Google through the phone: one privacy sentence for the owner to approve.
+     **First a small test build:** does it find restaurants by name (Hinode Sushi, Lemongrass Thai
+     Kitchen, Oviedo FL), or only street addresses? Replaces the on-hold OpenStreetMap lookup.
+  5. **"Restaurants close by" said none, although both are under 10 miles away** (owner confirmed).
+     Logs (tool names only): `ask_for_location` → shared → `find_places` once → "can't find any";
+     after "look in my notes": `search_items`, `find_places` again, `show_places` with the right
+     card. Both places have numeric `lat`/`lng` in Restaurants (checked). So the first call's
+     arguments were wrong: likely a filter that matched nothing (e.g. cuisine "sushi" vs stored
+     "japanese", or a `kind`/`space`/`status`), or a wrong point or `within`. Not a missing notes
+     search: `find_places` already reads every place note. **Plan (server, strongest model,
+     evaluation run and deploy with the owner's OK):** (a) `find_places` returns a plain `summary`
+     sentence ("No saved place within 10 miles; the nearest is X, about N miles away"); (b)
+     forgiving filters: when a filter removes every nearby place, also return the nearby ones as
+     "nearby, not tagged <filter>"; (c) log which filters were set and the result counts, never
+     names or points; (d) evaluation cases for a filter mismatch and for "close by". Also deploy
+     #152's server copy of `credentials.ts` with it.
+  **Order:** (5) and (3) next, then (4)'s test build, then versionCode 13 with all of it and the
+  rest of the checklist; then the calendar (day planner step 1), then invite-only sign-up.
 - **versionCode 12 stop-ship: the app crashes when a message contains a label word** ("password",
   "PIN", "token", "secret", "code"…), found by the owner typing "supabase pass…" in the chat. Cause:
   on the phone's JavaScript engine (Hermes), `matchAll` results have no named `groups`, so the
