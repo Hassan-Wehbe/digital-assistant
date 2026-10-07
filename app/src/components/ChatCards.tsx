@@ -5,12 +5,16 @@
 //
 // A vault card opens the app's own vault screen when tapped (never by itself, so a reply still
 // being written is not interrupted), and never the server's link (lib/chatVault.ts).
+//
+// All of them use the one ChatCard shell (plan step 6): Cancel first, one filled main action,
+// Delete as red text, finished cards as one dimmed line.
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import { ChatCard, ChatCardDone, ChatCardText } from '@/components/ChatCard';
 import { UnlockCard } from '@/components/UnlockCard';
-import { Button, Card, Muted, useColors } from '@/components/ui';
+import { Button, Muted, useColors } from '@/components/ui';
 import { CANT_DO, checkDelete, needsVault } from '@/lib/chatDeletes';
 import type { Entry } from '@/lib/chatThread';
 import { vaultCardText, vaultRoute } from '@/lib/chatVault';
@@ -45,36 +49,23 @@ export function DeleteCard({
     if (active) onConfirm();
   }, [vault.status, active, onConfirm]);
 
-  const box = { alignSelf: 'flex-start' as const, maxWidth: '85%' as const, gap: 10 };
   const title = `“${entry.target.title}”`;
 
   switch (entry.state) {
     case 'deleted':
-      return (
-        <Card style={box}>
-          <Muted>{`Deleted ${title}`}</Muted>
-        </Card>
-      );
+      return <ChatCardDone icon="🗑" text={`Deleted ${title}`} />;
     case 'cancelled':
-      return (
-        <Card style={box}>
-          <Muted>{`Left ${title} alone`}</Muted>
-        </Card>
-      );
+      return <ChatCardDone icon="🗑" text={`Left ${title} alone`} />;
     case 'not_done':
-      return (
-        <Card style={box}>
-          <Muted>{`Not done: ${title}`}</Muted>
-        </Card>
-      );
+      return <ChatCardDone icon="🗑" text={`Not done: ${title}`} />;
   }
 
   // A card the app does not accept: nothing can be run from it.
   if (!checkDelete(entry)) {
     return (
-      <Card style={box}>
-        <Text style={{ color: c.text, fontSize: 16, lineHeight: 22 }}>{CANT_DO}</Text>
-      </Card>
+      <ChatCard icon="⚠️">
+        <ChatCardText>{CANT_DO}</ChatCardText>
+      </ChatCard>
     );
   }
 
@@ -87,18 +78,22 @@ export function DeleteCard({
   };
 
   return (
-    <Card style={box}>
-      <Text style={{ color: c.text, fontSize: 16, lineHeight: 22 }}>{entry.message}</Text>
+    <ChatCard
+      icon="🗑"
+      actions={
+        <>
+          <Button title={entry.cancelLabel} kind="plain" onPress={onCancel} disabled={!active} />
+          <Button title={running ? 'Deleting…' : entry.confirmLabel} kind="danger" onPress={tapDelete} disabled={!active || unlocking} />
+        </>
+      }>
+      <ChatCardText>{entry.message}</ChatCardText>
       {entry.state === 'failed' && entry.error ? <Text style={{ color: c.danger, fontSize: 15 }}>{entry.error}</Text> : null}
       {unlocking ? <UnlockCard /> : null}
-      <Button title={running ? 'Deleting…' : entry.confirmLabel} kind="danger" onPress={tapDelete} disabled={!active || unlocking} />
-      <Button title={entry.cancelLabel} kind="plain" onPress={onCancel} disabled={!active} />
-    </Card>
+    </ChatCard>
   );
 }
 
 export function VaultCard({ entry }: { entry: Extract<Entry, { kind: 'vault' }> }) {
-  const c = useColors();
   const { text, button } = vaultCardText(entry);
   const open = () => {
     const route = vaultRoute(entry);
@@ -113,10 +108,9 @@ export function VaultCard({ entry }: { entry: Extract<Entry, { kind: 'vault' }> 
     }
   };
   return (
-    <Card style={{ alignSelf: 'flex-start', maxWidth: '85%', gap: 10 }}>
-      <Text style={{ color: c.text, fontSize: 16, lineHeight: 22 }}>{`🔒 ${text}`}</Text>
-      <Button title={button} kind="plain" onPress={open} />
-    </Card>
+    <ChatCard icon="🔒" actions={<Button title={button} onPress={open} />}>
+      <ChatCardText>{text}</ChatCardText>
+    </ChatCard>
   );
 }
 
@@ -136,7 +130,7 @@ export function NotesCard({
 }) {
   const c = useColors();
   return (
-    <Card style={{ alignSelf: 'flex-start', maxWidth: '85%', gap: 10 }}>
+    <ChatCard icon="🗒" actions={active ? <Button title="Ask Wilma instead" kind="plain" onPress={onAskWilma} /> : undefined}>
       {entry.notes.map((n) => (
         <Pressable
           key={n.id}
@@ -153,7 +147,6 @@ export function NotesCard({
           </View>
         </Pressable>
       ))}
-      {active ? <Button title="Ask Wilma instead" kind="plain" onPress={onAskWilma} /> : null}
-    </Card>
+    </ChatCard>
   );
 }
