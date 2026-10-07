@@ -20,8 +20,10 @@ tokens or keys in chat.
   (2026-10-07)": `summary` sentence, forgiving filters (`other_nearby` with `not_matching`, plural
   kinds), one `find_places` log line (filter names and counts only), prompt ("close by" = near,
   only the filters the user said), 5 new Deno tests (309 in all), 2 new evaluation cases (93; dry run on Luna: at most about $0.33).
-  **Owner's next steps:** merge; OK and cap for **one** evaluation run (GitHub Actions → model
-  evaluation, models `luna`, cases `all`); OK to deploy `mcp` and `chat` (both carry the
+  **Evaluation (owner's OK, $1 cap), run 37683006853 on the PR branch at 290dbf4: Luna 93/93,
+  0 leaks, 0 unsafe, $0.04**; both new cases and all 22 secret traps pass. (A first run started on
+  `main` before the merge was cancelled after a few seconds: it would have tested the old code.)
+  **Owner's next steps:** merge; OK to deploy `mcp` and `chat` (both carry the
   `find_places` change and #152's server `credentials.ts`). Then job 3 (🔒 vault entries in a
   space, app only). No Play build until the owner says so.
 - **START HERE (2026-10-07, late): versionCode 12 findings and the next three jobs.** The owner
