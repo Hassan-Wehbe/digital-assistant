@@ -341,6 +341,21 @@ class Query implements PromiseLike<Result> {
           w.spaces.push(s);
           return this.shape([{ id: s.id }]);
         }
+        if (this.op === "update") {
+          const rows = w.spaces.filter((s) => where(s as unknown as Record<string, unknown>));
+          const name = this.payload.name as string | undefined;
+          for (const s of rows) {
+            if (
+              name !== undefined &&
+              w.spaces.some((o) => o.id !== s.id && o.parent_id === s.parent_id && o.name.toLowerCase() === name.toLowerCase())
+            ) return err("duplicate key value violates unique constraint", "23505");
+          }
+          for (const s of rows) {
+            if (name !== undefined) s.name = name;
+            if ("description" in this.payload) s.description = (this.payload.description as string | null) ?? null;
+          }
+          return this.shape(rows.map((s) => ({ id: s.id })));
+        }
         return this.shape(w.spaces.map((s) => ({ ...s })).filter(where));
       }
       case "secret":

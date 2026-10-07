@@ -32,7 +32,7 @@ Deno.test("tools/list advertises the milestone-1, vault, settings and attachment
     "attach_file", "create_space", "delete_attachment", "delete_item", "delete_secret", "delete_space",
     "describe_attachment", "find_places", "find_secret", "get_attachment_link", "get_item", "get_secret", "link_items",
     "list_deleted_items", "list_spaces", "purge_item", "restore_item", "save_item", "save_secret",
-    "search_items", "set_assistant_name", "update_item", "update_secret",
+    "search_items", "set_assistant_name", "update_item", "update_secret", "update_space",
   ]);
   const save = out.result.tools.find((t: { name: string }) => t.name === "save_item");
   assertEquals(save.inputSchema.required.sort(), ["body", "item_type", "space", "title"]);
