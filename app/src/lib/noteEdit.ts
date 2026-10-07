@@ -1,4 +1,4 @@
-// Editing a note's title and text (the server's update_item keeps the previous version in the
+// Editing a note's title, text and space (the server's update_item keeps the previous version in the
 // note's history first, and refuses anything that looks like a credential: CLAUDE.md rules 7, 9).
 
 import type { NoteChanges } from './wilma';
@@ -11,8 +11,8 @@ export const MAX_BODY = 40_000;
  * change is `{ changes: {} }`.
  */
 export function noteChanges(
-  current: { title: string; body: string | null },
-  edited: { title: string; body: string },
+  current: { title: string; body: string | null; spaceId?: string },
+  edited: { title: string; body: string; spaceId?: string },
 ): { changes: NoteChanges } | { error: string } {
   const title = edited.title.trim();
   if (!title) return { error: 'Give the note a title.' };
@@ -21,6 +21,7 @@ export function noteChanges(
   const changes: NoteChanges = {};
   if (title !== current.title) changes.title = title;
   if (edited.body !== (current.body ?? '')) changes.body = edited.body;
+  if (edited.spaceId && edited.spaceId !== current.spaceId) changes.space = edited.spaceId;
   return { changes };
 }
 

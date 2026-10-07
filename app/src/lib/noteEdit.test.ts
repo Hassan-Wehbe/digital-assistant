@@ -27,6 +27,17 @@ describe('noteChanges', () => {
   });
 });
 
+describe('noteChanges: moving to another space', () => {
+  it('sends the new space id only when it changed', () => {
+    const at = { ...current, spaceId: 's1' };
+    expect(noteChanges(at, { title: at.title, body: at.body, spaceId: 's1' })).toEqual({ changes: {} });
+    expect(noteChanges(at, { title: at.title, body: at.body, spaceId: 's2' })).toEqual({ changes: { space: 's2' } });
+    expect(noteChanges(at, { title: 'Red lentil soup', body: at.body, spaceId: 's2' })).toEqual({
+      changes: { title: 'Red lentil soup', space: 's2' },
+    });
+  });
+});
+
 describe('editError', () => {
   it('turns the server\'s credential refusal into a plain sentence, never repeating it', () => {
     const refusal = 'Not saved: the body looks like it contains a password. Wilma keeps passwords ...';

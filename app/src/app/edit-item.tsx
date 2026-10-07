@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
 
 import { PlaceFields } from '@/components/PlaceFields';
+import { SpaceChips } from '@/components/SpaceChips';
 import { Button, ErrorBox, KeyboardScreen, Loading, Muted, styles, useColors, useLoad } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { editError, MAX_BODY, MAX_TITLE, noteChanges } from '@/lib/noteEdit';
@@ -37,11 +38,14 @@ function EditForm({ item }: { item: Item }) {
   const base = placeOf(item);
   const [asPlace, setAsPlace] = useState(wasPlace);
   const [place, setPlace] = useState<PlaceForm>(() => placeForm(base));
+  // Moving the note: the spaces the app can open (a restricted one would hide the note from the app).
+  const spaces = useLoad('spaces', async () => (await wilma.listSpaces()).filter((s) => !s.restricted));
+  const [spaceId, setSpaceId] = useState(item.space.id);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const save = async () => {
-    const out = noteChanges({ title: item.title, body: item.body_markdown }, { title, body });
+    const out = noteChanges({ title: item.title, body: item.body_markdown, spaceId: item.space.id }, { title, body, spaceId });
     if ('error' in out) return setError(out.error);
     if (asPlace) {
       const fields = placeMetadata(place, base);
@@ -95,6 +99,9 @@ function EditForm({ item }: { item: Item }) {
           onChangeText={setBody}
           editable={!busy}
         />
+        <Text style={[styles.title, { color: c.text }]}>Space</Text>
+        <SpaceChips spaces={spaces.data} error={spaces.error} onRetry={spaces.reload} value={spaceId} onChange={setSpaceId} disabled={busy} />
+        {spaceId !== item.space.id ? <Muted>Saving moves the note to the chosen space.</Muted> : null}
         <Muted>The previous version is kept in the note’s history. Passwords and other secrets belong in the vault, not in notes.</Muted>
         {error ? <Text style={{ color: c.danger, fontSize: 15 }}>{error}</Text> : null}
         <Button title={busy ? 'Saving…' : 'Save'} onPress={save} disabled={busy} />
