@@ -12,6 +12,12 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Next build's checklist ready (part 2 PR 8): `docs/versioncode12-phone-checklist.md`.** One
+  "super checklist" for versionCode 12: the UI tidy-up, places part 2 (Miles/km, place cards, 📍
+  Share where I am), the key lines of the unrecorded versionCode 10/11 lists, and the owner's
+  parked to-dos (delete the `place-locations` stub, give the two places a location). **Next: the
+  owner says "build for Play"** (production build from `main`, auto-submitted to internal testing;
+  see the versionCode 11 entry for how it was run), then runs the list and reports back.
 - **Places part 2: lookup skipped for now (owner, 2026-10-07).** OpenStreetMap does not know the
   owner's two places, so PRs 5-7 (privacy wording, server lookup, Find on the map) are on hold;
   draft #148 closed unmerged (approved wording kept on its branch). PRs 1-4 are merged (server

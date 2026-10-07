@@ -349,6 +349,8 @@ Step 3 shows them (cuisine chips, price, occasions, dishes, **We went again** ad
      Google account exists (Google's place search, Q17's upgrade, or OpenStreetMap if coverage
      improves).
      8. **Phone checklist** (Sonnet), then the Play build carrying the UI tidy-up and places.
+        **As built:** `docs/versioncode12-phone-checklist.md`, one list with the UI tidy-up's and
+        the owner's parked to-dos (it also replaces the unrecorded versionCode 10 and 11 lists).
      Decided with it: distances on cards only from a shared point or a named place; no
      distances or coordinates in the saved thread; the lookup runs on the server; Nominatim;
      the area from a rounded tap or a typed city; `location_source` stored; no lookup from the

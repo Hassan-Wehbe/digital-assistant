@@ -210,6 +210,8 @@ Small PRs. Each passes `npm run check` and is tried in the browser preview (`doc
 8. **Phone checklist** `docs/ui-tidy-phone-checklist.md` (home panel, ＋ menu, counter, Settings,
    slide-up, Continue tile, password card on home and chat, 📍 on and off, dictation, a delete
    card, a vault card, light and dark), then "build for Play" when the owner says so. *Sonnet.*
+   **As built:** merged with places step 8 part 2's checklist into one list for the next build,
+   `docs/versioncode12-phone-checklist.md`.
 
 Places step 8 then builds its place cards on the `ChatCard` shell from PR 6.
 
