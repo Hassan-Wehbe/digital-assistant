@@ -98,6 +98,13 @@ reviewer account (`+playreview` email alias), never the owner's own sign-in or S
     the chat function and the AI service for that answer, not stored or logged. Passing it to the
     AI service that answers on our behalf is not "sharing" in Google's terms, and "processed
     ephemerally" stays **No** because Save where I am stores it. No change in Play Console.
+  - *Location → Approximate location* (places Q17, **"Find on the map", from the build that carries
+    part 2 PR 7; not before**): on a tap, the server sends the place's name and the user's location
+    rounded to about 10 km to OpenStreetMap's Nominatim, a third party that is not acting for us.
+    Our reading: **Collected, optional, shared** (with OpenStreetMap), **processed ephemerally: Yes**
+    (the rounded area is not stored; only a place the user confirms is saved, and that is the place's
+    own location). Purpose: **App functionality**. Change Play Console in the same release as that
+    build, and have the lawyer confirm (`legal-review-checklist.md`).
   - Not collected: contacts, messages, health, financial info, web browsing,
     device IDs, analytics or crash data (the app has none of these).
   - Vault values are end-to-end encrypted, so no one but the user can read them. Google's form

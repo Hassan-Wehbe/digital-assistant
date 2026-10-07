@@ -39,7 +39,10 @@
      location once, and stores it in that place note only, like the rest of the note; you can remove it
      from the note at any time. In the chat, if you tap 📍, Wilma reads your location once and sends it
      with that one message so she can find your saved places nearby. Like the message itself, it goes to
-     our AI service for that answer only; it is not saved or logged. Wilma never reads your location in the background and never tracks where
+     our AI service for that answer only; it is not saved or logged. When you tap <em>Find on the map</em>
+     on a place, Wilma's server sends the place's name and your approximate area (to about 10 km) to
+     OpenStreetMap's search service (Nominatim, run by the OpenStreetMap Foundation). Nothing else about
+     you is sent, and a location is saved only if you confirm it. Wilma never reads your location in the background and never tracks where
      you go. The camera, the microphone and file access are used only when you choose to: the camera
      and files when you add a photo or file, the microphone when you tap the microphone button to
      dictate a message. Dictation uses your phone's own speech recognition. Depending on your phone,
@@ -76,6 +79,12 @@
     <li><strong>Google Maps</strong>, only when you tap <em>Open in Maps</em> on a place: your phone opens
         Google Maps (the app, or the website) with that place's saved link, address or location, under
         Google's own privacy terms. Wilma's servers do not contact Google about your places.</li>
+    <li><strong>OpenStreetMap</strong> (its search service, Nominatim, run by the OpenStreetMap
+        Foundation in the United Kingdom), only when you tap <em>Find on the map</em> on a place: Wilma's
+        server sends the place's name and your approximate area (your location rounded to about 10 km,
+        or a town you type) to find where the place is, under the OpenStreetMap Foundation's own privacy
+        terms. Your account, your email and your notes are never sent. Map data © OpenStreetMap
+        contributors.</li>
     <li>If you choose to connect Wilma to an AI assistant such as Claude, the things you ask it to look up
         or save pass through that assistant under your own account with it and its privacy policy.</li>
   </ul>

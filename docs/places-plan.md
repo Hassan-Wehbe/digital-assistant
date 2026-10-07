@@ -330,6 +330,12 @@ Step 3 shows them (cuisine chips, price, occasions, dishes, **We went again** ad
         Foundation). Nothing else about you is sent, and a location is saved only if you confirm
         it." OpenStreetMap in the list of services; the Data safety question in
         `docs/legal-review-checklist.md`.
+        **As drafted (PR 5, waiting for the owner's approval):** the plan's sentence added to the
+        privacy page's Location paragraph; OpenStreetMap (Nominatim, OpenStreetMap Foundation, UK)
+        in "Services we use", with the typed-town alternative and the credit "© OpenStreetMap
+        contributors"; a legal-review item; Play Data safety: *Approximate location*, collected,
+        optional, shared, processed ephemerally, from the build carrying PR 7. **Merging publishes
+        the privacy page**, so merge it just before that build (as #111 was), not now.
      6. **Server: the lookup** as a `{"place_lookup": {...}}` body of `chat` (like `classify`):
         Nominatim, one identifying User-Agent (`NOMINATIM_CONTACT` in Supabase secrets, name in
         `.env.example`), a tap only, at most 1 request a second, 5 s, up to 3 candidates, the

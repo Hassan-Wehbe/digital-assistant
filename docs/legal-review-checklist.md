@@ -37,6 +37,13 @@ and is a starting point, not legal advice.
 - [ ] **Calendar** (D25): read on the phone, chosen calendars only, needed lines sent to the AI
       provider, nothing stored; later Google connection under Google's Limited Use policy.
 - [ ] **Location** (D26 "Save where I am"): on-tap only, stored in the note; consent wording.
+- [ ] **Place lookup in OpenStreetMap** (places Q17, "Find on the map"): on a tap, Wilma's server
+      sends a place's name and the user's approximate area (location rounded to about 10 km, or a
+      typed town) to Nominatim, run by the OpenStreetMap Foundation (UK), a third party under its own
+      privacy terms, not our processor. Check: the privacy wording, whether Play's Data safety form
+      must list *Approximate location* as **shared** (we lean yes, see `phase4-play-release.md`),
+      Nominatim's usage policy (identifying User-Agent, at most 1 request a second, attribution
+      "© OpenStreetMap contributors"), and the ODbL terms for showing the result.
 - [ ] **AI**: disclosure that answers come from AI providers, provider data terms (no training on
       API data), any AI-disclosure laws in force at launch.
 - [ ] **Voice** (A5e) and the future **wearable**: recording consent. Florida requires the consent
