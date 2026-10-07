@@ -3,7 +3,7 @@
 import { Text, View } from 'react-native';
 
 import { ChatCard, ChatCardText } from '@/components/ChatCard';
-import { DeleteCard, NotesCard, VaultCard } from '@/components/ChatCards';
+import { DeleteCard, LocationCard, NotesCard, PlacesCard, VaultCard } from '@/components/ChatCards';
 import { Button, Muted, useColors } from '@/components/ui';
 import type { Entry, ErrorButton } from '@/lib/chatThread';
 
@@ -18,6 +18,9 @@ export function ChatBubble({
   onCancel,
   notesActive = false,
   onAskWilma,
+  locationActive = false,
+  onShareLocation,
+  onNotNow,
 }: {
   entry: Entry;
   onButton: (button: ErrorButton) => void;
@@ -30,6 +33,10 @@ export function ChatBubble({
   /** A notes card's "Ask Wilma instead" can be tapped. */
   notesActive?: boolean;
   onAskWilma?: (entry: Extract<Entry, { kind: 'notes' }>) => void;
+  /** A "📍 Share where I am" card's buttons can be tapped. */
+  locationActive?: boolean;
+  onShareLocation?: (id: string) => void;
+  onNotNow?: (id: string) => void;
 }) {
   const c = useColors();
   switch (entry.kind) {
@@ -80,5 +87,16 @@ export function ChatBubble({
       return <VaultCard entry={entry} />;
     case 'notes':
       return <NotesCard entry={entry} active={notesActive && !!onAskWilma} onAskWilma={() => onAskWilma?.(entry)} />;
+    case 'places':
+      return <PlacesCard entry={entry} />;
+    case 'location':
+      return (
+        <LocationCard
+          entry={entry}
+          active={locationActive && !!onShareLocation}
+          onShare={() => onShareLocation?.(entry.id)}
+          onNotNow={() => onNotNow?.(entry.id)}
+        />
+      );
   }
 }

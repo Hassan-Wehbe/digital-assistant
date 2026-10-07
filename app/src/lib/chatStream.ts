@@ -32,14 +32,56 @@ export type ChatEvent =
       /** The id is for a secret that exists only once its value is entered (save_secret). */
       new_secret?: true;
     }
+  /** Place cards for Wilma's answer (places step 8; the server checked every place as the user). */
+  | { type: 'places'; cards: PlaceCardData[] }
+  /** Wilma asks for the location: the "📍 Share where I am" card. */
+  | { type: 'location_request' }
   | { type: 'error'; code: string; message: string }
   | { type: 'done'; counted: boolean };
+
+/** One place card as the server sends it. `distance` is measured by the server, in the user's unit. */
+export interface PlaceCardData {
+  id: string;
+  title: string;
+  kind?: string;
+  cuisine: string[];
+  address?: string;
+  maps_url?: string;
+  lat?: number;
+  lng?: number;
+  distance?: { value: number; unit: 'mi' | 'km' };
+}
+
+/** The server sends at most 5 cards per answer; more is never shown. */
+export const MAX_PLACE_CARDS = 5;
 
 /** A response body reader, or any source of byte chunks (tests). */
 export type ChunkSource = Pick<ReadableStreamDefaultReader<Uint8Array>, 'read' | 'cancel'> | AsyncIterable<Uint8Array>;
 
 const str = (v: unknown): v is string => typeof v === 'string';
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+const short = (v: unknown, max: number): v is string => str(v) && v.trim().length > 0 && v.length <= max;
+const inRange = (v: unknown, limit: number): v is number => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= limit;
+
+/** One card, copied field by field; null without an id and a name. */
+export function toPlaceCard(raw: unknown): PlaceCardData | null {
+  if (!isObject(raw) || !short(raw.id, 100) || !short(raw.title, 500)) return null;
+  const d = raw.distance;
+  const cuisine = Array.isArray(raw.cuisine) ? raw.cuisine.filter((c): c is string => short(c, 40)).slice(0, 10) : [];
+  const located = inRange(raw.lat, 90) && inRange(raw.lng, 180);
+  return {
+    id: raw.id,
+    title: raw.title,
+    ...(short(raw.kind, 40) ? { kind: raw.kind } : {}),
+    cuisine,
+    ...(short(raw.address, 300) ? { address: raw.address } : {}),
+    ...(short(raw.maps_url, 500) ? { maps_url: raw.maps_url } : {}),
+    ...(located ? { lat: raw.lat as number, lng: raw.lng as number } : {}),
+    ...(isObject(d) && typeof d.value === 'number' && Number.isFinite(d.value) && d.value >= 0 && (d.unit === 'mi' || d.unit === 'km')
+      ? { distance: { value: d.value, unit: d.unit } }
+      : {}),
+  };
+}
 
 /** One parsed line → a known, well-formed event (copied field by field), or null. */
 export function toChatEvent(raw: unknown): ChatEvent | null {
@@ -77,6 +119,13 @@ export function toChatEvent(raw: unknown): ChatEvent | null {
         ...(str(raw.secret_type) ? { secret_type: raw.secret_type } : {}),
         ...(raw.new_secret === true ? { new_secret: true as const } : {}),
       };
+    case 'places': {
+      if (!Array.isArray(raw.cards)) return null;
+      const cards = raw.cards.map(toPlaceCard).filter((c): c is PlaceCardData => c !== null).slice(0, MAX_PLACE_CARDS);
+      return cards.length ? { type: 'places', cards } : null;
+    }
+    case 'location_request':
+      return { type: 'location_request' };
     case 'done':
       return { type: 'done', counted: raw.counted === true };
     default:

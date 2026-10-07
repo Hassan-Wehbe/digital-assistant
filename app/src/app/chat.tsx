@@ -14,7 +14,7 @@ import { BoxCounter, WilmaBox } from '@/components/WilmaBox';
 import { useAuth } from '@/lib/auth';
 import { useChat } from '@/lib/chat';
 import { chatChip, pinPoint, tapPin, type PinState } from '@/lib/chatHere';
-import { cardActive, type Entry, type ErrorButton, lastUserText, notesActive } from '@/lib/chatThread';
+import { cardActive, type Entry, type ErrorButton, lastUserText, locationActive, notesActive } from '@/lib/chatThread';
 import { VOICE_ENABLED } from '@/lib/config';
 import { findCredential } from '@/lib/credentials';
 import { deviceLocation } from '@/lib/location';
@@ -25,7 +25,10 @@ import { appendDictation, useDictation } from '@/lib/voice';
 export default function Chat() {
   const c = useColors();
   const { session } = useAuth();
-  const { state, ready, canSend, routing, bannerVisible, send, askWilma, stop, retry, dismissBanner, clear, confirmDelete, cancelDelete } = useChat();
+  const {
+    state, ready, canSend, routing, bannerVisible, send, askWilma, stop, retry, dismissBanner, clear, confirmDelete, cancelDelete,
+    shareLocation, dismissLocation,
+  } = useChat();
   const [text, setText] = useState('');
   const list = useRef<FlatList>(null);
   const box = useRef<TextInput>(null);
@@ -147,6 +150,9 @@ export default function Chat() {
               onCancel={cancelDelete}
               notesActive={notesActive(state, item) && canSend}
               onAskWilma={onAskWilma}
+              locationActive={locationActive(state, item) && canSend && !locating}
+              onShareLocation={shareLocation}
+              onNotNow={dismissLocation}
             />
           )}
           ListEmptyComponent={<Muted>Ask about your notes, save something new, or find a password in your vault.</Muted>}

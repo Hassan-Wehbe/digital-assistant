@@ -304,3 +304,9 @@ export function visitArgs(form: VisitForm, now = new Date()): { visit: NewVisit 
   }
   return { visit };
 }
+
+/** A chat place card's second line: "Restaurant · italian, pizza" (an unknown kind is left out). */
+export function placeCardDetail(c: { kind?: string; cuisine?: string[] }): string {
+  const kind = c.kind && c.kind in KIND_LABELS ? KIND_LABELS[c.kind as PlaceKind] : null;
+  return [kind, c.cuisine?.length ? c.cuisine.join(', ') : null].filter(Boolean).join(' · ');
+}

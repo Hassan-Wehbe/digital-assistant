@@ -12,6 +12,12 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Places part 2 PR 4 (app: place cards and the 📍 Share where I am card in the chat): PR open.**
+  App only (the server sends the events since `chat` v12). Details: `places-plan.md` step 8, "As
+  built (PR 4)". 517 app tests. Ships with the next Play build. PR 3 (#146, Settings → Distances)
+  is merged. **Next: part 2 PR 5** (docs and privacy for Q17, the OpenStreetMap lookup; the owner
+  approves the privacy sentence), then PR 6 (server lookup; needs the OpenStreetMap coverage check,
+  parked with the owner's to-dos).
 - **Places part 2 PR 3 (app: Settings → Distances, Miles / Kilometres): PR open.** `app/src/lib/units.ts`
   (+ tests), Settings section, `GroupRow` `checked`. App only, no server change; ships with the
   next Play build. 501 app tests. **Next: part 2 PR 4** (app: the place cards and the Share where I
