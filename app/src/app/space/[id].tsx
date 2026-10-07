@@ -36,9 +36,15 @@ export default function SpaceScreen() {
       <Stack.Screen
         options={{
           title: path ?? 'Space',
+          // Edit (name and description) up here; Delete stays at the bottom of the list.
           headerRight: () => (
-            <Pressable accessibilityRole="button" accessibilityLabel="Delete this space" onPress={deleteSpace} disabled={deleting} hitSlop={8}>
-              <Text style={{ color: c.danger, fontSize: 16, opacity: deleting ? 0.5 : 1 }}>{deleting ? 'Deleting…' : 'Delete'}</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Edit this space"
+              onPress={() => router.push({ pathname: '/edit-space', params: { id } })}
+              disabled={deleting}
+              hitSlop={8}>
+              <Text style={{ color: c.accent, fontSize: 16 }}>Edit</Text>
             </Pressable>
           ),
         }}

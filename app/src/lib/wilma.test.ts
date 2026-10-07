@@ -112,12 +112,12 @@ describe('wilma client', () => {
     expect([...APP_TOOLS].sort()).toEqual([
       'attach_file', 'create_space', 'delete_attachment', 'delete_item', 'delete_secret', 'delete_space', 'find_secret',
       'get_attachment_link', 'get_item', 'get_secret', 'list_deleted_items', 'list_spaces', 'purge_item', 'restore_item', 'save_item', 'save_secret',
-      'search_items', 'update_item', 'update_secret',
+      'search_items', 'update_item', 'update_secret', 'update_space',
     ]);
     expect(Object.keys(setup([]).client).sort()).toEqual(
       ['addVisit', 'attachmentLink', 'createSpace', 'deleteAttachment', 'deleteItem', 'deleteSecret', 'deleteSpace', 'findSecrets', 'getItem', 'listSpaces',
         'newValueLink', 'purgeItem', 'recycleBin', 'restoreItem', 'revealLink', 'saveItem', 'saveSecret', 'search', 'updateItem',
-        'updateSecret', 'uploadLink'],
+        'updateSecret', 'updateSpace', 'uploadLink'],
     );
   });
 
@@ -132,6 +132,23 @@ describe('wilma client', () => {
     expect(params).toEqual([
       { name: 'create_space', arguments: { name: 'Recipes' } },
       { name: 'create_space', arguments: { name: 'Gartner', parent: 's1', description: 'Client work', restricted: true } },
+    ]);
+  });
+
+  it('edits a space by id with only the fields given, and moves a note by space id', async () => {
+    const { client, fetch } = setup([
+      reply(200, toolResult({ id: 's1', path: 'Cooking', previous_path: 'Recipes', description: null })),
+      reply(200, toolResult({ id: 's1', path: 'Cooking', previous_path: 'Cooking', description: 'Family food' })),
+      reply(200, toolResult({ id: 'i1', updated: true })),
+    ]);
+    expect((await client.updateSpace('s1', { name: 'Cooking' })).path).toBe('Cooking');
+    await client.updateSpace('s1', { description: 'Family food' });
+    await client.updateItem('i1', { space: 's2' });
+    const params = fetch.mock.calls.map(([, init]) => JSON.parse(init.body as string).params);
+    expect(params).toEqual([
+      { name: 'update_space', arguments: { space: 's1', name: 'Cooking' } },
+      { name: 'update_space', arguments: { space: 's1', description: 'Family food' } },
+      { name: 'update_item', arguments: { item_id: 'i1', space: 's2' } },
     ]);
   });
 
