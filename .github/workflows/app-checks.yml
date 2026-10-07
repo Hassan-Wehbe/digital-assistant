@@ -1,11 +1,12 @@
-# Lint, type-check, unit tests and Expo's doctor for the mobile app (app/).
+# Lint, type-check, unit tests and Expo's doctor for the mobile app (app/). Also runs when the
+# server's password check changes: the app holds a copy and its test compares the two.
 name: app checks
 on:
   pull_request:
-    paths: ["app/**", ".github/workflows/app-checks.yml"]
+    paths: ["app/**", "supabase/functions/mcp/lib/credentials.ts", ".github/workflows/app-checks.yml"]
   push:
     branches: [main]
-    paths: ["app/**", ".github/workflows/app-checks.yml"]
+    paths: ["app/**", "supabase/functions/mcp/lib/credentials.ts", ".github/workflows/app-checks.yml"]
 permissions:
   contents: read
 jobs:

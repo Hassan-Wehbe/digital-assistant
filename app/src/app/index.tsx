@@ -3,10 +3,11 @@
 // up, or the chat's Search button), the old note search runs on the text instead, never the model
 // (restricted spaces are never searched); spaces to browse below.
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, RefreshControl, Text, TextInput, View } from 'react-native';
 
 import { MicButton } from '@/components/MicButton';
+import { PasswordHold } from '@/components/PasswordHold';
 import { ItemRow } from '@/components/rows';
 import {
   ErrorBox,
@@ -30,6 +31,7 @@ import { useAuth } from '@/lib/auth';
 import { useChat } from '@/lib/chat';
 import { lastUserText } from '@/lib/chatThread';
 import { VOICE_ENABLED } from '@/lib/config';
+import { findCredential } from '@/lib/credentials';
 import { supabase } from '@/lib/supabase';
 import { loadAllowance, usageCounterText, usageSummary } from '@/lib/usage';
 import { appendDictation, useDictation } from '@/lib/voice';
@@ -87,9 +89,12 @@ export default function Home() {
 
   // Dictated words are added to the box; only Send sends them (A5e Q1).
   const mic = useDictation((words) => setText((t) => appendDictation(t, words)), chat.canSend);
+  // Text that looks like a password is held on the phone: it never goes to Wilma, the name
+  // lookup or the note search (plan step 4; CLAUDE.md rules 1 and 9).
+  const credential = useMemo(() => findCredential(text), [text]);
 
   const submit = async () => {
-    if (!chat.canSend || !text.trim() || mic.listening) return;
+    if (!chat.canSend || !text.trim() || mic.listening || credential) return;
     const out = await chat.send(text);
     if (out.to === 'none') return;
     if (out.to === 'blocked') {
@@ -139,11 +144,13 @@ export default function Home() {
           if (!t.trim()) setQuery('');
         }}
         onSend={submit}
-        sendDisabled={!chat.canSend || !text.trim() || mic.listening}
+        sendDisabled={!chat.canSend || !text.trim() || mic.listening || !!credential}
+        warn={!!credential}
         left={left}
         center={counter}
         mic={VOICE_ENABLED ? <MicButton mic={mic} disabled={!chat.canSend} /> : null}
       />
+      {credential ? <PasswordHold kind={credential} onEdit={() => search.current?.focus()} /> : null}
       {mic.listening ? <Muted>Never type or say passwords here. Use the Vault.</Muted> : null}
       {mic.error ? <Muted>{mic.error}</Muted> : null}
       {held ? <Muted>{held}</Muted> : chat.routing ? <Muted>One moment…</Muted> : null}

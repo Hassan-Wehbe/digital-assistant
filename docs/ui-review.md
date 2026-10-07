@@ -167,6 +167,11 @@ Small PRs. Each passes `npm run check` and is tried in the browser preview (`doc
    the same cases; the amber card ("This looks like a password. Wilma won't send it.", **Save in
    Vault** opening "Save a secret" without copying the text, **Edit message**); Send held; a
    "Don't say passwords" line while the mic is on. *Strongest model.*
+   **As built:** `app/src/lib/credentials.ts` holds the server's code unchanged between two
+   markers; `credentials.test.ts` fails if the copies differ and checks both on the server's own
+   cases (CI runs it when either file changes). `components/PasswordHold.tsx` is the card;
+   `lib/chat.tsx` also refuses to send such text (the backstop). The chat keeps its always-on
+   password line until PR 5 moves it to the Wilma box.
 5. **Chat with `WilmaBox`:** ＋ menu with 📍 "Send where I am" (replaces the 📍 button; the
    location is still read only on that tap and sent with one message), the counter, one status
    chip, "New chat". *Strongest model.*
@@ -175,6 +180,9 @@ Small PRs. Each passes `npm run check` and is tried in the browser preview (`doc
 7. **Server: the same check in the `chat` function** before any model call (and before the
    classifier, which already has it), with an evaluation run; covers the Claude connector and
    older app versions. Deploy needs the owner's OK. *Strongest model.*
+   Found while building PR 4: neither check catches a very casual "i think its Kitten77" ("its"
+   without the apostrophe, after "pw?"); look at it with the evaluation, then copy any change to
+   the app.
 8. **Phone checklist** `docs/ui-tidy-phone-checklist.md` (home panel, ＋ menu, counter, Settings,
    slide-up, Continue tile, password card on home and chat, 📍 on and off, dictation, a delete
    card, a vault card, light and dark), then "build for Play" when the owner says so. *Sonnet.*

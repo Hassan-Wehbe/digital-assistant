@@ -1,16 +1,18 @@
 // Ask Wilma: the conversation screen. The thread and the running answer live in ChatProvider
 // (lib/chat.tsx), so this screen only draws them.
 import { router, Stack } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 
 import { ChatBubble } from '@/components/ChatBubble';
 import { MicButton } from '@/components/MicButton';
+import { PasswordHold } from '@/components/PasswordHold';
 import { Button, confirm, KeyboardScreen, Loading, Muted, styles, useColors } from '@/components/ui';
 import { useChat } from '@/lib/chat';
 import { PIN_ON, pinPoint, tapPin, type PinState } from '@/lib/chatHere';
 import { cardActive, type Entry, type ErrorButton, lastUserText, notesActive } from '@/lib/chatThread';
 import { VOICE_ENABLED } from '@/lib/config';
+import { findCredential } from '@/lib/credentials';
 import { deviceLocation } from '@/lib/location';
 import { appendDictation, useDictation } from '@/lib/voice';
 
@@ -19,6 +21,7 @@ export default function Chat() {
   const { state, ready, canSend, routing, bannerVisible, send, askWilma, stop, retry, dismissBanner, clear, confirmDelete, cancelDelete } = useChat();
   const [text, setText] = useState('');
   const list = useRef<FlatList>(null);
+  const box = useRef<TextInput>(null);
   // 📍 "near me" (places step 7): the location for the next message only, read on the tap.
   const [pin, setPin] = useState<PinState>(null);
   const [locating, setLocating] = useState(false);
@@ -33,9 +36,11 @@ export default function Chat() {
   };
   // Dictated words are added to the box; only Send sends them (A5e Q1). No mic while a reply streams.
   const mic = useDictation((words) => setText((t) => appendDictation(t, words)), canSend && !state.streaming);
+  // Text that looks like a password is held on the phone and never sent (plan step 4).
+  const credential = useMemo(() => findCredential(text), [text]);
 
   const submit = async () => {
-    if (!canSend || !text.trim() || mic.listening || locating) return;
+    if (!canSend || !text.trim() || mic.listening || locating || credential) return;
     const out = await send(text, pinPoint(pin));
     // Used up or not sent: the text (and the 📍) stays.
     if (out.to === 'none' || out.to === 'blocked') return;
@@ -63,7 +68,7 @@ export default function Chat() {
   };
 
   const last = state.entries[state.entries.length - 1];
-  const input = [styles.input, { color: c.text, borderColor: c.line, backgroundColor: c.card, flex: 1, maxHeight: 140 }];
+  const input = [styles.input, { color: c.text, borderColor: credential ? c.warn : c.line, backgroundColor: c.card, flex: 1, maxHeight: 140 }];
 
   return (
     <KeyboardScreen>
@@ -122,8 +127,10 @@ export default function Chat() {
       )}
 
       <View style={{ padding: 12, gap: 6, borderTopColor: c.line, borderTopWidth: 1 }}>
+        {credential ? <PasswordHold kind={credential} onEdit={() => box.current?.focus()} /> : null}
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
           <TextInput
+            ref={box}
             style={input}
             placeholder="Message Wilma"
             placeholderTextColor={c.muted}
@@ -156,7 +163,7 @@ export default function Chat() {
                 <Text style={styles.buttonText}>📍</Text>
               </Pressable>
               {VOICE_ENABLED ? <MicButton mic={mic} disabled={!canSend} /> : null}
-              <Button title="Send" onPress={submit} disabled={!canSend || !text.trim() || mic.listening || locating} />
+              <Button title="Send" onPress={submit} disabled={!canSend || !text.trim() || mic.listening || locating || !!credential} />
             </>
           )}
         </View>
