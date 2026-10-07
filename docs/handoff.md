@@ -11,7 +11,25 @@ tokens or keys in chat.
 
 ## Where things stand (2026-10-06)
 
-**Newest first (2026-10-06):**
+**Newest first (2026-10-07):**
+- **Places step 7 ("near me" in the chat, Q9), server live; app, privacy and checklist in PRs.**
+  #108 merged (`chat` accepts `here: {lat, lng}` with one message; it becomes one line in that
+  request's instructions only, never stored, logged or sent to the classifier; Wilma's
+  instructions, `mcp` 0.7.1). Evaluation (owner's OK) run 37541617963, Luna, **76/76, 0 leaks,
+  0 unsafe**, $0.03. **Deployed 2026-10-07:** `mcp` version 14 (34/35 files identical, the `.d.ts`
+  not listed back; 401 without sign-in and with a fake token), `chat` version 7 (46/47 identical,
+  401 both ways). Today's app never sends `here`, so nothing changes on versionCode 10.
+  **Open PRs:** #109 (grader: `attach-photo-new-item` accepts save then attach by id), #110 (app:
+  📍 in the chat only, Q10; merge now that the server is live; ships with the next build), #111
+  (privacy sentence, owner-approved; merging publishes the page, so merge just before the next
+  build), #112 (`docs/places-step7-phone-checklist.md` for the next build).
+- **New request (owner, 2026-10-07): edit a space** (name and description; today only New space
+  sets them). No migration needed (the `space_owner` policy allows updates). Proposed: an
+  `update_space` tool (server, evaluation cases, deploy) and an **Edit space** screen (app).
+  Waiting on the owner: Q1 name + description only (restricted on/off and moving later),
+  Q2 also from the chat, Q3 old names in notes stay as written.
+
+**Earlier (2026-10-06):**
 - **Places step 6, the places build, started (owner: "build for Play", 2026-10-06).** Production
   build from `main` at 537fff2 (GitHub run 37540216475), **versionCode 10**, Expo build
   https://expo.dev/accounts/zafnut/projects/wilma/builds/28df2ba0-5a62-465d-b0d4-b83077ed29d1 ,
