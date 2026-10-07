@@ -6,10 +6,21 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
-  coordinatesInLink, isShortMapsLink, locationFromMapsLink, MAX_REDIRECTS, withLinkLocation,
+  coordinatesInLink, isShortMapsLink, linkLogLine, locationFromMapsLink as withTrace, MAX_REDIRECTS,
+  withLinkLocation as withLog,
 } from "../../supabase/functions/mcp/lib/maps_link.ts";
 import { registerSaveItem } from "../../supabase/functions/mcp/tools/save_item.ts";
 import { registerUpdateItem } from "../../supabase/functions/mcp/tools/update_item.ts";
+
+// The outcomes without their log details (checked on their own below).
+const locationFromMapsLink = async (...a: Parameters<typeof withTrace>) => {
+  const { trace: _t, ...r } = await withTrace(...a);
+  return r;
+};
+const withLinkLocation = async (...a: Parameters<typeof withLog>) => {
+  const { log: _l, ...r } = await withLog(...a);
+  return r;
+};
 
 const SHORT = "https://maps.app.goo.gl/AbCdEf123";
 const PIN_URL =
@@ -172,6 +183,17 @@ Deno.test("withLinkLocation keeps a location the place already has, and needs a 
   assertEquals(filled, { place: { status: "want", maps_url: SHORT, lat: 28.538335, lng: -81.379237 }, filled: true });
 });
 
+Deno.test("the log line holds only the outcome code, the requests made and the last status", async () => {
+  const hop = "https://www.google.com/maps/place/Hinode+Sushi/data=!4m2!3m1!1s0x88e77b:0x1";
+  const f = fakeFetch({ [SHORT]: { status: 302, location: hop }, [hop]: { status: 200 } });
+  const line = linkLogLine(await withTrace(SHORT, f.fn));
+  assertEquals(JSON.parse(line), { event: "maps_link", code: "no_coordinates", requests: 2, status: 200 });
+  const ok = linkLogLine(await withTrace(SHORT, fakeFetch({ [SHORT]: { status: 302, location: PIN_URL } }).fn));
+  assertEquals(JSON.parse(ok), { event: "maps_link", code: "ok", requests: 1, status: 302 });
+  for (const leak of ["goo.gl", "google", "Hinode", "28.5", "81.3"]) assert(!line.includes(leak) && !ok.includes(leak), leak);
+  assertEquals(JSON.parse(linkLogLine(await withTrace(PIN_URL, f.fn))), { event: "maps_link", code: "ok", requests: 0, status: 0 });
+});
+
 // ---- Through save_item and update_item -------------------------------------------------------
 
 const g = globalThis as Record<string, unknown>;
@@ -227,7 +249,18 @@ async function call(db: SupabaseClient, name: string, args: Record<string, unkno
 const savePlace = (metadata: Record<string, unknown>) =>
   ({ space: "Restaurants", title: "Hinode Sushi", body: "", item_type: "place", metadata });
 
-Deno.test("save_item: a place shared from Google Maps gets its location from the link; nothing logged", async () => {
+/** Every console line, checked to be only the maps_link line (never the link or the point). */
+function onlyCodes(logged: unknown[][]) {
+  for (const args of logged) {
+    assertEquals(args.length, 1);
+    const line = JSON.parse(String(args[0]));
+    assertEquals(Object.keys(line).sort(), ["code", "event", "requests", "status"]);
+    for (const leak of ["goo.gl", "maps.", "evil", "http", "28.5", "81.3"]) assert(!String(args[0]).includes(leak), leak);
+  }
+  return logged.map((a) => JSON.parse(String(a[0])).code);
+}
+
+Deno.test("save_item: a place shared from Google Maps gets its location from the link; only a code logged", async () => {
   const f = fakeFetch({ [SHORT]: { status: 302, location: PIN_URL } });
   const { db, rpcs } = fakeDb();
   const out = await call(db, "save_item", savePlace({ maps_url: SHORT, kind: "restaurant" }), f.fn);
@@ -237,7 +270,7 @@ Deno.test("save_item: a place shared from Google Maps gets its location from the
   });
   assertEquals(JSON.parse(out.text).location, "read from the Google Maps link");
   assertEquals(f.requested.length, 1);
-  assertEquals(out.logged, [], "no log line at all, so never the link or the point");
+  assertEquals(onlyCodes(out.logged), ["ok"]);
 });
 
 Deno.test("save_item: a location the user set is kept and the link is not opened", async () => {
@@ -257,7 +290,7 @@ Deno.test("save_item: when the link leads nowhere useful the place is saved as i
     const out = await call(db, "save_item", savePlace({ maps_url: SHORT }), fakeFetch(table).fn);
     assertEquals(out.isError, false, out.text);
     assertEquals(rpcs.find((r) => r.name === "save_item")!.params.p_metadata, { status: "want", maps_url: SHORT });
-    assertEquals(out.logged, []);
+    assertEquals(onlyCodes(out.logged).length, 1);
   }
 });
 
