@@ -12,6 +12,13 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **UI tidy-up PRs 1-6 merged, not built (2026-10-07):** PR 5 chat with the Wilma box (#139),
+  PR 6 one ChatCard shell (#140). Left: PR 8 (phone checklist, then the build). **Owner's choice:
+  one Play build after places step 8 part 2.** **Places step 8 part 2: plan agreed (as
+  recommended), written in `docs/places-plan.md` step 8 ("Part 2 build plan")**, 8 PRs; Q17
+  recorded (#134 merged). **Next: places part 2 PR 1** (server + migration: miles/km, 10-mile
+  nearby, honest answers), in a fresh session, strongest model. Open: the OpenStreetMap coverage
+  check before PR 6 (the sandbox cannot reach Nominatim; see the plan).
 - **UI PR 4 and PR 7 done (2026-10-07, afternoon).** PR 4 (#136, app, merged, not built): the
   phone holds a message that looks like a password (amber box, "Wilma won't send it" card with
   Edit message / Save in Vault, Send held; `app/src/lib/credentials.ts` is the server's check,
