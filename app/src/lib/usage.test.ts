@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { loadAllowance, resetDay, roughlyDown, TYPICAL_REQUEST_CENTS, usageSummary, usageText } from './usage';
+import { loadAllowance, resetDay, roughlyDown, TYPICAL_REQUEST_CENTS, usageCounterText, usageSummary, usageText } from './usage';
 
 const month = '2026-10-01';
 
@@ -34,6 +34,15 @@ describe('usage meter', () => {
     expect(done.usedUp).toBe(true);
     expect(done.requestsLeft).toBe(0);
     expect(usageText(done)).toBe("You've used this month's AI requests. They start again on Nov 1. Search, notes and your vault still work.");
+  });
+
+  it('the box counter is short: about N left, then N left with the reset day, then used up', () => {
+    const fine = usageSummary({ month, used_cents: 20, requests: 500, limit_cents: 100, used_fraction: 0.2 });
+    expect(usageCounterText(fine)).toBe('About 2,000 left');
+    const low = usageSummary({ month, used_cents: 85, requests: 2000, limit_cents: 100, used_fraction: 0.85 });
+    expect(usageCounterText(low)).toBe('350 left · resets Nov 1');
+    const done = usageSummary({ month, used_cents: 100.2, requests: 2400, limit_cents: 100, used_fraction: 1 });
+    expect(usageCounterText(done)).toBe('Used up · resets Nov 1');
   });
 
   it('a zero allowance is used up; odd numbers never make a negative or huge estimate', () => {

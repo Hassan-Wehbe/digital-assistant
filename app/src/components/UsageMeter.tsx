@@ -9,7 +9,7 @@ import { useColors } from './ui';
 
 export function UsageMeter({ usage }: { usage: UsageSummary }) {
   const c = useColors();
-  const color = usage.usedUp ? c.danger : usage.low ? '#d08a00' : c.accent;
+  const color = usage.usedUp ? c.danger : usage.low ? c.warn : c.accent;
   return (
     <View
       accessible

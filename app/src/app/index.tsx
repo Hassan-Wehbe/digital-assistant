@@ -5,12 +5,12 @@
 import * as Application from 'expo-application';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, Text, TextInput, View } from 'react-native';
+import { FlatList, RefreshControl, Text, TextInput, View } from 'react-native';
 
 import { MicButton } from '@/components/MicButton';
 import { ItemRow, SpaceRow } from '@/components/rows';
 import { UsageMeter } from '@/components/UsageMeter';
-import { Button, ErrorBox, KeyboardScreen, Loading, Muted, styles, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
+import { Button, ErrorBox, KeyboardScreen, Loading, Muted, styles, TextLink, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { useChat } from '@/lib/chat';
 import { versionLabel, VOICE_ENABLED } from '@/lib/config';
@@ -87,12 +87,6 @@ export default function Home() {
     else router.push('/chat');
   };
 
-  const link = (title: string, onPress: () => void) => (
-    <Pressable accessibilityRole="button" onPress={onPress} hitSlop={8} style={{ alignSelf: 'flex-start' }}>
-      <Text style={{ color: c.accent, fontSize: 16, fontWeight: '600' }}>{title}</Text>
-    </Pressable>
-  );
-
   const header = (
     <View style={{ gap: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -122,7 +116,7 @@ export default function Home() {
       {held ? <Muted>{held}</Muted> : chat.routing ? <Muted>One moment…</Muted> : null}
       {/* Under the box only when it matters: from 80% of the month's allowance. */}
       {usage.data?.low && !held ? <UsageMeter usage={usage.data} /> : null}
-      {link('Conversation', () => router.push('/chat'))}
+      <TextLink title="Conversation" onPress={() => router.push('/chat')} />
       <Button title="New note or photo" kind="plain" onPress={() => router.push('/new-item')} />
       <Button title="📍 Save where I am" kind="plain" onPress={() => router.push({ pathname: '/new-item', params: { here: '1' } })} />
       {query ? (
@@ -130,9 +124,7 @@ export default function Home() {
       ) : (
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Text style={[styles.title, { color: c.text }]}>Spaces</Text>
-          <Pressable accessibilityRole="button" onPress={() => router.push('/new-space')} hitSlop={8}>
-            <Text style={{ color: c.accent, fontSize: 16, fontWeight: '600' }}>+ New space</Text>
-          </Pressable>
+          <TextLink title="+ New space" onPress={() => router.push('/new-space')} />
         </View>
       )}
       {error ? <ErrorBox message={error} onRetry={reload} /> : null}
