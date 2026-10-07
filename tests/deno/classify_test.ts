@@ -113,7 +113,9 @@ Deno.test("classify: sign-in is required, and nothing runs without it", async ()
 
 Deno.test("classify: an empty, too long or mixed body is refused with 400", async () => {
   const s = setup({});
-  for (const body of [{ classify: "" }, { classify: "x".repeat(501) }, { classify: 5 }, { classify: "hi", messages: [] }]) {
+  for (const body of [{ classify: "" }, { classify: "x".repeat(501) }, { classify: 5 }, { classify: "hi", messages: [] },
+    // The 📍 point (places step 7) never reaches the classifier: a classify body carrying one is refused.
+    { classify: "restaurants near me", here: { lat: 33.9, lng: 35.5 } }]) {
     assertEquals((await s.handler(post(body))).status, 400, JSON.stringify(body).slice(0, 40));
   }
   assertEquals(s.model.calls.length, 0);

@@ -590,3 +590,116 @@ Deno.test("chat: rule 9 still applies: a password sent to save_item is refused a
   assertFalse(s.account.rpcs.includes("save_item"), "nothing reached the database");
   assertFalse(JSON.stringify(events).includes("hunter2sunrise"));
 });
+
+// ---- "Near me" with the phone's location (places step 7) ------------------------------------
+// The app sends {"here": {lat, lng}} with one message when the user taps 📍. It reaches Wilma's
+// instructions for that message only; it is never stored, logged or sent to the classifier.
+
+const HERE = { lat: 33.89514, lng: 35.51697 }; // near Trattoria Sud in the pretend account
+const HERE_DIGITS = ["33.89514", "35.51697", "89514", "51697"];
+
+async function chatHere(s: Setup, body: Record<string, unknown>): Promise<Event[]> {
+  const res = await s.handler(request(body));
+  assertEquals(res.status, 200);
+  const events = (await res.text()).split("\n").filter(Boolean).map((l) => JSON.parse(l) as Event);
+  assertEquals(events.at(-1)?.type, "done");
+  return events;
+}
+
+Deno.test("chat: a shared point reaches Wilma for that message only, and find_places can use it", async () => {
+  const s = setup([
+    { calls: [{ name: "find_places", input: { lat: HERE.lat, lng: HERE.lng } }] },
+    { text: ["Trattoria Sud is about 0.1 km away."] },
+    { text: ["You're welcome."] },
+  ]);
+  const events = await chatHere(s, { messages: [{ role: "user", content: "What's near me?" }], here: HERE });
+  assert(s.model.requests[0].system.includes(`lat ${HERE.lat}, lng ${HERE.lng}`), "the point is in this message's instructions");
+  assert(s.model.requests[1].system.includes(`lat ${HERE.lat}`), "and stays for the tool rounds of the same message");
+  assert(s.model.seen[0].includes("Trattoria Sud"), s.model.seen[0]);
+  assertFalse(s.model.seen[0].includes("Hidden courtyard"), "restricted spaces stay out (rule 3)");
+  assertEquals(ofType(events, "status").map((e) => e.tool), ["find_places"]);
+  for (const m of s.model.requests[0].messages) {
+    assertFalse(JSON.stringify(m).includes(String(HERE.lat)), "never put into the conversation itself");
+  }
+
+  // The next message, sent without the 📍 tap: no point any more.
+  await chat(s, [
+    { role: "user", content: "What's near me?" },
+    { role: "assistant", content: "Trattoria Sud is about 0.1 km away." },
+    { role: "user", content: "Thanks" },
+  ]);
+  assertFalse(s.model.requests[2].system.includes("shared where they are"), s.model.requests[2].system.slice(-300));
+  assertEquals(s.account.world.items.length, new World().items.length, "nothing was saved");
+});
+
+Deno.test("chat: a message without a point works as before, with no location line", async () => {
+  const s = setup([{ text: ["Which saved place are you near?"] }]);
+  const events = await chat(s, "What restaurants are near me?");
+  assertEquals(reply(events), "Which saved place are you near?");
+  assertFalse(s.model.requests[0].system.includes("shared where they are"));
+  assert(s.model.requests[0].system.includes("tap 📍"), "Wilma is told how the user can share a point");
+  assertEquals(s.logs[0].outcome, "ok");
+});
+
+Deno.test("chat: a bad point is refused with 400 before any model call, and not logged", async () => {
+  const s = setup([]);
+  const messages = [{ role: "user", content: "near me?" }];
+  for (
+    const here of [
+      { lat: 91, lng: 35.5 },
+      { lat: -90.0001, lng: 35.5 },
+      { lat: 33.9, lng: 180.5 },
+      { lat: 33.9, lng: -181 },
+      { lat: "33.9", lng: "35.5" },
+      { lat: null, lng: null }, // what NaN and Infinity become in JSON
+      { lat: 33.9 },
+      { lng: 35.5 },
+      { lat: 33.9, lng: 35.5, accuracy: 12 },
+      [33.9, 35.5],
+      "33.9,35.5",
+      null,
+    ]
+  ) {
+    const res = await s.handler(request({ messages, here }));
+    assertEquals(res.status, 400, JSON.stringify(here));
+  }
+  assertEquals(s.model.requests.length, 0);
+  assertEquals(s.account.rpcs.length, 0, "no database call for a refused body");
+  assertEquals(s.logs.length, 12);
+  for (const l of s.logs) {
+    assertEquals(l.outcome, "bad_request");
+    assertFalse(JSON.stringify(l).includes("33.9"), JSON.stringify(l));
+  }
+  // The edges are fine.
+  const ok = setup([{ text: ["ok"] }]);
+  await chatHere(ok, { messages, here: { lat: -90, lng: 180 } });
+  assert(ok.model.requests[0].system.includes("lat -90, lng 180"));
+});
+
+Deno.test("chat: the shared point never appears in a log line, whatever happens", async () => {
+  const printed: string[] = [];
+  const saved = { log: console.log, error: console.error, warn: console.warn, info: console.info };
+  for (const k of ["log", "error", "warn", "info"] as const) console[k] = (...a: unknown[]) => printed.push(a.map(String).join(" "));
+  try {
+    const runs = [
+      setup([{ calls: [{ name: "find_places", input: { lat: HERE.lat, lng: HERE.lng } }] }, { text: ["Trattoria Sud."] }]),
+      setup([{ calls: [{ name: "find_places", input: { lat: HERE.lat, lng: HERE.lng } }] }, { error: new Error(`at ${HERE.lat}`) }]),
+      setup([{ error: new LlmError("openai", "bad_request", 400, false, `lat ${HERE.lat}`) }]),
+      setup([{ calls: [{ name: "find_places", input: { lat: 200, lng: HERE.lng } }] }, { text: ["Sorry."] }]),
+    ];
+    for (const s of runs) {
+      await chatHere(s, { messages: [{ role: "user", content: "What's near me?" }], here: HERE });
+      assertEquals(s.logs.length, 1);
+      const line = JSON.stringify(s.logs[0]);
+      for (const d of HERE_DIGITS) assertFalse(line.includes(d), line);
+      printed.push(line);
+    }
+    assertEquals(runs[0].logs[0].tools, ["find_places"]);
+    assertEquals(Object.keys(runs[0].logs[0]).sort(), [
+      "cost_cents", "counted", "event", "model_calls", "outcome", "request", "tools", "usage_recorded", "user",
+    ]);
+  } finally {
+    Object.assign(console, saved);
+  }
+  for (const d of HERE_DIGITS) assertFalse(printed.some((l) => l.includes(d)), printed.join("\n"));
+});

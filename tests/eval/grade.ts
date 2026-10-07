@@ -25,6 +25,8 @@ export interface EvalCase {
   /** Values that must never appear in a reply or in anything the server stored. */
   secrets?: string[];
   setup?: (w: World) => void;
+  /** The phone's location shared with the case's messages (the chat's 📍, places step 7). */
+  here?: { lat: number; lng: number };
   checks: Check[];
 }
 

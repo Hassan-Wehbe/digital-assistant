@@ -6,6 +6,9 @@
 //           {"messages": [{"role": "user" | "assistant", "content": "..."}, ...]}
 //           The app keeps the thread and sends the recent part, ending with the new user message.
 //           Nothing about the conversation is stored on the server.
+//           Optional "here": {"lat": ..., "lng": ...}, the phone's location when the user tapped 📍
+//           (places step 7). It goes into this one message's instructions for find_places and
+//           nowhere else: never stored, never logged, never sent to the classifier.
 // Response: 401 without a valid sign-in, 400 for a malformed body, otherwise a stream of
 //           newline-delimited JSON events (application/x-ndjson):
 //             {"type":"notice","code":"allowance_low","message":...}   heads-up at 80%
@@ -21,7 +24,7 @@
 // answer, not a stream.
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { systemPrompt } from "../_shared/assistant_prompt.ts";
+import { type SharedPoint, systemPrompt } from "../_shared/assistant_prompt.ts";
 import { type Llm, LlmError, type Message, QUOTA_EXCEEDED, RoutesConfigError, type ToolResult } from "../_shared/llm/index.ts";
 import { loadAssistantName } from "../mcp/lib/assistant.ts";
 import { classify, classifyBody, type ClassifyLog } from "./classify.ts";
@@ -80,6 +83,12 @@ const bodySchema = z.object({
     role: z.enum(["user", "assistant"]),
     content: z.string().max(MAX_MESSAGE_CHARS),
   })).min(1).max(200),
+  /** Where the phone is, shared with this one message (📍). Out of range or not a number: 400
+   * (zod 4's z.number() already refuses NaN and Infinity). */
+  here: z.object({
+    lat: z.number().min(-90).max(90),
+    lng: z.number().min(-180).max(180),
+  }).strict().optional(),
 });
 
 function jsonError(status: number, error: string, detail: string): Response {
@@ -146,7 +155,7 @@ export function createHandler(deps: ChatDeps): (req: Request) => Promise<Respons
           }
         };
         try {
-          await runChat({ deps, token, userId, messages, emit, signal: abort.signal });
+          await runChat({ deps, token, userId, messages, here: parsed.data?.here, emit, signal: abort.signal });
         } catch (e) {
           // Last resort (e.g. the database client threw): the app still gets an answer and an end.
           if (!finished) {
@@ -182,6 +191,8 @@ interface RunArgs {
   token: string;
   userId: string;
   messages: Message[];
+  /** The shared location for this message only (never stored or logged). */
+  here?: SharedPoint;
   emit: (event: Record<string, unknown>) => void;
   signal: AbortSignal;
 }
@@ -214,7 +225,7 @@ export function vaultEvents(tool: string, resultText: string): Record<string, un
   }];
 }
 
-async function runChat({ deps, token, userId, messages, emit, signal }: RunArgs): Promise<void> {
+async function runChat({ deps, token, userId, messages, here, emit, signal }: RunArgs): Promise<void> {
   const log: LogEntry = {
     event: "chat", request: crypto.randomUUID(), user: userId, outcome: "ok",
     model_calls: 0, tools: [], cost_cents: 0, counted: false,
@@ -253,7 +264,7 @@ async function runChat({ deps, token, userId, messages, emit, signal }: RunArgs)
     const llm = deps.llm();
     const assistantName = await loadAssistantName(db, userId);
     tools = await connectTools({ db, userId, accessToken: token, assistantName });
-    const system = systemPrompt(assistantName, tools.instructions);
+    const system = systemPrompt(assistantName, tools.instructions, new Date(), here);
     const cards = new Set<string>();
     let lastStatus = "";
     let wrote = false; // text already sent this message: the next round's text starts a new paragraph
