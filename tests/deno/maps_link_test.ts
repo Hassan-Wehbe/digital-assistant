@@ -6,8 +6,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
-  coordinatesInLink, isShortMapsLink, linkLogLine, locationFromMapsLink as withTrace, MAX_REDIRECTS,
-  withLinkLocation as withLog,
+  coordinatesInLink, isShortMapsLink, linkLogLine, locationFromMapsLink as withTrace, MAX_PAGE_BYTES,
+  MAX_REDIRECTS, pageCoordinates, withLinkLocation as withLog,
 } from "../../supabase/functions/mcp/lib/maps_link.ts";
 import { registerSaveItem } from "../../supabase/functions/mcp/tools/save_item.ts";
 import { registerUpdateItem } from "../../supabase/functions/mcp/tools/update_item.ts";
@@ -151,7 +151,7 @@ Deno.test("too many redirects: at most 5 are followed", async () => {
   assert("point" in await locationFromMapsLink(SHORT, fakeFetch(ok).fn));
 });
 
-Deno.test("a timeout, a network error, an error status or a page without coordinates: a code, no point", async () => {
+Deno.test("a timeout, a network error, an error status or a non-HTML page: a code, no point, nothing read", async () => {
   const t0 = Date.now();
   assertEquals(await locationFromMapsLink(SHORT, fakeFetch({ [SHORT]: "hang" }).fn, 50), { code: "timeout" });
   assert(Date.now() - t0 < 2000);
@@ -163,7 +163,7 @@ Deno.test("a timeout, a network error, an error status or a page without coordin
   assertEquals(await locationFromMapsLink(SHORT, fakeFetch({ [SHORT]: { status: 302 } }).fn), { code: "http_status" });
   const page = fakeFetch({ [SHORT]: { status: 200 } });
   assertEquals(await locationFromMapsLink(SHORT, page.fn), { code: "no_coordinates" });
-  assertEquals(page.bodyRead(), false, "the page is never read");
+  assertEquals(page.bodyRead(), false, "only an HTML page is read");
 });
 
 Deno.test("a bad coordinate in the final address is refused", async () => {
@@ -183,15 +183,87 @@ Deno.test("withLinkLocation keeps a location the place already has, and needs a 
   assertEquals(filled, { place: { status: "want", maps_url: SHORT, lat: 28.538335, lng: -81.379237 }, filled: true });
 });
 
+// ---- Google's place page (current share links: the address has no coordinates) -------------
+
+// Today's share links lead to an address that names the place by id, with no coordinates.
+const PLACE_PAGE = "https://www.google.com/maps/place/Hinode+Sushi/data=!4m2!3m1!1s0x88e77b:0x1?entry=gps";
+
+/** A fetch whose last hop answers with an HTML page, optionally slowly. */
+function pageFetch(html: string, opts: { contentType?: string; slowMs?: number } = {}) {
+  const requested: string[] = [];
+  let pulled = 0;
+  const bytes = new TextEncoder().encode(html);
+  const fn = ((input: string | URL | Request) => {
+    const url = String(input);
+    requested.push(url);
+    if (url === SHORT) return Promise.resolve(new Response(null, { status: 302, headers: { location: PLACE_PAGE } }));
+    if (url !== PLACE_PAGE) return Promise.resolve(new Response(null, { status: 404 }));
+    const body = new ReadableStream<Uint8Array>({
+      async pull(c) {
+        if (opts.slowMs) await new Promise((r) => setTimeout(r, opts.slowMs));
+        if (pulled >= bytes.length) return c.close();
+        const part = bytes.subarray(pulled, pulled + 64 * 1024);
+        pulled += part.length;
+        c.enqueue(part);
+      },
+    }, { highWaterMark: 0 });
+    return Promise.resolve(new Response(body, { status: 200, headers: { "content-type": opts.contentType ?? "text/html; charset=UTF-8" } }));
+  }) as typeof fetch;
+  return { fn, requested, pulled: () => pulled };
+}
+
+const page = (inner: string) => `<!DOCTYPE html><html><head><title>Hinode Sushi</title>${inner}</head><body></body></html>`;
+
+Deno.test("the place page: coordinates by the pin, the preview image, a map address, or the starting view", async () => {
+  const cases: [string, string, { lat: number; lng: number }][] = [
+    ["page_pin", 'x="/maps/place/Hinode/data=!4m5!3m4!1s0x1:0x2!8m2!3d28.5383351!4d-81.3792371"', { lat: 28.538335, lng: -81.379237 }],
+    ["page_image", '<meta content="https://maps.google.com/maps/api/staticmap?center=28.5383351%2C-81.3792371&amp;zoom=16&amp;size=900x900" property="og:image">', { lat: 28.538335, lng: -81.379237 }],
+    ["page_view", '<link href="https://www.google.com/maps/place/Hinode/@28.5383,-81.3792,17z" rel="canonical">', { lat: 28.5383, lng: -81.3792 }],
+    ["page_state", "<script>window.APP_INITIALIZATION_STATE=[[[3456.78,-81.3792371,28.5383351],[0,0,0],[1024,768],13.1]]</script>", { lat: 28.538335, lng: -81.379237 }],
+  ];
+  for (const [found, inner, point] of cases) {
+    const f = pageFetch(page(inner));
+    const out = await withTrace(SHORT, f.fn);
+    assertEquals("point" in out && out.point, point, found);
+    assertEquals(out.trace?.found, found);
+    assertEquals(f.requested, [SHORT, PLACE_PAGE]);
+  }
+  // The pin wins over the map's centre when both are there.
+  assertEquals(pageCoordinates(page('/@1.5,2.5,17z !3d28.5!4d-81.3'))?.point, { lat: 28.5, lng: -81.3 });
+});
+
+Deno.test("the place page: none, out of range, too big, too slow, or not HTML gives no point", async () => {
+  assertEquals(await locationFromMapsLink(SHORT, pageFetch(page("<p>no coordinates here</p>")).fn), { code: "no_coordinates" });
+  assertEquals(pageCoordinates(page('center=95.1%2C35.5 /@95.1,35.5,17z')), null);
+  // Only the first MAX_PAGE_BYTES are read: coordinates after that are never seen.
+  const big = pageFetch("a".repeat(MAX_PAGE_BYTES + 200_000) + "!3d28.5!4d-81.3");
+  const out = await withTrace(SHORT, big.fn);
+  assertEquals("code" in out && out.code, "no_coordinates");
+  assertEquals(out.trace?.page_bytes, MAX_PAGE_BYTES);
+  assert(big.pulled() <= MAX_PAGE_BYTES + 64 * 1024, "reading stops at the limit");
+  // A page that trickles in is cut off by the same time limit.
+  const slow = pageFetch(page("x".repeat(500_000)), { slowMs: 30 });
+  assertEquals(await locationFromMapsLink(SHORT, slow.fn, 200), { code: "timeout" });
+  // A page that is not HTML is not read.
+  const json = pageFetch('{"x":"!3d28.5!4d-81.3"}', { contentType: "application/json" });
+  assertEquals(await locationFromMapsLink(SHORT, json.fn), { code: "no_coordinates" });
+  assertEquals(json.pulled(), 0);
+});
+
 Deno.test("the log line holds only the outcome code, the requests made and the last status", async () => {
-  const hop = "https://www.google.com/maps/place/Hinode+Sushi/data=!4m2!3m1!1s0x88e77b:0x1";
-  const f = fakeFetch({ [SHORT]: { status: 302, location: hop }, [hop]: { status: 200 } });
-  const line = linkLogLine(await withTrace(SHORT, f.fn));
-  assertEquals(JSON.parse(line), { event: "maps_link", code: "no_coordinates", requests: 2, status: 200 });
+  const none = page("<p>Hinode Sushi</p>");
+  const line = linkLogLine(await withTrace(SHORT, pageFetch(none).fn));
+  const bytes = new TextEncoder().encode(none).length;
+  assertEquals(JSON.parse(line), { event: "maps_link", code: "no_coordinates", requests: 2, status: 200, page_bytes: bytes, found: null });
+  const inPage = linkLogLine(await withTrace(SHORT, pageFetch(page("staticmap?center=28.5383351%2C-81.3792371")).fn));
+  assertEquals(JSON.parse(inPage).found, "page_image");
   const ok = linkLogLine(await withTrace(SHORT, fakeFetch({ [SHORT]: { status: 302, location: PIN_URL } }).fn));
-  assertEquals(JSON.parse(ok), { event: "maps_link", code: "ok", requests: 1, status: 302 });
-  for (const leak of ["goo.gl", "google", "Hinode", "28.5", "81.3"]) assert(!line.includes(leak) && !ok.includes(leak), leak);
-  assertEquals(JSON.parse(linkLogLine(await withTrace(PIN_URL, f.fn))), { event: "maps_link", code: "ok", requests: 0, status: 0 });
+  assertEquals(JSON.parse(ok), { event: "maps_link", code: "ok", requests: 1, status: 302, page_bytes: 0, found: "link" });
+  for (const leak of ["goo.gl", "google", "Hinode", "28.5", "81.3"]) {
+    assert(!line.includes(leak) && !ok.includes(leak) && !inPage.includes(leak), leak);
+  }
+  const f = fakeFetch({});
+  assertEquals(JSON.parse(linkLogLine(await withTrace(PIN_URL, f.fn))), { event: "maps_link", code: "ok", requests: 0, status: 0, page_bytes: 0, found: "link" });
 });
 
 // ---- Through save_item and update_item -------------------------------------------------------
@@ -254,7 +326,7 @@ function onlyCodes(logged: unknown[][]) {
   for (const args of logged) {
     assertEquals(args.length, 1);
     const line = JSON.parse(String(args[0]));
-    assertEquals(Object.keys(line).sort(), ["code", "event", "requests", "status"]);
+    assertEquals(Object.keys(line).sort(), ["code", "event", "found", "page_bytes", "requests", "status"]);
     for (const leak of ["goo.gl", "maps.", "evil", "http", "28.5", "81.3"]) assert(!String(args[0]).includes(leak), leak);
   }
   return logged.map((a) => JSON.parse(String(a[0])).code);
