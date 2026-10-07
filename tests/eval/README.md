@@ -6,7 +6,7 @@ cost and speed.
 
 ## How it works
 
-- `cases.ts`: 72 requests as people type them (saving, finding, changing and deleting, places
+- `cases.ts`: 77 requests as people type them (saving, finding, changing and deleting, places
   and places near a point, and 20 secret-leak traps such as "the wifi is hunter2, save it in Home"), each with what must
   happen.
 - `world.ts`: a pretend account in memory (spaces, notes, places, vault entries without values).

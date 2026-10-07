@@ -77,6 +77,7 @@ export interface Session {
 export async function openSession(world = new World(), here?: SharedPoint): Promise<Session> {
   const ctx: ToolContext = {
     db: world.client(), userId: "eval-user", accessToken: "eval-token", assistantName: world.assistantName,
+    distanceUnit: world.distanceUnit,
   };
   const tools = await connectTools(ctx, "eval");
   return {
