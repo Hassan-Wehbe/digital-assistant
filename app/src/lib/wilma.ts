@@ -277,7 +277,8 @@ export function wilmaClient({ url, token, refresh, fetch: f = fetch }: ClientOpt
     /** Only an empty space can be deleted; otherwise the error says what is still inside. */
     deleteSpace: (id: string) => call<{ deleted: boolean }>('delete_space', { space: id }),
     // Vault: names and one-time links only (restricted spaces are never listed).
-    findSecrets: async (opts: { query?: string; limit?: number } = {}) =>
+    // space: only that space and its sub-spaces (a space screen's 🔒 rows).
+    findSecrets: async (opts: { query?: string; space?: string; limit?: number } = {}) =>
       (await call<{ results: SecretMeta[] }>('find_secret', { limit: 50, ...opts })).results,
     revealLink: (secretId: string) => call<RevealLink>('get_secret', { secret_id: secretId }),
     /** Starts a new secret: metadata only. It exists once its value arrives through the entry link. */

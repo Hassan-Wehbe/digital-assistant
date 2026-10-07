@@ -1,11 +1,25 @@
-// One space: its most recently updated items (and those of its sub-spaces).
+// One space: its most recently updated items (and those of its sub-spaces), then its vault
+// entries as 🔒 rows (name and website only; a tap opens the entry in the Vault).
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 
 import { ItemRow } from '@/components/rows';
-import { Button, confirm, ErrorBox, Loading, Muted, styles, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
+import {
+  Button,
+  confirm,
+  ErrorBox,
+  GroupList,
+  GroupRow,
+  Loading,
+  Muted,
+  styles,
+  useColors,
+  useLoad,
+  useReloadOnReturn,
+} from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { secretRoute, spaceSecretRow } from '@/lib/secretRows';
 
 export default function SpaceScreen() {
   const c = useColors();
@@ -13,6 +27,14 @@ export default function SpaceScreen() {
   const { wilma } = useAuth();
   const { data, error, loading, reload } = useLoad(`space:${id}`, () => wilma.search({ space: id, limit: 50 }));
   useReloadOnReturn(reload);
+  // Names and websites only (find_secret never returns values; restricted spaces are left out).
+  const secrets = useLoad(`space-secrets:${id}`, () => wilma.findSecrets({ space: id }));
+  useReloadOnReturn(secrets.reload);
+  const reloadAll = () => {
+    reload();
+    secrets.reload();
+  };
+  const nothing = !loading && !secrets.loading && !error && !secrets.error && !data?.length && !secrets.data?.length;
   const [deleting, setDeleting] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -62,14 +84,22 @@ export default function SpaceScreen() {
             {error ? <ErrorBox message={error} onRetry={reload} /> : null}
           </>
         }
-        ListEmptyComponent={loading ? <Loading /> : error ? null : <Muted>Nothing in this space yet.</Muted>}
+        ListEmptyComponent={loading ? <Loading /> : nothing ? <Muted>Nothing in this space yet.</Muted> : null}
         ListFooterComponent={
           <View style={{ gap: 8, marginTop: 16 }}>
+            {secrets.error ? <ErrorBox message={secrets.error} onRetry={secrets.reload} /> : null}
+            {secrets.data?.length ? (
+              <GroupList>
+                {secrets.data.map((s, i) => (
+                  <GroupRow key={s.id} first={i === 0} {...spaceSecretRow(s)} onPress={() => router.push(secretRoute(s))} />
+                ))}
+              </GroupList>
+            ) : null}
             <Button title="New space inside this one" kind="plain" onPress={() => router.push({ pathname: '/new-space', params: { parent: id } })} />
             <Button title={deleting ? 'Deleting…' : 'Delete space'} kind="danger" onPress={deleteSpace} disabled={deleting} />
           </View>
         }
-        refreshControl={<RefreshControl refreshing={loading && !!data} onRefresh={reload} />}
+        refreshControl={<RefreshControl refreshing={(loading && !!data) || (secrets.loading && !!secrets.data)} onRefresh={reloadAll} />}
       />
     </>
   );
