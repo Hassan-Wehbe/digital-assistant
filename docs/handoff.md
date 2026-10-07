@@ -12,6 +12,20 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **UI PR 4 and PR 7 done (2026-10-07, afternoon).** PR 4 (#136, app, merged, not built): the
+  phone holds a message that looks like a password (amber box, "Wilma won't send it" card with
+  Edit message / Save in Vault, Send held; `app/src/lib/credentials.ts` is the server's check,
+  kept identical by a test). PR 7 (#137, server, **live: `chat` version 11**, deployed
+  2026-10-07, 48/48 listed files identical to `main` at b94e2f6, `mcp/lib/supabase-ai.d.ts` not
+  listed back as usual; 401 without sign-in and with a fake token): a new message that looks
+  like a credential gets a fixed answer with no model call and nothing counted; earlier ones
+  (and Wilma's reply after them) are replaced before the model sees the history. No evaluation
+  run (owner: skip; the harness does not include this step, so results would not change). Not
+  covered: the Claude connector (the Claude app talks to Anthropic itself; rule 9 in `save_item`
+  stays its guard). Places Q17 decided (#134): a shared place's location comes from an
+  OpenStreetMap name lookup the user confirms (built with places step 8 part 2). **Next: UI
+  PR 5** (chat with the Wilma box), then PR 6, places step 8 part 2, PR 8 and the Play build
+  (owner may ask for an earlier build after PR 6; ask then).
 - **START HERE: consolidated state (2026-10-07, end of day).** Two lines of work ran in parallel
   today and are now merged into this one note. Nothing is open on GitHub.
   - **UI tidy-up (`docs/ui-review.md` section 3):** PR 1 shared pieces (#123), PR 2 Settings
