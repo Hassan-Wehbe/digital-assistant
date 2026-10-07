@@ -22,9 +22,10 @@
 //
 // Passwords never reach the model (CLAUDE.md rules 1 and 9; docs/ui-review.md, plan step 7):
 // when the new message looks like a credential (the server's findCredential, the same check
-// save_item uses and the app runs before sending), the reply is HELD_TEXT and no model is called;
-// an earlier message in the history that looks like one is replaced by REMOVED_TEXT before the
-// conversation goes to the model. Neither the message nor the value is logged.
+// save_item uses and the app runs before sending), the reply is heldText() and no model is
+// called; an earlier message in the history that looks like one (and Wilma's reply to it) is
+// replaced by REMOVED_TEXT before the conversation goes to the model (screenCredentials).
+// Neither the message nor the value is logged.
 //
 // A body {"classify": "..."} is the one box's classifier instead (classify.ts): a plain JSON
 // answer, not a stream.
