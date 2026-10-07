@@ -8,8 +8,9 @@ import { IDS, World } from "../eval/world.ts";
 import { type ChatDeps, createHandler, type LogEntry, MAX_HISTORY, MAX_ROUNDS } from "../../supabase/functions/chat/chat.ts";
 import { CONFIRM_TOOLS } from "../../supabase/functions/chat/confirm.ts";
 import {
-  ALLOWANCE_LOW, CONNECTION_TROUBLE, SERVICE_PAUSED, STATUS, TOO_MANY_STEPS,
+  ALLOWANCE_LOW, CONNECTION_TROUBLE, heldText, REMOVED_TEXT, SERVICE_PAUSED, STATUS, TOO_MANY_STEPS,
 } from "../../supabase/functions/chat/messages.ts";
+import { findCredential } from "../../supabase/functions/mcp/lib/credentials.ts";
 import { ALL_TOOLS } from "../../supabase/functions/mcp/tools/all.ts";
 import {
   type ChatRequest, LlmError, QUOTA_EXCEEDED, RoutesConfigError, type StreamEvent, type ToolCall,
@@ -574,6 +575,7 @@ Deno.test("chat: logs hold codes and ids only, never conversation text", async (
 });
 
 Deno.test("chat: rule 9 still applies: a password sent to save_item is refused and not stored", async () => {
+  // The message itself passes the chat's check; the model puts a password into save_item anyway.
   const s = setup([
     {
       calls: [{
@@ -583,12 +585,84 @@ Deno.test("chat: rule 9 still applies: a password sent to save_item is refused a
     },
     { text: ["That looks like a password, so I didn't save it. Use the vault instead."] },
   ]);
-  const events = await chat(s, "the wifi password is hunter2sunrise, save it in Home");
+  const events = await chat(s, "save a note about the wifi in Home");
   assert(s.model.seen[0].startsWith("Not saved"), s.model.seen[0]);
   assertFalse(s.model.seen[0].includes("hunter2sunrise"), "the refusal never repeats the value");
   assertFalse(s.account.world.items.some((i) => World.text(i).includes("hunter2sunrise")));
   assertFalse(s.account.rpcs.includes("save_item"), "nothing reached the database");
   assertFalse(JSON.stringify(events).includes("hunter2sunrise"));
+});
+
+// ---- Passwords never reach the model (plan step 7) -------------------------------------------
+
+const PW = "Sunflower2024!";
+
+Deno.test("chat: a message that looks like a password gets the decided answer, with no model call", async () => {
+  for (const [message, kind] of [
+    [`Wifi password: ${PW}`, "a password"],
+    ["my bank card pin is 0937", "a PIN"],
+    ["Visa 4111 1111 1111 1111 exp 12/29", "a card number"],
+  ]) {
+    const s = setup([{ text: ["should not be asked"] }]);
+    const events = await chat(s, message);
+    assertEquals(s.model.requests.length, 0, "the model is never called");
+    assertEquals(s.account.rpcs, [], "nothing is read or written");
+    assertEquals(reply(events), heldText(kind.replace(/^an? /, "")));
+    assert(reply(events).includes(kind), reply(events));
+    assertEquals(events.at(-1), { type: "done", counted: false });
+    assertEquals(s.logs.length, 1);
+    assertEquals(s.logs[0].outcome, "credential_held");
+    assertEquals(s.logs[0].counted, false);
+    for (const v of [PW, "0937", "4111"]) {
+      assertFalse(JSON.stringify(events).includes(v), "the reply never repeats the value");
+      assertFalse(JSON.stringify(s.logs).includes(v), "the log never holds the value");
+    }
+  }
+});
+
+Deno.test("chat: a password with a shared point is held too, and the point is not used", async () => {
+  const s = setup([{ text: ["should not be asked"] }]);
+  const res = await s.handler(request({ messages: [{ role: "user", content: `PIN: 4821` }], here: { lat: 1, lng: 2 } }));
+  const events = (await res.text()).split("\n").filter(Boolean).map((l) => JSON.parse(l) as Event);
+  assertEquals(s.model.requests.length, 0);
+  assertEquals(s.logs[0].outcome, "credential_held");
+  assertEquals(events.at(-1), { type: "done", counted: false });
+});
+
+Deno.test("chat: an earlier message that looks like a password is removed before the model sees it", async () => {
+  const s = setup([{ text: ["Sure."] }]);
+  await chat(s, [
+    { role: "user", content: `the wifi password is ${PW}` }, // sent by an older app version
+    { role: "assistant", content: `Got it: ${PW}.` }, // the reply to it, even without a label
+    { role: "user", content: "thanks" },
+    { role: "assistant", content: `Also, your router PIN is 4821.` }, // Wilma's own text is checked too
+    { role: "user", content: heldText("password") }, // the decided answer itself is not removed
+    { role: "assistant", content: "OK." },
+    { role: "user", content: "what's the wifi password?" },
+  ]);
+  assertEquals(s.model.requests.length, 1);
+  const sent = JSON.stringify(s.model.requests[0].messages);
+  assertFalse(sent.includes(PW), sent);
+  assertFalse(sent.includes("4821"), sent);
+  assertEquals(s.model.requests[0].messages.map((m) => m.role === "user" ? m.content : m.role === "assistant" ? m.text : ""), [
+    REMOVED_TEXT, REMOVED_TEXT, "thanks", REMOVED_TEXT, heldText("password"), "OK.", "what's the wifi password?",
+  ]);
+});
+
+Deno.test("chat: ordinary talk about passwords still reaches Wilma", async () => {
+  for (const message of ["what's the wifi password?", "open the vault", "My password is stored in the vault under Bank."]) {
+    const s = setup([{ text: ["Here."] }]);
+    await chat(s, message);
+    assertEquals(s.model.requests.length, 1, message);
+    assertEquals(s.logs[0].outcome, "ok");
+  }
+});
+
+Deno.test("chat: the decided texts do not look like a password themselves", () => {
+  for (const kind of ["password", "PIN", "access code", "API key or token", "private key", "card number"]) {
+    assertEquals(findCredential(heldText(kind)), null, kind);
+  }
+  assertEquals(findCredential(REMOVED_TEXT), null);
 });
 
 // ---- "Near me" with the phone's location (places step 7) ------------------------------------

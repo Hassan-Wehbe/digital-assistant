@@ -19,6 +19,20 @@ export const SERVICE_PAUSED =
 
 export const CONNECTION_TROUBLE = "I'm having trouble connecting. Try again in a moment.";
 
+/** The reply when the new message looks like a password (no model call; plan step 7). Names the
+ * kind, never the value. Plain text, so every app version shows it as Wilma's answer. */
+export function heldText(kind: string): string {
+  const what = `${/^[aeiou]/i.test(kind) ? "an" : "a"} ${kind}`;
+  return (
+    `That message looks like it holds ${what}, so I didn't send it to the AI and didn't save it. ` +
+    "Passwords, PINs and keys go in your vault: open the Vault and tap Save a new secret. " +
+    "If it's a real password, it's worth changing it, since it was typed into the chat."
+  );
+}
+
+/** Stands in for an earlier message that looked like it held a password. */
+export const REMOVED_TEXT = "(Removed: this message looked like it held a password, so it was not sent.)";
+
 export const TOO_MANY_STEPS = "I couldn't finish that in one go. Try asking in smaller steps.";
 
 /** Error codes the app switches on: allowance_used (usage bar), service_paused (Search and

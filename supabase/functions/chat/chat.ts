@@ -20,6 +20,12 @@
 //             {"type":"error","code":"allowance_used"|"service_paused"|"connection","message":...}
 //             {"type":"done","counted":true|false}                    always last
 //
+// Passwords never reach the model (CLAUDE.md rules 1 and 9; docs/ui-review.md, plan step 7):
+// when the new message looks like a credential (the server's findCredential, the same check
+// save_item uses and the app runs before sending), the reply is HELD_TEXT and no model is called;
+// an earlier message in the history that looks like one is replaced by REMOVED_TEXT before the
+// conversation goes to the model. Neither the message nor the value is logged.
+//
 // A body {"classify": "..."} is the one box's classifier instead (classify.ts): a plain JSON
 // answer, not a stream.
 import { z } from "zod";
@@ -27,10 +33,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { type SharedPoint, systemPrompt } from "../_shared/assistant_prompt.ts";
 import { type Llm, LlmError, type Message, QUOTA_EXCEEDED, RoutesConfigError, type ToolResult } from "../_shared/llm/index.ts";
 import { loadAssistantName } from "../mcp/lib/assistant.ts";
+import { type CredentialKind, findCredential } from "../mcp/lib/credentials.ts";
 import { classify, classifyBody, type ClassifyLog } from "./classify.ts";
 import { CONFIRM_TOOLS, confirmCard } from "./confirm.ts";
 import {
-  ALLOWANCE_LOW, allowanceUsed, type ChatErrorCode, ERROR_TEXT, STATUS, STATUS_DEFAULT, TOO_MANY_STEPS,
+  ALLOWANCE_LOW, allowanceUsed, type ChatErrorCode, ERROR_TEXT, heldText, REMOVED_TEXT, STATUS, STATUS_DEFAULT,
+  TOO_MANY_STEPS,
 } from "./messages.ts";
 import { connectTools, type ToolSession } from "./tools.ts";
 
@@ -51,8 +59,9 @@ export interface LogEntry {
   event: "chat";
   request: string;
   user: string;
-  outcome: "ok" | ChatErrorCode | "client_closed" | "bad_request";
-  /** Machine code of a failure: llm:<code>, db:<code>, routes_config, or an error class name. */
+  outcome: "ok" | ChatErrorCode | "client_closed" | "bad_request" | "credential_held";
+  /** Machine code of a failure: llm:<code>, db:<code>, routes_config, or an error class name;
+   * for credential_held, the kind of credential (never the value). */
   code?: string;
   status?: number;
   model_calls: number;
@@ -106,6 +115,32 @@ export function toMessages(history: z.infer<typeof bodySchema>["messages"]): Mes
       ? { role: "user", content: m.content }
       : { role: "assistant", text: m.content, toolCalls: [] }
   );
+}
+
+/**
+ * Passwords out of the conversation before it reaches the model: the new (last) message's kind
+ * when it looks like a credential (the caller then answers without a model), and the history with
+ * every earlier message that looks like one replaced by REMOVED_TEXT. Wilma's own replies are
+ * checked too, and the reply right after a removed message is removed with it (it may repeat the
+ * value without a label the check could see).
+ */
+export function screenCredentials(messages: Message[]): { held: CredentialKind | null; messages: Message[] } {
+  const last = messages.at(-1);
+  const held = last?.role === "user" ? findCredential(last.content) : null;
+  let removedUser = false;
+  const screened = messages.map((m): Message => {
+    if (m.role === "user") {
+      removedUser = !!findCredential(m.content);
+      return removedUser ? { role: "user", content: REMOVED_TEXT } : m;
+    }
+    if (m.role === "assistant") {
+      const remove = removedUser || !!findCredential(m.text);
+      removedUser = false;
+      return remove ? { ...m, text: REMOVED_TEXT } : m;
+    }
+    return m;
+  });
+  return { held, messages: screened };
 }
 
 export function createHandler(deps: ChatDeps): (req: Request) => Promise<Response> {
@@ -236,6 +271,19 @@ async function runChat({ deps, token, userId, messages, here, emit, signal }: Ru
     if (status !== undefined) log.status = status;
     if (outcome !== "allowance_used") emit({ type: "error", code: outcome, message: ERROR_TEXT[outcome] });
   };
+
+  // 0. A password in the new message: the decided answer, no model call, nothing counted.
+  const screened = screenCredentials(messages);
+  if (screened.held) {
+    log.outcome = "credential_held";
+    log.code = screened.held;
+    emit({ type: "text", text: heldText(screened.held) });
+    emit({ type: "done", counted: false });
+    deps.log(log);
+    return;
+  }
+  messages = screened.messages;
+
   const db = deps.clientFor(token);
 
   // 1. The allowance, before any model call.
