@@ -3,6 +3,9 @@
 // (rule 9 spirit): save_item / update_item pass place metadata through normalizePlace, which
 // rejects unknown fields, bad links and out-of-range values with a message the model can act on.
 // Credential-looking values are refused before this, by rejectCredentials (every metadata value).
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DistanceUnit } from "./assistant.ts";
+import { loadSpaces, type Space } from "./spaces.ts";
 
 export const PLACE_TYPE = "place";
 
@@ -311,3 +314,67 @@ export function placePoint(metadata: unknown): Point | null {
     typeof v === "number" && Number.isFinite(v) && Math.abs(v) <= limit;
   return ok(lat, 90) && ok(lng, 180) ? { lat, lng } : null;
 }
+
+export const KM_PER_MILE = 1.609344;
+
+/** A distance in the user's unit, rounded to 0.1 (as find_places and the chat's place cards say it). */
+export function inUnit(km: number, unit: DistanceUnit): number {
+  return Math.round((unit === "mi" ? km / KM_PER_MILE : km) * 10) / 10;
+}
+
+/**
+ * The spaces places may be read from: the user's own spaces that are not restricted and not under
+ * a restricted space (searchable_space_ids, migration knowledge_path), the same rule as
+ * search_items (rule 3). Used by find_places and by the chat's show_places.
+ */
+export async function placeScope(db: SupabaseClient): Promise<{ spaces: Space[]; allowed: string[] }> {
+  const spaces = await loadSpaces(db);
+  const { data: ids, error } = await db.rpc("searchable_space_ids");
+  if (error) throw new Error(`Finding places failed: ${error.message}`);
+  const searchable = new Set(
+    ((ids ?? []) as unknown[]).map((v) =>
+      typeof v === "string" ? v : String((v as Record<string, unknown>)?.searchable_space_ids)
+    ),
+  );
+  const own = new Set(spaces.map((s) => s.id));
+  return { spaces, allowed: [...searchable].filter((id) => own.has(id)) };
+}
+
+export interface VisiblePlace {
+  id: string;
+  title: string;
+  space_id: string;
+  metadata: Record<string, unknown> | null;
+}
+
+/**
+ * The places among `ids` the user may see, by id: item_type place, not deleted, in one of their
+ * own searchable spaces. Anything else (a restricted space, someone else's place, a deleted one, a
+ * note that is not a place, an id that does not exist) is simply absent, so a caller cannot tell
+ * those apart (rule 3).
+ */
+export async function visiblePlaces(db: SupabaseClient, ids: string[]): Promise<Map<string, VisiblePlace>> {
+  const out = new Map<string, VisiblePlace>();
+  const wanted = [...new Set(ids.filter((id) => UUID.test(id)))];
+  if (!wanted.length) return out;
+  const { allowed } = await placeScope(db);
+  if (!allowed.length) return out;
+  const { data, error } = await db
+    .from("item")
+    .select("id, title, space_id, item_type, metadata, deleted_at")
+    .in("id", wanted)
+    .eq("item_type", PLACE_TYPE)
+    .is("deleted_at", null)
+    .in("space_id", allowed);
+  if (error) throw new Error(`Finding places failed: ${error.message}`);
+  // Checked again here, whatever the database returned.
+  const allowedSet = new Set(allowed);
+  const wantedSet = new Set(wanted);
+  for (const r of (data ?? []) as (VisiblePlace & { item_type: string; deleted_at: string | null })[]) {
+    if (!wantedSet.has(r.id) || r.item_type !== PLACE_TYPE || r.deleted_at || !allowedSet.has(r.space_id)) continue;
+    out.set(r.id, { id: r.id, title: r.title, space_id: r.space_id, metadata: r.metadata });
+  }
+  return out;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

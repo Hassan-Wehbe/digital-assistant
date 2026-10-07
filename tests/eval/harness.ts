@@ -1,7 +1,9 @@
 // Runs one evaluation case: a fresh pretend account (world.ts), Wilma's real MCP tools on top
 // of it (same descriptions, same server-side checks such as rule 9), connected in memory, and
 // the conversation loop the chat function will use: model -> tool calls -> results -> model,
-// until the model answers. Records every tool call and reply for grading.
+// until the model answers. The chat-only actions (chat/actions.ts: show_places, ask_for_location)
+// run here exactly as in the chat function. Records every tool call, event and reply for grading.
+import { ACTION_NAMES, ACTION_SPECS, ChatActions } from "../../supabase/functions/chat/actions.ts";
 import { connectTools } from "../../supabase/functions/chat/tools.ts";
 import type { ToolContext } from "../../supabase/functions/mcp/tools/_shared.ts";
 import { ALL_TOOLS } from "../../supabase/functions/mcp/tools/all.ts";
@@ -49,6 +51,8 @@ export interface TurnRecord {
   /** Everything the model said to the user during this turn. */
   reply: string;
   toolCalls: ToolCallRecord[];
+  /** What the chat function would have sent the app from the actions (place cards, 📍 card). */
+  events: Record<string, unknown>[];
   stop: StopReason;
 }
 
@@ -70,6 +74,8 @@ export interface Session {
   tools: ToolSpec[];
   system: string;
   call(name: string, args: Record<string, unknown>): Promise<{ isError: boolean; text: string }>;
+  /** The chat-only actions for one user message, as the chat function makes them. */
+  actions(): ChatActions;
   close(): Promise<void>;
 }
 
@@ -82,10 +88,12 @@ export async function openSession(world = new World(), here?: SharedPoint): Prom
   const tools = await connectTools(ctx, "eval");
   return {
     world,
-    tools: tools.specs,
+    // As the chat function: the MCP tools plus the chat-only actions.
+    tools: [...tools.specs, ...ACTION_SPECS],
     // `here`: the 📍 location the chat function adds to a message's instructions (places step 7).
     system: systemPrompt(ctx.assistantName, tools.instructions, new Date(), here),
     call: tools.call,
+    actions: () => new ChatActions({ db: ctx.db, distanceUnit: ctx.distanceUnit ?? "mi", here }),
     close: tools.close,
   };
 }
@@ -114,8 +122,9 @@ export async function runConversation(
   try {
     for (const user of userTurns) {
       messages.push({ role: "user", content: user });
-      const turn: TurnRecord = { user, reply: "", toolCalls: [], stop: "other" };
+      const turn: TurnRecord = { user, reply: "", toolCalls: [], events: [], stop: "other" };
       record.turns.push(turn);
+      const actions = session.actions();
       for (let step = 0; ; step++) {
         if (step >= (opts.maxStepsPerTurn ?? 8)) {
           turn.stop = "other";
@@ -136,9 +145,16 @@ export async function runConversation(
 
         const results: ToolResult[] = [];
         for (const c of done.turn.toolCalls) {
-          const out = c.invalidInput
-            ? { isError: true, text: "The tool arguments were not a JSON object." }
-            : await session.call(c.name, c.input);
+          let out: { isError: boolean; text: string };
+          if (c.invalidInput) {
+            out = { isError: true, text: "The tool arguments were not a JSON object." };
+          } else if (ACTION_NAMES.has(c.name)) {
+            const a = await actions.run(c.name, c.input);
+            turn.events.push(...a.events);
+            out = a;
+          } else {
+            out = await session.call(c.name, c.input);
+          }
           turn.toolCalls.push({ name: c.name, args: c.input, isError: out.isError, result: out.text });
           results.push({ callId: c.id, content: out.text, isError: out.isError });
         }

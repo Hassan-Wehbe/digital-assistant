@@ -12,6 +12,22 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Places part 2 PR 2 (chat-only `show_places` / `ask_for_location`): PR open, not merged.**
+  New `supabase/functions/chat/actions.ts`, shared by the chat function and the evaluation;
+  the Claude connector never sees them. Events `{"type":"places","cards":[...]}` and
+  `{"type":"location_request"}`; today's app (versionCode 11 and the merged UI PRs) drops unknown
+  event types (`app/src/lib/chatStream.ts`), and Wilma still names the places in her text, so
+  nothing changes on the phone until the app's cards (part 2 PR 4). Details: `places-plan.md`
+  step 8, "As built (PR 2)". 304 Deno tests; eval dry run 91 cases on Luna, at most about $0.33.
+  **Owner's next steps:** merge; OK and spending cap for **one** paid evaluation run covering
+  PRs 1 and 2 (GitHub Actions → model evaluation, models `luna`, cases `all`); OK to deploy `mcp`
+  (37 files) and `chat` (50 files) (recipe below and in `phase5-a5b-chat-function-plan.md`:
+  every file from `scripts/function-files.sh`, each checked identical with `get_edge_function`,
+  401 without sign-in). Then part 2 PR 3 (Settings: miles / km).
+  **Owner's instruction (2026-10-07): do not chase the owner's open to-dos for now** (deleting the
+  `place-locations` stub, giving the two saved places a location, the versionCode 10 and 11 phone
+  checklists, the OpenStreetMap coverage check before PR 6). They will be handled together in one
+  "super checklist" and validation after the next Play build.
 - **Places part 2 PR 1 merged (#142); migration `distance_unit` applied 2026-10-07** (column
   `app_user.distance_unit`, default `mi`; grants: `authenticated` select/update on that column
   only, no anon). Server code (`mcp` 0.9.0) **not deployed yet**: one evaluation run and one deploy

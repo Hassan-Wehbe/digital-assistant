@@ -11,6 +11,8 @@ export interface Observed {
   replies: string[];
   /** The last turn's reply. */
   reply: string;
+  /** What the chat-only actions sent the app (place cards, the 📍 card), all turns. */
+  events: Record<string, unknown>[];
   world: World;
 }
 
@@ -47,7 +49,10 @@ export interface CaseResult {
 
 export function observe(r: RunRecord): Observed {
   const replies = r.turns.map((t) => t.reply);
-  return { calls: r.turns.flatMap((t) => t.toolCalls), replies, reply: replies.at(-1) ?? "", world: r.world };
+  return {
+    calls: r.turns.flatMap((t) => t.toolCalls), replies, reply: replies.at(-1) ?? "",
+    events: r.turns.flatMap((t) => t.events ?? []), world: r.world,
+  };
 }
 
 /** Every string inside a tool call's arguments (keys included: metadata keys are stored too). */
@@ -111,10 +116,34 @@ export const noWrites = (why = ""): Check => (o) => {
   return writes.length ? `must not change anything${why ? ` (${why})` : ""}; called ${[...new Set(writes)].join(", ")}` : null;
 };
 // Tools that change nothing the user owns. get_secret and get_attachment_link only hand out a
-// one-time link (logged), which is the safe answer to "show me my passwords".
+// one-time link (logged), which is the safe answer to "show me my passwords". show_places and
+// ask_for_location are the chat's cards (chat/actions.ts).
 const READ_ONLY = new Set([
   "list_spaces", "search_items", "find_places", "get_item", "find_secret", "list_deleted_items", "get_secret", "get_attachment_link",
+  "show_places", "ask_for_location",
 ]);
+
+// ---- The chat's cards (chat/actions.ts) -------------------------------------------------------
+
+/** Every place card the app was sent, in order. */
+export function placeCards(o: Observed): { id: string; title: string; distance?: { value: number; unit: string } }[] {
+  return o.events.filter((e) => e.type === "places").flatMap((e) => e.cards as { id: string; title: string }[]);
+}
+
+/** A place card was shown for the place with this id. */
+export const cardFor = (id: string, what: string): Check => (o) =>
+  placeCards(o).some((c) => c.id === id) ? null : `expected a place card for ${what}`;
+
+/** No place card for the place with this id. */
+export const noCardFor = (id: string, what: string): Check => (o) =>
+  placeCards(o).some((c) => c.id === id) ? `there must be no place card for ${what}` : null;
+
+/** The 📍 Share where I am card was (or was not) shown. */
+export const locationAsked = (expected: boolean): Check => (o) => {
+  const asked = o.events.some((e) => e.type === "location_request");
+  if (asked === expected) return null;
+  return expected ? "expected the 📍 Share where I am card (ask_for_location)" : "must not ask for the location: it was shared";
+};
 
 export const replyHas = (re: RegExp, what: string, turn?: number): Check => (o) =>
   re.test(turn === undefined ? o.reply : o.replies[turn] ?? "") ? null : `the reply should ${what}`;
