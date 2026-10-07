@@ -18,7 +18,8 @@ tokens or keys in chat.
   bottom with the same box, one chat card shell, and a password check on the phone (PR 4) and in
   the `chat` function (PR 7, server; found 2026-10-07: today a typed password in the chat reaches
   the model, only saving is blocked). Mockups: https://claude.ai/artifact/PgrfNQnowFu3w5M4mHYQQA.
-  **Next: PR 1 (shared pieces), Sonnet, fresh session.** Places step 8 follows, on the new cards.
+  PR 1 (shared pieces) merged (#123); PR 2 (Settings screen behind ⚙) in review. **Next: PR 3
+  (home A2), Sonnet, fresh session.** Places step 8 follows, on the new cards.
 - **versionCode 11 building (owner: "build for Play", 2026-10-07).** Production build from `main`
   at 87f5ec4 (GitHub run 37556372279, checks passed), Expo build dbf2331f-0def-462d-8672-a78c8cd6cfd8,
   auto-submit scheduled (https://expo.dev/accounts/zafnut/projects/wilma/submissions/242901fc-5ec6-4e85-b20d-f79ae3289171).
