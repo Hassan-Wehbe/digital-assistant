@@ -128,6 +128,19 @@ needs to *recommend* it, not only to find it:
   distance. **No migration.** **Where "here" comes from in chat:** the chat does not know the
   phone's location in this step; for "near me" Wilma asks which saved place the user is near, or
   for a map link with coordinates (owner's question below: should the app send the location?).
+  **Fix (2026-10-07, "restaurants close by" said none; `mcp` 0.9.2):** the owner's two
+  restaurants were within 10 miles, yet the first `find_places` answer was "none": a filter
+  matched nothing (the logs did not keep the arguments). Now (a) every answer starts with a plain
+  `summary` sentence ("No saved place (cuisine sushi) within 10 miles. Within 10 miles but not
+  matching every filter: ..."); (b) filters are forgiving: a kind in the plural ("restaurants") is
+  read as stored, and when the filters (kind, status, cuisine, occasion) leave nothing within the
+  radius, the nearby places they ruled out come back as `other_nearby`, each with `not_matching`
+  (restricted spaces stay out: `other_nearby` is drawn from the same rows); (c) one log line per
+  call, `{"event":"find_places", from, within, unit, filters, scanned, matching, results,
+  other_nearby, nearest_outside, without_location}`: filter names and counts, never values, names
+  or points; (d) Wilma's instructions count "close by" as "near", set only the filters the user
+  said, and name `other_nearby` places instead of saying "none". Evaluation cases
+  `place-close-by-filter-mismatch` and `place-restaurants-close-by`.
 
 ## Steps (each a small PR; the owner approves merges, builds and deploys)
 

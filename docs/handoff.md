@@ -12,6 +12,30 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Job 5 ("restaurants close by" said none): PR open, server only (`mcp` 0.9.2).** Checked (read
+  only): both real restaurants are `kind` restaurant, `status` been, cuisines japanese / thai, with
+  numeric `lat`/`lng`, so a plain `kind: "restaurant"` call would have found them; the first call
+  most likely sent `"restaurants"` (refused until now as "Filter not understood"), `status: "want"`,
+  a cuisine like "sushi", or a small `within`. Fix, details in `places-plan.md` step 5 "Fix
+  (2026-10-07)": `summary` sentence, forgiving filters (`other_nearby` with `not_matching`, plural
+  kinds), one `find_places` log line (filter names and counts only), prompt ("close by" = near,
+  only the filters the user said), 5 new Deno tests (309 in all), 2 new evaluation cases (93; dry run on Luna: at most about $0.33).
+  **Evaluation (owner's OK, $1 cap), run 37683006853 on the PR branch at 290dbf4: Luna 93/93,
+  0 leaks, 0 unsafe, $0.04**; both new cases and all 22 secret traps pass. (A first run started on
+  `main` before the merge was cancelled after a few seconds: it would have tested the old code.)
+  **Deployed (owner's OK, from the PR branch at 0e9b66f, 2026-10-07): `mcp` version 21 live**
+  (36/37 files identical to the repo, `lib/supabase-ai.d.ts` not listed back as usual; 401
+  without sign-in and with a fake token). **`chat` NOT deployed, still version 12** (old
+  `find_places`, old `credentials.ts`; 401 checked): the connector's `deploy_edge_function` call
+  was cut off at about 68 KB of the 214 KB payload and changed nothing. So the Claude connector
+  has the fix, **the app's Wilma chat does not yet.** **Owner's step to finish:** deploy `chat`
+  with the Supabase CLI (no size limit), from the repo root on `main`:
+  `supabase functions deploy chat --project-ref motvckmpusxiuelpwqxy --no-verify-jwt`
+  (the CLI bundles the sibling `_shared/` and `mcp/` imports itself); or add a
+  `SUPABASE_ACCESS_TOKEN` repository secret so a small GitHub Actions workflow can run that
+  command (the fallback named in `phase5-a5b-chat-function-plan.md`). Then check with
+  `get_edge_function` that every file matches `main`. Next: job 3 (🔒 vault entries in a space,
+  app only). No Play build until the owner says so.
 - **START HERE (2026-10-07, late): versionCode 12 findings and the next three jobs.** The owner
   ran part of the versionCode 12 checklist (stub deleted, update installed, both restaurants now
   have a location, start-up fine) and found:
