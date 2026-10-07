@@ -12,15 +12,16 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **Job 3 (🔒 vault entries in a space): PR open, app only.** A space screen now lists its vault
+- **Job 3 (🔒 vault entries in a space): merged (#155), not built, app only.** A space screen now lists its vault
   entries (that space and its sub-spaces; restricted spaces never, as `find_secret` already does)
   under its notes as 🔒 rows: name and website only. A tap opens the same entry screen as the
   Vault list (`/vault/[id]`), which shows the unlock card only when locked. "Nothing in this space
   yet" only when there are no notes and no entries. Home is unchanged (Logins stays listed). New
   `app/src/lib/secretRows.ts` (+ 14 tests; 532 app tests). No server, schema or privacy change.
   Ships with the next Play build (versionCode 13). **Next:** job 4's small geocoder test build,
-  when the owner says so; `chat` deploy (owner, Supabase CLI) still pending from job 5.
-- **Job 5 ("restaurants close by" said none): PR open, server only (`mcp` 0.9.2).** Checked (read
+  when the owner says so.
+- **Job 5 ("restaurants close by" said none): merged (#154) and live: `mcp` version 21, `chat`
+  version 13 (server only, `mcp` 0.9.2).** Checked (read
   only): both real restaurants are `kind` restaurant, `status` been, cuisines japanese / thai, with
   numeric `lat`/`lng`, so a plain `kind: "restaurant"` call would have found them; the first call
   most likely sent `"restaurants"` (refused until now as "Filter not understood"), `status: "want"`,
@@ -42,8 +43,13 @@ tokens or keys in chat.
   fake token). It needs the repository secret `SUPABASE_ACCESS_TOKEN`; a Supabase access token
   cannot be limited to one project and must be able to write, so **the owner deletes it in
   Supabase right after each deploy** and makes a new one next time. After a run, check with
-  `get_edge_function` that every file matches `main`. Next: job 3 (🔒 vault entries in a space,
-  app only). No Play build until the owner says so.
+  `get_edge_function` that every file matches `main`.
+  **`chat` deployed (owner's OK, 2026-10-07): version 13 live** from `main` at 513338b by the
+  workflow (#156, run 37700449212); 48/48 listed files identical to `main` (`chat/deno.json` and
+  `mcp/lib/supabase-ai.d.ts` not listed back); 401 without sign-in and with a fake token. The app's
+  Wilma chat now has the fix, and #152's server `credentials.ts`. **Owner:** delete the Supabase
+  access token used for this run; try "restaurants close by" on the phone. No Play build until the
+  owner says so.
 - **START HERE (2026-10-07, late): versionCode 12 findings and the next three jobs.** The owner
   ran part of the versionCode 12 checklist (stub deleted, update installed, both restaurants now
   have a location, start-up fine) and found:
