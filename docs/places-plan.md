@@ -185,6 +185,27 @@ visits; "add a visit" through `update_item`; evaluation cases such as "Italian d
 we liked", "where haven't we been since summer?", and a door code in a visit note, refused).
 Step 3 shows them (cuisine chips, price, occasions, dishes, **We went again** adding a visit).
 
+8. **Place cards and asking for the location** (owner's testing, 2026-10-07; Q11-Q14 decided).
+   - **Place cards in the chat:** when Wilma's answer is about saved places, cards appear under it:
+     name, kind and cuisine, "about N miles" when known, **Open in Maps** (the saved link, else the
+     coordinates, else an address search) and **Open note**. Wilma picks which places get a card,
+     at most 5 (Q13), through a chat-only action; the server checks each card is the user's own
+     place in a searchable space (never a restricted one, rule 3) before the app sees it.
+   - **Asking for the location:** for "near me / nearby" without a 📍 point, Wilma's reply comes with
+     a **📍 Share where I am** card (Q11). A tap reads the location once (the same permission, asked
+     only on a tap) and sends the question again with the point (step 7). The privacy promise is
+     unchanged: the location is read only on a tap. The Claude connector has no such card; there
+     Wilma still asks which saved place.
+   - **Radius:** "nearby" without a distance means within **10 miles** (about 16 km; Q12), nearest
+     first; if nothing is that close, Wilma says so and offers the nearest. Places without a
+     location are mentioned by address only, never with a distance.
+   - **Units:** distances in **miles by default**, with a setting to use km (Q14). One account
+     setting read by the server, so Wilma's replies, the cards and "nearby" all agree.
+   - PRs: server (the two chat-only actions, the unit setting, instructions, Deno tests,
+     evaluation cases, a paid run with the owner's OK, deploy), then app (the place card, the share
+     card, the units setting), then a phone checklist. Strongest model (location, privacy, chat
+     loop). Needs step 7's app part (#110) first.
+
 Later, not in this plan: a map with pins, live opening hours and travel times (Google, with the
 company account and the day planner), the **date planner**, geocoding typed addresses, reminders when near a saved place, places in the day planner's
 travel times (D25 step 3), sharing a list of places with family (item sharing, D-roadmap).
@@ -239,3 +260,7 @@ Q8 after A5e.
   message is a search; with a point attached the app would have to skip that and go straight to
   Wilma, which is a second path to build and test. In the chat the point simply rides with the
   message. Alternative: both (the home box sends a 📍 message straight to the chat).
+- **Q11-Q14, decided (owner, 2026-10-07, step 8):** Q11 Wilma asks for the location with a
+  "📍 Share where I am" card (not by reading it automatically on "near me"); Q12 "nearby" means
+  within 10 miles; Q13 Wilma picks which places get a card (at most 5); Q14 distances in miles by
+  default, with a setting for km.

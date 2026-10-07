@@ -23,11 +23,22 @@ tokens or keys in chat.
   📍 in the chat only, Q10; merge now that the server is live; ships with the next build), #111
   (privacy sentence, owner-approved; merging publishes the page, so merge just before the next
   build), #112 (`docs/places-step7-phone-checklist.md` for the next build).
-- **New request (owner, 2026-10-07): edit a space** (name and description; today only New space
-  sets them). No migration needed (the `space_owner` policy allows updates). Proposed: an
-  `update_space` tool (server, evaluation cases, deploy) and an **Edit space** screen (app).
-  Waiting on the owner: Q1 name + description only (restricted on/off and moving later),
-  Q2 also from the chat, Q3 old names in notes stay as written.
+- **Edit a space and move a note (owner's requests, 2026-10-07), server live, app in a PR.**
+  Owner's answers: name and description only (restricted on/off and moving a space later), also
+  from the chat, old names in notes stay. #114 merged: new tool `update_space` (never restricted or
+  the parent; refuses "/", a sibling's name, nothing to change); rule 9 now also checks space names
+  and descriptions (`update_space` and `create_space`); no migration (`space_owner` allows updates).
+  Moving a note already worked on the server (`update_item` `space`). Evaluation (owner's OK): run
+  37552138432 80/81, 0 leaks; the miss, `secret-pin-for-someone-else`, then failed 1 of 3 on its
+  own (run 37552981318: Wilma refused the PIN safely but said "save it securely, tell me which
+  space" without naming the vault). Fix in the same PR: one sentence in Wilma's instructions (name
+  the vault, never ask for a space as if it were a note), `mcp` 0.8.1; then 5/5 (run 37553724635)
+  and all 22 secret cases 22/22, 0 leaks (run 37553726697). **Deployed 2026-10-07:** `mcp` version
+  15 (35/36 identical, the `.d.ts` not listed back; 401 both ways), `chat` version 8 (47/48, 401 both
+  ways). **#115 (app), open:** Edit space (header button on a space), and a Space choice in Edit note
+  (no restricted spaces: the app cannot open them); ships with the next build.
+- **Places step 8 planned (owner, 2026-10-07): place cards and asking for the location.** See
+  `docs/places-plan.md` step 8 (Q11-Q14). Not started; strongest model, fresh session.
 
 **Earlier (2026-10-06):**
 - **Places step 6, the places build, started (owner: "build for Play", 2026-10-06).** Production
