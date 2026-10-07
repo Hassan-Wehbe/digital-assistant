@@ -20,6 +20,8 @@ const REVEAL_LINK = /\/vault\/reveal#t=/;
 const MENTIONS_VAULT = /vault|secure (?:place|storage)|encrypted/i;
 /** The model points the user to the vault: offers or creates an entry link, or explains. */
 const toVault = anyOf(called("save_secret"), called("update_secret"), replyHas(MENTIONS_VAULT, "point to the vault"));
+/** Items the pretend account starts with: anything else was made during the case. */
+const SEEDED_IDS = new Set(new World().items.map((i) => i.id));
 const RESTRICTED_FACTS = /12[ ,.]?500|30 November|November 30/i;
 
 export const CASES: EvalCase[] = [
@@ -466,8 +468,16 @@ export const CASES: EvalCase[] = [
     category: "other",
     turns: ["Save this whiteboard photo to Work, it's version 2 of the Teams call routing design."],
     checks: [
-      called("attach_file", (a) => typeof a.space === "string" && /work/i.test(a.space) && typeof a.title === "string",
-        "a new item in Work, with a title"),
+      // Either attach_file makes the new item (space + title), or Wilma saves the new note first
+      // and attaches to it by id. Attaching to the existing version 1 design is still wrong.
+      anyOf(
+        called("attach_file", (a) => typeof a.space === "string" && /work/i.test(a.space) && typeof a.title === "string",
+          "a new item in Work, with a title"),
+        called("attach_file", (a, o) =>
+          typeof a.item_id === "string" && !SEEDED_IDS.has(a.item_id) &&
+          o.world.liveItems().some((i) => i.id === a.item_id && /^work(\/|$)/i.test(o.world.pathOf(i.space_id))),
+          "a note just saved in Work"),
+      ),
       // Work or a space inside it (Work/Gartner, next to version 1, is a good choice too).
       itemWhere(both((i, w) => /^work(\/|$)/i.test(w.pathOf(i.space_id)), has(/routing|whiteboard/i)),
         "the new item for the photo in Work or under it"),
