@@ -12,8 +12,8 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **Places part 2 PR 4 merged (#147); PR 5 (privacy and docs for the OpenStreetMap lookup) open,
-  waiting for the owner's approval of the privacy wording. Merging it publishes the privacy page:
+- **Places part 2 PR 4 merged (#147); PR 5 (privacy and docs for the OpenStreetMap lookup) open as a
+  draft; **wording approved by the owner (2026-10-07)**. Merging it publishes the privacy page:
   merge just before the Play build that carries "Find on the map" (part 2 PR 7).** Meanwhile PR 6
   (server lookup) can be built; it needs the OpenStreetMap coverage check first (parked with the
   owner's to-dos; the sandbox cannot reach Nominatim).

@@ -330,7 +330,7 @@ Step 3 shows them (cuisine chips, price, occasions, dishes, **We went again** ad
         Foundation). Nothing else about you is sent, and a location is saved only if you confirm
         it." OpenStreetMap in the list of services; the Data safety question in
         `docs/legal-review-checklist.md`.
-        **As drafted (PR 5, waiting for the owner's approval):** the plan's sentence added to the
+        **As drafted (PR 5; wording approved by the owner 2026-10-07):** the plan's sentence added to the
         privacy page's Location paragraph; OpenStreetMap (Nominatim, OpenStreetMap Foundation, UK)
         in "Services we use", with the typed-town alternative and the credit "© OpenStreetMap
         contributors"; a legal-review item; Play Data safety: *Approximate location*, collected,
