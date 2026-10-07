@@ -45,5 +45,5 @@ export function hereLine(here: SharedPoint): string {
   return `With this message the user shared where they are now: lat ${here.lat}, lng ${here.lng}. ` +
     `Use it only as the lat and lng of find_places, for "near me", "near here" or "around here". ` +
     `Do not save it anywhere (not in a note, a place or a search) and do not repeat the numbers; to save ` +
-    `where they are as a place, tell them to tap 📍 Save where I am on the home screen.`;
+    `where they are as a place, tell them to tap 📍 Save here on the home screen.`;
 }

@@ -265,6 +265,15 @@ Step 3 shows them (cuisine chips, price, occasions, dishes, **We went again** ad
         add one; fix "tap 📍" to "＋ → 📍 Send where I am". Eval cases: default radius (a place
         about 20 miles away added to the world), nothing within offers nearest, names unlocated,
         miles, km; update the step 5b/7 cases. Owner applies the migration.
+        **As built (PR 1):** migration `20261008120000_distance_unit.sql` (dry run on the live
+        database: 9/9 checks, rolled back; `tests/sql/12_distance_unit.sql`). `loadUserSettings`
+        reads the name and the unit and, if the unit column cannot be read (migration not yet
+        applied), still reads the name. `find_places` returns `within`, `results[].distance` +
+        `unit`, `nearest_outside`, `without_location` (≤10, then `without_location_more`); the
+        `include_without_location` input is gone. `mcp` 0.9.0. Eval cases: `place-nearby-default-
+        radius`, `place-nothing-within-offers-nearest`, `place-near-names-unlocated`,
+        `place-distance-in-miles`, `place-distance-in-km` (77 cases). The step 5b/7 cases needed no
+        change. Deploy waits for PR 2 (one evaluation run, one deploy).
      2. **Server: chat-only actions (Q11, Q13)** in a new `chat/actions.ts` shared with
         `tests/eval/harness.ts` (the Claude connector never sees them): `show_places({item_ids
         ≤5, near_place_id?})` checks each id as the user (place, not deleted, searchable space;

@@ -26,7 +26,7 @@ export interface ToolSession {
 export async function connectTools(ctx: ToolContext, version = "chat"): Promise<ToolSession> {
   const server = new McpServer(
     { name: "digital-assistant", version },
-    { instructions: serverInstructions(ctx.assistantName) },
+    { instructions: serverInstructions(ctx.assistantName, ctx.distanceUnit) },
   );
   for (const register of ALL_TOOLS) register(server, ctx);
   const [serverSide, clientSide] = InMemoryTransport.createLinkedPair();

@@ -12,7 +12,7 @@
 // then runs as that user, so Row Level Security applies to every query.
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
-import { loadAssistantName, serverInstructions } from "./lib/assistant.ts";
+import { loadUserSettings, serverInstructions } from "./lib/assistant.ts";
 import { supabaseUrl, userClient, verifyAccessToken } from "./lib/db.ts";
 import { embedPending, scheduleEmbedPending } from "./lib/embed.ts";
 import type { ToolContext } from "./tools/_shared.ts";
@@ -58,8 +58,8 @@ function unauthorized(detail: string): Response {
 
 function buildServer(ctx: ToolContext): McpServer {
   const server = new McpServer(
-    { name: "digital-assistant", version: "0.8.5" },
-    { instructions: serverInstructions(ctx.assistantName) },
+    { name: "digital-assistant", version: "0.9.0" },
+    { instructions: serverInstructions(ctx.assistantName, ctx.distanceUnit) },
   );
   for (const register of ALL_TOOLS) register(server, ctx);
   return server;
@@ -87,8 +87,8 @@ Deno.serve(async (req: Request) => {
   }
 
   // Stateless: a fresh server and transport per request, bound to this user.
-  const assistantName = await loadAssistantName(db, userId);
-  const server = buildServer({ db, userId, accessToken: token, assistantName });
+  const { assistantName, distanceUnit } = await loadUserSettings(db, userId);
+  const server = buildServer({ db, userId, accessToken: token, assistantName, distanceUnit });
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,

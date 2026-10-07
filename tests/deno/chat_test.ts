@@ -711,7 +711,7 @@ Deno.test("chat: a message without a point works as before, with no location lin
   const events = await chat(s, "What restaurants are near me?");
   assertEquals(reply(events), "Which saved place are you near?");
   assertFalse(s.model.requests[0].system.includes("shared where they are"));
-  assert(s.model.requests[0].system.includes("tap 📍"), "Wilma is told how the user can share a point");
+  assert(s.model.requests[0].system.includes("tap ＋ → 📍 Send where I am"), "Wilma is told how the user can share a point (UI PR 5 moved it into ＋)");
   assertEquals(s.logs[0].outcome, "ok");
 });
 

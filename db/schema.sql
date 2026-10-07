@@ -26,6 +26,8 @@ create table app_user (
   -- Added by 20261002120000_ai_usage.sql: ai_monthly_limit_cents numeric (personal chat
   --   allowance; null = the default in ai_settings), is_admin boolean (set by hand; never
   --   writable by users)
+  -- Added by 20261008120000_distance_unit.sql: distance_unit text not null default 'mi'
+  --   ('mi' or 'km'; places step 8 Q14, set on the app's Settings screen)
   created_at           timestamptz not null default now()
 );
 

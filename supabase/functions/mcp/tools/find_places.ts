@@ -1,11 +1,16 @@
 import { z } from "zod";
 import { loadSpaces, resolveSpace, type Space } from "../lib/spaces.ts";
-import { addressedAs } from "../lib/assistant.ts";
+import { addressedAs, DEFAULT_DISTANCE_UNIT, type DistanceUnit } from "../lib/assistant.ts";
 import { distanceKm, normalizePlace, PlaceError, PLACE_TYPE, placePoint, type Point } from "../lib/places.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
 /** At most this many places are read per call; plenty for one person's saved places. */
 export const MAX_PLACES_SCANNED = 1000;
+export const KM_PER_MILE = 1.609344;
+/** "Near" without a distance: 10 miles (about 16 km; places step 8, Q12), for km users too. */
+export const NEARBY_KM = 10 * KM_PER_MILE;
+/** Places without a saved location listed with every answer, by name and address only. */
+export const MAX_WITHOUT_LOCATION = 10;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -54,17 +59,22 @@ function findAnchor(rows: PlaceRow[], ref: string): PlaceRow {
  * map service is called. Only the user's own places in searchable spaces are read: restricted
  * spaces (and spaces under them) are never included, not even as the starting point (rule 3).
  */
-export const registerFindPlaces: RegisterTool = (server, { db, assistantName }) => {
+export const registerFindPlaces: RegisterTool = (server, { db, assistantName, distanceUnit }) => {
+  const unit: DistanceUnit = distanceUnit ?? DEFAULT_DISTANCE_UNIT;
+  const unitName = unit === "mi" ? "miles" : "km";
+  const inUnit = (km: number) => Math.round((unit === "mi" ? km / KM_PER_MILE : km) * 10) / 10;
   server.registerTool(
     "find_places",
     {
       title: "Find places near a point",
       description:
-        "Saved places (item_type \"place\") nearest to a point, with the straight-line distance in km " +
-        "(not a travel time). The point is either lat and lng the user gave (a location they shared, or " +
-        "a geo: or Google Maps link that contains coordinates) or near_place, a saved place that has a " +
-        "location. Never guess coordinates from an address, a street or a city name. Places without a " +
-        "saved location get no distance; they are listed by address only with include_without_location. " +
+        `Saved places (item_type "place") nearest to a point, with the straight-line distance in ${unitName}, ` +
+        "the user's unit (not a travel time). The point is either lat and lng the user gave (a location they " +
+        "shared, or a geo: or Google Maps link that contains coordinates) or near_place, a saved place that " +
+        "has a location. Never guess coordinates from an address, a street or a city name. Without within, " +
+        `only places within ${unit === "mi" ? "10 miles" : "16 km"} count ("near", "nearby"); when none is, ` +
+        "nearest_outside is the closest one further away. Matching places without a saved location are " +
+        "always listed in without_location (name and address, never a distance). " +
         "Results carry each place's fields (status, rating, cuisine, occasions, visits...). " +
         "Restricted spaces are never searched." +
         addressedAs(assistantName, "which restaurants are near Tawlet?"),
@@ -73,22 +83,26 @@ export const registerFindPlaces: RegisterTool = (server, { db, assistantName }) 
         lng: z.number().min(-180).max(180).optional().describe("Longitude of the point, with lat"),
         near_place: z.string().max(200).optional()
           .describe("Instead of lat/lng: a saved place (name or id) to measure from"),
-        within_km: z.number().positive().max(20000).optional().describe("Only places at most this far"),
+        within: z.number().positive().max(20000).optional()
+          .describe(`Only places at most this far, in unit (default ${unitName}); default ${unit === "mi" ? "10 miles" : "16 km"}`),
+        unit: z.enum(["mi", "km"]).optional().describe(`The unit of within, when the user named one; default ${unit}`),
+        within_km: z.number().positive().max(20000).optional().describe("Older form of within, in km"),
         space: z.string().optional().describe("Only this space and its sub-spaces (name, path or id)"),
         kind: z.string().optional().describe("restaurant, cafe, bar, shop, to-visit, hotel or other"),
         status: z.enum(["want", "been"]).optional().describe('"want" (not been yet) or "been"'),
         cuisine: z.string().max(40).optional().describe("e.g. italian"),
         occasion: z.string().max(40).optional()
           .describe("date_night, kids, business, quick_lunch, group or special"),
-        include_without_location: z.boolean().optional()
-          .describe("Also list matching places that have no saved location, by address, without a distance"),
         limit: z.number().int().min(1).max(50).optional().describe("Default 10"),
       },
       annotations: { readOnlyHint: true },
     },
     (args) =>
       guarded(async () => {
-        const { lat, lng, near_place, within_km, space, kind, status, cuisine, occasion } = args;
+        const { lat, lng, near_place, within, within_km, space, kind, status, cuisine, occasion } = args;
+        const radiusKm = within !== undefined
+          ? ((args.unit ?? unit) === "mi" ? within * KM_PER_MILE : within)
+          : within_km ?? NEARBY_KM;
         const limit = args.limit ?? 10;
         if ((lat === undefined) !== (lng === undefined)) throw new Error("lat and lng go together.");
         const hasPoint = lat !== undefined && lng !== undefined;
@@ -183,35 +197,34 @@ export const registerFindPlaces: RegisterTool = (server, { db, assistantName }) 
         for (const row of matching) {
           const p = placePoint(row.metadata);
           if (!p) unlocated.push(row);
-          else {
-            const km = distanceKm(origin, p);
-            if (within_km === undefined || km <= within_km) located.push({ row, km });
-          }
+          else located.push({ row, km: distanceKm(origin, p) });
         }
         located.sort((a, b) => a.km - b.km);
+        const inside = located.filter((l) => l.km <= radiusKm);
+        const measured = ({ row, km }: { row: PlaceRow; km: number }) => ({
+          id: row.id,
+          title: row.title,
+          space: pathOf.get(row.space_id),
+          distance: inUnit(km),
+          unit,
+          place: row.metadata,
+        });
 
         const out: Record<string, unknown> = {
           from,
-          results: located.slice(0, limit).map(({ row, km }) => ({
-            id: row.id,
-            title: row.title,
-            space: pathOf.get(row.space_id),
-            distance_km: Math.round(km * 10) / 10,
-            place: row.metadata,
-          })),
+          within: { distance: inUnit(radiusKm), unit },
+          results: inside.slice(0, limit).map(measured),
         };
-        if (args.include_without_location) {
-          // No distance for these, ever: they have no saved position.
-          out.without_location = unlocated.slice(0, limit).map((row) => ({
-            id: row.id,
-            title: row.title,
-            space: pathOf.get(row.space_id),
-            address: typeof row.metadata?.address === "string" ? row.metadata.address : null,
-            place: row.metadata,
-          }));
-        } else if (unlocated.length) {
-          out.without_location_count = unlocated.length;
-        }
+        // Nothing that close: the nearest one further away, so Wilma can offer it (Q12).
+        if (!inside.length && located.length) out.nearest_outside = measured(located[0]);
+        // Always named, never with a distance: they have no saved position (Q16).
+        out.without_location = unlocated.slice(0, MAX_WITHOUT_LOCATION).map((row) => ({
+          id: row.id,
+          title: row.title,
+          space: pathOf.get(row.space_id),
+          address: typeof row.metadata?.address === "string" ? row.metadata.address : null,
+        }));
+        if (unlocated.length > MAX_WITHOUT_LOCATION) out.without_location_more = unlocated.length - MAX_WITHOUT_LOCATION;
         if (rows.length >= MAX_PLACES_SCANNED) out.note = `Only the ${MAX_PLACES_SCANNED} most recently changed places were checked.`;
         return ok(out);
       }),

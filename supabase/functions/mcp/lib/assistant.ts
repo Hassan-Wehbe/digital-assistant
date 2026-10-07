@@ -10,15 +10,39 @@ export const DEFAULT_ASSISTANT_NAME = "Wilma";
 // name, because it is copied into text the model reads.
 export const ASSISTANT_NAME_PATTERN = /^\p{L}[\p{L} '’.-]{0,29}$/u;
 
+/** Distances in miles or kilometres (app_user.distance_unit, places step 8 Q14). */
+export type DistanceUnit = "mi" | "km";
+export const DEFAULT_DISTANCE_UNIT: DistanceUnit = "mi";
+
 /** The caller's assistant name; the default if it cannot be read. */
 export async function loadAssistantName(db: SupabaseClient, userId: string): Promise<string> {
-  const { data, error } = await db.from("app_user").select("assistant_name").eq("id", userId).maybeSingle();
-  const name = data?.assistant_name;
-  if (error || typeof name !== "string" || !ASSISTANT_NAME_PATTERN.test(name)) return DEFAULT_ASSISTANT_NAME;
-  return name;
+  return (await loadUserSettings(db, userId)).assistantName;
 }
 
-export function serverInstructions(name: string): string {
+/**
+ * The caller's assistant name and distance unit, each with its default when it cannot be read. If
+ * the unit column cannot be read (for example before its migration is applied), the name is read
+ * on its own, so it is never lost.
+ */
+export async function loadUserSettings(
+  db: SupabaseClient,
+  userId: string,
+): Promise<{ assistantName: string; distanceUnit: DistanceUnit }> {
+  const nameOf = (v: unknown) => (typeof v === "string" && ASSISTANT_NAME_PATTERN.test(v) ? v : DEFAULT_ASSISTANT_NAME);
+  const both = await db.from("app_user").select("assistant_name, distance_unit").eq("id", userId).maybeSingle();
+  if (!both.error) {
+    const unit = both.data?.distance_unit;
+    return {
+      assistantName: nameOf(both.data?.assistant_name),
+      distanceUnit: unit === "km" || unit === "mi" ? unit : DEFAULT_DISTANCE_UNIT,
+    };
+  }
+  const name = await db.from("app_user").select("assistant_name").eq("id", userId).maybeSingle();
+  return { assistantName: name.error ? DEFAULT_ASSISTANT_NAME : nameOf(name.data?.assistant_name), distanceUnit: DEFAULT_DISTANCE_UNIT };
+}
+
+export function serverInstructions(name: string, unit: DistanceUnit = DEFAULT_DISTANCE_UNIT): string {
+  const miles = unit === "mi";
   return `The user calls this assistant "${name}". A message that addresses ${name} ("${name}, …",
 "Hey ${name}, …", "ask ${name} …") is meant for this store: act on it with these tools, for example
 "${name}, save this recipe" → save_item, "${name}, what did I note about X?" → search_items,
@@ -63,14 +87,20 @@ them all): each result carries the place's fields (status, rating, cuisine, occa
 those. A door code, Wi-Fi password or any other code for a place goes in the vault, never in the place.
 For "near" questions ("restaurants near Tawlet", "what's close to 33.89, 35.52?") call find_places with
 near_place (a saved place) or lat and lng (only numbers the user gave, for example from a geo: or Google
-Maps link they pasted); it sorts saved places by straight-line distance. Say "about 0.8 km away", never a
-walking or driving time. You see where the user is only when they shared their location with this
-message (a line at the end of these instructions says so; in the app that is the 📍 button in the chat):
-then for "near me", "near here" or "around here" call find_places with exactly that lat and lng. Without
-it, for "near me" or "near here" ask which saved place they are near, or to tap 📍 in the app's chat and
-ask again, or to paste a map link of where they are. Never guess coordinates
-from an address, a street or a city, and never give a distance for a place without a saved location;
-list those by address only when the user asks (include_without_location).
+Maps link they pasted); it sorts saved places by straight-line distance. The user's distances are in
+${miles ? "miles" : "kilometres"}: say "about ${miles ? "0.5 miles" : "0.8 km"} away" with the distance find_places gives, never a
+walking or driving time and never another unit (the user changes it in the app's Settings). "Near" or
+"nearby" without a distance means within ${miles ? "10 miles" : "16 km"}, which find_places uses by default; when
+nothing is that close it gives the nearest place further away (nearest_outside): say nothing is within
+${miles ? "10 miles" : "16 km"} and offer that one. find_places also lists matching places that have no saved
+location (without_location): name them, never with a distance ("Kampai might be near, but it has no
+saved location"), and offer to open it in Maps or to add its location from its note in the app. You see
+where the user is only when they shared their location with this message (a line at the end of these
+instructions says so; in the app that is ＋ → 📍 Send where I am in the chat): then for "near me",
+"near here" or "around here" call find_places with exactly that lat and lng. Without it, for "near me"
+or "near here" ask which saved place they are near, or to tap ＋ → 📍 Send where I am in the app's chat
+and ask again, or to paste a map link of where they are. Never guess coordinates from an address, a
+street or a city.
 
 Deleting: delete_item moves an item to the recycle bin (list_deleted_items, restore_item); purge_item
 deletes a binned item for good, with its files; delete_space deletes only an empty space. Delete only

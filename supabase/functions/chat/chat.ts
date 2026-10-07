@@ -33,7 +33,7 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { type SharedPoint, systemPrompt } from "../_shared/assistant_prompt.ts";
 import { type Llm, LlmError, type Message, QUOTA_EXCEEDED, RoutesConfigError, type ToolResult } from "../_shared/llm/index.ts";
-import { loadAssistantName } from "../mcp/lib/assistant.ts";
+import { loadUserSettings } from "../mcp/lib/assistant.ts";
 import { type CredentialKind, findCredential } from "../mcp/lib/credentials.ts";
 import { classify, classifyBody, type ClassifyLog } from "./classify.ts";
 import { CONFIRM_TOOLS, confirmCard } from "./confirm.ts";
@@ -311,8 +311,8 @@ async function runChat({ deps, token, userId, messages, here, emit, signal }: Ru
   let tools: ToolSession | null = null;
   try {
     const llm = deps.llm();
-    const assistantName = await loadAssistantName(db, userId);
-    tools = await connectTools({ db, userId, accessToken: token, assistantName });
+    const { assistantName, distanceUnit } = await loadUserSettings(db, userId);
+    tools = await connectTools({ db, userId, accessToken: token, assistantName, distanceUnit });
     const system = systemPrompt(assistantName, tools.instructions, new Date(), here);
     const cards = new Set<string>();
     let lastStatus = "";

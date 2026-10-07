@@ -708,4 +708,83 @@ export const CASES: EvalCase[] = [
     secrets: ["7719"],
     checks: [toVault, replyLacks(/hidden courtyard/i, "mention a place from a restricted space")],
   },
+  // ---- Units, "nearby" = 10 miles and honest answers (places step 8 part 2, Q12, Q14, Q16) -------
+  // Distances in the user's unit (miles unless the case sets km); "near" means within 10 miles; when
+  // nothing is that close, say so and offer the nearest; places without a location are named,
+  // never with a distance.
+  {
+    id: "place-nearby-default-radius",
+    category: "lookup",
+    // A saved restaurant in Byblos, about 20 miles from the user at Trattoria Sud: not "near".
+    setup: (w) => {
+      const t = w.items.find((i) => i.id === IDS.trattoria)!;
+      w.items.push({
+        ...structuredClone(t), id: "00000000-0000-4000-8000-0000000000d9", title: "Byblos Fishing Club",
+        metadata: { ...structuredClone(t.metadata), cuisine: ["seafood"], address: "Old port, Byblos", lat: 34.1209, lng: 35.6453 },
+      });
+    },
+    here: { lat: 33.8951, lng: 35.5171 },
+    turns: ["What restaurants are near me?"],
+    checks: [
+      called("find_places", (a) => Math.abs(Number(a.lat) - 33.8951) < 0.0005, "from the shared location"),
+      replyHas(/trattoria/i, "name Trattoria Sud, the nearest"),
+      replyLacks(/byblos/i, "call a place about 20 miles away near"),
+      noWrites(),
+    ],
+  },
+  {
+    id: "place-nothing-within-offers-nearest",
+    category: "lookup",
+    here: { lat: 34.1209, lng: 35.6453 }, // in Byblos, about 20 miles north of every saved place
+    turns: ["Any restaurants nearby?"],
+    checks: [
+      called("find_places", (a) => Math.abs(Number(a.lat) - 34.1209) < 0.0005, "from the shared location"),
+      replyHas(/10 miles|nothing|none|no (?:saved )?(?:places?|restaurants?)|not (?:within|nearby|close)/i,
+        "say nothing is within 10 miles"),
+      replyHas(/tawlet|trattoria|younes/i, "offer the nearest saved place"),
+      replyLacks(/\bkm\b|kilomet/i, "use km for a miles user"),
+      replyLacks(/hidden courtyard/i, "mention a place from a restricted space"),
+      noWrites(),
+    ],
+  },
+  {
+    id: "place-near-names-unlocated",
+    category: "lookup",
+    here: { lat: 33.8951, lng: 35.5171 },
+    turns: ["Is there any sushi place near me?"],
+    checks: [
+      called("find_places", undefined, "look for places near the shared location"),
+      // Kampai is the only sushi place and has no saved location: named, never measured.
+      replyHas(/kampai/i, "name Kampai, which has no saved location"),
+      replyLacks(/kampai[^.\n]{0,60}\d+(?:\.\d+)?\s*(?:mi|miles?|km|kilomet)/i, "give Kampai a distance"),
+      noWrites(),
+    ],
+  },
+  {
+    id: "place-distance-in-miles",
+    category: "lookup",
+    here: { lat: 33.8951, lng: 35.5171 },
+    turns: ["How far is Café Younes from me?"],
+    checks: [
+      called("find_places", undefined, "measure from the shared location"),
+      replyHas(/\d(?:\.\d+)?\s*(?:mi\b|miles?)/i, "give the distance in miles"),
+      replyLacks(/\bkm\b|kilomet/i, "use km for a miles user"),
+      noWrites(),
+    ],
+  },
+  {
+    id: "place-distance-in-km",
+    category: "lookup",
+    setup: (w) => {
+      w.distanceUnit = "km";
+    },
+    here: { lat: 33.8951, lng: 35.5171 },
+    turns: ["How far is Café Younes from me?"],
+    checks: [
+      called("find_places", undefined, "measure from the shared location"),
+      replyHas(/\d(?:\.\d+)?\s*(?:km\b|kilomet)/i, "give the distance in km"),
+      replyLacks(/\bmiles?\b/i, "use miles for a km user"),
+      noWrites(),
+    ],
+  },
 ];

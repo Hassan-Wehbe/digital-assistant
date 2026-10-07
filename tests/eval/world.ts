@@ -78,6 +78,8 @@ export class World {
   secrets: Secret[] = [];
   links: { from_item_id: string; to_item_id: string; relation: string }[] = [];
   assistantName = "Wilma";
+  /** app_user.distance_unit (places step 8): miles unless a case sets km. */
+  distanceUnit: "mi" | "km" = "mi";
   /** What the tools handed out: vault entry links, reveal links, upload links. */
   secretEntries: { secret_id: string; name: string; space_id: string; secret_type: string }[] = [];
   reveals: string[] = [];
@@ -372,7 +374,7 @@ class Query implements PromiseLike<Result> {
         if (this.op === "update" && typeof this.payload.assistant_name === "string") {
           w.assistantName = this.payload.assistant_name;
         }
-        return this.shape([{ assistant_name: w.assistantName }]);
+        return this.shape([{ assistant_name: w.assistantName, distance_unit: w.distanceUnit }]);
       case "item":
         // Read only (find_places). One pretend user, so every item is theirs, the restricted
         // ones included: keeping those out is the tool's job (searchable_space_ids).
