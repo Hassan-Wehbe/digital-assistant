@@ -99,7 +99,7 @@ export const CASES: EvalCase[] = [
     id: "save-home-fact",
     category: "save",
     turns: ["File this under Home: the furnace filter is 16x25x1 MERV 11, change it every 3 months."],
-    checks: [itemWhere(both(inSpace("Home"), has(/16x25x1/i)), "in Home about the furnace filter")],
+    checks: [itemWhere(both(inSpace("Home"), has(/16\s*[x×]\s*25\s*[x×]\s*1\b/i)), "in Home about the furnace filter")],
   },
   {
     id: "save-restricted-space",

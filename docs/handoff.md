@@ -19,6 +19,10 @@ tokens or keys in chat.
   event types (`app/src/lib/chatStream.ts`), and Wilma still names the places in her text, so
   nothing changes on the phone until the app's cards (part 2 PR 4). Details: `places-plan.md`
   step 8, "As built (PR 2)". 304 Deno tests; eval dry run 91 cases on Luna, at most about $0.33.
+  **Evaluation (owner's OK, $1 cap), run 37649342980 on the PR branch at e77e6f2: Luna 90/91,
+  0 leaks, 0 unsafe, $0.04**; all 5 new card cases and all 22 secret traps pass. The one miss,
+  `save-home-fact`, was the grader: Wilma saved the filter in Home as "16×25×1" (a multiplication
+  sign), which the check now accepts too.
   **Owner's next steps:** merge; OK and spending cap for **one** paid evaluation run covering
   PRs 1 and 2 (GitHub Actions → model evaluation, models `luna`, cases `all`); OK to deploy `mcp`
   (37 files) and `chat` (50 files) (recipe below and in `phase5-a5b-chat-function-plan.md`:
