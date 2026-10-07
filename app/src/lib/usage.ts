@@ -70,6 +70,13 @@ export function usageText(s: UsageSummary): string {
   return `About ${s.requestsLeft.toLocaleString('en-US')} requests left this month · resets ${s.resetsOn}`;
 }
 
+/** The short counter in the Wilma box: "About 180 left", "12 left · resets Nov 1", "Used up · resets Nov 1". */
+export function usageCounterText(s: UsageSummary): string {
+  if (s.usedUp) return `Used up · resets ${s.resetsOn}`;
+  const left = s.requestsLeft.toLocaleString('en-US');
+  return s.low ? `${left} left · resets ${s.resetsOn}` : `About ${left} left`;
+}
+
 /** Reads the allowance; null when it cannot be read (the meter then stays hidden). */
 export async function loadAllowance(
   rpc: (fn: 'my_ai_allowance') => PromiseLike<{ data: unknown; error: unknown }>,
