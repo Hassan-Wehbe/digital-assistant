@@ -12,7 +12,19 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **Places part 2 PR 2 (chat-only `show_places` / `ask_for_location`): PR open, not merged.**
+- **Places part 2 PRs 1 and 2 merged (#142, #144) and live (deployed 2026-10-07): `mcp` version
+  20 (36/37 files identical to `main` at 2bac3ad), `chat` version 12 (49/50 identical); in both,
+  `supabase-ai.d.ts` is not listed back as usual; 401 without sign-in and with a fake token, both
+  functions.** Evaluation before the deploy: run 37649342980, Luna 90/91, 0 leaks, 0 unsafe, $0.04
+  (the miss was the grader, fixed in #144). Live now: miles by default, "nearby" = 10 miles, honest
+  near answers, and the chat's `places` / `location_request` events (today's app ignores them; Wilma
+  still names the places). **Deploy note:** the connector's `deploy_edge_function` takes every file's
+  text in one call; the first `mcp` attempt was cut off at about 75 KB and changed nothing, the
+  retry went through. Prepare the file list as JSON lines from `scripts/function-files.sh` and
+  verify with `get_edge_function` (its output is saved to a file) plus a short python comparison.
+  **Next: places part 2 PR 3** (app: Distances Miles / km on Settings), fresh session, Sonnet is
+  enough. The owner's to-dos stay parked for the "super checklist" after the next Play build.
+- **Places part 2 PR 2 (chat-only `show_places` / `ask_for_location`): merged (#144), live (entry above).**
   New `supabase/functions/chat/actions.ts`, shared by the chat function and the evaluation;
   the Claude connector never sees them. Events `{"type":"places","cards":[...]}` and
   `{"type":"location_request"}`; today's app (versionCode 11 and the merged UI PRs) drops unknown
