@@ -12,6 +12,12 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Places part 2 PR 1 merged (#142); migration `distance_unit` applied 2026-10-07** (column
+  `app_user.distance_unit`, default `mi`; grants: `authenticated` select/update on that column
+  only, no anon). Server code (`mcp` 0.9.0) **not deployed yet**: one evaluation run and one deploy
+  of `mcp` + `chat` after **PR 2** (chat-only `show_places` / `ask_for_location`), as planned. The
+  live server ignores the new column until then. **Next: places part 2 PR 2**, fresh session,
+  strongest model.
 - **UI tidy-up PRs 1-6 merged, not built (2026-10-07):** PR 5 chat with the Wilma box (#139),
   PR 6 one ChatCard shell (#140). Left: PR 8 (phone checklist, then the build). **Owner's choice:
   one Play build after places step 8 part 2.** **Places step 8 part 2: plan agreed (as
