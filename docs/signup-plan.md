@@ -1,6 +1,6 @@
 # Registration: invite-only sign-up and in-app account deletion (plan, stage 1)
 
-Status: **plan, waiting for the owner's review** (decisions Q1-Q7 below). Design entry:
+Status: **plan, approved** (owner, 2026-10-07: Q1-Q8 all as recommended; see Decisions). Not built. Design entry:
 `docs/design.md` D29. Nothing is built. Stage 2 (open sign-up, Google and Apple sign-in) is
 at the end and waits for the company account and the legal review (D27).
 
@@ -57,7 +57,7 @@ accounts); a smaller one (Sonnet) for step 4's copy, step 5 and docs.
 
 ## Data (one migration)
 
-`invite_code`, `invite_use`, the hook function, the three `app_user` columns, an update to
+`invite_code`, `invite_use`, the `signup_mode` setting (Q8), the hook function, the three `app_user` columns, an update to
 `handle_new_auth_user` to copy terms acceptance; revokes for `anon` and `authenticated`.
 
 ## Tests to write
@@ -97,10 +97,18 @@ service, final terms of service after the legal review (D27).
   and clearer for testers). Alternative: 30-day grace period.
 - **Q7 New users' allowance:** the default ($1/month) like everyone; invite codes can later carry
   a bonus.
+- **Q8 Switching to open sign-up later:** one server setting, `signup_mode` = `invite` or `open`
+  (in a small settings table the hook reads; owner or admin changes it). The app asks the server
+  which mode is on and hides the invite-code field when it is `open`, so going open (or back to
+  invite-only, e.g. during spam) needs **no new app build**. Built in stage 1, set to `invite`.
+  Before switching to `open` (stage 2): CAPTCHA, the legal review (D27), the company account
+  (Google and Apple sign-in, email from the company's domain), Play production track.
+
+**Owner's answers (2026-10-07): Q1-Q8 all as recommended.**
 
 ## What the owner does
 
-- Answer Q1-Q7 and approve merges, the migration and deploys.
+- ~~Answer Q1-Q8~~ (done 2026-10-07, all as recommended). Approve merges, the migration and deploys.
 - When step 5 comes: Supabase → Authentication → **allow new sign-ups**, enable the
   **before-user-created hook** (the function from step 1), set the **Site URL / redirect URLs**
   for the confirmation link, adjust the confirmation email's wording; then create invite codes.
