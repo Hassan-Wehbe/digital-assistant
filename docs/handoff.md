@@ -12,6 +12,18 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Job 4 (locations for shared places): PR open, app only, not built.** The owner's Expo Go test
+  passed (both restaurants, "Hinode Sushi" alone and a Starbucks found by `geocodeAsync`), so the
+  OpenStreetMap lookup stays dropped. A place shared from Google Maps is looked up by "name,
+  address" with the phone's geocoder; the share screen shows "Is this it?" with Open in Maps and
+  Yes / No; only Yes saves the point. Never the phone's own position. Android only answers once
+  Wilma has the location permission: automatic when it is already given, else a "🔎 Find it on
+  the map" tap asks for it. Privacy page: the owner's approved wording, verbatim. Play Data
+  safety: no change. New `lib/placeLookup.ts` (+ tests), `components/PlaceLookup.tsx`,
+  `deviceGeocoder` in `lib/location.ts`; 541 app tests. Details: `places-plan.md` step 8, "As
+  built (job 4)". **Owner:** review and merge; it ships with versionCode 13 (no build until the
+  owner says "build for Play"). Phone check for that build: share Hinode Sushi from Google Maps,
+  see "Is this it?", Open in Maps, Yes, Save, then the note shows the location.
 - **Job 3 (🔒 vault entries in a space): merged (#155), not built, app only.** A space screen now lists its vault
   entries (that space and its sub-spaces; restricted spaces never, as `find_secret` already does)
   under its notes as 🔒 rows: name and website only. A tap opens the same entry screen as the

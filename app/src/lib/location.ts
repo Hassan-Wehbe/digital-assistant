@@ -7,6 +7,8 @@
 // rest of the app never touches it. The logic takes its phone calls as `deps`, so it is tested
 // without a phone.
 
+import type { GeocodeDeps } from './placeLookup';
+
 export interface Here {
   lat: number;
   lng: number;
@@ -65,6 +67,17 @@ export const deviceLocation: LocationDeps = {
     const { coords } = await loc.getCurrentPositionAsync({ accuracy: loc.Accuracy.High });
     return { latitude: coords.latitude, longitude: coords.longitude, accuracy: coords.accuracy };
   },
+};
+
+/**
+ * The phone's map lookup for a shared place (placeLookup.ts). It sends only the text it is given
+ * (the place's name and address), never where the phone is; Android still wants the location
+ * permission before it answers.
+ */
+export const deviceGeocoder: GeocodeDeps = {
+  permission: () => pkg().getForegroundPermissionsAsync(),
+  askPermission: () => pkg().requestForegroundPermissionsAsync(),
+  geocode: (query) => pkg().geocodeAsync(query),
 };
 
 function pkg(): LocationPackage {
