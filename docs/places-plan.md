@@ -220,6 +220,15 @@ Step 3 shows them (cuisine chips, price, occasions, dishes, **We went again** ad
      domains are refused as hops because they cannot be listed strictly; a location the user
      removed is not put back from the same link), #125 (the one-off pass: admin function
      `place-locations`, dry run first, counts only, deleted after), #126 (privacy wording).
+     **First live try (2026-10-07):** the owner's app edit logged `no_coordinates` after 2
+     requests, last status 200 (#129 added a codes-only log line): Google's current share links
+     lead to a place page whose address names the place by id, with no coordinates. **Owner's
+     choice (a), 2026-10-07:** read that last page, only when it is an HTML page on a Google Maps
+     host, at most 1 MB within the same 5 s, for the coordinates only (in order: the pin
+     `!3d!4d`, the preview image `center=lat,lng`, a `/@lat,lng,` address, the map's starting
+     view), then drop it; the log line says which pattern matched and how many bytes were read.
+     Alternatives turned down: (b) no link following (locations only from Use where I am now or a
+     long link), (c) a paid address lookup (shared places have no address).
    - **Honest "nothing near" answers** (Q16, same testing): when matching places have no saved
      location, Wilma names them ("Hinode Sushi might be near, but it has no saved location") and
      offers Open in Maps or to add the location, instead of "nothing close by".

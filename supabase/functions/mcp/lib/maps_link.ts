@@ -3,14 +3,19 @@
 // A Google Maps share gives only a short link (https://maps.app.goo.gl/...) and the name. When a
 // place is saved with such a link and no location, the server opens the link once and reads the
 // coordinates from the Google Maps address it leads to (`!3d<lat>!4d<lng>` or `@lat,lng`). A long
-// link that already carries coordinates needs no request at all.
+// link that already carries coordinates needs no request at all. Google's current share links
+// lead to a Maps page whose address has no coordinates (live log, 2026-10-07: no_coordinates
+// after 2 requests, status 200), so that last page is read for them (owner's choice (a)).
 //
 // This is a request from our server on a link the user gave, so it is kept narrow (SSRF):
 // - only the short-link hosts start a request, https only, no port, no user:password;
 // - redirects are followed by hand, at most MAX_REDIRECTS, and every hop must stay on a Google
 //   Maps host (GOOGLE_MAPS_HOP); anything else is refused without being requested;
 // - one TIMEOUT_MS limit for the whole chain; no cookies, credentials or custom headers are sent;
-// - the response body is never read (it is cancelled) and nothing is stored but lat/lng;
+// - a page is read only when the chain ends on a Google Maps hop with an HTML page (status 200):
+//   at most MAX_PAGE_BYTES, within the same time limit, searched only for the place's coordinates
+//   (pageCoordinates) and then dropped; every other answer is cancelled unread. Nothing but
+//   lat/lng is stored;
 // - nothing is logged here: callers log codes and counts only (linkLogLine), never the link or
 //   the point.
 // Any failure returns a code and the place stays as it was.
@@ -18,11 +23,20 @@ import { isMapsLink, type PlaceMetadata, placePoint, type Point } from "./places
 
 export const MAX_REDIRECTS = 5;
 export const TIMEOUT_MS = 5000;
+export const MAX_PAGE_BYTES = 1_000_000;
 
-/** What happened, for the log: requests made and the last HTTP status (0: none). Never the link. */
+/** Where the coordinates were found: in a link, or by which pattern in the page. */
+export type FoundIn = "link" | "page_pin" | "page_image" | "page_view" | "page_state";
+
+/**
+ * What happened, for the log: requests made, the last HTTP status (0: none), the bytes of page
+ * read and where the point was found. Never the link, the page or the point.
+ */
 export interface LinkTrace {
   requests: number;
   status: number;
+  page_bytes: number;
+  found?: FoundIn;
 }
 export type LinkLocation = ({ point: Point } | { code: LinkFailure }) & { trace?: LinkTrace };
 export type LinkFailure =
@@ -100,6 +114,55 @@ export function coordinatesInLink(url: string): Point | null {
   return view ? checked(view[1], view[2]) : null;
 }
 
+/** A place page's coordinates, most precise first. Patterns seen in Google Maps place pages. */
+const PAGE_PATTERNS: [FoundIn, RegExp, "latlng" | "lnglat"][] = [
+  // The place's pin, as in a long link's data= part.
+  ["page_pin", new RegExp(String.raw`!3d${NUM}!4d${NUM}`), "latlng"],
+  // The preview image (og:image) is a static map centred on the place: center=lat%2Clng.
+  ["page_image", new RegExp(String.raw`[?&;]center=${NUM}(?:%2C|,)${NUM}`, "i"), "latlng"],
+  // A Maps address in the page with the map's centre: /@lat,lng,
+  ["page_view", new RegExp(String.raw`/@${NUM},${NUM},`), "latlng"],
+  // The map's starting view: APP_INITIALIZATION_STATE=[[[altitude,lng,lat]
+  ["page_state", new RegExp(String.raw`APP_INITIALIZATION_STATE=\[\[\[-?[\d.e+]+,${NUM},${NUM}\]`), "lnglat"],
+];
+
+/** The place's coordinates in a Google Maps page's text, or null. Nothing else is taken from it. */
+export function pageCoordinates(html: string): { point: Point; found: FoundIn } | null {
+  for (const [found, re, order] of PAGE_PATTERNS) {
+    const m = html.match(re);
+    if (!m) continue;
+    const point = order === "latlng" ? checked(m[1], m[2]) : checked(m[2], m[1]);
+    if (point) return { point, found };
+  }
+  return null;
+}
+
+/** At most MAX_PAGE_BYTES of the page as text, within the deadline; the rest is cancelled. */
+async function readPage(res: Response, deadline: Promise<never>, trace: LinkTrace): Promise<string> {
+  const reader = res.body?.getReader();
+  if (!reader) return "";
+  const parts: Uint8Array[] = [];
+  try {
+    while (trace.page_bytes < MAX_PAGE_BYTES) {
+      const { done, value } = await Promise.race([reader.read(), deadline]);
+      if (done) break;
+      const room = MAX_PAGE_BYTES - trace.page_bytes;
+      const part = value.length > room ? value.subarray(0, room) : value;
+      parts.push(part);
+      trace.page_bytes += part.length;
+    }
+  } finally {
+    reader.cancel().catch(() => {});
+  }
+  const all = new Uint8Array(trace.page_bytes);
+  let at = 0;
+  for (const p of parts) {
+    all.set(p, at);
+    at += p.length;
+  }
+  return new TextDecoder().decode(all);
+}
+
 /** Google's cookie-consent page (EU visitors) carries the Maps address in ?continue=; read, never requested. */
 function consentTarget(u: URL): URL | null {
   if (!plainHttps(u) || u.hostname.toLowerCase() !== "consent.google.com") return null;
@@ -118,7 +181,7 @@ export async function locationFromMapsLink(
   fetchFn: typeof fetch = globalThis.fetch,
   timeoutMs = TIMEOUT_MS,
 ): Promise<LinkLocation> {
-  const trace: LinkTrace = { requests: 0, status: 0 };
+  const trace: LinkTrace = { requests: 0, status: 0, page_bytes: 0 };
   const found = await follow(url, fetchFn, timeoutMs, trace);
   return { ...found, trace };
 }
@@ -130,7 +193,10 @@ async function follow(
   trace: LinkTrace,
 ): Promise<{ point: Point } | { code: LinkFailure }> {
   const direct = coordinatesInLink(url);
-  if (direct) return { point: direct };
+  if (direct) {
+    trace.found = "link";
+    return { point: direct };
+  }
   if (!isShortMapsLink(url)) return { code: "not_a_short_link" };
 
   const controller = new AbortController();
@@ -152,7 +218,15 @@ async function follow(
         deadline,
       ]);
       trace.status = res.status;
-      // The page itself is never read.
+      if (res.status === 200 && /^text\/html\b/i.test(res.headers.get("content-type") ?? "")) {
+        // The chain ended on a Google Maps page (this hop passed isGoogleMapsHop): read it for
+        // the place's coordinates only.
+        const inPage = pageCoordinates(await readPage(res, deadline, trace));
+        if (!inPage) return { code: "no_coordinates" };
+        trace.found = inPage.found;
+        return { point: inPage.point };
+      }
+      // Any other answer is never read.
       res.body?.cancel().catch(() => {});
       if (!REDIRECT.has(res.status)) return { code: res.ok ? "no_coordinates" : "http_status" };
       if (redirects + 1 > MAX_REDIRECTS) return { code: "too_many_redirects" };
@@ -168,7 +242,10 @@ async function follow(
       const hop = consent ?? next;
       if (!isGoogleMapsHop(hop)) return { code: "off_google" };
       const point = coordinatesInLink(hop.href);
-      if (point) return { point };
+      if (point) {
+        trace.found = "link";
+        return { point };
+      }
       if (consent) return { code: "no_coordinates" };
       current = hop;
     }
@@ -199,11 +276,12 @@ export async function withLinkLocation(
 }
 
 /**
- * The one log line about a link lookup: the outcome code, how many requests were made and the
- * last HTTP status. Built only from those, so it can never hold the link or the point.
+ * The one log line about a link lookup: the outcome code, how many requests were made, the last
+ * HTTP status, the bytes of page read and where the point was found (a fixed word). Built only
+ * from those, so it can never hold the link, the page or the point.
  */
 export function linkLogLine(found: LinkLocation): string {
   const code = "code" in found ? found.code : "ok";
-  const { requests, status } = found.trace ?? { requests: 0, status: 0 };
-  return JSON.stringify({ event: "maps_link", code, requests, status });
+  const { requests, status, page_bytes, found: where } = found.trace ?? { requests: 0, status: 0, page_bytes: 0 };
+  return JSON.stringify({ event: "maps_link", code, requests, status, page_bytes, found: where ?? null });
 }

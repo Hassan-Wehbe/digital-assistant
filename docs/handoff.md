@@ -21,7 +21,7 @@ tokens or keys in chat.
   `goo.gl/maps`) once: https only, at most 5 manual redirects, every hop on `maps.app.goo.gl`,
   `goo.gl/maps`, `maps.google.com` or `(www.)google.com/maps` (others refused unrequested; Google's
   EU consent page is read for its `continue=` link, never requested), 5 s in all, no cookies, body
-  never read, nothing logged. Never replaces a location; does not put back one the user removed
+  never read (changed by the owner's choice (a), below), nothing logged. Never replaces a location; does not put back one the user removed
   (same link); any failure leaves the place as it was and the save succeeds. No instruction
   change, so no evaluation run. `mcp` 0.8.2; `chat` carries the tools, so deploy both. **Not
   checked against Google yet** (this sandbox gets 403 for Google): the first real check is after
@@ -33,6 +33,15 @@ tokens or keys in chat.
   contact Google about your places"). Wording approved by the owner (2026-10-07). **Owner's next steps:**
   the backfill (deploy `place-locations`, dry run, apply,
   delete), then merge #126. Part 2 (honest near answers, 10-mile radius, miles, cards) is next.
+  **Update (2026-10-07):** `place-locations` deployed (version 1, 5/5 identical, 401 without the
+  key, dashboard run not yet done). The owner's app edit showed the real chain fails: #129 (codes-
+  only log line, `mcp` v17) logged `no_coordinates`, 2 requests, status 200: Google's share link
+  leads to a place page whose address has no coordinates. **Owner chose (a):** the server reads
+  that one HTML page (Google Maps host only, at most 1 MB, same 5 s) for the coordinates only
+  (`places-plan.md` step 8 has the patterns). In a PR (`mcp` 0.8.4); after it is deployed, the
+  owner changes one place field in the app and the log line says which pattern matched
+  (`found`); then check the location with Open in Maps, run the backfill for the other place (or
+  edit it), delete `place-locations`, merge #126.
 - **UI tidy-up of home and chat: decided, build next (owner, 2026-10-07).** `docs/ui-review.md`
   section 3 is the plan: Home A2 (a 3-line Wilma box with ＋, usage counter, 🎤 and ↑ in a top
   panel; tiles Continue/Chat, Save here, Vault; Settings behind ⚙), the chat sliding up from the
