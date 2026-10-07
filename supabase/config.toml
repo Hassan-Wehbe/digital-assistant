@@ -12,3 +12,8 @@ verify_jwt = false
 # Like mcp: the function verifies the caller's Supabase access token itself (401 otherwise)
 # and then runs every query as that user.
 verify_jwt = false
+
+[functions.place-locations]
+# One-off (places step 8, Q15), deleted after the run. The function checks the service-role
+# (secret) key itself, which also works with the new non-JWT secret keys.
+verify_jwt = false
