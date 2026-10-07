@@ -26,9 +26,8 @@ describe('home and chat hold a password', () => {
     expect(src).toMatch(/(disabled|sendDisabled)=\{[^}]*\|\| !!credential\}/);
   });
 
-  it('the box edge turns amber', () => {
-    expect(read('app/index.tsx')).toContain('warn={!!credential}');
-    expect(read('app/chat.tsx')).toContain('borderColor: credential ? c.warn : c.line');
+  it.each(SCREENS)('%s: the box edge turns amber', (f) => {
+    expect(read(f)).toContain('warn={!!credential}');
   });
 });
 
