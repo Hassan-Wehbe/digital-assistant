@@ -1,6 +1,6 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
+Last updated 2026-10-07 (see "START HERE" below for today's consolidated state). Earlier: 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
 #102), with Expo patch updates (#98). Step 2, server, is live. Places step 5b ("places near me",
 server) **merged and live** (#104, `mcp` v13, `chat` v6; first entry below). Then step 6, the places build, which also carries the mic fix #91. Play Console:
 Data safety and other forms saved, **not yet sent for review**; see the first entry below).
@@ -12,6 +12,26 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **START HERE: consolidated state (2026-10-07, end of day).** Two lines of work ran in parallel
+  today and are now merged into this one note. Nothing is open on GitHub.
+  - **UI tidy-up (`docs/ui-review.md` section 3):** PR 1 shared pieces (#123), PR 2 Settings
+    behind ⚙ (#127) and PR 3 home A2 with the Wilma box, ＋ menu, counter, tiles and the chat
+    sliding up (#128) are **merged, not built**. Next: **PR 4, the password check on the phone**
+    (strongest model), then PR 5 (chat with the Wilma box), PR 6 (one chat card shell), PR 7 (the
+    same password check in the `chat` function, with an evaluation run; owner's OK to deploy),
+    PR 8 (phone checklist, then the Play build).
+  - **Places step 8 part 1 is closed** (entry below): the server opens no Google links and reads
+    coordinates only from a long Maps link or a `geo:` link; `mcp` v19 and `chat` v10 live.
+    **Part 2 is next** (`docs/places-plan.md` step 8, Q11-Q16): Wilma names matching places that
+    have no location instead of saying nothing is near and offers to add one, "nearby" = 10
+    miles, miles by default with a miles/km setting (it goes on the new Settings screen), place
+    cards and the "📍 Share where I am" card (they use PR 6's card shell).
+  - **Order (recommended):** UI PR 4 → PR 7 (both close the gap where a typed password reaches the
+    model) → PR 5 → PR 6 → places step 8 part 2 → UI PR 8 and one Play build carrying both.
+  - **Owner to do:** delete the `place-locations` stub (Supabase → Edge Functions →
+    place-locations → Delete; it was still listed at the end of the places session), give the two
+    saved places a location (Use where I am now at the place, or paste a long Google Maps link
+    from a computer's browser). The versionCode 10 and 11 phone checklists are not yet recorded.
 - **Places step 8, part 1: coordinates from Google Maps links (Q15), server live (#124 merged;
   deployed 2026-10-07: `mcp` version 16, 36/37 files identical, `chat` version 9, 48/49 identical,
   the `.d.ts` not listed back; 401 without sign-in and with a fake token, both).** Why: on versionCode 11 "sushi near me" found nothing because the owner's 2 places
@@ -63,9 +83,8 @@ tokens or keys in chat.
   bottom with the same box, one chat card shell, and a password check on the phone (PR 4) and in
   the `chat` function (PR 7, server; found 2026-10-07: today a typed password in the chat reaches
   the model, only saving is blocked). Mockups: https://claude.ai/artifact/PgrfNQnowFu3w5M4mHYQQA.
-  PR 1 (shared pieces) merged (#123); PR 2 (Settings, #127) and PR 3 (home A2) in review. **Next:
-  PR 4 (password check on the phone), strongest model, fresh session.** Places step 8 follows, on
-  the new cards.
+  PRs 1-3 merged (#123, #127, #128), not built. **Next: PR 4 (password check on the phone),
+  strongest model.** Order with places step 8 part 2: see "START HERE" above.
 - **versionCode 11 building (owner: "build for Play", 2026-10-07).** Production build from `main`
   at 87f5ec4 (GitHub run 37556372279, checks passed), Expo build dbf2331f-0def-462d-8672-a78c8cd6cfd8,
   auto-submit scheduled (https://expo.dev/accounts/zafnut/projects/wilma/submissions/242901fc-5ec6-4e85-b20d-f79ae3289171).
