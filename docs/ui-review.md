@@ -183,6 +183,11 @@ Small PRs. Each passes `npm run check` and is tried in the browser preview (`doc
    only while the mic is on, as on home; a typed password gets PR 4's card.
 6. **Chat cards:** one `ChatCard` shell for vault, notes, delete and error cards (section 2,
    "Chat cards"). *Strongest model.*
+   **As built:** `components/ChatCard.tsx` (`ChatCard`, `ChatCardDone`, `ChatCardText`): icon,
+   text, right-aligned buttons side by side, the bubbles' corners and padding. Delete: Cancel then
+   Delete (red text, outlined); finished delete cards are one dimmed line. Vault: "Open in the
+   vault" filled. Notes: "Ask Wilma instead" plain. Errors: Try again filled, Search and Vault
+   plain. Places step 8 adds 📍 cards on the same shell.
 7. **Server: the same check in the `chat` function** before any model call (and before the
    classifier, which already has it), with an evaluation run; covers older app versions and
    any other front end that uses the chat function. Deploy needs the owner's OK. *Strongest model.*

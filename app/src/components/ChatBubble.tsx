@@ -2,8 +2,9 @@
 // Text is plain and selectable (no markdown, no links opened: decision 3).
 import { Text, View } from 'react-native';
 
+import { ChatCard, ChatCardText } from '@/components/ChatCard';
 import { DeleteCard, NotesCard, VaultCard } from '@/components/ChatCards';
-import { Button, Card, Muted, useColors } from '@/components/ui';
+import { Button, Muted, useColors } from '@/components/ui';
 import type { Entry, ErrorButton } from '@/lib/chatThread';
 
 const BUTTON_TITLES: Record<ErrorButton, string> = { search: 'Search', vault: 'Vault', try_again: 'Try again' };
@@ -59,13 +60,19 @@ export function ChatBubble({
       );
     case 'error':
       return (
-        <Card style={{ alignSelf: 'flex-start', maxWidth: '85%' }}>
-          <Text style={{ color: c.text, fontSize: 16, lineHeight: 22 }}>{entry.message}</Text>
+        <ChatCard
+          icon="⚠️"
+          actions={
+            buttonsEnabled && entry.buttons.length
+              ? entry.buttons.map((b) => (
+                  // Try again is the main action when offered; Search and Vault are the ways around.
+                  <Button key={b} title={BUTTON_TITLES[b]} kind={b === 'try_again' ? 'primary' : 'plain'} onPress={() => onButton(b)} />
+                ))
+              : undefined
+          }>
+          <ChatCardText>{entry.message}</ChatCardText>
           {entry.note ? <Muted>{entry.note}</Muted> : null}
-          {buttonsEnabled
-            ? entry.buttons.map((b) => <Button key={b} title={BUTTON_TITLES[b]} kind="plain" onPress={() => onButton(b)} />)
-            : null}
-        </Card>
+        </ChatCard>
       );
     case 'confirm':
       return <DeleteCard entry={entry} active={cardActive} onConfirm={() => onConfirm(entry.id)} onCancel={() => onCancel(entry.id)} />;
