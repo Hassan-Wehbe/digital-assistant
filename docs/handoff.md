@@ -12,7 +12,14 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **Day planner step 2, PR 1 (Wilma tasks, server): PR open, not deployed (2026-10-08).** Tasks are
+- **Day planner step 2, PR 1 (Wilma tasks, server): merged (#169); `mcp` version 23 live, `chat` not
+  yet (2026-10-08).** `mcp` deployed with the owner's OK by the "deploy chat" workflow (function
+  `mcp`, run 37802605333) from `main` at 79448d0: 38/38 listed files identical to `main`
+  (`deno.json`, `deno.lock`, `lib/supabase-ai.d.ts` not listed back, as usual); 401 without sign-in
+  and with a fake token. So the Claude connector has tasks; **the app's Wilma chat (`chat` v14) does
+  not until `chat` is deployed** (owner's OK; the repository's `SUPABASE_ACCESS_TOKEN` was still set
+  for this run). **Owner:** OK the `chat` deploy, then delete the Supabase access token.
+  Earlier state: Tasks are
   notes of type `task` (due date, duration, priority, place, done), `find_tasks`, `update_item`
   `task_done`, a Tasks space made on the first task; rule 9, 3 and 7 tests; 340 Deno tests, 103
   evaluation cases. **Evaluation run 37798727091: Luna 102/103, 0 leaks, 0 unsafe, $0.05**; the miss
@@ -24,7 +31,8 @@ tokens or keys in chat.
   month with AI; owner's request, 2026-10-08); mockups updated (section 0); Pro tester invite codes
   in `signup-plan.md` (Q9, owner: yes); iPhone drive times from Apple's MapKit later. **Owner:**
   review and merge, then OK the `mcp` and `chat` deploys (a fresh
-  `SUPABASE_ACCESS_TOKEN` for the `chat` workflow, deleted after).
+  `SUPABASE_ACCESS_TOKEN` for the `chat` workflow, deleted after). **Next:** step 2 (planner core
+  and the Pro switch; strongest model, fresh session).
 - **Day planner step 2 planned (owner's feedback on versionCode 14, 2026-10-08).** The phone
   calendar works (Settings → Calendars, "plan my day" lists the events), but reading the calendar
   alone is not useful: the owner wants a plan. Mockups approved (`docs/day-planner-mockups.html`,
