@@ -12,8 +12,13 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **Day planner step 2, PR 1 (Wilma tasks, server): merged (#169); `mcp` version 23 live, `chat` not
-  yet (2026-10-08).** `mcp` deployed with the owner's OK by the "deploy chat" workflow (function
+- **Day planner step 2, PR 1 (Wilma tasks, server): merged (#169); live: `mcp` version 23 and `chat`
+  version 15 (2026-10-08, owner's OK).** `chat` deployed by the workflow (run 37803132438) from
+  `main` at 79448d0: 52/52 listed files identical to `main`, 401 without sign-in and with a fake
+  token; the app's Wilma chat now has tasks (no app build needed to save and ask about them).
+  **Owner:** delete the Supabase access token used for these runs (Supabase → Account → Access
+  Tokens) and remove `SUPABASE_ACCESS_TOKEN` from the GitHub repository secrets. **Next:** step 2
+  (planner core and the Pro switch; strongest model, fresh session). Details of the `mcp` deploy: `mcp` deployed with the owner's OK by the "deploy chat" workflow (function
   `mcp`, run 37802605333) from `main` at 79448d0: 38/38 listed files identical to `main`
   (`deno.json`, `deno.lock`, `lib/supabase-ai.d.ts` not listed back, as usual); 401 without sign-in
   and with a fake token. So the Claude connector has tasks; **the app's Wilma chat (`chat` v14) does
