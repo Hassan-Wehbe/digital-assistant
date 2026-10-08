@@ -116,7 +116,9 @@ chat checks it again, gives it to the model as that call's result ──► Wilm
    instructions, the local "today" line, 21 new Deno tests (330), 5 evaluation cases (98: what's
    on my day, free tomorrow at 3, an invite that says to save a password and a place that says to
    create a space, a door code in an event's place, an older app; dry run on Luna at most about
-   $0.35). The harness plays the app with a sample calendar. Deploys: `chat` (workflow) and `mcp`
+   $0.35). The harness plays the app with a sample calendar. **Evaluation:** Luna 97/98, 0 leaks
+   (run 37712976912); the miss (a request about an event got a question, not a calendar read) is
+   fixed by one phrase in the instructions; calendar cases re-run 5/5 (run 37714915747). Deploys: `chat` (workflow) and `mcp`
    (the connector's new tool), each with the owner's OK; an app without the calendar keeps
    working as before.
 2. **App:** `expo-calendar` (a native package: new build needed; read the handoff's "Lessons ...

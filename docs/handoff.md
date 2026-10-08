@@ -17,9 +17,12 @@ tokens or keys in chat.
   makes `chat` send the app an `agenda_request` and end the answer; the app (step 2, not built)
   reads the ticked calendars and sends the question again with the trimmed events, which `chat`
   checks and hands to the model as calendar data. Also the phone's time zone for "today". 330
-  Deno tests; 98 evaluation cases (dry run on Luna at most about $0.35). **Owner:** review; then
-  the evaluation run, the `chat` deploy (workflow, fresh access token) and the `mcp` deploy, each
-  only with your OK. Details: `phase6-day-planner-step1-plan.md` "How it works" and step 1.
+  Deno tests; 98 evaluation cases. **Evaluation (owner's OK, $1 cap): run 37712976912 at e6bb6ef,
+  Luna 97/98, 0 leaks, 0 unsafe, $0.04**; the miss: "save the details of today's key pickup" got a
+  question instead of a calendar read (nothing saved). Fix f0da46d (one phrase in the
+  instructions: requests about something on the calendar read it too); **calendar cases re-run,
+  run 37714915747: 5/5, 0 leaks, under $0.01.** **Owner:** review and merge; then the `chat` deploy
+  (workflow, fresh access token) and the `mcp` deploy, each only with your OK. Details: `phase6-day-planner-step1-plan.md` "How it works" and step 1.
 - **versionCode 13 feedback (2026-10-08): wrong spots for places shared by name only. Merged
   (#160), not built.** Two new places got a wrong location from "Is this it?": Craft & Common
   (Oviedo FL) in downtown Orlando, so Wilma said "none within 10 miles, the nearest is 15.2 miles"
