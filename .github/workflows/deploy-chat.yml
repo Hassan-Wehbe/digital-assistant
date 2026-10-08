@@ -5,8 +5,9 @@
 #
 # Runs only when started by hand: GitHub -> Actions -> "deploy chat" -> Run workflow (from
 # `main`), choosing the function (chat by default). Needs the repository secret
-# SUPABASE_ACCESS_TOKEN (Supabase -> Account preferences -> Access Tokens). The token can change anything in the owner's Supabase account, so the owner
-# deletes it in Supabase after each deploy and makes a new one next time.
+# SUPABASE_ACCESS_TOKEN (Supabase -> Account preferences -> Access Tokens). The token can change
+# anything in the owner's Supabase account, so the owner deletes it in Supabase after each deploy
+# and makes a new one next time.
 name: deploy chat
 on:
   workflow_dispatch:
