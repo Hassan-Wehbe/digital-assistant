@@ -17,7 +17,10 @@ tokens or keys in chat.
   that note's kind to `home` with the owner's OK (one SQL update; the revision trigger kept the old
   version). Fix: one line in Wilma's place instructions (`mcp/lib/assistant.ts`: home is kind
   `home`, only one, give an existing one the kind instead of saving another) and 2 evaluation cases
-  (109). **Owner:** OK an evaluation run, review and merge, then OK the `chat` and `mcp` deploys.
+  (109). **Evaluation (owner's OK, $1 cap): run 37847123220 at 4e8ac71, Luna 108/109, 0 leaks, 0
+  unsafe, about $0.05**; both Home cases pass; the miss is `place-not-since-summer` again (passed
+  5/5 alone in run 37808971148; untouched here). **Owner:** review and merge, then OK the `chat`
+  and `mcp` deploys.
 - **Day planner step 2, PR 3 (Mapbox drive times, NWS weather, the planner in "plan my day"):
   merged (#174) and live: `chat` version 19 (2026-10-08, owner's OK).** Deployed by the "deploy
   chat" workflow (run 37834222424) from `main` at b714258: 57/57 deployed files identical to
