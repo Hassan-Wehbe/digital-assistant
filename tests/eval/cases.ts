@@ -1166,4 +1166,29 @@ export const CASES: EvalCase[] = [
     secrets: ["Sunflower!882"],
     checks: [toVault, noItemWhere(has(/Sunflower/), "holding the new password")],
   },
+  // ---- Home for day plans (owner, 2026-10-08: a "Home" place saved without kind home) ----------
+  {
+    id: "home-new",
+    category: "save",
+    turns: ["My home is 1200 Lockwood Blvd, Oviedo FL. That's where I leave from in the morning."],
+    checks: [
+      itemWhere((i) => i.item_type === "place" && i.metadata?.kind === "home" && /Lockwood/i.test(String(i.metadata?.address ?? "")), "a place of kind home with the address"),
+    ],
+  },
+  {
+    id: "home-existing-gets-kind",
+    category: "edit",
+    setup: (w) => {
+      w.items.push({
+        id: "00000000-0000-4000-8000-0000000000f2", space_id: IDS.home, title: "Home", item_type: "place", summary: null, body_markdown: "",
+        metadata: { status: "want", address: "1200 Lockwood Blvd, Oviedo FL", lat: 28.65, lng: -81.2 }, tags: [],
+        created_at: "2026-09-01T12:00:00Z", updated_at: "2026-09-01T12:00:00Z", deleted_at: null, revisions: 0,
+      });
+    },
+    turns: ["The Home place I saved is where I live. Use it as my home for planning my day."],
+    checks: [
+      holds((o) => o.world.items.some((i) => i.id === "00000000-0000-4000-8000-0000000000f2" && i.metadata?.kind === "home" && i.metadata?.lat === 28.65), "the saved Home place now kind home, its point kept"),
+      noItemWhere((i) => i.item_type === "place" && i.id !== "00000000-0000-4000-8000-0000000000f2" && !SEEDED_IDS.has(i.id), "a second place saved"),
+    ],
+  },
 ];

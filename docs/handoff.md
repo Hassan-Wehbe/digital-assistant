@@ -18,6 +18,15 @@ tokens or keys in chat.
   `chat` deploys). Details: plan step 5 "As built". 654 app tests, 392 Deno tests. My day (#176)
   merged too. **Owner:** OK the `mcp` and `chat` deploys (together with #177's). **Next:** step 6,
   ship (privacy page, Data safety, phone checklist, build versionCode 15; Sonnet).
+- **Wilma sets kind `home` (owner's phone test, 2026-10-08): merged (#177).** The owner asked Wilma to
+  save a place "Home"; it was saved without kind `home`, so the planner said no Home. Claude set
+  that note's kind to `home` with the owner's OK (one SQL update; the revision trigger kept the old
+  version). Fix: one line in Wilma's place instructions (`mcp/lib/assistant.ts`: home is kind
+  `home`, only one, give an existing one the kind instead of saving another) and 2 evaluation cases
+  (109). **Evaluation (owner's OK, $1 cap): run 37847123220 at 4e8ac71, Luna 108/109, 0 leaks, 0
+  unsafe, about $0.05**; both Home cases pass; the miss is `place-not-since-summer` again (passed
+  5/5 alone in run 37808971148; untouched here). **Owner:** OK the `chat` and `mcp`
+  deploys (with #178's server change).
 - **Day planner step 2, step 4 (the app's My day): merged (#176), not built (2026-10-08).** The 🌅 My
   day tile on Home and the 🌅 Plan my day chip in an empty chat (PRO badge and the Pro card without
   Pro), the My day timeline from `{"mode":"day"}` (drive, rain, alert, overlap, free, task rows;
@@ -27,9 +36,10 @@ tokens or keys in chat.
   chat's "plan my day" now re-sends events with the phone's places and the day's choices. **The plan
   is never saved on the phone** (Mapbox's terms). Details: plan step 4 "As built". 639 app tests (58 new).
   No server change, no migration, no evaluation run needed (the chat's prompt and tools are
-  unchanged). **Owner:** review and merge; it ships with step 6's build (versionCode 15). Still
-  open from step 3: ask Wilma "plan my day for tomorrow" on a Pro account so Claude can check the
-  `day` log line (`drive_failures` and `weather_failures` 0). **Next:** step 5, tasks in the app
+  unchanged). It ships with step 6's build (versionCode 15). **Secrets checked
+  (2026-10-08):** the owner's "plan my day" requests logged both providers (so `MAPBOX_TOKEN` and
+  `NWS_CONTACT` are set) with 0 requests and 0 failures: no event had a place the server could
+  find (the build on the phone sends no points; a location must equal a saved place's name). **Next:** step 5, tasks in the app
   (strongest model, fresh session).
 - **Day planner step 2, PR 3 (Mapbox drive times, NWS weather, the planner in "plan my day"):
   merged (#174) and live: `chat` version 19 (2026-10-08, owner's OK).** Deployed by the "deploy
