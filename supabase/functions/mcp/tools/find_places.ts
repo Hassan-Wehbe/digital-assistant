@@ -221,7 +221,9 @@ export const registerFindPlaces: RegisterTool = (server, { db, assistantName, di
         /** The filters a place does not meet, as the user would read them ("cuisine sushi"). */
         const misses = (m: Record<string, unknown>): string[] => {
           const out: string[] = [];
-          if (wanted.kind && m.kind !== wanted.kind) out.push(`kind ${wanted.kind}`);
+          // A place saved without a kind (shared from Google Maps, often) is not ruled out by a kind
+          // filter: it may well be one ("pizza restaurants" must find the pizza place); it says so.
+          if (wanted.kind && m.kind && m.kind !== wanted.kind) out.push(`kind ${wanted.kind}`);
           if (status && (m.status ?? "want") !== status) out.push(`status ${status}`);
           if (wanted.cuisine && !list(m.cuisine).includes(wanted.cuisine[0])) out.push(`cuisine ${wanted.cuisine[0]}`);
           if (wanted.occasions && !list(m.occasions).includes(wanted.occasions[0])) out.push(`occasion ${wanted.occasions[0]}`);
@@ -246,6 +248,7 @@ export const registerFindPlaces: RegisterTool = (server, { db, assistantName, di
           distance: inUnit(km),
           unit,
           place: row.metadata,
+          ...(wanted.kind && !row.metadata?.kind ? { kind_not_saved: true } : {}),
         });
 
         // Forgiving filters: when they leave nothing nearby, the nearby places they ruled out still

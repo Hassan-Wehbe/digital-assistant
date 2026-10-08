@@ -357,3 +357,22 @@ Deno.test("find_places: one log line with the filters set and the counts, never 
   assertEquals(logs[2].filters, ["occasion"]);
   assert(!JSON.stringify(logs[2]).includes("romantic"), JSON.stringify(logs[2]));
 });
+
+// Owner, versionCode 13: a place shared from Google Maps has no kind, and "pizza restaurants near me"
+// left out the pizza place itself (then offered the sushi and Thai places instead).
+Deno.test("find_places: a place saved without a kind is not ruled out by a kind filter, and says so", async () => {
+  const w = new World();
+  const tawlet = w.items.find((i) => i.title === "Tawlet")!;
+  w.items.push({
+    ...structuredClone(tawlet), id: "00000000-0000-4000-8000-0000000000d9", title: "Pizza Napoli",
+    metadata: { status: "want", cuisine: ["pizza"], lat: 33.8962, lng: 35.5252 },
+  });
+  const out = await call(w.client(), { ...TAWLET, kind: "restaurant", cuisine: "pizza" });
+  assertEquals(out.isError, false, out.text);
+  assertEquals(titles(out.json.results), ["Pizza Napoli"]);
+  assertEquals(out.json.results[0].kind_not_saved, true);
+  assertEquals(out.json.other_nearby, undefined);
+  // A place whose kind is saved and different is still left out.
+  const cafes = await call(w.client(), { ...TAWLET, kind: "cafe" });
+  assert(!titles(cafes.json.results).includes("Tawlet"));
+});
