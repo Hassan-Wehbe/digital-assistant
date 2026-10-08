@@ -20,7 +20,7 @@ import { UnlockCard } from '@/components/UnlockCard';
 import { Button, Muted, TextLink, useColors } from '@/components/ui';
 import { CANT_DO, checkDelete, needsVault } from '@/lib/chatDeletes';
 import { LOCATION_ASK, LOCATION_DONE } from '@/lib/chatHere';
-import type { Entry } from '@/lib/chatThread';
+import { CALENDAR_TEXT, type Entry } from '@/lib/chatThread';
 import { mapsLink, placeCardDetail } from '@/lib/places';
 import { distanceText } from '@/lib/units';
 import { vaultCardText, vaultRoute } from '@/lib/chatVault';
@@ -228,6 +228,17 @@ export function LocationCard({
       }>
       <ChatCardText>{LOCATION_ASK}</ChatCardText>
       {entry.error ? <Text style={{ color: c.warn, fontSize: 15 }}>{entry.error}</Text> : null}
+    </ChatCard>
+  );
+}
+
+/** Wilma asked for the calendar but it could not be read (day planner step 1): why, and where to turn it on. */
+export function CalendarCard({ entry }: { entry: Extract<Entry, { kind: 'calendar' }> }) {
+  return (
+    <ChatCard
+      icon="📅"
+      actions={entry.problem !== 'failed' ? <Button title="Open Settings → Calendars" kind="plain" onPress={() => router.push('/calendars')} /> : undefined}>
+      <ChatCardText>{CALENDAR_TEXT[entry.problem]}</ChatCardText>
     </ChatCard>
   );
 }

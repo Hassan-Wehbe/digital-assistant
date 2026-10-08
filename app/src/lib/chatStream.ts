@@ -36,6 +36,9 @@ export type ChatEvent =
   | { type: 'places'; cards: PlaceCardData[] }
   /** Wilma asks for the location: the "📍 Share where I am" card. */
   | { type: 'location_request' }
+  /** Wilma asks for these days of the phone's calendar (day planner step 1): the app reads the
+   * ticked calendars and sends the question again with them (chat.tsx). */
+  | { type: 'agenda_request'; from: string; to: string }
   | { type: 'error'; code: string; message: string }
   | { type: 'done'; counted: boolean };
 
@@ -61,6 +64,7 @@ export type ChunkSource = Pick<ReadableStreamDefaultReader<Uint8Array>, 'read' |
 const str = (v: unknown): v is string => typeof v === 'string';
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const short = (v: unknown, max: number): v is string => str(v) && v.trim().length > 0 && v.length <= max;
+const isDay = (v: unknown): v is string => str(v) && /^\d{4}-\d{2}-\d{2}$/.test(v);
 const inRange = (v: unknown, limit: number): v is number => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= limit;
 
 /** One card, copied field by field; null without an id and a name. */
@@ -126,6 +130,8 @@ export function toChatEvent(raw: unknown): ChatEvent | null {
     }
     case 'location_request':
       return { type: 'location_request' };
+    case 'agenda_request':
+      return isDay(raw.from) && isDay(raw.to) ? { type: 'agenda_request', from: raw.from, to: raw.to } : null;
     case 'done':
       return { type: 'done', counted: raw.counted === true };
     default:

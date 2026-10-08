@@ -126,7 +126,21 @@ export type Entry =
   /** Places Wilma's answer names (places step 8): Open in Maps, Open note. */
   | { kind: 'places'; id: string; cards: PlaceRef[] }
   /** Wilma asked where the user is: Not now / 📍 Share where I am, which sends `question` again. */
-  | { kind: 'location'; id: string; question: string; state: LocationState; error?: string };
+  | { kind: 'location'; id: string; question: string; state: LocationState; error?: string }
+  /** Wilma asked for the calendar but it could not be read: why, and Settings → Calendars. */
+  | { kind: 'calendar'; id: string; problem: CalendarProblem };
+
+/** Why the calendar was not read: turned off (or nothing ticked), not allowed, or a failure. */
+export type CalendarProblem = 'off' | 'permission' | 'failed';
+export const CALENDAR_PROBLEMS: CalendarProblem[] = ['off', 'permission', 'failed'];
+
+/** What the calendar card says (the button opens Settings → Calendars, except after a failure). */
+export const CALENDAR_TEXT: Record<CalendarProblem, string> = {
+  off: 'I can answer from your phone’s calendar once you turn on Use my calendar in Settings → Calendars. Then ask me again.',
+  permission:
+    'Wilma may not read your calendar right now. Allow it in Settings → Calendars (or phone Settings → Apps → Wilma → Permissions → Calendar), then ask me again.',
+  failed: 'Your calendar could not be read just now. Ask me again in a moment.',
+};
 
 export interface ChatState {
   entries: Entry[];
@@ -185,7 +199,11 @@ export type ChatAction =
   /** It was read: the card is done (the caller then sends the question again with the point). */
   | { type: 'location_shared'; id: string }
   /** "Not now" tapped. */
-  | { type: 'location_dismiss'; id: string };
+  | { type: 'location_dismiss'; id: string }
+  /** The calendar Wilma asked for was read: the same question goes to Wilma again (no new message). */
+  | { type: 'resend' }
+  /** The calendar Wilma asked for could not be read: the card says why. */
+  | { type: 'calendar_card'; problem: CalendarProblem };
 
 /** A thread as loaded from the phone (or empty). Status, banner and limits start fresh. */
 export function initialChat(entries: Entry[] = [], noticeDismissed: string | null = null): ChatState {
@@ -389,6 +407,9 @@ function onEvent(state: ChatState, event: ChatEvent): ChatState {
       });
     case 'places':
       return add(state, { kind: 'places', id, cards: event.cards.map((c) => ({ ...c, title: cut(c.title) })) });
+    case 'agenda_request':
+      // Nothing to show: the app reads the calendar after the answer ends (chat.tsx).
+      return state;
     case 'location_request': {
       // One card per answer, for the question it answers; nothing to ask again without one.
       const question = lastUserText(state.entries);
@@ -452,6 +473,13 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       if (state.streaming || !last || last.kind !== 'error' || !last.buttons.includes('try_again')) return state;
       return startAnswer({ ...state, entries: state.entries.slice(0, -1) });
     }
+    case 'resend':
+      // Only between answers, and only for a question in the thread.
+      if (state.streaming || !lastUserText(state.entries)) return state;
+      return startAnswer(state);
+    case 'calendar_card':
+      if (state.streaming || !lastUserText(state.entries)) return state;
+      return add(state, { kind: 'calendar', id: String(state.seq), problem: action.problem });
     case 'dismiss_notice':
       return { ...state, noticeDismissed: action.month };
     case 'load':

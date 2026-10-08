@@ -2,6 +2,7 @@
 // to the reducer, and makes sure the answer always ends (Send comes back) whatever happens.
 // Also a delete card's Delete: its one delete, run once, with the result put in the thread.
 
+import type { Agenda } from './calendar';
 import type { ChatClient, SharedPoint } from './chatClient';
 import { runDelete, type DeleteRunners } from './chatDeletes';
 import { CONNECTION_MESSAGE } from './chatStream';
@@ -18,9 +19,11 @@ export async function runTurn(
   act: (action: ChatAction) => void,
   /** The 📍 location, for this message only. */
   here?: SharedPoint,
+  /** The calendar Wilma asked for, sent with the question again. */
+  agenda?: Agenda,
 ): Promise<TurnEnd> {
   try {
-    for await (const event of send(entries, signal, here)) {
+    for await (const event of send(entries, signal, here, agenda)) {
       if (signal.aborted) break;
       act({ type: 'event', event });
       if (event.type === 'done') return 'done';

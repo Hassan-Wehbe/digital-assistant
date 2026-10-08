@@ -19,17 +19,25 @@
 // Try again on that message, and is never saved with the thread. The same holds for Wilma's
 // "📍 Share where I am" card (places step 8): one reading on the tap, then the card's question
 // goes to Wilma again with the point.
+//
+// The phone's calendar (day planner step 1, "ask, then re-send"): when Wilma's answer ends with
+// an `agenda_request`, the ticked calendars are read for those days (chatCalendar.ts) and the same
+// question goes to Wilma again with them, once; when the calendar is off, not allowed or cannot be
+// read, a card says why. The calendar lines are never kept: not in the thread, not on the phone.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { useAuth } from './auth';
+import { deviceCalendar, phoneTimeZone, readAgenda, type Agenda } from './calendar';
+import { loadChoice } from './calendarSettings';
 import type { SharedPoint } from './chatClient';
 import { MAX_NOTES, routeMessage, type MessageRoute } from './chatRoute';
+import { calendarFollowUp } from './chatCalendar';
 import { shareFromCard } from './chatHere';
 import { runConfirm, runTurn } from './chatRun';
 import { threadsToKeep } from './chatStore';
 import { findCredential } from './credentials';
 import { canLookup, chatReducer, initialChat, monthKey, noticeVisible, type ChatAction, type ChatState } from './chatThread';
-import { deviceChatStore } from './deviceStorage';
+import { deviceChatStore, deviceSettingsStore } from './deviceStorage';
 import { deviceLocation } from './location';
 import { useVault } from './vault';
 
@@ -153,22 +161,46 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     if (keep !== undefined) queue(() => deviceChatStore.forgetOthers(keep));
   }, [keep, queue]);
 
+  // start() calls itself again (through this ref) to send a question back with the calendar.
+  const startRef = useRef<(entries: ChatState['entries'], here?: SharedPoint, agenda?: Agenda) => void>(() => {});
   const start = useCallback(
-    (entries: ChatState['entries'], here?: SharedPoint) => {
+    (entries: ChatState['entries'], here?: SharedPoint, agenda?: Agenda) => {
       const controller = new AbortController();
       request.current = controller;
       lastHere.current = here;
       const forUser = user.current;
+      let asked: { from: string; to: string } | null = null;
       runTurn(chat.send, entries, controller.signal, (a) => {
+        if (a.type === 'event' && a.event.type === 'agenda_request') asked = { from: a.event.from, to: a.event.to };
         // An answer for an account that has since signed out is dropped.
         if (user.current === forUser && !controller.signal.aborted) act(a);
-      }, here).then((end) => {
+      }, here, agenda).then(async (end) => {
         if (request.current === controller) request.current = null;
-        if (end === 'signed_out') signOut();
+        if (end === 'signed_out') return signOut();
+        if (end !== 'done' || !asked || controller.signal.aborted || user.current !== forUser || !forUser) return;
+        // Wilma asked for the calendar: read it, then the same question again (once).
+        const question = current.current.entries.findLast((e) => e.kind === 'user');
+        const out = await calendarFollowUp(asked, {
+          choice: () => loadChoice(deviceSettingsStore, forUser),
+          read: (choice, from, to) => readAgenda(deviceCalendar, choice, from, to, phoneTimeZone()),
+        }, !!agenda);
+        // Signed out, a new message, or another answer started meanwhile: nothing more.
+        if (user.current !== forUser || current.current.streaming || current.current.entries.findLast((e) => e.kind === 'user') !== question) return;
+        if ('problem' in out) {
+          act({ type: 'calendar_card', problem: out.problem });
+          return;
+        }
+        const before = current.current;
+        if (before.blocked !== null) return;
+        const next = act({ type: 'resend' });
+        if (next !== before) startRef.current(next.entries, here, out.agenda);
       });
     },
     [chat, act, signOut],
   );
+  useEffect(() => {
+    startRef.current = start;
+  }, [start]);
 
   const value = useMemo<ChatContextValue>(
     () => ({

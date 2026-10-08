@@ -173,3 +173,15 @@ describe('readChatEvents', () => {
     expect(JSON.stringify(events)).not.toContain('one-time-token');
   });
 });
+
+describe('the calendar request (day planner step 1)', () => {
+  it('passes on the days Wilma asked for, and drops a request without real-looking days', async () => {
+    const events = await all(readChatEvents(chunks(
+      line({ type: 'agenda_request', from: '2026-10-08', to: '2026-10-09', extra: 'dropped' }),
+      line({ type: 'agenda_request', from: 'today', to: '2026-10-09' }),
+      line({ type: 'agenda_request', from: '2026-10-08' }),
+      DONE,
+    )));
+    expect(events.filter((e) => e.type === 'agenda_request')).toEqual([{ type: 'agenda_request', from: '2026-10-08', to: '2026-10-09' }]);
+  });
+});

@@ -6,6 +6,8 @@
 
 import { fetch as expoFetch } from 'expo/fetch';
 
+import { phoneTimeZone, type Agenda } from './calendar';
+
 import { CONNECTION_MESSAGE, readChatEvents, type ChatEvent, type ChunkSource } from './chatStream';
 import type { Verdict } from './chatRoute';
 import { messagesToSend, type Entry } from './chatThread';
@@ -34,6 +36,23 @@ export interface ChatClientOptions {
 
 const SESSION_ENDED = 'Your session has ended. Please sign in again.';
 
+/** What this app version can do for Wilma (chat/agenda.ts on the server): read the phone's calendar. */
+export const CAN = ['calendar'];
+
+/**
+ * The request body: the thread, what the app can do, the phone's time zone (so "today" is the
+ * user's day), and for this one message the 📍 location or the calendar Wilma asked for.
+ */
+export function chatBody(entries: Entry[], here?: SharedPoint, agenda?: Agenda, timeZone: string | null = phoneTimeZone()): string {
+  return JSON.stringify({
+    messages: messagesToSend(entries),
+    can: CAN,
+    ...(timeZone ? { tz: timeZone } : {}),
+    ...(here ? { here: { lat: here.lat, lng: here.lng } } : {}),
+    ...(agenda ? { agenda } : {}),
+  });
+}
+
 /** The classifier answers in about 2 seconds; after this the message goes to Wilma. */
 export const CLASSIFY_TIMEOUT_MS = 8_000;
 
@@ -60,10 +79,11 @@ export function chatClient({ url, token, refresh, fetch: f = expoFetch as unknow
    * message) and yields the answer's events, ending with `done`. Problems become the usual
    * connection error event; only an ended session throws (a WilmaError marked signed out).
    * Aborting `signal` (Stop) ends the events quietly. `here`: the phone's location from the 📍
-   * tap (places step 7), sent with this one message only; never with the classifier.
+   * tap (places step 7), sent with this one message only; never with the classifier. `agenda`:
+   * the calendar days Wilma asked for (lib/calendar.ts), sent with the question again.
    */
-  async function* send(entries: Entry[], signal?: AbortSignal, here?: SharedPoint): AsyncGenerator<ChatEvent> {
-    const body = JSON.stringify(here ? { messages: messagesToSend(entries), here: { lat: here.lat, lng: here.lng } } : { messages: messagesToSend(entries) });
+  async function* send(entries: Entry[], signal?: AbortSignal, here?: SharedPoint, agenda?: Agenda): AsyncGenerator<ChatEvent> {
+    const body = chatBody(entries, here, agenda);
     const post = (accessToken: string) =>
       f(url, {
         method: 'POST',
