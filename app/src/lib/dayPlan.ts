@@ -46,6 +46,18 @@ export type DayRow =
   | { kind: 'rain'; place: string; for_keys: string[]; start: string; end: string; chance_pct: number }
   | { kind: 'alert'; event: string; severity: string; start: string; end?: string; places: string[]; for_keys: string[] };
 
+/** Where a task fits (＋ Add → Find a time): on a drive already planned, or in free time. */
+export interface TaskOption {
+  kind: 'on_the_way' | 'free_time';
+  start: string;
+  end: string;
+  extra_drive_min: number;
+  /** on_the_way: the trip it joins, and its new and old leave-by times. */
+  for_keys?: string[];
+  leave_at?: string;
+  was_leave_at?: string;
+}
+
 export interface DayPlan {
   date: string;
   time_zone: string;
@@ -57,6 +69,8 @@ export interface DayPlan {
   rows: DayRow[];
   all_day: { key: string; title: string }[];
   tasks_not_placed: { id: string; title: string; priority: string; duration_min?: number; due_on?: string; overdue?: true; repeat?: string }[];
+  /** Only when asked for one task (options_for): at most three, and a note when none fits. */
+  options?: { task_id: string; options: TaskOption[]; note?: string };
 }
 
 /** What the day route answered. `connection`: anything else (offline, 5xx, an unreadable answer). */
@@ -74,6 +88,8 @@ export interface DayBody {
   now?: string;
   events: Record<string, unknown>[];
   choices?: { together?: string[][]; not_driving?: string[] };
+  /** A task's id: the plan also says where it fits. */
+  options_for?: string;
 }
 
 // ---- Checking the answer -----------------------------------------------------------------------
@@ -145,6 +161,18 @@ export function toDayRow(raw: unknown): DayRow | null {
   }
 }
 
+function toOption(raw: unknown): TaskOption | null {
+  if (!isObject(raw) || (raw.kind !== 'on_the_way' && raw.kind !== 'free_time') || !when(raw.start) || !when(raw.end) || !count(raw.extra_drive_min, 1440)) {
+    return null;
+  }
+  return {
+    kind: raw.kind, start: raw.start, end: raw.end, extra_drive_min: raw.extra_drive_min,
+    ...opt('for_keys', Array.isArray(raw.for_keys), texts(raw.for_keys)),
+    ...opt('leave_at', when(raw.leave_at), raw.leave_at as string),
+    ...opt('was_leave_at', when(raw.was_leave_at), raw.was_leave_at as string),
+  };
+}
+
 /** The plan, checked; null when it is not one. Unknown rows and fields are dropped. */
 export function toDayPlan(raw: unknown): DayPlan | null {
   if (!isObject(raw) || !when(raw.date) || typeof raw.time_zone !== 'string' || !isObject(raw.home) || !Array.isArray(raw.rows)) return null;
@@ -179,6 +207,15 @@ export function toDayPlan(raw: unknown): DayPlan | null {
         ...opt('overdue', t.overdue === true, true as const),
         ...opt('repeat', text(t.repeat), t.repeat as string),
       })),
+    ...(isObject(raw.options) && text(raw.options.task_id)
+      ? {
+          options: {
+            task_id: raw.options.task_id,
+            options: (Array.isArray(raw.options.options) ? raw.options.options : []).map(toOption).filter((o): o is TaskOption => o !== null).slice(0, 3),
+            ...opt('note', text(raw.options.note), raw.options.note as string),
+          },
+        }
+      : {}),
   };
 }
 

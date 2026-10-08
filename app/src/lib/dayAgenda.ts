@@ -132,8 +132,8 @@ export async function placeEvents(
   return { events: out, found };
 }
 
-/** The My day request for one day: the events (with keys and places) and that day's choices. */
-export function dayBody(date: string, tz: string, now: string | undefined, events: DayEvent[], memory: DayMemory): DayBody {
+/** The My day request for one day: the events (with keys and places), that day's choices, and (＋ Add) the task to fit in. */
+export function dayBody(date: string, tz: string, now: string | undefined, events: DayEvent[], memory: DayMemory, optionsFor?: string): DayBody {
   const keys = new Set(events.map((e) => e.key));
   const c = choicesFor(memory, date);
   const together = c.together?.map((g) => g.filter((k) => keys.has(k))).filter((g) => g.length >= 2);
@@ -147,6 +147,7 @@ export function dayBody(date: string, tz: string, now: string | undefined, event
     ...(together?.length || notDriving?.length
       ? { choices: { ...(together?.length ? { together } : {}), ...(notDriving?.length ? { not_driving: notDriving } : {}) } }
       : {}),
+    ...(optionsFor ? { options_for: optionsFor } : {}),
   };
 }
 

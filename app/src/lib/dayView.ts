@@ -1,7 +1,7 @@
 // What My day shows for a plan (the mockups' screens 2, 3 and 5, docs/day-planner-mockups.html):
 // the words for each row, the chips at the top, and the sum behind an event's leave-by time. Every
 // number comes from the planner (dayPlan.ts); this only puts it into words. Pure functions.
-import type { DayDriveRow, DayEventRow, DayPlan, DayRow } from './dayPlan';
+import type { DayDriveRow, DayEventRow, DayPlan, DayRow, TaskOption } from './dayPlan';
 
 const two = (n: number) => String(n).padStart(2, '0');
 
@@ -179,4 +179,17 @@ export function eventDetail(plan: DayPlan, key: string, notDriving: boolean): Ev
 export function directionsLink(to: { lat: number; lng: number } | string): string {
   const dest = typeof to === 'string' ? encodeURIComponent(to.trim().slice(0, 300)) : `${to.lat},${to.lng}`;
   return `https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=driving`;
+}
+
+/** A suggested time for a task (＋ Add → Find a time; mockups screen 2's sheet). */
+export function optionText(o: TaskOption, t: Map<string, string>): { title: string; detail: string } {
+  if (o.kind === 'on_the_way') {
+    const trip = o.for_keys?.length ? names(o.for_keys, t) : 'a drive';
+    const leave = o.leave_at && o.was_leave_at ? `Leave at ${clock(o.leave_at)} instead of ${clock(o.was_leave_at)}. ` : '';
+    return { title: `On the way to ${trip}, ${clock(o.start)}`, detail: `${leave}${o.extra_drive_min ? `${o.extra_drive_min} min more driving.` : 'No extra driving.'}` };
+  }
+  return {
+    title: `In free time, ${range(o.start, o.end)}`,
+    detail: o.extra_drive_min ? `${o.extra_drive_min} min of driving there and back.` : 'No driving.',
+  };
 }

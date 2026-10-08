@@ -167,7 +167,7 @@ export default function Home() {
       ) : null}
       <View style={{ flexDirection: 'row', gap: space.s }}>
         <Tile
-          grow={1.6}
+          grow={1.3}
           icon="💬"
           title={asked ? 'Continue' : 'Chat'}
           subtitle={asked ?? undefined}
@@ -177,6 +177,7 @@ export default function Home() {
         {/* Reads the location only after this tap, on the New note screen (places Q10). */}
         <Tile icon="📍" title="Save here" accessibilityLabel="Save where I am" onPress={() => go({ here: '1' })} />
         <Tile icon="🔒" title="Vault" onPress={() => router.push('/vault')} />
+        <Tile icon="✅" title="Tasks" onPress={() => router.push('/tasks')} />
         {/* Opens the timeline straight away: no typing and no AI request (day planner step 4). */}
         <Tile
           icon="🌅"
