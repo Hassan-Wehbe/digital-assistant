@@ -19,12 +19,15 @@ tokens or keys in chat.
   events*** (Collected Yes, Shared No, Processed ephemerally Yes, Optional, App functionality; steps
   in `docs/phase4-play-release.md`, "Data types") and send it for review with this release, before
   the build leaves internal testing; (2) run `docs/versioncode15-phone-checklist.md` and report back.
-- **Two small fixes (owner, 2026-10-08): PR open.** (1) `find_places`: a place saved without a
+- **Two small fixes (owner, 2026-10-08): merged (#180).** (1) `find_places`: a place saved without a
   kind (shared from Google Maps) is no longer ruled out by a kind filter; it comes back with
   `kind_not_saved` (the parked "places without a kind" fix, and likely why "pizza" offered Hinode
   and Lemongrass). (2) Calendar titles are used as written ("Alex swim BD" was read as a birthday):
   a line in the calendar note (`chat/agenda.ts`) and an evaluation case (110). 393 Deno tests.
-  **Owner:** OK an evaluation run, merge, then the `chat` and `mcp` deploys. Privacy page (#179)
+  **Evaluation (owner's OK, $1 cap): run 37851214466 at 087ece0, Luna 108/110, 0 leaks, 0 unsafe,
+  $0.05**; the "BD" case passes; misses: `place-not-since-summer` (as before) and
+  `place-shared-point-not-stored` (untouched here; **re-run alone 5 times, run 37852431237: 5/5**).
+  Merged and deployed with the owner's OK (see the newest entry). Privacy page (#179)
   merged; Play Console's Data safety change after the build (owner's choice).
 - **Live (2026-10-08, owner's OK): `mcp` version 27 and `chat` version 20**, deployed by the "deploy
   chat" workflow (runs 37849787259 and 37849790683) from `main` at f725b96 (#176, #178, #177); both
