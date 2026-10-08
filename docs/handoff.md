@@ -12,6 +12,11 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Day planner step 2, step 6 (ship): PR open (2026-10-08).** Privacy page (planning your day,
+  Mapbox, the Weather Service, tasks and Home), Data safety notes (no new data type), and
+  `docs/versioncode15-phone-checklist.md`. **Owner:** approve the privacy wording and merge (it
+  publishes the page); in Play Console add *Calendar → Calendar events* (left from versionCode 14);
+  then say "build for Play" (versionCode 15).
 - **Day planner step 2, step 5 (tasks in the app): merged (#178), not built (2026-10-08).**
   Tasks tile and list, the task form (new/edit), ＋ Add with Find a time in My day, and
   `update_item` `today` (the phone's date for repeating tasks; server, live after the `mcp` and

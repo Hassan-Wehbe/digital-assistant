@@ -23,7 +23,9 @@
         one-way hash by our sign-in provider).</li>
     <li><strong>What you save:</strong> spaces, notes, photos and files you add, their titles, tags and
         descriptions, and earlier versions of notes you edit. A place note can also hold an address, a
-        Google Maps link and, if you choose, the location where you saved it (see below).</li>
+        Google Maps link and, if you choose, the location where you saved it (see below). Tasks you
+        add (what, how long, where, by when) and your Home place, if you set one for planning your day,
+        are saved the same way, as your notes.</li>
     <li><strong>Your vault:</strong> passwords, keys and other secrets you save in the vault. Their values
         are encrypted on your phone (or in your browser) with a key only you hold, before they are sent.
         The name, kind and website you give each secret are stored readable, so you can find it; a log
@@ -35,7 +37,7 @@
   </ul>
   <p>Wilma has no advertising, no analytics and no tracking, and does not collect your contacts.
      <strong>Location:</strong> Wilma reads your phone's location only when you tap <em>Save where I am</em>
-     or <em>Use where I am now</em> on a place, or 📍 in the chat, or 🔎 <em>Find it on the map</em> on a place you
+     or <em>Use where I am now</em> on a place or for your Home, or 📍 in the chat, or 🔎 <em>Find it on the map</em> on a place you
      shared (that tap only asks for the permission; your location is not read). It asks for permission on that first tap, reads the
      location once, and stores it in that place note only, like the rest of the note; you can remove it
      from the note at any time. A place you share from Google Maps can also get a location from that place's name and address (never from where you are), after you confirm it. In the chat, if you tap 📍, Wilma reads your location once and sends it
@@ -52,6 +54,16 @@
      needed for that answer to its AI provider, never descriptions, attendees or meeting links, and
      private events only as "Busy". Wilma does not store your calendar and does not change it. You can
      turn it off, or untick calendars, at any time in Settings.</p>
+  <p><strong>Planning your day (optional, Wilma Pro).</strong> When you open My day or ask Wilma to plan
+     your day, Wilma works out drive times and weather for the places on your calendar and your tasks.
+     To know where an event is, your phone looks up the event's address with its own map lookup (see
+     below), only if you have already allowed location for Wilma; the event's title is not sent. Wilma
+     then sends those places' map coordinates and the times you would travel to <strong>Mapbox</strong> (for
+     drive times with traffic) and to the <strong>US National Weather Service</strong> (for the forecast),
+     never event titles or who is going. Your Home place and your tasks are saved with your notes. The
+     plan itself is not stored, and Wilma never changes your calendar. Your own choices for the day
+     ("take both", "not driving") and your answers to "where is this?" are kept only on your phone,
+     encrypted, and are forgotten when you sign out.</p>
 
   <h2>Who can see it</h2>
   <ul>
@@ -80,13 +92,22 @@
     <li><strong>Your phone's speech service</strong> (on most Android phones, Google's), only when you
         tap the microphone button to dictate. It turns your speech into text under its own privacy
         terms; Wilma gets only the text, which is then treated exactly like text you typed.</li>
-    <li><strong>Google Maps</strong>, only when you tap <em>Open in Maps</em> on a place: your phone opens
-        Google Maps (the app, or the website) with that place's saved link, address or location, under
+    <li><strong>Google Maps</strong>, only when you tap <em>Open in Maps</em> on a place or <em>Directions</em>
+        in My day: your phone opens Google Maps (the app, or the website) with that place's saved link,
+        address or location, under
         Google's own privacy terms. Wilma's servers do not contact Google about your places.</li>
     <li><strong>Your phone's map lookup</strong> (on most Android phones, Google's), only when you share a place
         from Google Maps into Wilma: the phone sends that place's name and address to find where it is, and
         then the spot it found, to show you its street and town, so Wilma can ask "Is this it?". The lookup
-        happens under your phone's own privacy terms, and nothing is saved unless you confirm. Your own location is not sent.</li>
+        happens under your phone's own privacy terms, and nothing is saved unless you confirm. Your own location is not sent.
+        When you plan your day, the same lookup finds the addresses of your calendar events (the address
+        text only, never the event's title), and the addresses you type for your Home or a task.</li>
+    <li><strong>Mapbox</strong>, in the United States, only when you plan your day: Wilma's server sends
+        it the map coordinates of the places you drive between and when you would leave, to get drive
+        times with traffic. Nothing else about you is sent, and Wilma does not keep the answers.</li>
+    <li><strong>The US National Weather Service</strong> (api.weather.gov), only when you plan your day:
+        Wilma's server sends it the rounded map coordinates of the places you drive to, to get the
+        hourly forecast and weather alerts there. Nothing else about you is sent.</li>
     <li>If you choose to connect Wilma to an AI assistant such as Claude, the things you ask it to look up
         or save pass through that assistant under your own account with it and its privacy policy.</li>
   </ul>

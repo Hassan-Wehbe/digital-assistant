@@ -110,6 +110,15 @@ reviewer account (`+playreview` email alias), never the owner's own sign-in or S
     functionality** → Save → then **Send changes for review** on Publishing overview.
     Android asks for read and write calendar access together (the calendar package needs both);
     the app never writes, so no extra declaration.
+  - **Day planning** (My day and tasks, versionCode 15): **no new data type and no change in the
+    form.** Tasks and the Home place are notes ("Other user-generated content", stored). "Use where
+    I am now" for Home is the same tap-once *Precise location* already declared (stored in that
+    note). Event places: the phone looks up the event's address text with its own map lookup (as
+    "Is this it?"); the server then sends map coordinates and times to Mapbox (drive times) and the
+    US National Weather Service (forecast) for that one plan, nothing kept. Both act for us on our
+    request, which Google does not count as "sharing"; calendar events stay **processed
+    ephemerally: Yes**. Re-check this before proactive alerts (a server asking on a schedule) and
+    before purchases (Play Billing).
   - Not collected: contacts, messages, health, financial info, web browsing,
     device IDs, analytics or crash data (the app has none of these).
   - Vault values are end-to-end encrypted, so no one but the user can read them. Google's form
