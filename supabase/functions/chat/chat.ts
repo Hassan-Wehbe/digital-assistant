@@ -9,6 +9,9 @@
 //           Optional "here": {"lat": ..., "lng": ...}, the phone's location when the user tapped 📍
 //           (places step 7). It goes into this one message's instructions for find_places and
 //           nowhere else: never stored, never logged, never sent to the classifier.
+//           Optional "tz": the phone's time zone (e.g. "America/New_York"), so "today" is the
+//           user's day. Optional "can": ["calendar"] when the app reads the phone's calendar, and
+//           "agenda": {...}, the calendar it read for this message (agenda.ts: ask, then re-send).
 // Response: 401 without a valid sign-in, 400 for a malformed body, otherwise a stream of
 //           newline-delimited JSON events (application/x-ndjson):
 //             {"type":"notice","code":"allowance_low","message":...}   heads-up at 80%
@@ -19,6 +22,7 @@
 //              "new_secret":bool,"link":...}
 //             {"type":"places","cards":[...]}                          place cards (actions.ts)
 //             {"type":"location_request"}                             📍 Share where I am card
+//             {"type":"agenda_request","from":...,"to":...}            read the calendar, send again
 //             {"type":"error","code":"allowance_used"|"service_paused"|"connection","message":...}
 //             {"type":"done","counted":true|false}                    always last
 //
@@ -40,6 +44,7 @@ import { type CredentialKind, findCredential } from "../mcp/lib/credentials.ts";
 import { classify, classifyBody, type ClassifyLog } from "./classify.ts";
 import { ACTION_NAMES, ACTION_SPECS, ChatActions } from "./actions.ts";
 import { CONFIRM_TOOLS, confirmCard } from "./confirm.ts";
+import { type Agenda, AGENDA_TOOL, agendaCall, agendaSchema, CAN_CALENDAR, isTimeZone, withAgenda } from "./agenda.ts";
 import {
   ALLOWANCE_LOW, allowanceUsed, type ChatErrorCode, ERROR_TEXT, heldText, REMOVED_TEXT, STATUS, STATUS_DEFAULT,
   TOO_MANY_STEPS,
@@ -73,6 +78,9 @@ export interface LogEntry {
   cost_cents: number;
   counted: boolean;
   usage_recorded?: boolean;
+  /** The calendar: asked of the app this time, or read (sent with this message); counts only. */
+  agenda?: "requested" | "read";
+  agenda_events?: number;
 }
 
 export interface ChatDeps {
@@ -102,6 +110,12 @@ const bodySchema = z.object({
     lat: z.number().min(-90).max(90),
     lng: z.number().min(-180).max(180),
   }).strict().optional(),
+  /** The phone's time zone, for "today". */
+  tz: z.string().max(64).refine(isTimeZone).optional(),
+  /** What this app version can do for Wilma: "calendar" (it reads the phone's calendar). */
+  can: z.array(z.string().max(30)).max(10).optional(),
+  /** The calendar the app read for this message (agenda.ts). */
+  agenda: agendaSchema.optional(),
 });
 
 function jsonError(status: number, error: string, detail: string): Response {
@@ -194,7 +208,11 @@ export function createHandler(deps: ChatDeps): (req: Request) => Promise<Respons
           }
         };
         try {
-          await runChat({ deps, token, userId, messages, here: parsed.data?.here, emit, signal: abort.signal });
+          const data = parsed.data!;
+          await runChat({
+            deps, token, userId, messages, here: data.here, emit, signal: abort.signal,
+            tz: data.tz ?? data.agenda?.time_zone, canCalendar: !!data.can?.includes(CAN_CALENDAR), agenda: data.agenda,
+          });
         } catch (e) {
           // Last resort (e.g. the database client threw): the app still gets an answer and an end.
           if (!finished) {
@@ -232,6 +250,12 @@ interface RunArgs {
   messages: Message[];
   /** The shared location for this message only (never stored or logged). */
   here?: SharedPoint;
+  /** The phone's time zone (never logged). */
+  tz?: string;
+  /** The app reads the phone's calendar when asked. */
+  canCalendar: boolean;
+  /** The calendar the app read for this message (never stored or logged, counts aside). */
+  agenda?: Agenda;
   emit: (event: Record<string, unknown>) => void;
   signal: AbortSignal;
 }
@@ -264,7 +288,7 @@ export function vaultEvents(tool: string, resultText: string): Record<string, un
   }];
 }
 
-async function runChat({ deps, token, userId, messages, here, emit, signal }: RunArgs): Promise<void> {
+async function runChat({ deps, token, userId, messages, here, tz, canCalendar, agenda, emit, signal }: RunArgs): Promise<void> {
   const log: LogEntry = {
     event: "chat", request: crypto.randomUUID(), user: userId, outcome: "ok",
     model_calls: 0, tools: [], cost_cents: 0, counted: false,
@@ -287,6 +311,12 @@ async function runChat({ deps, token, userId, messages, here, emit, signal }: Ru
     return;
   }
   messages = screened.messages;
+  if (agenda) {
+    // The calendar the app read for this question, as the result of the model's own call (agenda.ts).
+    messages = withAgenda(messages, agenda);
+    log.agenda = "read";
+    log.agenda_events = agenda.events.length;
+  }
 
   const db = deps.clientFor(token);
 
@@ -316,7 +346,7 @@ async function runChat({ deps, token, userId, messages, here, emit, signal }: Ru
     const llm = deps.llm();
     const { assistantName, distanceUnit } = await loadUserSettings(db, userId);
     tools = await connectTools({ db, userId, accessToken: token, assistantName, distanceUnit });
-    const system = systemPrompt(assistantName, tools.instructions, new Date(), here);
+    const system = systemPrompt(assistantName, tools.instructions, new Date(), here, tz);
     // The MCP tools plus the chat-only actions (never offered to the Claude connector).
     const specs = [...tools.specs, ...ACTION_SPECS];
     const actions = new ChatActions({ db, distanceUnit, here });
@@ -346,6 +376,7 @@ async function runChat({ deps, token, userId, messages, here, emit, signal }: Ru
       if (done.stop !== "tool_calls") break;
 
       const results: ToolResult[] = [];
+      let askedApp = false; // the app reads the calendar: this answer ends after this round
       for (const call of done.turn.toolCalls) {
         log.tools.push(call.name);
         if (call.invalidInput) {
@@ -357,6 +388,18 @@ async function runChat({ deps, token, userId, messages, here, emit, signal }: Ru
           const out = await actions.run(call.name, call.input);
           for (const ev of out.events) emit(ev);
           results.push({ callId: call.id, content: out.text, isError: out.isError });
+          continue;
+        }
+        if (call.name === AGENDA_TOOL) {
+          // Never run here: the phone's calendar comes from the app (agenda.ts).
+          const out = agendaCall(call.input, canCalendar, agenda);
+          if (out.request && !askedApp) {
+            emit({ type: "status", tool: call.name, text: STATUS[call.name] });
+            emit(out.request);
+            askedApp = true;
+            log.agenda = "requested";
+          }
+          results.push({ callId: call.id, ...out.result });
           continue;
         }
         if (CONFIRM_TOOLS.has(call.name)) {
@@ -381,6 +424,7 @@ async function runChat({ deps, token, userId, messages, here, emit, signal }: Ru
       }
       messages.push({ role: "tool", results });
       lastStatus = "";
+      if (askedApp) break;
     }
   } catch (e) {
     if (signal.aborted) {

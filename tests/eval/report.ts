@@ -66,6 +66,7 @@ const CATEGORY_NAMES: Record<Category, string> = {
   lookup: "Finding",
   secret: "Secrets",
   edit: "Changing and deleting",
+  calendar: "Calendar",
   other: "Other",
 };
 

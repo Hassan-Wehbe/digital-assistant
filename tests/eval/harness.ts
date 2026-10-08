@@ -3,7 +3,13 @@
 // the conversation loop the chat function will use: model -> tool calls -> results -> model,
 // until the model answers. The chat-only actions (chat/actions.ts: show_places, ask_for_location)
 // run here exactly as in the chat function. Records every tool call, event and reply for grading.
+// The phone's calendar (chat/agenda.ts): when the model calls get_day_agenda, the harness plays the
+// app: it reads the case's calendar for those days and sends the question again with it, as the
+// chat function receives it.
 import { ACTION_NAMES, ACTION_SPECS, ChatActions } from "../../supabase/functions/chat/actions.ts";
+import {
+  type Agenda, type AgendaEvent, AGENDA_TOOL, agendaCall, agendaSchema, withAgenda,
+} from "../../supabase/functions/chat/agenda.ts";
 import { connectTools } from "../../supabase/functions/chat/tools.ts";
 import type { ToolContext } from "../../supabase/functions/mcp/tools/_shared.ts";
 import { ALL_TOOLS } from "../../supabase/functions/mcp/tools/all.ts";
@@ -80,7 +86,7 @@ export interface Session {
 }
 
 /** A fresh pretend account with Wilma's tools connected to it, exactly as the chat function connects them. */
-export async function openSession(world = new World(), here?: SharedPoint): Promise<Session> {
+export async function openSession(world = new World(), here?: SharedPoint, timeZone?: string): Promise<Session> {
   const ctx: ToolContext = {
     db: world.client(), userId: "eval-user", accessToken: "eval-token", assistantName: world.assistantName,
     distanceUnit: world.distanceUnit,
@@ -92,7 +98,7 @@ export async function openSession(world = new World(), here?: SharedPoint): Prom
     // As the chat function: the MCP tools plus the chat-only actions.
     tools: [...tools.specs, ...ACTION_SPECS],
     // `here`: the 📍 location the chat function adds to a message's instructions (places step 7).
-    system: systemPrompt(ctx.assistantName, tools.instructions, new Date(), here),
+    system: systemPrompt(ctx.assistantName, tools.instructions, new Date(), here, timeZone),
     call: tools.call,
     actions: () => new ChatActions({ db: ctx.db, distanceUnit: ctx.distanceUnit ?? "mi", here }),
     close: tools.close,
@@ -105,6 +111,23 @@ export interface RunOptions {
   setup?: (w: World) => void;
   /** The phone's location shared with the messages (📍), as the chat function passes it. */
   here?: SharedPoint;
+  /** The phone's calendar (the ticked calendars, already trimmed by the app) and time zone. Without
+   * it the app is an older one that cannot read the calendar. */
+  calendar?: PhoneCalendar;
+}
+
+export interface PhoneCalendar {
+  time_zone: string;
+  /** How many calendars are ticked; 0 reads as "nothing chosen". */
+  calendars?: number;
+  events: AgendaEvent[];
+}
+
+/** What the app sends back for an agenda_request: the events that touch those days. */
+export function readCalendar(cal: PhoneCalendar, from: string, to: string): Agenda {
+  const events = cal.events.filter((e) => e.start.slice(0, 10) <= to && e.end.slice(0, 10) >= from);
+  // Checked as the chat function checks what the app sends.
+  return agendaSchema.parse({ from, to, time_zone: cal.time_zone, calendars: cal.calendars ?? 1, events });
 }
 
 /** Play the user's messages to the model, running its tool calls, and record everything. */
@@ -116,7 +139,7 @@ export async function runConversation(
 ): Promise<RunRecord> {
   const world = new World();
   opts.setup?.(world);
-  const session = await openSession(world, opts.here);
+  const session = await openSession(world, opts.here, opts.calendar?.time_zone);
   const started = performance.now();
   const record: RunRecord = { turns: [], world, costCents: 0, modelCalls: 0, ms: 0 };
   const messages: Message[] = [];
@@ -126,6 +149,8 @@ export async function runConversation(
       const turn: TurnRecord = { user, reply: "", toolCalls: [], events: [], stop: "other" };
       record.turns.push(turn);
       const actions = session.actions();
+      const asked = messages.length; // the conversation as the app sends it, ending with this message
+      let agenda: Agenda | undefined;
       for (let step = 0; ; step++) {
         if (step >= (opts.maxStepsPerTurn ?? 8)) {
           turn.stop = "other";
@@ -145,10 +170,18 @@ export async function runConversation(
         if (done.stop !== "tool_calls") break;
 
         const results: ToolResult[] = [];
+        let request: { from: string; to: string } | undefined;
         for (const c of done.turn.toolCalls) {
           let out: { isError: boolean; text: string };
           if (c.invalidInput) {
             out = { isError: true, text: "The tool arguments were not a JSON object." };
+          } else if (c.name === AGENDA_TOOL) {
+            const a = agendaCall(c.input, !!opts.calendar, agenda);
+            if (a.request && !request) {
+              turn.events.push(a.request);
+              request = a.request;
+            }
+            out = { isError: !!a.result.isError, text: a.result.content };
           } else if (ACTION_NAMES.has(c.name)) {
             const a = await actions.run(c.name, c.input);
             turn.events.push(...a.events);
@@ -160,6 +193,11 @@ export async function runConversation(
           results.push({ callId: c.id, content: out.text, isError: out.isError });
         }
         messages.push({ role: "tool", results });
+        if (request && opts.calendar) {
+          // The app reads those days and sends the same conversation again, with the calendar.
+          agenda = readCalendar(opts.calendar, request.from, request.to);
+          messages.splice(asked, messages.length - asked, ...withAgenda([], agenda));
+        }
       }
     }
   } catch (e) {

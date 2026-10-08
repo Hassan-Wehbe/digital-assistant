@@ -16,7 +16,7 @@ on:
         description: "Models to compare (ids from tests/eval/models.json, comma-separated); a model whose API key is not set is skipped"
         default: "luna"
       cases:
-        description: "Cases: all, or ids / categories (chat: save, lookup, secret, edit, other; router: search, wilma, trap)"
+        description: "Cases: all, or ids / categories (chat: save, lookup, secret, edit, calendar, other; router: search, wilma, trap)"
         default: "all"
       repeat:
         description: "Runs per case"

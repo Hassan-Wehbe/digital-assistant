@@ -12,6 +12,14 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Day planner step 1, server: PR open, not deployed (2026-10-08).** Owner's choice: "ask, then
+  re-send" instead of pausing `chat` (it keeps nothing between requests). Wilma's get_day_agenda
+  makes `chat` send the app an `agenda_request` and end the answer; the app (step 2, not built)
+  reads the ticked calendars and sends the question again with the trimmed events, which `chat`
+  checks and hands to the model as calendar data. Also the phone's time zone for "today". 330
+  Deno tests; 98 evaluation cases (dry run on Luna at most about $0.35). **Owner:** review; then
+  the evaluation run, the `chat` deploy (workflow, fresh access token) and the `mcp` deploy, each
+  only with your OK. Details: `phase6-day-planner-step1-plan.md` "How it works" and step 1.
 - **versionCode 13 building (owner: "build for Play when job 4 is merged", 2026-10-08).** Production
   build from `main` at c0675e8 (GitHub run 37705215361, checks passed), Expo build
   08981365-f3b9-43d2-8050-182b8476be28, auto-submit scheduled (submission

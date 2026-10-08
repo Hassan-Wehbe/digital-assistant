@@ -969,3 +969,99 @@ Deno.test("chat: the actions are offered in the chat, described for the chat, an
   }
   for (const x of [IDS.trattoria, IDS.hiddenBar, ...HERE_DIGITS]) assertFalse(printed.some((l) => l.includes(x)), printed.join("\n"));
 });
+
+// ---- The phone's calendar: ask, then re-send (chat/agenda.ts) ---------------------------------
+
+const CAL = {
+  from: "2026-10-08", to: "2026-10-08", time_zone: "America/New_York", calendars: 2,
+  events: [
+    { title: "Dentist", start: "2026-10-08T09:00", end: "2026-10-08T09:45", all_day: false, location: "Oviedo Dental", calendar: "Personal" },
+    { title: "Therapy session", start: "2026-10-08T18:00", end: "2026-10-08T19:00", all_day: false, calendar: "Personal", busy_only: true },
+  ],
+};
+const ASK = [{ role: "user", content: "What's on my day?" }];
+
+Deno.test("chat: get_day_agenda asks the app for those days and ends the answer there", async () => {
+  const s = setup([
+    { text: ["Let me check."], calls: [{ name: "get_day_agenda", input: { from: "2026-10-08" } }] },
+    { text: ["never asked"] },
+  ]);
+  const events = await chatHere(s, { messages: ASK, can: ["calendar"], tz: "America/New_York" });
+  assertEquals(s.model.requests.length, 1, "no model call after asking the app");
+  assertEquals(ofType(events, "agenda_request"), [{ type: "agenda_request", from: "2026-10-08", to: "2026-10-08" }]);
+  assertEquals(ofType(events, "status").map((e) => e.text), [STATUS.get_day_agenda]);
+  assertEquals(events.map((e) => e.type), ["text", "status", "agenda_request", "done"]);
+  assertEquals(events.at(-1), { type: "done", counted: true }, "the model call it took is counted");
+  assertEquals([s.logs[0].outcome, s.logs[0].agenda], ["ok", "requested"]);
+  assert(s.model.requests[0].system.includes("in America/New_York."), "today is the user's own day");
+});
+
+Deno.test("chat: the app is asked once, however many times the model calls it in one turn", async () => {
+  const s = setup([{
+    calls: [
+      { name: "get_day_agenda", input: { from: "2026-10-08" } },
+      { name: "get_day_agenda", input: { from: "2026-10-09" } },
+    ],
+  }]);
+  const events = await chatHere(s, { messages: ASK, can: ["calendar"] });
+  assertEquals(ofType(events, "agenda_request").length, 1);
+});
+
+Deno.test("chat: the calendar sent with the question reaches the model as its call's result, and nothing more", async () => {
+  const s = setup([{ text: ["You have the dentist at 9:00, and you're busy from 6 to 7 pm."] }]);
+  const events = await chatHere(s, { messages: ASK, can: ["calendar"], tz: "America/New_York", agenda: CAL });
+  assertEquals(reply(events), "You have the dentist at 9:00, and you're busy from 6 to 7 pm.");
+  const sent = s.model.requests[0].messages;
+  assertEquals(sent.length, 3);
+  assertEquals(sent[0], { role: "user", content: "What's on my day?" });
+  assert(sent[1].role === "assistant" && sent[1].toolCalls[0].name === "get_day_agenda");
+  assert(sent[2].role === "tool");
+  const data = JSON.parse(sent[2].results[0].content);
+  assertEquals(data.events.map((e: { title: string }) => e.title), ["Dentist", "Busy"]);
+  assertFalse(JSON.stringify(sent).includes("Therapy"), "a private event is Busy only");
+  assertFalse(s.model.requests[0].system.includes("Dentist"), "never in the instructions");
+  assertEquals([s.logs[0].agenda, s.logs[0].agenda_events], ["read", 2]);
+  assertEquals(s.account.world.items.length, new World().items.length, "nothing was saved");
+});
+
+Deno.test("chat: the calendar's time zone sets today when the app sends no tz", async () => {
+  const s = setup([{ text: ["ok"] }]);
+  await chatHere(s, { messages: ASK, can: ["calendar"], agenda: CAL });
+  assert(s.model.requests[0].system.includes("in America/New_York."));
+});
+
+Deno.test("chat: an older app (no calendar) gets a sentence to update, and no request", async () => {
+  const s = setup([
+    { calls: [{ name: "get_day_agenda", input: { from: "2026-10-08" } }] },
+    { text: ["Update the Wilma app to ask about your calendar."] },
+  ]);
+  const events = await chat(s, "What's on my day?");
+  assertEquals(ofType(events, "agenda_request"), []);
+  assert(s.model.seen[0].includes("update the Wilma app"));
+  assertEquals(s.model.requests.length, 2);
+  assertEquals(s.logs[0].agenda, undefined);
+});
+
+Deno.test("chat: a malformed calendar or time zone is refused with 400 before any model call", async () => {
+  const s = setup([]);
+  for (
+    const extra of [
+      { agenda: { ...CAL, to: "2026-10-30" } },
+      { agenda: { ...CAL, events: [{ title: "x" }] } },
+      { agenda: { ...CAL, time_zone: "Mars/Olympus" } },
+      { tz: "Mars/Olympus" },
+      { can: "calendar" },
+    ]
+  ) {
+    const res = await s.handler(request({ messages: ASK, ...extra }));
+    assertEquals(res.status, 400, JSON.stringify(extra).slice(0, 80));
+  }
+  assertEquals(s.model.requests.length, 0);
+});
+
+Deno.test("chat: calendar text never appears in a log line", async () => {
+  const s = setup([{ calls: [{ name: "save_item", input: { space: "Home", title: "Dentist", body: "Oviedo Dental", item_type: "note" } }] }, { text: ["Saved."] }]);
+  await chatHere(s, { messages: ASK, can: ["calendar"], tz: "America/New_York", agenda: CAL });
+  const logged = JSON.stringify(s.logs);
+  for (const t of ["Dentist", "Oviedo", "Therapy", "America/New_York", "2026-10-08"]) assertFalse(logged.includes(t), t);
+});
