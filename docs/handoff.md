@@ -13,7 +13,13 @@ tokens or keys in chat.
 
 **Newest first (2026-10-07):**
 - **Day planner step 2, PR 3 (Mapbox drive times, NWS weather, the planner in "plan my day"):
-  PR open, not merged, not deployed (2026-10-08).** Details: plan step 3 "As built" and "Mapbox:
+  merged (#174) and live: `chat` version 19 (2026-10-08, owner's OK).** Deployed by the "deploy
+  chat" workflow (run 37834222424) from `main` at b714258: 57/57 deployed files identical to
+  `main` (the dayplan `mapbox.ts`, `nws.ts`, `time.ts` among them); the workflow's own check
+  passed (401 without sign-in and with a fake token). `mcp` unchanged (version 26; the listing
+  showed `chat` 19 and `mcp` 26, newer than the v16/v24 noted below, so other deploys happened in
+  between). Secrets not yet seen working: the first "plan my day" from a Pro account shows it
+  (the `day` log line's `drive_failures` and `weather_failures` stay 0). Earlier state: Details: plan step 3 "As built" and "Mapbox:
   pricing and terms". Mapbox checked: 100,000 Directions requests a month free, then $2.00 per
   1,000; its terms do not allow keeping Directions results (nothing is kept; **step 4: the app must
   not save the plan on the phone**); no rule found that needs a Mapbox map for Directions results;
