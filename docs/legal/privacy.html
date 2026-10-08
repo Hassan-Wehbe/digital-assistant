@@ -35,7 +35,8 @@
   </ul>
   <p>Wilma has no advertising, no analytics and no tracking, and does not collect your contacts.
      <strong>Location:</strong> Wilma reads your phone's location only when you tap <em>Save where I am</em>
-     or <em>Use where I am now</em> on a place, or 📍 in the chat. It asks for permission on that first tap, reads the
+     or <em>Use where I am now</em> on a place, or 📍 in the chat, or 🔎 <em>Find it on the map</em> on a place you
+     shared (that tap only asks for the permission; your location is not read). It asks for permission on that first tap, reads the
      location once, and stores it in that place note only, like the rest of the note; you can remove it
      from the note at any time. A place you share from Google Maps can also get a location from that place's name and address (never from where you are), after you confirm it. In the chat, if you tap 📍, Wilma reads your location once and sends it
      with that one message so she can find your saved places nearby. Like the message itself, it goes to
@@ -46,6 +47,11 @@
      it runs on the phone or your phone's speech service (on most Android phones, Google) receives
      the audio to turn it into text, under that service's own privacy terms. Wilma receives only the
      resulting text, never the audio, and does not record or keep audio.</p>
+  <p><strong>Your calendar (optional).</strong> If you turn on "Use my calendar", Wilma reads the calendars you
+     choose on your phone, only when you ask about your day. It sends the event titles, times and places
+     needed for that answer to its AI provider, never descriptions, attendees or meeting links, and
+     private events only as "Busy". Wilma does not store your calendar and does not change it. You can
+     turn it off, or untick calendars, at any time in Settings.</p>
 
   <h2>Who can see it</h2>
   <ul>
@@ -66,8 +72,9 @@
     <li><strong>GitHub Pages</strong> hosts this page and the vault web pages. <strong>Expo</strong> builds
         the app; it receives no data about you from the app.</li>
     <li><strong>OpenAI</strong> (the AI model behind Wilma's chat), in the United States. When you use the
-        chat, what you type, the recent conversation, and the notes and vault entry names Wilma looks up to
-        answer are sent to OpenAI to write the reply. Vault values are never sent: Wilma never sees them. We
+        chat, what you type, the recent conversation, the notes and vault entry names Wilma looks up to
+        answer, and, when you ask about your day, the calendar events needed for that answer are sent to
+        OpenAI to write the reply. Vault values are never sent: Wilma never sees them. We
         ask OpenAI not to store these requests, and OpenAI does not use them to train its models. OpenAI may
         keep them for up to 30 days to detect abuse, then deletes them.</li>
     <li><strong>Your phone's speech service</strong> (on most Android phones, Google's), only when you

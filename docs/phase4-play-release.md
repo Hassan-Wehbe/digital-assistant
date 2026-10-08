@@ -98,13 +98,25 @@ reviewer account (`+playreview` email alias), never the owner's own sign-in or S
     the chat function and the AI service for that answer, not stored or logged. Passing it to the
     AI service that answers on our behalf is not "sharing" in Google's terms, and "processed
     ephemerally" stays **No** because Save where I am stores it. No change in Play Console.
+  - *Calendar → Calendar events* (day planner step 1, from versionCode 14). Collected,
+    **optional** ("Use my calendar" in Settings → Calendars, off until the user turns it on),
+    **processed ephemerally: Yes** (read on the phone only when the user asks about their day;
+    the titles, times and places needed for that answer go to the chat function and the AI
+    service for that one answer; never stored or logged), not shared. Purpose: **App
+    functionality**. **Owner, in Play Console** (before or with the versionCode 14 release):
+    Policy and programs → App content → **Data safety** → Manage → Next to the data types →
+    tick **Calendar → Calendar events** → Next → for it: Collected **Yes**, Shared **No**,
+    Processed ephemerally **Yes**, Required or optional **Optional**, Purpose **App
+    functionality** → Save → then **Send changes for review** on Publishing overview.
+    Android asks for read and write calendar access together (the calendar package needs both);
+    the app never writes, so no extra declaration.
   - Not collected: contacts, messages, health, financial info, web browsing,
     device IDs, analytics or crash data (the app has none of these).
   - Vault values are end-to-end encrypted, so no one but the user can read them. Google's form
     still counts data that leaves the phone, so they are covered by "Other user-generated
     content" above. Do not claim the app collects no data.
   - "Is this data processed ephemerally?" **No** for all of the above (it is stored), except
-    audio: **Yes**.
+    audio and calendar events: **Yes**.
 
 **Store listing** (Grow → Store presence → Main store listing):
 - App name: `Wilma`

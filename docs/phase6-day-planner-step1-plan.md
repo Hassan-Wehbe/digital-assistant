@@ -150,6 +150,11 @@ chat checks it again, gives it to the model as that call's result ──► Wilm
    needed lines sent to the AI provider for the answer, not stored), phone checklist
    (`docs/day-planner-step1-phone-checklist.md`), "build for Play". iPhone: same code when the iOS
    app is built; its App Store privacy label follows the same wording.
+   **As built (2026-10-08, owner approved the wording):** privacy page "Your calendar (optional)"
+   paragraph as drafted below, calendar events added to the OpenAI line, and the 🔎 Find it on the
+   map sentence (job 4's open item); Data safety answer and Play Console steps in
+   `docs/phase4-play-release.md` (*Calendar → Calendar events*, optional, ephemeral, not shared);
+   phone checklist `docs/versioncode14-phone-checklist.md` (it also covers #160).
 
 ## Decisions (recommendations first)
 

@@ -12,6 +12,13 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **versionCode 14 ready to build once step 3 is merged (2026-10-08).** On `main`: the place
+  lookup fix (#160) and the calendar app side (#164 Settings → Calendars, #165 Wilma reads it
+  when she asks; 581 app tests). Step 3 PR: privacy page (calendar paragraph, OpenAI line, 🔎
+  sentence; owner approved), Data safety answer (*Calendar → Calendar events*), and
+  `docs/versioncode14-phone-checklist.md`. **Owner:** merge step 3; update Data safety in Play
+  Console (steps in `phase4-play-release.md`); then say "build for Play". Android asks for read
+  and write calendar access together (the package needs both); the app never writes.
 - **Day planner step 1, server: merged (#161) and live: `chat` version 14, `mcp` version 22
   (2026-10-08, owner's OK).** Both deployed from `main` by the "deploy chat" workflow (#162
   added the function choice for `mcp`): `chat` run 37718710319 at d7d327c (50/50 listed files
