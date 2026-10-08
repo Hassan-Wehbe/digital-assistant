@@ -30,7 +30,9 @@ accounts); a smaller one (Sonnet) for step 4's copy, step 5 and docs.
    usage), asks for the password again and for typing DELETE, then deletes everything and signs
    out. The web page stays as a second way (Google requires a web link too).
 6. **Owner:** makes invite codes (Supabase Table editor until there is an admin screen), each
-   with a number of uses and an end date, and sees who used which code.
+   with a number of uses and an end date, and sees who used which code. A code is either a
+   **normal** code (the account starts on Free) or a **Pro tester** code (the account starts on
+   Pro, so the tester can use the day planner; owner, 2026-10-08).
 
 ## How it works
 
@@ -41,7 +43,12 @@ accounts); a smaller one (Sonnet) for step 4's copy, step 5 and docs.
   available on the project's plan, a small `signup` Edge Function does the same check and creates
   the user; to confirm in step 1.)
 - **`invite_code` table:** `code_hash` (SHA-256 of the code, never the code itself), `note`
-  ("for Sarah"), `max_uses`, `uses`, `expires_at`, `created_at`; `invite_use` (code, user, when).
+  ("for Sarah"), `max_uses`, `uses`, `expires_at`, `created_at`, `grants_plan` (`free` or `pro`,
+  default `free`); `invite_use` (code, user, when). The hook sets the new account's
+  `app_user.plan` from the code it used (`pro` for a Pro tester code), so no tester is switched
+  to Pro by hand. `app_user.plan` itself comes with day planner step 2
+  (`docs/phase6-day-planner-step2-plan.md`, "Premium"); if sign-up is built first, it adds the
+  column the same way (users can read it, only the server and the admin set it).
   No access for `anon` or `authenticated`; only the hook and the admin.
 - **Terms acceptance recorded:** `app_user.terms_version`, `terms_accepted_at`, `age_confirmed`
   (from the sign-up, written by the trigger). A new terms version can later ask again.
@@ -99,6 +106,9 @@ service, final terms of service after the legal review (D27).
   and clearer for testers). Alternative: 30-day grace period.
 - **Q7 New users' allowance:** the default ($1/month) like everyone; invite codes can later carry
   a bonus.
+- **Q9 Pro tester codes (owner, 2026-10-08: yes):** a code can grant Pro (`grants_plan = pro`),
+  for testers of the day planner. Pro from a code lasts until the owner changes it; when Pro
+  purchases arrive, testers keep it until the owner decides.
 - **Q8 Switching to open sign-up later:** one server setting, `signup_mode` = `invite` or `open`
   (in a small settings table the hook reads; owner or admin changes it). The app asks the server
   which mode is on and hides the invite-code field when it is `open`, so going open (or back to

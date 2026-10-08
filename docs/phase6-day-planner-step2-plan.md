@@ -60,6 +60,9 @@ checks, the chat loop, location data leaving the phone, an outside service key);
   planner's numbers in the chat answer, and later leave-by alerts and the morning briefing. Without
   Pro, the day route answers `pro_required` (403) and `chat` keeps answering calendar questions as
   in step 1, without drive times or weather, and says planning is part of Pro once.
+- **Testers:** a **Pro tester invite code** (owner, 2026-10-08; `docs/signup-plan.md` Q9) makes the
+  new account Pro at sign-up. Until sign-up exists, the owner asks Claude to set `pro` for an
+  account (with the owner's OK, like a deploy).
 - **Buying Pro comes later:** a purchase goes through Google Play Billing (and Apple later), which
   needs the company's merchant account (D22, D28). Then the server verifies the purchase with Google
   and sets `plan`; Play's "purchase digital goods" answer, Data safety and the privacy page are
@@ -87,6 +90,13 @@ day and "plan my day" is asked in the chat about once a day.
   (Sonnet) for the AI: roughly **$1.50-3.00 a month** at the worst case, against the sketch price of
   $12.99 for Pro (D22; about $11 after the store's fee). The fair-use cap keeps one heavy user from
   costing much more.
+- **On iPhone, drive times can come from the phone for free** (owner asked, 2026-10-08): Apple's
+  MapKit gives a drive time with predicted traffic for a departure time, with no key and no bill
+  (Apple limits how often; a few drives a day is fine; a small native module, as Expo has none).
+  Android has no such thing: Google shares traffic times only through its paid services. So
+  Android uses Mapbox through the server, and the iPhone app (when built) uses MapKit, roughly
+  halving Mapbox's cost if half the Pro users are on iPhone. The planner takes drive times from a
+  swappable provider, so this changes no design.
 - Ways to lower it if needed: reuse a drive time for the same trip for 15 minutes when Mapbox's
   terms allow it, check traffic only for drives in the next few hours (later ones use the typical
   time until the screen is refreshed), or Google Routes / HERE under the company account.
