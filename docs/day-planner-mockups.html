@@ -104,6 +104,13 @@ section > header { display: grid; gap: 6px; }
 .group > div:first-child { border-top: 0; }
 .lbl { font: 600 10px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--soft); }
 .reset { justify-self: start; }
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.tile { position: relative; border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 8px 4px; text-align: center; display: grid; gap: 2px; font-size: 11px; color: var(--ink); }
+.tile span { font-size: 18px; }
+.tile.hot { border-color: var(--accent); background: var(--tint); color: var(--accent); font-weight: 600; }
+.pro { position: absolute; top: -6px; right: -4px; font: 700 9px/1 var(--mono); letter-spacing: .04em; padding: 3px 5px; border-radius: 4px; background: var(--warn); color: var(--card); }
+.big { border: 1px solid var(--line); background: var(--bg); border-radius: 16px; padding: 10px; color: var(--soft); min-height: 64px; }
+.zone { background: var(--card); border-bottom: 1px solid var(--line); padding: 12px; display: grid; gap: 10px; }
 @media (prefers-reduced-motion: no-preference) { .new { transition: outline-color .4s; } }
 </style>
 
@@ -112,8 +119,66 @@ section > header { display: grid; gap: 6px; }
     <span class="eyebrow">Day planner · step 2 · mockups for review</span>
     <h1>Wilma plans your day</h1>
     <p class="lede">Your choices: Wilma answers in the chat with a play-by-play (C) and <b>Open my day</b> opens a timeline (A). Drive times from Mapbox with traffic, weather from the US National Weather Service, Wilma tasks you can add. All names, places and times below are <b>made-up examples</b> for one Thursday.</p>
-    <nav><a href="#chat">1 · In the chat</a><a href="#day">2 · My day (try it)</a><a href="#event">3 · One event</a><a href="#tasks">4 · Tasks</a><a href="#setup">5 · First use</a><a href="#questions">Questions</a></nav>
+    <nav><a href="#start">0 · One tap</a><a href="#chat">1 · In the chat</a><a href="#day">2 · My day (try it)</a><a href="#event">3 · One event</a><a href="#tasks">4 · Tasks</a><a href="#setup">5 · First use</a><a href="#questions">Questions</a></nav>
   </header>
+
+  <section id="start">
+    <header><span class="tag">0 · One tap to start · Pro</span><h2>🌅 My day on Home, no typing</h2></header>
+    <div class="row">
+      <div class="col">
+        <span class="tag">Pro user</span>
+        <div class="phone short">
+          <div class="bar">Wilma<span class="sp"></span><span class="lnk">⚙ Settings</span></div>
+          <div class="zone">
+            <div class="big">Ask Wilma, or type a name…</div>
+            <div class="tiles"><div class="tile"><span>💬</span>Continue</div><div class="tile"><span>📍</span>Save here</div><div class="tile"><span>🔒</span>Vault</div><div class="tile hot"><span>🌅</span>My day</div></div>
+          </div>
+          <div class="scroll"><span class="lbl">Spaces</span><div class="group"><div><span>Home</span><span class="muted">›</span></div><div><span>Places</span><span class="muted">›</span></div><div><span>Tasks</span><span class="muted">›</span></div></div></div>
+        </div>
+      </div>
+      <div class="col">
+        <span class="tag">Chat, empty thread</span>
+        <div class="phone short">
+          <div class="bar"><span class="lnk">‹</span>Wilma<span class="sp"></span><span class="lnk">New chat</span></div>
+          <div class="scroll" style="justify-content:flex-end">
+            <span class="muted" style="text-align:center">Ask anything, or start with:</span>
+            <div class="chips" style="justify-content:center"><span class="chip" style="font-weight:600">🌅 Plan my day</span><span class="chip">✅ My tasks</span><span class="chip">📍 Near me</span></div>
+          </div>
+          <div class="comp"><div class="in">Message Wilma…</div></div>
+        </div>
+      </div>
+      <div class="col">
+        <span class="tag">Not Pro yet</span>
+        <div class="phone short">
+          <div class="bar">Wilma<span class="sp"></span><span class="lnk">⚙ Settings</span></div>
+          <div class="zone">
+            <div class="tiles"><div class="tile"><span>💬</span>Continue</div><div class="tile"><span>📍</span>Save here</div><div class="tile"><span>🔒</span>Vault</div><div class="tile"><span>🌅</span>My day<i class="pro">PRO</i></div></div>
+          </div>
+          <div class="scroll">
+            <div class="clash" style="border-color:var(--accent)">
+              <b>🌅 My day is part of Pro</b>
+              <span>Wilma turns your calendar and tasks into a plan: when to leave with traffic, rain at each stop, overlaps sorted out, tasks fitted in.</span>
+              <span class="muted">"What's on my day?" and tasks stay free.</span>
+              <div class="acts"><button class="btn" type="button">Not now</button><button class="btn pri" type="button">See Pro</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="notes">
+        <h3>One tap</h3>
+        <ul>
+          <li><b>🌅 My day</b> on Home opens the timeline straight away. No typing, and no AI request, so it doesn't use your monthly allowance.</li>
+          <li>In an empty chat, <b>Plan my day</b> sends the question for you and Wilma answers with the play-by-play.</li>
+          <li>The sunrise is a stand-in. A drawn icon can replace it later.</li>
+        </ul>
+        <h3>Pro</h3>
+        <ul>
+          <li>The server decides who has Pro. The app only shows the badge.</li>
+          <li>Buying Pro comes with Google Play Billing, after the company account. Until then you set Pro for testers.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
 
   <section id="chat">
     <header><span class="tag">1 · Wilma's answer in the chat</span><h2>"Plan my day" gets a play-by-play</h2></header>

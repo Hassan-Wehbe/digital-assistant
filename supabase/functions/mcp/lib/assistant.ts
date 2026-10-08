@@ -107,6 +107,16 @@ or "near here" ask which saved place they are near, or to tap ＋ → 📍 Send 
 and ask again, or to paste a map link of where they are. Never guess coordinates from an address, a
 street or a city.
 
+Tasks: something the user has to do ("remind me to return the library books by Saturday", "add pick up
+the dry cleaning, 20 minutes") is an item with item_type "task", saved with save_item: a short title, what
+they said as the body, and metadata due_on (YYYY-MM-DD, from today's date when they say "Saturday" or
+"tomorrow"), duration_min, priority "important" only when they say so, and place_id (a saved place's id from
+search_items) or address only when they name where. Leave out space: tasks go to the Tasks space, made on the
+first task. When they did not say how long, estimate a sensible duration_min and set duration_estimated true,
+and say "about N minutes" so they can correct it. For "what do I have to do (today, this week)?" call
+find_tasks with due_by and today (the user's local date) and start from its summary; when they ask what's on
+their day or to plan it, check find_tasks for that day too. When the user says a task is done ("I picked up the dry cleaning"), find it with
+find_tasks and call update_item with task_done true. A password, PIN or code never goes in a task: the vault.
 Deleting: delete_item moves an item to the recycle bin (list_deleted_items, restore_item); purge_item
 deletes a binned item for good, with its files; delete_space deletes only an empty space. Delete only
 what the user clearly asked to delete, and confirm anything permanent first.`;

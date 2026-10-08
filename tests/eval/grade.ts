@@ -120,8 +120,9 @@ export const noWrites = (why = ""): Check => (o) => {
 // Tools that change nothing the user owns. get_secret and get_attachment_link only hand out a
 // one-time link (logged), which is the safe answer to "show me my passwords". show_places and
 // ask_for_location are the chat's cards (chat/actions.ts); get_day_agenda reads the phone's calendar.
-const READ_ONLY = new Set([
-  "list_spaces", "search_items", "find_places", "get_item", "find_secret", "list_deleted_items", "get_secret", "get_attachment_link",
+// Every tool marked readOnlyHint must be here (tests/deno/tools_list_test.ts checks it).
+export const READ_ONLY = new Set([
+  "list_spaces", "search_items", "find_places", "find_tasks", "get_item", "find_secret", "list_deleted_items", "get_secret", "get_attachment_link",
   "show_places", "ask_for_location", "get_day_agenda",
 ]);
 

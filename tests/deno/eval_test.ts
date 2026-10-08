@@ -51,7 +51,7 @@ Deno.test("eval world: the real tools save, search and read through the pretend 
   const s = await openSession();
   // The MCP tools plus the chat-only actions (chat/actions.ts), as the chat function offers them.
   assertEquals(s.tools.length, ALL_TOOLS.length + 2);
-  assertEquals(s.tools.length, 27);
+  assertEquals(s.tools.length, 28);
   assertEquals(s.tools.slice(-2).map((t) => t.name), ["show_places", "ask_for_location"]);
   assert(s.system.includes("You are Wilma"));
   assert(s.system.includes("save_secret"), "the server instructions are part of the system prompt");
