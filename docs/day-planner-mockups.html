@@ -329,6 +329,7 @@ section > header { display: grid; gap: 6px; }
             <span class="lbl">This week</span>
             <div class="group">
               <div><span>☐ Book Adam's dentist<br><span class="muted">by Fri · 10 min</span></span></div>
+              <div><span>☐ Put the bins out<br><span class="muted">Tue · 5 min · ↻ weekly</span></span></div>
               <div><span>☐ Return the library books<br><span class="muted">by Sat · 15 min · City Library</span></span></div>
             </div>
             <span class="lbl">Done</span>
@@ -344,6 +345,7 @@ section > header { display: grid; gap: 6px; }
             <div class="field"><label for="t2">How long</label><input id="t2" value="15 min"></div>
             <div class="field"><label for="t3">Where (optional)</label><input id="t3" value="City Library (saved place)"></div>
             <div class="field"><label for="t4">By when</label><input id="t4" value="Saturday"></div>
+            <div class="field"><span class="lbl">Repeats</span><div class="chips"><span class="chip" style="font-weight:600">One time</span><span class="chip">Daily</span><span class="chip">Weekdays</span><span class="chip">Weekly</span><span class="chip">Every 2 weeks</span><span class="chip">Monthly</span></div></div>
             <div class="chips"><span class="chip">Normal</span><span class="chip warn">Important</span></div>
             <span class="muted">Or just tell Wilma: "remind me to return the library books by Saturday, 15 minutes".</span>
           </div>
@@ -352,6 +354,7 @@ section > header { display: grid; gap: 6px; }
       <div class="notes">
         <h3>How tasks work</h3>
         <ul>
+          <li>A task is one time (that day) or repeats: daily, weekdays, weekly, every 2 weeks or monthly. Ticking a repeating task moves it to its next date, and each day's plan picks it up.</li>
           <li>A task is a note of its own kind: what, how long, where, by when, and how important. It is kept and searchable like your other notes.</li>
           <li>Wilma places today's tasks into free gaps or onto drives you're already making. If a task doesn't fit, it's listed as "not placed yet" and never squeezed in silently.</li>
           <li>If you leave out how long it takes, Wilma estimates and says so ("about 20 min").</li>

@@ -12,6 +12,15 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Day planner step 2, PR 2 (planner core, Pro switch, Home, repeating tasks): PR open, not
+  deployed, migration not applied (2026-10-08).** Details: plan step 2 "As built". 372 Deno tests,
+  SQL test 13, 104 evaluation cases. **Owner:** (1) run the dry run of
+  `20261009120000_day_plan.sql` with SQL test 13 in the Supabase SQL editor (the connector times
+  out on it; Claude gives the script; every line must say ok), then apply the migration there;
+  (2) OK the evaluation run (Luna, at most about $0.37, cap $1); (3) set yourself to Pro
+  (`admin_set_plan`, Claude can run it with your OK); (4) merge, then OK the `chat` and `mcp`
+  deploys (fresh `SUPABASE_ACCESS_TOKEN`, deleted after). Nothing in the app uses My day until
+  step 4.
 - **Day planner step 2, PR 1 (Wilma tasks, server): merged (#169); live: `mcp` version 23 and `chat`
   version 15 (2026-10-08, owner's OK).** `chat` deployed by the workflow (run 37803132438) from
   `main` at 79448d0: 52/52 listed files identical to `main`, 401 without sign-in and with a fake

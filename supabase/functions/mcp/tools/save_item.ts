@@ -3,7 +3,7 @@ import { chunkAndEmbed, hasPending, scheduleEmbedPending } from "../lib/embed.ts
 import { loadSpaces, resolveSpace, type Space } from "../lib/spaces.ts";
 import { addressedAs } from "../lib/assistant.ts";
 import { rejectCredentials } from "../lib/credentials.ts";
-import { isPlace, normalizePlace, PLACE_KINDS, visiblePlaces, withPlace } from "../lib/places.ts";
+import { assertOnlyHome, HOME_KIND, isPlace, normalizePlace, PLACE_KINDS, visiblePlaces, withPlace } from "../lib/places.ts";
 import { isTask, normalizeTask, type TaskMetadata, TASKS_SPACE, tasksSpace, withTask } from "../lib/tasks.ts";
 import { withLinkLocation } from "../lib/maps_link.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
@@ -21,10 +21,11 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
         `(Google Maps links only), kind (${PLACE_KINDS.join(", ")}), status ("want" or "been"), ` +
         "rating (1-5), visited_on (YYYY-MM-DD), cuisine [words], price_level (1-4), dishes_liked [..], " +
         "would_return, occasions (date_night, kids, business, quick_lunch, group, special), " +
-        'visits [{on, with, note}]. The server checks these fields. ' +
+        'visits [{on, with, note}]. Kind "home" is the user\'s one Home, where day plans start. The server checks these fields. ' +
         `For something the user has to do use item_type "task" (space optional, default ${TASKS_SPACE}) with ` +
         'metadata: due_on (YYYY-MM-DD), duration_min (5-480), duration_estimated (true when you guessed it), ' +
-        'priority ("normal" or "important"), place_id (a saved place\'s id) or address, status ("open" or "done").' +
+        'priority ("normal" or "important"), place_id (a saved place\'s id) or address, status ("open" or "done"), ' +
+        'repeat ("daily", "weekdays", "weekly", "biweekly", "monthly"; leave out for one time).' +
         addressedAs(assistantName, "save this recipe"),
       inputSchema: {
         space: z.string().optional().describe(`Space name, path (Work/Gartner) or id; for a task, default ${TASKS_SPACE}`),
@@ -43,6 +44,7 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
         rejectCredentials({ title, body, summary, tags, metadata, item_type }, assistantName);
         // A place's fields are checked by the server and added to the searchable text.
         let place = isPlace(item_type) ? normalizePlace(metadata) : null;
+        if (place?.kind === HOME_KIND) await assertOnlyHome(db);
         // A task's fields too; its place must be one of the user's own visible saved places.
         const task: TaskMetadata | null = isTask(item_type) ? normalizeTask(metadata) : null;
         const placeTitle = task?.place_id ? await taskPlaceTitle(db, task.place_id) : undefined;

@@ -80,7 +80,7 @@ function setup(step: Step) {
     verifyToken: (t) => Promise.resolve(t === "good-token" ? "user-1" : null),
     clientFor: () => account.client(),
     llm: model.llm(),
-    log: (e) => e.event === "classify" ? logs.push(e) : chatLogs.push(e),
+    log: (e) => e.event === "classify" ? logs.push(e) : e.event === "chat" && chatLogs.push(e),
   });
   return { account, model, logs, chatLogs, handler };
 }

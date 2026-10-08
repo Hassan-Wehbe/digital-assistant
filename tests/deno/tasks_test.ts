@@ -5,7 +5,7 @@
 import { assert, assertEquals, assertThrows } from "jsr:@std/assert@1";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
-import { normalizeTask, setTaskDone, TaskError, taskText } from "../../supabase/functions/mcp/lib/tasks.ts";
+import { nextDue, normalizeTask, setTaskDone, TaskError, taskText } from "../../supabase/functions/mcp/lib/tasks.ts";
 import { ALL_TOOLS } from "../../supabase/functions/mcp/tools/all.ts";
 import "../eval/harness.ts"; // Edge runtime stand-ins (Supabase.ai, EdgeRuntime, embed-pending fetch)
 import { IDS, World } from "../eval/world.ts";
@@ -210,4 +210,54 @@ Deno.test("find_tasks: never a task in a restricted space, nor its restricted pl
   const out = await call(w, "find_tasks", {});
   assertEquals(out.json.tasks.map((t: { title: string }) => t.title).sort(), ["Drinks", "Visible task"]);
   assertEquals(out.json.tasks.find((t: { title: string }) => t.title === "Visible task").place.title, "Tawlet");
+});
+
+// ---- Repeating tasks (owner, 2026-10-08) -------------------------------------------------------
+
+Deno.test("repeat: one time by default; daily, weekdays, weekly, biweekly, monthly; starts today without a date", () => {
+  assertEquals(normalizeTask({ due_on: "2026-10-09" }, NOW).repeat, undefined);
+  assertEquals(normalizeTask({ repeat: "none", due_on: "2026-10-09" }, NOW).repeat, undefined);
+  assertEquals(normalizeTask({ repeat: "Weekly", due_on: "2026-10-12" }, NOW), {
+    status: "open", priority: "normal", due_on: "2026-10-12", repeat: "weekly",
+  });
+  assertEquals(normalizeTask({ repeat: "daily" }, NOW).due_on, "2026-10-09");
+  for (const bad of [{ repeat: "yearly" }, { repeat: "weekly", status: "done" }, { last_done_on: "2026-10-01" }]) {
+    assertThrows(() => normalizeTask(bad as Record<string, unknown>, NOW), TaskError, "Task not saved", JSON.stringify(bad));
+  }
+});
+
+Deno.test("nextDue: the next date each repeat comes back", () => {
+  assertEquals(nextDue("2026-10-09", "daily"), "2026-10-10");
+  assertEquals(nextDue("2026-10-09", "weekdays"), "2026-10-12", "Friday to Monday");
+  assertEquals(nextDue("2026-10-10", "weekdays"), "2026-10-12", "Saturday to Monday");
+  assertEquals(nextDue("2026-10-12", "weekdays"), "2026-10-13");
+  assertEquals(nextDue("2026-10-09", "weekly"), "2026-10-16");
+  assertEquals(nextDue("2026-10-09", "biweekly"), "2026-10-23");
+  assertEquals(nextDue("2026-01-31", "monthly"), "2026-02-28", "the month's last day");
+  assertEquals(nextDue("2026-12-15", "monthly"), "2027-01-15");
+});
+
+Deno.test("setTaskDone on a repeating task: stays open, moves to the next date after today, notes the day", () => {
+  const swimKit = { repeat: "weekly", due_on: "2026-10-09", duration_min: 10, planned_at: "2026-10-09T15:30:00-04:00" };
+  assertEquals(setTaskDone(swimKit, true, NOW, "2026-10-09"), {
+    status: "open", priority: "normal", due_on: "2026-10-16", duration_min: 10, repeat: "weekly", last_done_on: "2026-10-09",
+  });
+  // Overdue by three weeks: the next date is still after today, not in the past.
+  assertEquals(setTaskDone({ repeat: "weekly", due_on: "2026-09-18" }, true, NOW, "2026-10-09").due_on, "2026-10-16");
+  // Done early (on Wednesday for Friday): the Friday after.
+  assertEquals(setTaskDone({ repeat: "weekly", due_on: "2026-10-09" }, true, NOW, "2026-10-07").due_on, "2026-10-16");
+});
+
+Deno.test("update_item task_done on a repeating task keeps it open with its next date", async () => {
+  const w = new World();
+  const saved = await call(w, "save_item", task("Water the plants", { repeat: "daily", due_on: "2020-01-01" }));
+  assertEquals(saved.isError, false, saved.text);
+  const done = await call(w, "update_item", { item_id: saved.json.id, task_done: true });
+  assertEquals(done.isError, false, done.text);
+  const m = w.items.find((i) => i.id === saved.json.id)!.metadata;
+  assertEquals(m.status, "open");
+  assert(typeof m.due_on === "string" && m.due_on > new Date().toISOString().slice(0, 10), String(m.due_on));
+  assertEquals(m.repeat, "daily");
+  const listed = await call(w, "find_tasks", {});
+  assertEquals(listed.json.tasks[0].repeat, "daily");
 });

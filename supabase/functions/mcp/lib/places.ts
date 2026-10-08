@@ -9,7 +9,9 @@ import { loadSpaces, type Space } from "./spaces.ts";
 
 export const PLACE_TYPE = "place";
 
-export const PLACE_KINDS = ["restaurant", "cafe", "bar", "shop", "to-visit", "hotel", "other"] as const;
+export const PLACE_KINDS = ["restaurant", "cafe", "bar", "shop", "to-visit", "hotel", "home", "other"] as const;
+/** The user's Home: where the day planner times drives from (docs/phase6-day-planner-step2-plan.md). At most one. */
+export const HOME_KIND = "home";
 export const OCCASIONS = ["date_night", "kids", "business", "quick_lunch", "group", "special"] as const;
 export const MAX_VISITS = 50;
 
@@ -277,6 +279,23 @@ export function withPlace(body: string, place: PlaceMetadata | null): string {
   if (!place) return body;
   const fields = placeText(place);
   return body.trim() ? `${body}\n\n${fields}` : fields;
+}
+
+/**
+ * At most one Home: refused when the user already has another live place of kind home (in any of
+ * their spaces), so the day planner never has to guess which one to drive from.
+ */
+export async function assertOnlyHome(db: SupabaseClient, exceptId?: string): Promise<void> {
+  const { data, error } = await db
+    .from("item")
+    .select("id, title, item_type, metadata, deleted_at")
+    .eq("item_type", PLACE_TYPE)
+    .is("deleted_at", null)
+    .limit(1000);
+  if (error) throw new Error(`Checking for a Home place failed: ${error.message}`);
+  const other = ((data ?? []) as { id: string; title: string; metadata: Record<string, unknown> | null; deleted_at: string | null }[])
+    .find((r) => r.id !== exceptId && !r.deleted_at && r.metadata?.kind === HOME_KIND);
+  if (other) fail(`there is already a Home place ("${other.title}"); change that one with update_item instead`);
 }
 
 // ---- Near a point (find_places) ----------------------------------------------------------------

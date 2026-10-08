@@ -11,6 +11,9 @@ export const TASK_TYPE = "task";
 /** The space a task goes to when the user names none; created on the first task. */
 export const TASKS_SPACE = "Tasks";
 export const TASK_PRIORITIES = ["normal", "important"] as const;
+/** How a task comes back (owner, 2026-10-08): none means one time, on its due date. */
+export const TASK_REPEATS = ["daily", "weekdays", "weekly", "biweekly", "monthly"] as const;
+export type TaskRepeat = (typeof TASK_REPEATS)[number];
 export const MIN_DURATION = 5;
 export const MAX_DURATION = 480;
 
@@ -25,12 +28,17 @@ export interface TaskMetadata {
   place_id?: string;
   address?: string;
   done_at?: string;
+  /** A repeating task: done moves due_on to the next time instead of closing it. */
+  repeat?: TaskRepeat;
+  /** A repeating task's last day done. */
+  last_done_on?: string;
   /** When the day plan put it (the user picked that option); a time with its UTC offset. */
   planned_at?: string;
 }
 
 const FIELDS = [
   "status", "priority", "due_on", "duration_min", "duration_estimated", "place_id", "address", "done_at", "planned_at",
+  "repeat", "last_done_on",
 ];
 
 export class TaskError extends Error {}
@@ -121,16 +129,73 @@ export function normalizeTask(input: Record<string, unknown> | null | undefined,
   const planned = moment(m.planned_at, "planned_at");
   if (planned) out.planned_at = planned;
 
+  const repeat = word(m.repeat === "none" ? undefined : m.repeat, "repeat", TASK_REPEATS);
+  if (repeat) {
+    // A repeating task is never done for good: it starts on its due date (today when none is given).
+    if (status === "done") fail("a repeating task is not done for good; use task_done to move it to its next date");
+    out.repeat = repeat;
+    out.due_on ??= now.toISOString().slice(0, 10);
+    const last = taskDate(m.last_done_on, "last_done_on");
+    if (last) out.last_done_on = last;
+  } else if (m.last_done_on !== undefined && m.last_done_on !== null && m.last_done_on !== "") {
+    fail("last_done_on is only for a repeating task");
+  }
+
   if (status === "done") out.done_at = moment(m.done_at, "done_at") ?? now.toISOString();
   return out;
 }
 
-/** "I picked up the dry cleaning": done now (or open again), the rest of the task kept. */
-export function setTaskDone(current: Record<string, unknown> | null | undefined, done: boolean, now = new Date()): TaskMetadata {
+/**
+ * "I picked up the dry cleaning": done now (or open again), the rest of the task kept. A repeating
+ * task stays open and moves to its next date after today (or after its due date, done early).
+ * `today` is the user's local date when known.
+ */
+export function setTaskDone(
+  current: Record<string, unknown> | null | undefined,
+  done: boolean,
+  now = new Date(),
+  today = now.toISOString().slice(0, 10),
+): TaskMetadata {
   const m = { ...(current ?? {}) };
+  const repeat = typeof m.repeat === "string" && (TASK_REPEATS as readonly string[]).includes(m.repeat) ? m.repeat as TaskRepeat : null;
+  if (repeat && done) {
+    const due = typeof m.due_on === "string" ? m.due_on : today;
+    let next = nextDue(due, repeat);
+    while (next <= today) next = nextDue(next, repeat);
+    m.status = "open";
+    m.due_on = next;
+    m.last_done_on = today;
+    delete m.done_at;
+    delete m.planned_at; // the next time is placed afresh
+    return normalizeTask(m, now);
+  }
   m.status = done ? "done" : "open";
   delete m.done_at;
   return normalizeTask(m, now);
+}
+
+/** The next date a repeating task comes back after `day`. Monthly keeps the day, or the month's last. */
+export function nextDue(day: string, repeat: TaskRepeat): string {
+  const d = new Date(`${day}T00:00:00Z`);
+  const add = (n: number) => new Date(d.getTime() + n * 86_400_000).toISOString().slice(0, 10);
+  switch (repeat) {
+    case "daily":
+      return add(1);
+    case "weekdays": {
+      const dow = d.getUTCDay(); // 0 Sunday … 6 Saturday
+      return add(dow === 5 ? 3 : dow === 6 ? 2 : 1);
+    }
+    case "weekly":
+      return add(7);
+    case "biweekly":
+      return add(14);
+    case "monthly": {
+      const y = d.getUTCFullYear();
+      const mo = d.getUTCMonth() + 1;
+      const last = new Date(Date.UTC(y, mo + 1, 0)).getUTCDate();
+      return new Date(Date.UTC(y, mo, Math.min(d.getUTCDate(), last))).toISOString().slice(0, 10);
+    }
+  }
 }
 
 /**
@@ -144,9 +209,14 @@ export function taskText(t: TaskMetadata): string {
     t.due_on && `Due: ${t.due_on}`,
     t.duration_min && `Takes ${t.duration_estimated ? "about " : ""}${t.duration_min} min`,
     t.address && `Where: ${t.address}`,
+    t.repeat && `Repeats: ${REPEAT_WORDS[t.repeat]}`,
   ];
   return lines.filter(Boolean).join("\n");
 }
+
+const REPEAT_WORDS: Record<TaskRepeat, string> = {
+  daily: "every day", weekdays: "every weekday", weekly: "every week", biweekly: "every two weeks", monthly: "every month",
+};
 
 /** The body as meaning search reads it: a task's fields follow the text. */
 export function withTask(body: string, task: TaskMetadata | null): string {

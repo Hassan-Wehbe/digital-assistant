@@ -34,7 +34,8 @@
 // Neither the message nor the value is logged.
 //
 // A body {"classify": "..."} is the one box's classifier instead (classify.ts): a plain JSON
-// answer, not a stream.
+// answer, not a stream. A body {"mode": "day", ...} is My day (day.ts): the day planner, a plain
+// JSON answer with no model call.
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { type SharedPoint, systemPrompt } from "../_shared/assistant_prompt.ts";
@@ -50,6 +51,8 @@ import {
   TOO_MANY_STEPS,
 } from "./messages.ts";
 import { connectTools, type ToolSession } from "./tools.ts";
+import { dayPlan, type DayLog } from "./day.ts";
+import type { DriveTimes } from "../_shared/dayplan/plan.ts";
 
 /** Model calls per message, as in the evaluation (tests/eval/harness.ts). */
 export const MAX_ROUNDS = 8;
@@ -90,7 +93,9 @@ export interface ChatDeps {
   clientFor(token: string): SupabaseClient;
   /** The configured model routes. May throw RoutesConfigError (LLM_ROUTES missing or invalid). */
   llm(): Pick<Llm, "stream">;
-  log(entry: LogEntry | ClassifyLog): void;
+  /** Drive times for My day (Mapbox from day planner step 3); none until then. */
+  drives?(): DriveTimes | null;
+  log(entry: LogEntry | ClassifyLog | DayLog): void;
 }
 
 const CORS = {
@@ -181,6 +186,10 @@ export function createHandler(deps: ChatDeps): (req: Request) => Promise<Respons
       if (!body.success) return jsonError(400, "bad_request", "send {classify: \"...\"} (1-500 characters)");
       const verdict = await classify(deps, token, userId, body.data.classify, req.signal);
       return Response.json(verdict, { headers: { ...CORS, "Cache-Control": "no-store" } });
+    }
+    if (raw && typeof raw === "object" && (raw as Record<string, unknown>).mode === "day") {
+      const out = await dayPlan(deps, token, userId, raw);
+      return Response.json(out.body, { status: out.status, headers: { ...CORS, "Cache-Control": "no-store" } });
     }
     const parsed = bodySchema.safeParse(raw);
     const messages = parsed.success ? toMessages(parsed.data.messages) : null;

@@ -130,6 +130,8 @@ export const registerFindTasks: RegisterTool = (server, { db, assistantName }) =
             ...(place ? { place: { id: place.id, title: place.title } } : {}),
             ...(t.address ? { address: t.address } : {}),
             ...(t.planned_at ? { planned_at: t.planned_at } : {}),
+            ...(t.repeat ? { repeat: t.repeat } : {}),
+            ...(t.last_done_on ? { last_done_on: t.last_done_on } : {}),
             ...(t.done_at ? { done_at: t.done_at } : {}),
           };
         });

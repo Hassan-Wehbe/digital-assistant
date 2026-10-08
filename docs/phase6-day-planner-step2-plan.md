@@ -239,14 +239,30 @@ Log lines: counts and timings only, never places, titles or coordinates.
    37798727091 at d8cddbd, Luna 102/103, 0 leaks, 0 unsafe, $0.05**; the miss was the grader's:
    `find_tasks` was not on its list of reading tools, so a correct answer counted as a change.
    Fixed, with a test that every tool marked read-only is on that list (341 Deno tests). **Task
-   cases re-run, run 37800606256 at c3e1e40: 5/5, 0 leaks, under $0.01.** No migration: tasks are items, and
+   cases re-run, run 37800606256 at c3e1e40: 5/5, 0 leaks, under $0.01.** Live: `mcp` v23, `chat` v15. No migration: tasks are items, and
    keyword and meaning search already read their title, body and fields. The app's chat lists
    `find_tasks` as a reading tool in step 5.
 2. **Server: the planner core and the Pro switch**, with fakes only: `_shared/dayplan/plan.ts`,
    the `mode: "day"` route, place kind `home`, migration for `app_user.plan` (admin-only change,
    `anon` revoked) and the fair-use count, Deno tests (a free user gets `pro_required`; a user
    cannot make themselves Pro). **Owner:** apply the migration (dry run first) and set `pro` for
-   yourself. Deploy `chat` (the route answers with drives "not
+   yourself.
+   **As built (2026-10-08, PR open):** `_shared/dayplan/plan.ts` (the planner: leave-by = start − drive
+   − 5 min buffer; overlaps with `take_both` at the same place; Take both and Not driving from the
+   app's choices; home between events only with 30 minutes there; free gaps from now; tasks placed
+   by `planned_at` or "not placed"; task options on the way or in free time, at most three; a drive
+   provider gets two points and a time, never a name; no provider or a failing one: "unavailable"),
+   `chat/day.ts` (`mode: "day"` in `chat`: `use_day_plan` first, 403 `pro_required`, 429 `fair_use`;
+   Home, saved places matched by name and tasks from searchable spaces only; no model call; a log
+   line of counts), place kind `home` (one only; never listed by `find_places`, but "near Home" works),
+   migration `20261009120000_day_plan.sql` (`app_user.plan`, `day_plan_usage`, `use_day_plan()`,
+   `admin_set_plan()`, `ai_settings.day_plans_per_day` = 30) with SQL test 13.
+   **Repeating tasks (owner, 2026-10-08):** a task is one time or repeats `daily`, `weekdays`,
+   `weekly`, `biweekly` or `monthly`; `task_done` on a repeating task keeps it open and moves `due_on`
+   to its next date after today (`last_done_on` notes the day), so each day's plan picks it up.
+   372 Deno tests; 104 evaluation cases (new: a weekly task). **Dry run:** the Supabase connector
+   times out on this script (twice; checked after each: nothing kept, nothing waiting), so the owner
+   runs the dry run in the SQL editor. Deploy `chat` (the route answers with drives "not
    available" until step 3).
 3. **Server: Mapbox and NWS**, and the planner in the chat answer (`get_day_agenda` re-send).
    **Owner first:** a Mapbox account and a token, pasted as Supabase secret `MAPBOX_TOKEN` (and
@@ -276,6 +292,9 @@ Log lines: counts and timings only, never places, titles or coordinates.
 - **Q10 Without Pro:** "what's on my day?" still reads the calendar (step 1), tasks stay free, and
   the My day tile shows the Pro card. Alternative: a free preview (one plan a week).
 - **Q11 Fair use:** 30 plans per user per day.
+- **Q12 Repeating tasks (owner, 2026-10-08):** one time, daily, weekdays, weekly, every 2 weeks or
+  monthly; done moves a repeating task to its next date. Dates are the server's day (UTC) when done
+  through the chat; the app sends the phone's date in step 5.
 - **Q9 Apple Reminders** (iPhone, step 1 Q6): with the iPhone build, as a second task source.
 
 ## Privacy page wording (draft, for the owner's approval in step 6)
