@@ -16,7 +16,8 @@ tokens or keys in chat.
   notes of type `task` (due date, duration, priority, place, done), `find_tasks`, `update_item`
   `task_done`, a Tasks space made on the first task; rule 9, 3 and 7 tests; 340 Deno tests, 103
   evaluation cases. **Evaluation run 37798727091: Luna 102/103, 0 leaks, 0 unsafe, $0.05**; the miss
-  was the grader (find_tasks not listed as reading), fixed with a guard test (341). Same PR: the plan now makes day
+  was the grader (find_tasks not listed as reading), fixed with a guard test (341); **task cases
+  re-run 37800606256: 5/5, 0 leaks.** Same PR: the plan now makes day
   planning **Pro** (server-side `app_user.plan`, set by hand for testers until Play Billing),
   adds a **🌅 My day** tile and a **Plan my day** chat chip, and estimates the running cost
   (Mapbox free for about the first 100-150 Pro users, then roughly $1.50-3.00 per Pro user per

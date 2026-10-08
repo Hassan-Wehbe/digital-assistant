@@ -238,7 +238,8 @@ Log lines: counts and timings only, never places, titles or coordinates.
    password in a task; dry run on Luna at most about $0.37). **Evaluation (owner's OK, $1 cap): run
    37798727091 at d8cddbd, Luna 102/103, 0 leaks, 0 unsafe, $0.05**; the miss was the grader's:
    `find_tasks` was not on its list of reading tools, so a correct answer counted as a change.
-   Fixed, with a test that every tool marked read-only is on that list (341 Deno tests). No migration: tasks are items, and
+   Fixed, with a test that every tool marked read-only is on that list (341 Deno tests). **Task
+   cases re-run, run 37800606256 at c3e1e40: 5/5, 0 leaks, under $0.01.** No migration: tasks are items, and
    keyword and meaning search already read their title, body and fields. The app's chat lists
    `find_tasks` as a reading tool in step 5.
 2. **Server: the planner core and the Pro switch**, with fakes only: `_shared/dayplan/plan.ts`,
