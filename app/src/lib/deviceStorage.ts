@@ -5,6 +5,7 @@ import * as SecureStore from 'expo-secure-store';
 import kv from 'expo-sqlite/kv-store';
 import { Platform } from 'react-native';
 
+import type { SettingsStore } from './calendarSettings';
 import { chatStore, EMPTY_CHAT, type ChatStore } from './chatStore';
 import { base64Bytes, encryptedStorage, utf8Bytes, utf8Text, type Cipher, type KeyStore } from './sessionStorage';
 
@@ -55,3 +56,9 @@ export const deviceChatStore: ChatStore =
   Platform.OS !== 'web'
     ? chatStore(encryptedStorage(secureKeys, localData, deviceCipher), () => kv.getAllKeysAsync())
     : { load: async () => EMPTY_CHAT, save: async () => {}, clear: async () => {}, forgetOthers: async () => {} };
+
+/** Plain settings kept on this phone (Settings → Calendars' choice; calendarSettings.ts). */
+export const deviceSettingsStore: SettingsStore = {
+  get: (name) => kv.getItemAsync(name),
+  set: (name, value) => kv.setItemAsync(name, value),
+};

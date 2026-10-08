@@ -1,5 +1,6 @@
 // Settings (docs/ui-review.md, plan step 2): what used to fill the bottom of the home screen.
-// This month's AI allowance in full (D28), distances in miles or km (places Q14), the account,
+// This month's AI allowance in full (D28), distances in miles or km (places Q14), the phone's
+// calendars Wilma may read (day planner step 1, app/calendars.tsx), the account,
 // the recycle bin, sign out, the version. Later: deleting the account (D29).
 import * as Application from 'expo-application';
 import { router } from 'expo-router';
@@ -9,7 +10,9 @@ import { ScrollView, Text } from 'react-native';
 import { UsageMeter } from '@/components/UsageMeter';
 import { Button, Card, GroupList, GroupRow, Muted, space, styles, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { loadChoice } from '@/lib/calendarSettings';
 import { versionLabel } from '@/lib/config';
+import { deviceSettingsStore } from '@/lib/deviceStorage';
 import { supabase } from '@/lib/supabase';
 import { type DistanceUnit, loadDistanceUnit, saveDistanceUnit, UNIT_CHOICES, type UnitsDb } from '@/lib/units';
 import { loadAllowance, usageSummary } from '@/lib/usage';
@@ -29,6 +32,8 @@ export default function Settings() {
   const [picked, setPicked] = useState<DistanceUnit | null>(null);
   const [unitNote, setUnitNote] = useState<string | null>(null);
   const unit = picked ?? stored.data;
+  const calendar = useLoad(`calendars:${userId}`, () => loadChoice(deviceSettingsStore, userId));
+  useReloadOnReturn(calendar.reload);
 
   const pickUnit = async (u: DistanceUnit) => {
     if (u === unit || !userId) return;
@@ -72,6 +77,22 @@ export default function Settings() {
             ? 'Reading your setting…'
             : 'Your setting cannot be read right now.'}
       </Muted>
+
+      {heading('Calendar')}
+      <GroupList>
+        <GroupRow
+          first
+          title="Calendars"
+          subtitle={
+            !calendar.data
+              ? undefined
+              : calendar.data.on
+                ? `On: Wilma may read ${calendar.data.ticked.length} calendar${calendar.data.ticked.length === 1 ? '' : 's'}`
+                : 'Off'
+          }
+          onPress={() => router.push('/calendars')}
+        />
+      </GroupList>
 
       {heading('Account')}
       <GroupList>
