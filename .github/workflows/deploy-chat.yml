@@ -1,15 +1,21 @@
-# Deploy the `chat` Edge Function with the Supabase CLI. The Supabase connector's
-# deploy_edge_function takes every file's text in one call and is cut off at about 70 KB;
-# `chat` is about 210 KB, so it goes through the CLI here (it bundles the sibling `_shared/`
-# and `mcp/` imports itself). docs/handoff.md, "Job 5".
+# Deploy the `chat` or `mcp` Edge Function with the Supabase CLI. The Supabase connector's
+# deploy_edge_function takes every file's text in one call and is cut off well below what these
+# functions weigh (`chat` about 210 KB, `mcp` about 140 KB), so they go through the CLI here (it
+# bundles the sibling `_shared/` and `mcp/` imports itself). docs/handoff.md, "Job 5".
 #
 # Runs only when started by hand: GitHub -> Actions -> "deploy chat" -> Run workflow (from
-# `main`). Needs the repository secret SUPABASE_ACCESS_TOKEN (Supabase -> Account preferences ->
-# Access Tokens). The token can change anything in the owner's Supabase account, so the owner
+# `main`), choosing the function (chat by default). Needs the repository secret
+# SUPABASE_ACCESS_TOKEN (Supabase -> Account preferences -> Access Tokens). The token can change anything in the owner's Supabase account, so the owner
 # deletes it in Supabase after each deploy and makes a new one next time.
 name: deploy chat
 on:
   workflow_dispatch:
+    inputs:
+      function:
+        description: "Which function to deploy"
+        type: choice
+        options: [chat, mcp]
+        default: chat
 permissions:
   contents: read
 concurrency:
@@ -21,6 +27,7 @@ jobs:
     timeout-minutes: 15
     env:
       PROJECT_REF: motvckmpusxiuelpwqxy
+      FUNCTION: ${{ inputs.function || 'chat' }}
     steps:
       - name: Only from main
         if: github.ref != 'refs/heads/main'
@@ -33,7 +40,7 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: latest
-      - name: Deploy chat
+      - name: Deploy ${{ inputs.function || 'chat' }}
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
@@ -41,14 +48,14 @@ jobs:
             echo "The repository secret SUPABASE_ACCESS_TOKEN is not set."
             exit 1
           fi
-          # verify_jwt stays off, as in supabase/config.toml: the function checks the sign-in itself.
-          supabase functions deploy chat --project-ref "$PROJECT_REF" --no-verify-jwt
+          # verify_jwt stays off, as in supabase/config.toml: each function checks the sign-in itself.
+          supabase functions deploy "$FUNCTION" --project-ref "$PROJECT_REF" --no-verify-jwt
       - name: Check it refuses requests without sign-in
         run: |
           for auth in "" "Authorization: Bearer fake"; do
             code=$(curl -s -o /dev/null -w '%{http_code}' -X POST ${auth:+-H "$auth"} \
-              "https://${PROJECT_REF}.supabase.co/functions/v1/chat")
+              "https://${PROJECT_REF}.supabase.co/functions/v1/${FUNCTION}")
             if [ -n "$auth" ]; then what="with a fake token"; else what="without a token"; fi
-            echo "POST /chat $what: $code"
+            echo "POST /${FUNCTION} $what: $code"
             [ "$code" = "401" ] || exit 1
           done

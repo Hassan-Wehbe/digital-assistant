@@ -906,6 +906,11 @@ edit an applied one).
   transaction (dry run). **In a dry run, setup statements that run as the superuser see the
   owner's real rows** (e.g. a real "Recipes" space): always filter superuser lookups by the
   test user's id (`owner_user_id = '00000000-0000-4000-a000-00000000000a'`).
+- **Deploying `mcp` (since 2026-10-08):** the "deploy chat" workflow with function `mcp`, as for
+  `chat` (fresh `SUPABASE_ACCESS_TOKEN` secret, deleted in Supabase afterwards; it checks 401
+  without and with a fake token); then compare the live files with `get_edge_function`. At
+  about 140 KB, `mcp` no longer fits one connector call. The older connector route, for
+  reference only:
 - **Deploying `mcp`** with the connector's `deploy_edge_function`: pass every file under
   `supabase/functions/mcp/` (not `deno.lock`), `verify_jwt: false`, and
   `import_map_path: "deno.json"` (without it the deploy fails on a stale import-map path).
