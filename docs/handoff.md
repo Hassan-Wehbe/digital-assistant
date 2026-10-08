@@ -12,6 +12,16 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **versionCode 14 building (owner: "build for Play", 2026-10-08).** Production build from
+  `main` at cc3a181 (GitHub run 37721583530, checks passed: lint, typecheck, 581 app tests), Expo
+  build abae235a-019e-4eff-9f6f-519f2d89354b, auto-submit to Play internal testing scheduled
+  (submission f83d0953-f810-41a4-8600-ce9d1baee771). Carries the place lookup fix (#160) and the
+  calendar app side (#164, #165); server already live (`chat` v14, `mcp` v22). **Owner:** Data
+  safety *Calendar → Calendar events* in Play Console (steps in `phase4-play-release.md`), then
+  run `docs/versioncode14-phone-checklist.md` and report back (a fresh session: Sonnet to sort the
+  feedback; the strongest model for fixes to the calendar, location or the chat loop). **Next
+  after feedback:** invite-only sign-up (`docs/signup-plan.md`); parked: the small server fix for
+  places without a kind and the forgiving filters ("pizza" got Hinode and Lemongrass).
 - **versionCode 14 ready to build once step 3 is merged (2026-10-08).** On `main`: the place
   lookup fix (#160) and the calendar app side (#164 Settings → Calendars, #165 Wilma reads it
   when she asks; 581 app tests). Step 3 PR: privacy page (calendar paragraph, OpenAI line, 🔎
