@@ -1,6 +1,6 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-10-08 (newest: day planner PR 3 open; see "START HERE" below for today's consolidated state). Earlier: 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
+Last updated 2026-10-08 22:25 UTC (newest: day planner step 2 done; versionCode 15 in internal testing, owner testing it; live `mcp` v28, `chat` v21; see the first entry under "Where things stand"). Earlier: 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
 #102), with Expo patch updates (#98). Step 2, server, is live. Places step 5b ("places near me",
 server) **merged and live** (#104, `mcp` v13, `chat` v6; first entry below). Then step 6, the places build, which also carries the mic fix #91. Play Console:
 Data safety and other forms saved, **not yet sent for review**; see the first entry below).
@@ -12,9 +12,19 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Day planner step 2 done; versionCode 15 in internal testing (2026-10-08 22:25 UTC).** Merged:
+  #176 My day, #178 tasks, #177 Wilma sets Home, #179 privacy page, #180 places without a kind and
+  calendar titles as written. **Live: `mcp` version 28 and `chat` version 21** (the entries below
+  that say v27/v20 were written before #180's deploy). versionCode 15 (Expo build
+  431c76e2-237a-4bc9-83b0-2c42eb732191, from `main` at 1e1b19e; #180 is server-only, so it is live
+  for this build) was submitted to Play internal testing. **Owner, still to do:** Play Console →
+  App content → Data safety → add *Calendar → Calendar events* (steps in
+  `docs/phase4-play-release.md`, "Data types"), sent for review with this release. **Now:** the
+  owner is running `docs/versioncode15-phone-checklist.md`; feedback is sorted into small fixes
+  first, larger items after.
 - **versionCode 15 building (owner: "build", 2026-10-08).** Production build from `main` at 1e1b19e
   (#176 My day, #178 tasks, #179 privacy page), started by the "app build" workflow with
-  auto-submit to Play internal testing. Server already live (`chat` v20, `mcp` v27). **Next steps,
+  auto-submit to Play internal testing. Server live at the time (`chat` v20, `mcp` v27; now v21/v28, see above). **Next steps,
   in order (owner):** (1) **Play Console → App content → Data safety → add *Calendar → Calendar
   events*** (Collected Yes, Shared No, Processed ephemerally Yes, Optional, App functionality; steps
   in `docs/phase4-play-release.md`, "Data types") and send it for review with this release, before
