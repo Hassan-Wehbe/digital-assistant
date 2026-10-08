@@ -12,6 +12,13 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **versionCode 15 building (owner: "build", 2026-10-08).** Production build from `main` at 1e1b19e
+  (#176 My day, #178 tasks, #179 privacy page), started by the "app build" workflow with
+  auto-submit to Play internal testing. Server already live (`chat` v20, `mcp` v27). **Next steps,
+  in order (owner):** (1) **Play Console → App content → Data safety → add *Calendar → Calendar
+  events*** (Collected Yes, Shared No, Processed ephemerally Yes, Optional, App functionality; steps
+  in `docs/phase4-play-release.md`, "Data types") and send it for review with this release, before
+  the build leaves internal testing; (2) run `docs/versioncode15-phone-checklist.md` and report back.
 - **Two small fixes (owner, 2026-10-08): PR open.** (1) `find_places`: a place saved without a
   kind (shared from Google Maps) is no longer ruled out by a kind filter; it comes back with
   `kind_not_saved` (the parked "places without a kind" fix, and likely why "pizza" offered Hinode
