@@ -12,6 +12,8 @@ import { createHandler } from "../../supabase/functions/chat/chat.ts";
 import type { DayLog } from "../../supabase/functions/chat/day.ts";
 import { localTime } from "../../supabase/functions/chat/day.ts";
 import type { DriveTimes } from "../../supabase/functions/_shared/dayplan/plan.ts";
+import { mapboxDrives } from "../../supabase/functions/_shared/dayplan/mapbox.ts";
+import { nwsWeather } from "../../supabase/functions/_shared/dayplan/nws.ts";
 import { ALL_TOOLS } from "../../supabase/functions/mcp/tools/all.ts";
 
 const DATE = "2026-10-09";
@@ -212,6 +214,79 @@ Deno.test("day: the log line holds counts only, never titles, places or times", 
   const line = JSON.stringify(logs);
   for (const s of ["Swim", "Aquatic", "28.6", "16:30", "dry cleaning", DATE]) assert(!line.includes(s), `log holds ${s}: ${line}`);
   assertEquals([logs[0].outcome, logs[0].events, logs[0].tasks, logs[0].matched_places], ["ok", 2, 3, 2]);
+});
+
+// ---- Step 3: Mapbox and the National Weather Service, through the route ------------------------
+
+/** The route with the real Mapbox and NWS providers on a fake network; every URL is kept. */
+function withProviders(client: SupabaseClient) {
+  const urls: string[] = [];
+  const net = ((input: RequestInfo | URL) => {
+    const url = new URL(String(input));
+    urls.push(decodeURIComponent(url.href));
+    if (url.host === "api.mapbox.com") {
+      return Promise.resolve(Response.json({ code: "Ok", routes: [{ duration: 14 * 60, duration_typical: 10 * 60 }] }));
+    }
+    if (url.pathname.startsWith("/points/")) {
+      return Promise.resolve(Response.json({ properties: { forecastHourly: "https://api.weather.gov/gridpoints/MLB/1,2/forecast/hourly" } }));
+    }
+    if (url.pathname.endsWith("/hourly")) {
+      return Promise.resolve(Response.json({
+        properties: { periods: [{ startTime: `${DATE}T16:00:00-04:00`, probabilityOfPrecipitation: { value: 60 } }] },
+      }));
+    }
+    return Promise.resolve(Response.json({ features: [] }));
+  }) as typeof fetch;
+  const logs: DayLog[] = [];
+  const h = createHandler({
+    verifyToken: (t) => Promise.resolve(t === "tok" ? "user-a" : null),
+    clientFor: () => client,
+    llm: () => {
+      throw new Error("My day must never call a model");
+    },
+    drives: () => mapboxDrives({ token: "pk.secret", fetch: net, now: () => Date.parse(`${DATE}T16:00:00Z`) }),
+    weather: () => nwsWeather({ contact: "owner@example.com", fetch: net }),
+    log: (e) => logs.push(e as DayLog),
+  });
+  const post = async (body: unknown) => {
+    const res = await h(new Request("http://localhost/chat", {
+      method: "POST", headers: { "content-type": "application/json", authorization: "Bearer tok" }, body: JSON.stringify(body),
+    }));
+    return { status: res.status, json: await res.json() };
+  };
+  return { post, urls, logs };
+}
+
+Deno.test("day: drive times with traffic from Mapbox and rain from NWS; only points and times are sent", async () => {
+  const { client } = account();
+  const { post, urls, logs } = withProviders(client);
+  const out = await post({ ...BODY, choices: { together: [["sara", "adam"]] } });
+  assertEquals(out.status, 200);
+  const plan = out.json.plan;
+  const drive = plan.rows.find((r: { kind: string }) => r.kind === "drive");
+  assertEquals([drive.leave_at, drive.minutes, drive.typical_minutes], [`${DATE}T16:11`, 14, 10]);
+  assertEquals([plan.drive_times, plan.weather], ["available", "available"]);
+  assertEquals(plan.rows.filter((r: { kind: string }) => r.kind === "rain").map((r: { chance_pct: number }) => r.chance_pct), [60]);
+  assertEquals(plan.credits, ["Drive times © Mapbox", "Weather: US National Weather Service"]);
+  assert(urls.some((u) => u.includes("depart_at=2026-10-09T20:00:00Z")), "asked for leaving about 30 min before the 16:30 start");
+  // Titles, places' names, calendars and tasks never leave for Mapbox or NWS.
+  for (const u of urls) {
+    for (const s of ["Swim", "Sara", "Adam", "Aquatic", "Kids", "Home", "dry", "insurance"]) assert(!u.includes(s), `${s} sent: ${u}`);
+  }
+  // Nothing about the token in what the app gets.
+  assert(!JSON.stringify(out.json).includes("pk.secret"));
+  // The log line: counts of requests, never a place, a time or the token.
+  const line = JSON.stringify(logs);
+  for (const s of ["pk.secret", "28.6", "-81", "Aquatic", "16:"]) assert(!line.includes(s), `log holds ${s}`);
+  assertEquals([logs[0].drive_failures, logs[0].weather_requests, logs[0].weather_failures], [0, 3, 0]);
+  assert((logs[0].drive_requests ?? 0) >= 2);
+});
+
+Deno.test("day: a pool in a restricted space is never sent to Mapbox or NWS (rule 3)", async () => {
+  const { client } = account();
+  const { post, urls } = withProviders(client);
+  await post({ ...BODY, events: [{ ...swim("x", "Swim", "16:30", "17:30"), location: "Hidden pool" }] });
+  assert(!urls.some((u) => u.includes("28.7") || u.includes("-81.3")), urls.join("\n"));
 });
 
 Deno.test("localTime: a stored moment in the user's own day and time", () => {

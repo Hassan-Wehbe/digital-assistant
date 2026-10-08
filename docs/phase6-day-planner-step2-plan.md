@@ -78,7 +78,7 @@ day and "plan my day" is asked in the chat about once a day.
 
 | Piece | Per plan | Per user per month | Notes |
 |---|---|---|---|
-| Mapbox drive times | about 6-10 requests (one per drive; "usually" from the same answer if Mapbox's traffic profile returns a typical duration, else double) | about 600-900 requests | First 100,000 a month free, then about **$2.00 per 1,000** (third-party summaries of Mapbox's pricing; to confirm on Mapbox's own page in step 3) |
+| Mapbox drive times | about 6-10 requests (one per drive; "usually" comes from the same answer, Mapbox's `duration_typical`) | about 600-900 requests | First 100,000 a month free, then **$2.00 per 1,000** up to 500,000, $1.60 to 1 million (checked 2026-10-08, step 3; see "Mapbox: pricing and terms") |
 | Mapbox for task options | 2-3 requests per ＋ Add | about 50 | Same price |
 | Weather (NWS) | 1-3 requests | about 300 | **Free**, no key |
 | Event places | on the phone | 0 | The phone's geocoder, free |
@@ -97,9 +97,10 @@ day and "plan my day" is asked in the chat about once a day.
   Android uses Mapbox through the server, and the iPhone app (when built) uses MapKit, roughly
   halving Mapbox's cost if half the Pro users are on iPhone. The planner takes drive times from a
   swappable provider, so this changes no design.
-- Ways to lower it if needed: reuse a drive time for the same trip for 15 minutes when Mapbox's
-  terms allow it, check traffic only for drives in the next few hours (later ones use the typical
-  time until the screen is refreshed), or Google Routes / HERE under the company account.
+- Ways to lower it if needed: check traffic only for drives in the next few hours (later ones use
+  the typical time until the screen is refreshed), or Google Routes / HERE under the company
+  account. Reusing a drive time between requests is **not** an option: Mapbox's terms do not allow
+  keeping Directions results (step 3).
 
 ## How it works
 
@@ -270,6 +271,58 @@ Log lines: counts and timings only, never places, titles or coordinates.
 3. **Server: Mapbox and NWS**, and the planner in the chat answer (`get_day_agenda` re-send).
    **Owner first:** a Mapbox account and a token, pasted as Supabase secret `MAPBOX_TOKEN` (and
    `NWS_CONTACT`) in the Supabase dashboard, never in chat. Evaluation run, deploy `chat`.
+   **As built (2026-10-08, PR open):** `_shared/dayplan/mapbox.ts` (Directions, `driving-traffic`,
+   `depart_at` in UTC for a departure still ahead, else as of now; one more try as of now if Mapbox
+   refuses the time (422); minutes rounded up; `duration_typical` as "usually"; 5 s timeout; at most
+   40 requests a plan; the same drive asked once per plan and nothing kept after it; a failure is
+   "unavailable", never an error that could carry the token), `_shared/dayplan/nws.ts` (points
+   rounded to 4 decimals, `User-Agent: Wilma digital assistant (<NWS_CONTACT>)`; hourly chance of
+   rain for the plan's day in local time; active alerts with NWS's plain alert names only; 404 is
+   "outside_us"; only forecast addresses on api.weather.gov are followed; at most 6 places a plan),
+   `_shared/dayplan/time.ts` (local time to a moment, daylight-saving days included), and the
+   planner's weather (`plan.ts`): a **rain** row for the wettest hour at 50% or more from an hour
+   before an event to its end, at places driven to only, each place looked up once; **alert** rows
+   once per alert with every place it covers, first in the day; `weather` "available" |
+   "unavailable" | "outside_us"; `weather_at` (hourly rain per place, for the event detail);
+   `credits` ("Drive times © Mapbox", "Weather: US National Weather Service") for the screen.
+   `chat/index.ts` makes a new provider per plan from `MAPBOX_TOKEN` and `NWS_CONTACT` (none set:
+   "unavailable", as today). **Plan my day in the chat:** when the app re-sends **one** day for
+   `get_day_agenda`, `chat` runs the same planner (`day.ts` `planForChat`; after the AI allowance
+   check; Pro and fair use as My day, a chat plan counts one) and the model gets `day_plan` with the
+   calendar: leave-by times, drive minutes with traffic and usually, rain, alerts, overlaps with
+   their fix, free time and tasks, by title (no keys, no coordinates; every text screened for
+   passwords, rule 1). Without Pro (or over the limit) `day_plan` is a note: answer from the
+   calendar and mention Pro once if they asked to plan. The app gets `{"type":"day_plan","date"}`
+   (Open my day, step 4; today's app ignores it). The re-sent agenda may now carry each event's
+   `point` and `not_a_trip` and the day's `choices` (events named `e0`, `e1`, ... in order), for the
+   step 4 app; today's app sends none, so the chat's plan finds places by saved-place name only.
+   Prompt: plan a day with `get_day_agenda` for that one day and use only the planner's numbers.
+   Log lines: request and failure counts only. 391 Deno tests (19 new; also a timer the streaming
+   test left running); 107 evaluation cases (new: plan tomorrow with leave-by, rain and the overlap
+   first; when to leave; without Pro). Secrets set by the owner. **Evaluation (owner's OK, $1 cap):
+   run 37832337431 at b7de176, Luna 107/107, 0 leaks, 0 unsafe, $0.05.** **Owner:** review and
+   merge; OK the `chat` deploy.
+
+   **Mapbox: pricing and terms (checked 2026-10-08).** Mapbox's own pages could not be opened from
+   Claude's environment (blocked), so this comes from search results quoting them; the owner should
+   glance at mapbox.com/pricing and the Product Terms when making the account.
+   - *Pricing:* Directions (traffic included): 100,000 requests a month free, then $2.00 per 1,000
+     to 500,000, $1.60 to 1 million, $1.20 to 5 million. Matches the estimate above.
+   - *Keeping results:* the Product Terms say results from the Directions API may not be cached or
+     stored. Fits: nothing is stored on the server, and a provider lives for one request. **For step
+     4:** the app keeps the plan only while My day is open (in memory, not saved on the phone), and
+     "above the fair-use cap, show the last plan" means the plan still on screen, not a saved one.
+     Task `planned_at` is the user's own choice of time, not a Mapbox result.
+   - *Showing results without a Mapbox map:* no clause found that requires a Mapbox map for
+     Directions results (the "Mapbox maps only" rule found is for Search/Geocoding results, which
+     we do not use: event places come from the phone's geocoder). Not confirmed against the full
+     current terms. "Drive times © Mapbox" is shown with the numbers as attribution.
+   - *Only in response to a person:* the terms ask that the services be queried in response to a
+     user's request. Fits My day and the chat. **Does not obviously fit the later proactive alerts
+     and morning briefing** (a server asking Mapbox on a schedule): re-check, or ask Mapbox, before
+     that step.
+   - *Telling users:* Mapbox's terms ask apps using Directions to tell their users; the step 6
+     privacy text already names Mapbox and what is sent.
 4. **App: My day.** The 🌅 My day tile and the Plan my day chip (Pro badge and card without Pro), timeline, Home setup card, event detail, Where is this?, choices on the phone,
    Open my day from the chat card.
 5. **App: tasks in the app.** Tasks tile and list, task fields in new/edit note, ＋ Add with

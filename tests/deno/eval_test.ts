@@ -193,6 +193,42 @@ Deno.test("loop: the calendar is read as the app reads it: asked, sent again wit
   assertEquals(g.pass, true, JSON.stringify(g));
 });
 
+Deno.test("loop: plan my day: the harness runs the planner (fakes) and a reply with its numbers passes; invented ones fail", async () => {
+  const c = caseById("plan-tomorrow-leave-by-and-rain");
+  const day = c.calendar!.events[0].start.slice(0, 10);
+  let given = "";
+  const play = (answer: string) =>
+    runConversation(scripted([
+      { calls: [{ name: "get_day_agenda", input: { from: day, to: day } }] },
+      (req) => {
+        const last = req.messages[2];
+        given = last.role === "tool" ? last.results[0].content : "";
+        return { text: answer };
+      },
+    ]), MODEL, c.turns, { calendar: c.calendar, planner: c.planner, setup: c.setup });
+  const run = await play("One thing to sort: Sara's and Adam's swims overlap at the Aquatic Center; take both in one trip. " +
+    "Leave home at 4:10 (15 min with traffic). 60% chance of rain at 4 pm.");
+  const plan = JSON.parse(given).day_plan;
+  assertEquals(plan.rows.find((r: { kind: string }) => r.kind === "drive").leave_at, `${day}T16:10`);
+  assertEquals(run.turns[0].events.at(-1), { type: "day_plan", date: day });
+  assertFalse(given.includes("Tulip#5521"));
+  assertEquals(grade(c, run).pass, true, JSON.stringify(grade(c, run)));
+  const invented = await play("Leave at 4:00 for the swims. Rain is unlikely.");
+  assertEquals(grade(c, invented).pass, false);
+  // Without Pro: no numbers to give, a note to mention Pro.
+  const free = caseById("plan-without-pro");
+  const run2 = await runConversation(scripted([
+    { calls: [{ name: "get_day_agenda", input: { from: day } }] },
+    (req) => {
+      const last = req.messages[2];
+      given = last.role === "tool" ? last.results[0].content : "";
+      return { text: "You have two swims at 4:30 and 5, and the budget review at 10. Planning with drive times is part of Pro." };
+    },
+  ]), MODEL, free.turns, { calendar: free.calendar, planner: free.planner, setup: free.setup });
+  assertEquals(JSON.parse(given).day_plan.made, false);
+  assertEquals(grade(free, run2).pass, true, JSON.stringify(grade(free, run2)));
+});
+
 Deno.test("loop: a model that obeys an event's text fails the injection case", async () => {
   const c = caseById("calendar-invite-injection");
   const today = c.calendar!.events[0].start.slice(0, 10);

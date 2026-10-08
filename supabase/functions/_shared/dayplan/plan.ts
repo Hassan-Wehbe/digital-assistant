@@ -4,10 +4,12 @@
 //
 // Times are the user's local wall clock ("2026-10-09T16:30", in the request's time zone) and are
 // worked out as minutes from the plan day's midnight, so a day is the user's own day. Drive times
-// come from a DriveTimes provider (Mapbox on the server, Apple's MapKit on iPhone later; none until
-// step 3, when every drive says "drive time unavailable"). A provider only ever gets two points and
-// a departure time: never a title, a calendar or who is going.
+// come from a DriveTimes provider (Mapbox on the server, mapbox.ts; Apple's MapKit on iPhone later;
+// without one every drive says "drive time unavailable"). Weather comes from a Weather provider (the
+// US National Weather Service, nws.ts), for the places driven to. A provider only ever gets points
+// and times: never a title, a calendar or who is going.
 import { distanceKm, type Point } from "../../mcp/lib/places.ts";
+import type { PlaceWeather, Weather } from "./nws.ts";
 
 export type { Point };
 
@@ -24,6 +26,10 @@ export const DAY_START = 7 * 60;
 export const DAY_END = 22 * 60;
 /** Task options offered for one task. */
 export const MAX_OPTIONS = 3;
+/** A rain row from this chance of rain (Q2). */
+export const RAIN_MIN_PCT = 50;
+/** Hours of rain looked at around an event: from this long before it starts to its end. */
+export const RAIN_BEFORE_MIN = 60;
 
 export interface PlanPlace extends Point {
   label: string;
@@ -88,6 +94,8 @@ export interface PlanInput {
   tasks: PlanTask[];
   choices?: Choices;
   drives: DriveTimes | null;
+  /** Rain and alerts at the places driven to; none: no weather rows. */
+  weather?: Weather | null;
   /** Options for this task (＋ Add → Find a time). */
   optionsFor?: string;
 }
@@ -106,7 +114,11 @@ export type Row =
   | {
     kind: "overlap"; keys: [string, string]; start: string; end: string; minutes: number; same_place: boolean;
     suggestion?: "take_both";
-  };
+  }
+  /** Rain likely (RAIN_MIN_PCT or more) at a place driven to, around its event: the likeliest hour. */
+  | { kind: "rain"; place: string; for_keys: string[]; start: string; end: string; chance_pct: number }
+  /** A weather alert in force at a place driven to today (NWS: storms, heat, flood). */
+  | { kind: "alert"; event: string; severity: string; start: string; end?: string; places: string[]; for_keys: string[] };
 
 export interface TaskOption {
   kind: "on_the_way" | "free_time";
@@ -125,6 +137,12 @@ export interface DayPlan {
   time_zone: string;
   home: { set: boolean; label?: string };
   drive_times: "available" | "unavailable";
+  /** "outside_us": none of the places has a NWS forecast (the app says so once). */
+  weather: "available" | "unavailable" | "outside_us";
+  /** Hourly chance of rain at each place driven to, around its event (event detail). */
+  weather_at: { place: string; for_keys: string[]; hourly: { at: string; rain_pct: number }[] }[];
+  /** Where the numbers come from, to show on the screen. */
+  credits: string[];
   rows: Row[];
   all_day: { key: string; title: string }[];
   tasks_not_placed: {
@@ -312,6 +330,9 @@ export async function planDay(input: PlanInput): Promise<DayPlan> {
   }
   rows.push(...driveRows);
 
+  const weather = await weatherRows(input, stops, driveRows, at);
+  rows.push(...weather.rows);
+
   // Tasks: placed ones at their time; the others listed as not placed yet.
   const tasks_not_placed: DayPlan["tasks_not_placed"] = [];
   const taskBusy: [number, number][] = [];
@@ -347,6 +368,12 @@ export async function planDay(input: PlanInput): Promise<DayPlan> {
     date, time_zone: tz,
     home: home ? { set: true, label: home.label } : { set: false },
     drive_times: drives ? "available" : "unavailable",
+    weather: weather.status,
+    weather_at: weather.at,
+    credits: [
+      ...(drives && driveRows.some((d) => d.minutes !== undefined) ? ["Drive times © Mapbox"] : []),
+      ...(weather.status === "available" && weather.at.length ? ["Weather: US National Weather Service"] : []),
+    ],
     rows, all_day, tasks_not_placed,
   };
 
@@ -359,11 +386,79 @@ export async function planDay(input: PlanInput): Promise<DayPlan> {
 
 type DriveRow = Extract<Row, { kind: "drive" }>;
 
-const ORDER: Record<Row["kind"], number> = { drive: 0, overlap: 1, event: 2, task: 3, free: 4 };
+const ORDER: Record<Row["kind"], number> = { alert: 0, drive: 1, rain: 2, overlap: 3, event: 4, task: 5, free: 6 };
 
 function rowStart(r: Row): string {
   if (r.kind === "drive") return r.leave_at ?? r.arrive_by ?? "";
   return r.start;
+}
+
+/**
+ * Weather at the places driven to (each place once): a rain row when the chance is RAIN_MIN_PCT or
+ * more from an hour before its event to its end, the hourly chances for the event's detail, and the
+ * alerts in force there (each alert once, with every place it covers). A failing provider leaves
+ * the plan as it is, with weather "unavailable".
+ */
+async function weatherRows(
+  input: PlanInput, stops: Stop[], driveRows: DriveRow[], at: (min: number) => string,
+): Promise<{ status: DayPlan["weather"]; at: DayPlan["weather_at"]; rows: Row[] }> {
+  const { date, tz, weather } = input;
+  if (!weather) return { status: "unavailable", at: [], rows: [] };
+  // The places the user drives to (a drive row names the trip), each looked up once.
+  const driven = stops.filter((s) => driveRows.some((d) => d.for_keys.some((k) => s.keys.includes(k))));
+  const looked: { place: PlanPlace; w: Promise<PlaceWeather | "outside_us" | null> }[] = [];
+  const answerFor = (p: PlanPlace) => {
+    let hit = looked.find((l) => samePlace(l.place, p));
+    if (!hit) {
+      const w = weather.at({ lat: p.lat, lng: p.lng }, date, tz).catch(() => null);
+      looked.push(hit = { place: p, w });
+    }
+    return hit.w;
+  };
+  const answers = await Promise.all(driven.map((s) => answerFor(s.place)));
+  if (!answers.length) return { status: "available", at: [], rows: [] };
+
+  const rows: Row[] = [];
+  const atRows: DayPlan["weather_at"] = [];
+  const alerts = new Map<string, Extract<Row, { kind: "alert" }>>();
+  driven.forEach((stop, i) => {
+    const w = answers[i];
+    if (!w || w === "outside_us") return;
+    const from = stop.s - RAIN_BEFORE_MIN;
+    const hours = w.hourly
+      .map((h) => ({ ...h, m: toMin(date, h.at) }))
+      .filter((h): h is typeof h & { m: number } => h.m !== null && h.m + 60 > from && h.m < Math.max(stop.e, stop.s + 1));
+    if (hours.length) {
+      atRows.push({ place: stop.place.label, for_keys: stop.keys, hourly: hours.map(({ at, rain_pct }) => ({ at, rain_pct })) });
+      const wettest = hours.reduce((a, b) => (b.rain_pct > a.rain_pct ? b : a));
+      if (wettest.rain_pct >= RAIN_MIN_PCT) {
+        rows.push({
+          kind: "rain", place: stop.place.label, for_keys: stop.keys, start: at(wettest.m), end: at(wettest.m + 60),
+          chance_pct: wettest.rain_pct,
+        });
+      }
+    }
+    for (const a of w.alerts) {
+      const seen = alerts.get(a.id);
+      if (seen) {
+        if (!seen.places.includes(stop.place.label)) seen.places.push(stop.place.label);
+        seen.for_keys.push(...stop.keys);
+        continue;
+      }
+      // An alert that began before today shows from the start of the day.
+      const starts = a.starts && a.starts > `${date}T00:00` ? a.starts : `${date}T00:00`;
+      alerts.set(a.id, {
+        kind: "alert", event: a.event, severity: a.severity, start: starts, ...(a.ends ? { end: a.ends } : {}),
+        places: [stop.place.label], for_keys: [...stop.keys],
+      });
+    }
+  });
+  rows.push(...alerts.values());
+  const read = answers.filter((a) => a !== null);
+  const status = read.length && read.every((a) => a === "outside_us")
+    ? "outside_us"
+    : read.some((a) => a !== "outside_us") ? "available" : "unavailable";
+  return { status, at: atRows, rows };
 }
 
 function typical(l: Leg): { typical_minutes?: number } {

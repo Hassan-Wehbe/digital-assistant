@@ -15,27 +15,30 @@
 //
 // From the database, as the user (RLS): Home (the place of kind home), saved places to match an
 // event's location text by name, and open tasks for the day, all from searchable spaces only
-// (rule 3: a restricted space never adds anything to the plan). Nothing is stored; the log line
-// holds counts only, never titles, places or times.
+// (rule 3: a restricted space never adds anything to the plan). Drive times from Mapbox and weather
+// from the US National Weather Service (step 3; only points and times leave, never a title). Nothing
+// is stored (Mapbox's terms do not allow keeping its results either); the log line holds counts
+// only, never titles, places or times.
+//
+// The chat uses the same plan for "plan my day" (planForChat): when the app re-sends one day's
+// calendar for get_day_agenda, the model gets the planner's numbers with it (agenda.ts).
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { type DriveTimes, planDay, type PlanPlace, type PlanTask } from "../_shared/dayplan/plan.ts";
+import { type Choices, type DayPlan, type DriveTimes, planDay, type PlanEvent, type PlanPlace, type PlanTask } from "../_shared/dayplan/plan.ts";
+import type { Weather } from "../_shared/dayplan/nws.ts";
+import { localTime } from "../_shared/dayplan/time.ts";
 import { HOME_KIND, PLACE_TYPE, placePoint, placeScope } from "../mcp/lib/places.ts";
 import { normalizeTask, TASK_TYPE } from "../mcp/lib/tasks.ts";
-import { DAY, eventSchema, isTimeZone, LOCAL_TIME, MAX_AGENDA_EVENTS } from "./agenda.ts";
+import { type Agenda, type ChatPlan, choicesSchema, DAY, eventSchema, isTimeZone, LOCAL_TIME, MAX_AGENDA_EVENTS } from "./agenda.ts";
+
+export { localTime };
+export type { ChatPlan };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const dayEvent = eventSchema.extend({
   /** The app's id for the event (choices name it). */
   key: z.string().min(1).max(200),
-  /** Where the phone's geocoder found the event's location text. */
-  point: z.object({
-    lat: z.number().min(-90).max(90),
-    lng: z.number().min(-180).max(180),
-    by_name_only: z.boolean().optional(),
-  }).strict().optional(),
-  not_a_trip: z.boolean().optional(),
 });
 
 export const dayBody = z.object({
@@ -44,10 +47,7 @@ export const dayBody = z.object({
   tz: z.string().max(64).refine(isTimeZone),
   now: z.string().regex(LOCAL_TIME).optional(),
   events: z.array(dayEvent).max(MAX_AGENDA_EVENTS),
-  choices: z.object({
-    together: z.array(z.array(z.string().max(200)).min(2).max(6)).max(20).optional(),
-    not_driving: z.array(z.string().max(200)).max(100).optional(),
-  }).strict().optional(),
+  choices: choicesSchema.optional(),
   options_for: z.string().regex(UUID).optional(),
 });
 
@@ -64,6 +64,11 @@ export interface DayLog {
   tasks: number;
   drives: number;
   matched_places: number;
+  /** Requests to Mapbox and NWS for this plan, and how many failed. */
+  drive_requests?: number;
+  drive_failures?: number;
+  weather_requests?: number;
+  weather_failures?: number;
 }
 
 interface Row {
@@ -105,9 +110,123 @@ function asPlace(r: Row): PlanPlace | null {
 
 export interface DayDeps {
   clientFor(token: string): SupabaseClient;
-  /** Drive times (Mapbox from step 3); none until then. */
-  drives?(): DriveTimes | null;
+  /** Drive times for one plan (Mapbox, mapbox.ts; none without MAPBOX_TOKEN). */
+  drives?(): (DriveTimes & { stats?: ProviderStats }) | null;
+  /** Weather for one plan (NWS, nws.ts; none without NWS_CONTACT). */
+  weather?(): (Weather & { stats?: ProviderStats }) | null;
   log(entry: DayLog): void;
+}
+
+interface ProviderStats {
+  requests: number;
+  failed: number;
+}
+
+/** An event as the app sends it, for the planner (the day route's and the re-sent agenda's). */
+interface SentEvent {
+  key: string;
+  title: string;
+  start: string;
+  end: string;
+  all_day: boolean;
+  location?: string | null;
+  point?: { lat: number; lng: number; by_name_only?: boolean };
+  not_a_trip?: boolean;
+  busy_only?: boolean;
+  declined?: boolean;
+}
+
+interface PlanRequest {
+  date: string;
+  tz: string;
+  now?: string;
+  events: SentEvent[];
+  choices?: Choices;
+  optionsFor?: string;
+}
+
+/** Pro, and under today's fair-use limit (counted only when allowed): use_day_plan(), migration day_plan. */
+type Gate = { allowed: true; used?: number; limit?: number } | { allowed: false; reason: "pro_required" | "fair_use"; used?: number; limit?: number };
+
+async function gate(db: SupabaseClient): Promise<Gate | null> {
+  const { data, error } = await db.rpc("use_day_plan");
+  if (error || !data) return null;
+  const g = data as { allowed: boolean; reason?: string; used?: number; limit?: number };
+  if (g.allowed) return { allowed: true, used: g.used, limit: g.limit };
+  return { allowed: false, reason: g.reason === "fair_use" ? "fair_use" : "pro_required", used: g.used, limit: g.limit };
+}
+
+/**
+ * The plan for one day, as the user (RLS): Home, saved places (matched to events by name), the
+ * day's open tasks, all from searchable spaces only (rule 3); drive times and weather from the
+ * providers. Throws "db:<code>" when the database cannot be read. Fills the log's counts.
+ */
+async function makePlan(deps: DayDeps, db: SupabaseClient, req: PlanRequest, log: DayLog): Promise<DayPlan> {
+  const { places, tasks } = await readItems(db);
+  const homeRow = places.find((p) => p.metadata?.kind === HOME_KIND);
+  const home = homeRow ? asPlace(homeRow) : null;
+  // A saved place named like the event's location ("Aquatic Center", "Hinode Sushi, Oviedo") is
+  // the most reliable point; else the phone's geocoder result; else the app asks "Where is this?".
+  const byName = new Map<string, PlanPlace>();
+  for (const r of places) {
+    const p = r.metadata?.kind === HOME_KIND ? null : asPlace(r);
+    if (p) byName.set(norm(r.title), p);
+  }
+  const events: PlanEvent[] = req.events.map((e) => {
+    const text = e.location?.trim() ?? "";
+    const saved = text ? byName.get(norm(text)) ?? byName.get(norm(text.split(",")[0])) : undefined;
+    if (saved) log.matched_places += 1;
+    const place: PlanPlace | null = saved ??
+      (e.point ? { lat: e.point.lat, lng: e.point.lng, label: text || e.title, ...(e.point.by_name_only ? { by_name_only: true } : {}) } : null);
+    return {
+      key: e.key, title: e.title, start: e.start, end: e.end, all_day: e.all_day, location: e.location ?? null, place,
+      not_a_trip: e.not_a_trip, busy_only: e.busy_only, declined: e.declined,
+    };
+  });
+
+  // Open tasks for the day: due by then (overdue too), no date, or planned on it.
+  const placeById = new Map(places.map((r) => [r.id, r]));
+  const dayTasks: PlanTask[] = [];
+  for (const r of tasks) {
+    let t;
+    try {
+      t = normalizeTask(r.metadata ?? {});
+    } catch {
+      continue; // a task whose fields do not check is left out of the plan, never guessed
+    }
+    if (t.status !== "open") continue;
+    const plannedLocal = t.planned_at ? localTime(t.planned_at, req.tz) : undefined;
+    const plannedToday = plannedLocal?.startsWith(req.date);
+    if (t.due_on && t.due_on > req.date && !plannedToday) continue;
+    const placeRow = t.place_id ? placeById.get(t.place_id) : undefined;
+    dayTasks.push({
+      id: r.id, title: r.title, priority: t.priority,
+      ...(t.duration_min ? { duration_min: t.duration_min } : {}),
+      ...(t.duration_estimated ? { duration_estimated: true } : {}),
+      ...(t.due_on ? { due_on: t.due_on } : {}),
+      ...(t.repeat ? { repeat: t.repeat } : {}),
+      ...(plannedToday ? { planned_at: plannedLocal } : {}),
+      place: placeRow ? asPlace(placeRow) : null,
+    });
+  }
+  log.tasks = dayTasks.length;
+
+  const drives = deps.drives?.() ?? null;
+  const weather = deps.weather?.() ?? null;
+  const plan = await planDay({
+    date: req.date, tz: req.tz, now: req.now, home, events, tasks: dayTasks,
+    choices: req.choices, drives, weather, optionsFor: req.optionsFor,
+  });
+  log.drives = plan.rows.filter((r) => r.kind === "drive").length;
+  if (drives?.stats) {
+    log.drive_requests = drives.stats.requests;
+    log.drive_failures = drives.stats.failed;
+  }
+  if (weather?.stats) {
+    log.weather_requests = weather.stats.requests;
+    log.weather_failures = weather.stats.failed;
+  }
+  return plan;
 }
 
 const json = (status: number, body: unknown) => ({ status, body });
@@ -130,14 +249,12 @@ export async function dayPlan(deps: DayDeps, token: string, userId: string, raw:
   log.events = body.events.length;
   const db = deps.clientFor(token);
 
-  // Pro, and under today's fair-use limit (counted only when allowed): use_day_plan(), migration day_plan.
-  const { data: gate, error: gateError } = await db.rpc("use_day_plan");
-  if (gateError || !gate) {
+  const g = await gate(db);
+  if (!g) {
     log.outcome = "connection";
-    log.code = `db:${gateError?.code ?? "no_gate"}`;
+    log.code = "db:no_gate";
     return done(503, { error: "connection", error_description: "Could not check your plan. Try again." });
   }
-  const g = gate as { allowed: boolean; reason?: string; used?: number; limit?: number };
   if (!g.allowed) {
     if (g.reason === "fair_use") {
       log.outcome = "fair_use";
@@ -148,60 +265,9 @@ export async function dayPlan(deps: DayDeps, token: string, userId: string, raw:
   }
 
   try {
-    const { places, tasks } = await readItems(db);
-    const homeRow = places.find((p) => p.metadata?.kind === HOME_KIND);
-    const home = homeRow ? asPlace(homeRow) : null;
-    // A saved place named like the event's location ("Aquatic Center", "Hinode Sushi, Oviedo") is
-    // the most reliable point; else the phone's geocoder result; else the app asks "Where is this?".
-    const byName = new Map<string, PlanPlace>();
-    for (const r of places) {
-      const p = r.metadata?.kind === HOME_KIND ? null : asPlace(r);
-      if (p) byName.set(norm(r.title), p);
-    }
-    const events = body.events.map((e) => {
-      const text = e.location?.trim() ?? "";
-      const saved = text ? byName.get(norm(text)) ?? byName.get(norm(text.split(",")[0])) : undefined;
-      if (saved) log.matched_places += 1;
-      const place: PlanPlace | null = saved ??
-        (e.point ? { lat: e.point.lat, lng: e.point.lng, label: text || e.title, ...(e.point.by_name_only ? { by_name_only: true } : {}) } : null);
-      return {
-        key: e.key, title: e.title, start: e.start, end: e.end, all_day: e.all_day, location: e.location ?? null, place,
-        not_a_trip: e.not_a_trip, busy_only: e.busy_only, declined: e.declined,
-      };
-    });
-
-    // Open tasks for the day: due by then (overdue too), no date, or planned on it.
-    const placeById = new Map(places.map((r) => [r.id, r]));
-    const dayTasks: PlanTask[] = [];
-    for (const r of tasks) {
-      let t;
-      try {
-        t = normalizeTask(r.metadata ?? {});
-      } catch {
-        continue; // a task whose fields do not check is left out of the plan, never guessed
-      }
-      if (t.status !== "open") continue;
-      const plannedLocal = t.planned_at ? localTime(t.planned_at, body.tz) : undefined;
-      const plannedToday = plannedLocal?.startsWith(body.date);
-      if (t.due_on && t.due_on > body.date && !plannedToday) continue;
-      const placeRow = t.place_id ? placeById.get(t.place_id) : undefined;
-      dayTasks.push({
-        id: r.id, title: r.title, priority: t.priority,
-        ...(t.duration_min ? { duration_min: t.duration_min } : {}),
-        ...(t.duration_estimated ? { duration_estimated: true } : {}),
-        ...(t.due_on ? { due_on: t.due_on } : {}),
-        ...(t.repeat ? { repeat: t.repeat } : {}),
-        ...(plannedToday ? { planned_at: plannedLocal } : {}),
-        place: placeRow ? asPlace(placeRow) : null,
-      });
-    }
-    log.tasks = dayTasks.length;
-
-    const plan = await planDay({
-      date: body.date, tz: body.tz, now: body.now, home, events, tasks: dayTasks,
-      choices: body.choices, drives: deps.drives?.() ?? null, optionsFor: body.options_for,
-    });
-    log.drives = plan.rows.filter((r) => r.kind === "drive").length;
+    const plan = await makePlan(deps, db, {
+      date: body.date, tz: body.tz, now: body.now, events: body.events, choices: body.choices, optionsFor: body.options_for,
+    }, log);
     return done(200, { plan, usage: { used: g.used, limit: g.limit } });
   } catch (e) {
     log.outcome = "connection";
@@ -210,14 +276,33 @@ export async function dayPlan(deps: DayDeps, token: string, userId: string, raw:
   }
 }
 
-/** "2026-10-09T21:05:00Z" as the user's local "2026-10-09T17:05" in tz. */
-export function localTime(moment: string, tz: string): string | undefined {
-  const t = Date.parse(moment);
-  if (!Number.isFinite(t)) return undefined;
-  const p = Object.fromEntries(
-    new Intl.DateTimeFormat("en-CA", {
-      timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
-    }).formatToParts(new Date(t)).map((x) => [x.type, x.value]),
-  );
-  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+/**
+ * The planner on the calendar the app re-sent for get_day_agenda (one day only: "plan my day",
+ * "plan tomorrow"). Pro and fair use as for My day (a chat plan counts as one plan). The events are
+ * keyed e0, e1, ... in the agenda's order; `titles` maps them back. Logged like My day (counts only).
+ */
+export async function planForChat(deps: DayDeps, db: SupabaseClient, userId: string, agenda: Agenda, now = Date.now()): Promise<ChatPlan> {
+  if (agenda.from !== agenda.to) return { made: false, reason: "not_one_day" };
+  const log: DayLog = {
+    event: "day", request: crypto.randomUUID(), user: userId, outcome: "ok", events: agenda.events.length, tasks: 0, drives: 0,
+    matched_places: 0,
+  };
+  const out = await (async (): Promise<ChatPlan> => {
+    const g = await gate(db);
+    if (!g) return { made: false, reason: "connection" };
+    if (!g.allowed) return { made: false, reason: g.reason };
+    const events = agenda.events.map((e, i) => ({ ...e, key: `e${i}` }));
+    const today = localTime(now, agenda.time_zone);
+    const plan = await makePlan(deps, db, {
+      date: agenda.from, tz: agenda.time_zone, now: today?.startsWith(agenda.from) ? today : undefined, events,
+      choices: agenda.choices,
+    }, log);
+    return { made: true, plan, titles: new Map(events.map((e) => [e.key, e.busy_only ? "Busy" : e.title])) };
+  })().catch((e): ChatPlan => {
+    log.code = e instanceof Error && e.message.startsWith("db:") ? e.message : e instanceof Error ? e.name : "unknown";
+    return { made: false, reason: "connection" };
+  });
+  if (!out.made && out.reason !== "not_one_day") log.outcome = out.reason;
+  deps.log(log);
+  return out;
 }

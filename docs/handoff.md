@@ -1,6 +1,6 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-10-08 (see "START HERE" below for today's consolidated state). Earlier: 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
+Last updated 2026-10-08 (newest: day planner PR 3 open; see "START HERE" below for today's consolidated state). Earlier: 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
 #102), with Expo patch updates (#98). Step 2, server, is live. Places step 5b ("places near me",
 server) **merged and live** (#104, `mcp` v13, `chat` v6; first entry below). Then step 6, the places build, which also carries the mic fix #91. Play Console:
 Data safety and other forms saved, **not yet sent for review**; see the first entry below).
@@ -12,6 +12,19 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Day planner step 2, PR 3 (Mapbox drive times, NWS weather, the planner in "plan my day"):
+  PR open, not merged, not deployed (2026-10-08).** Details: plan step 3 "As built" and "Mapbox:
+  pricing and terms". Mapbox checked: 100,000 Directions requests a month free, then $2.00 per
+  1,000; its terms do not allow keeping Directions results (nothing is kept; **step 4: the app must
+  not save the plan on the phone**); no rule found that needs a Mapbox map for Directions results;
+  queries must answer a person's request (**re-check before proactive alerts**). Mapbox's own pages
+  are blocked from Claude's environment: the owner glances at them when making the account. 391
+  Deno tests, 107 evaluation cases (3 new). Owner set `MAPBOX_TOKEN` and `NWS_CONTACT` (2026-10-08;
+  Claude cannot list secrets, so they are checked after the deploy: drive times no longer
+  "unavailable"). **Evaluation (owner's OK, $1 cap): run 37832337431 at b7de176, Luna 107/107, 0
+  leaks, 0 unsafe, $0.05**; the 3 plan cases pass. **Owner:** (1) review and merge; (2) OK the
+  `chat` deploy (then drive times and weather go live for Pro). Next: step 4, the
+  app's My day (strongest model, fresh session).
 - **Day planner step 2, PR 2: merged (#172) and live: `chat` version 16, `mcp` version 24;
   migration applied; owner and Play review accounts Pro (2026-10-08, owner's OK).** Migration
   `20261009120000_day_plan.sql` was run by the owner in the SQL editor (the dry run did not run
