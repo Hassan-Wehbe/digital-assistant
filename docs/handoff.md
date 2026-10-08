@@ -1,6 +1,6 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-10-07 (see "START HERE" below for today's consolidated state). Earlier: 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
+Last updated 2026-10-08 (see "START HERE" below for today's consolidated state). Earlier: 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
 #102), with Expo patch updates (#98). Step 2, server, is live. Places step 5b ("places near me",
 server) **merged and live** (#104, `mcp` v13, `chat` v6; first entry below). Then step 6, the places build, which also carries the mic fix #91. Play Console:
 Data safety and other forms saved, **not yet sent for review**; see the first entry below).
@@ -12,6 +12,18 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Day planner step 2 planned (owner's feedback on versionCode 14, 2026-10-08).** The phone
+  calendar works (Settings → Calendars, "plan my day" lists the events), but reading the calendar
+  alone is not useful: the owner wants a plan. Mockups approved (`docs/day-planner-mockups.html`,
+  also a private artifact): a play-by-play in the chat plus a **My day** timeline with leave-by
+  times (Mapbox, traffic), rain and alerts (US National Weather Service), overlaps with fixes
+  ("take both"), and **Wilma tasks** placed into the day. Plan:
+  `docs/phase6-day-planner-step2-plan.md` (six small PRs, Q1-Q9). **Order (owner): before
+  invite-only sign-up.** The rest of the versionCode 14 checklist (places sharing, calendar
+  off/permission, "Still works") was not reported yet. **Play Console:** the owner chose to do
+  *Calendar → Calendar events* at the end, with step 6's Data safety changes, before the build
+  leaves internal testing. **Owner:** approve the plan; before step 3, a Mapbox account and token
+  (Supabase secret `MAPBOX_TOKEN`). Parked as before: the server fix for places without a kind.
 - **versionCode 14 building (owner: "build for Play", 2026-10-08).** Production build from
   `main` at cc3a181 (GitHub run 37721583530, checks passed: lint, typecheck, 581 app tests), Expo
   build abae235a-019e-4eff-9f6f-519f2d89354b, auto-submit to Play internal testing scheduled
