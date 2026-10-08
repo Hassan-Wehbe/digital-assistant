@@ -12,7 +12,15 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **Day planner step 1, server: PR open, not deployed (2026-10-08).** Owner's choice: "ask, then
+- **Day planner step 1, server: merged (#161) and live: `chat` version 14, `mcp` version 22
+  (2026-10-08, owner's OK).** Both deployed from `main` by the "deploy chat" workflow (#162
+  added the function choice for `mcp`): `chat` run 37718710319 at d7d327c (50/50 listed files
+  identical to `main`), `mcp` run 37719590550 at e740918 (36/36 identical, the new
+  `get_day_agenda` among them); 401 without sign-in and with a fake token for both. Today's app
+  does not send `can: ["calendar"]`, so nothing changes for it until step 2. **Owner:** delete
+  the Supabase access token used for these runs. **Next:** step 2, the app side (strongest
+  model; a native package, so a new build).
+- **Day planner step 1, server (earlier state, 2026-10-08).** Owner's choice: "ask, then
   re-send" instead of pausing `chat` (it keeps nothing between requests). Wilma's get_day_agenda
   makes `chat` send the app an `agenda_request` and end the answer; the app (step 2, not built)
   reads the ticked calendars and sends the question again with the trimmed events, which `chat`
