@@ -262,7 +262,10 @@ Log lines: counts and timings only, never places, titles or coordinates.
    to its next date after today (`last_done_on` notes the day), so each day's plan picks it up.
    372 Deno tests; 104 evaluation cases (new: a weekly task). **Dry run:** the Supabase connector
    times out on this script (twice; checked after each: nothing kept, nothing waiting), so the owner
-   runs the dry run in the SQL editor. Deploy `chat` (the route answers with drives "not
+   runs the dry run in the SQL editor. **Evaluation (owner's OK, $1 cap): run 37807486314 at 4ce9c44,
+   Luna 103/104, 0 leaks, 0 unsafe, $0.05**; all 6 task cases pass. The miss, "not been back since the
+   summer", named Trattoria Sud but not Tawlet (July read as part of the summer; search found both;
+   no code here touches it); **that case alone 5 times, run 37808971148: 5/5.** Deploy `chat` (the route answers with drives "not
    available" until step 3).
 3. **Server: Mapbox and NWS**, and the planner in the chat answer (`get_day_agenda` re-send).
    **Owner first:** a Mapbox account and a token, pasted as Supabase secret `MAPBOX_TOKEN` (and

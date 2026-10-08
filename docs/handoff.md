@@ -14,10 +14,11 @@ tokens or keys in chat.
 **Newest first (2026-10-07):**
 - **Day planner step 2, PR 2 (planner core, Pro switch, Home, repeating tasks): PR open, not
   deployed, migration not applied (2026-10-08).** Details: plan step 2 "As built". 372 Deno tests,
-  SQL test 13, 104 evaluation cases. **Owner:** (1) run the dry run of
+  SQL test 13, 104 evaluation cases; **evaluation run 37807486314: Luna 103/104, 0 leaks, $0.05**
+  (the miss, "since the summer", passed 5/5 on its own, run 37808971148). **Owner:** (1) run the dry run of
   `20261009120000_day_plan.sql` with SQL test 13 in the Supabase SQL editor (the connector times
   out on it; Claude gives the script; every line must say ok), then apply the migration there;
-  (2) OK the evaluation run (Luna, at most about $0.37, cap $1); (3) set yourself to Pro
+  (2) ~~evaluation~~ (done); (3) set yourself to Pro
   (`admin_set_plan`, Claude can run it with your OK); (4) merge, then OK the `chat` and `mcp`
   deploys (fresh `SUPABASE_ACCESS_TOKEN`, deleted after). Nothing in the app uses My day until
   step 4.
