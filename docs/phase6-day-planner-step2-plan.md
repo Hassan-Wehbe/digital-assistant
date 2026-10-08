@@ -375,6 +375,14 @@ Log lines: counts and timings only, never places, titles or coordinates.
 6. **Ship:** privacy page (Mapbox and NWS, Home, tasks), Play Data safety, phone checklist
    (`docs/versioncode15-phone-checklist.md`), then "build for Play" (versionCode 15), together with
    the Play Console change left over from versionCode 14 (*Calendar → Calendar events*).
+   **As built (2026-10-08, PR open):** privacy page: tasks and Home in "What you save", Use where I
+   am now for Home, a "Planning your day (optional, Wilma Pro)" paragraph (the plan's draft plus the
+   phone's map lookup of event addresses and the choices kept on the phone), Mapbox and the US
+   National Weather Service under "Services we use", the map lookup's day-planning use, and
+   Directions under Google Maps. Data safety: no new data type (`phase4-play-release.md`, "Day
+   planning"); the *Calendar → Calendar events* change from versionCode 14 is still to do.
+   `docs/versioncode15-phone-checklist.md`. **Owner:** approve the privacy wording (merging
+   publishes it), do the Data safety change, then "build for Play".
 
 ## Decisions (recommendations first; the owner can change any)
 

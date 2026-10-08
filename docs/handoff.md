@@ -12,6 +12,16 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Live (2026-10-08, owner's OK): `mcp` version 27 and `chat` version 20**, deployed by the "deploy
+  chat" workflow (runs 37849787259 and 37849790683) from `main` at f725b96 (#176, #178, #177); both
+  refuse requests without a sign-in. Live now: Wilma sets kind `home` for "my home is ..." (#177)
+  and `update_item` takes the phone's date for a repeating task (#178). Not compared file by file
+  this time (the workflow deploys from its own checkout of `main`).
+- **Day planner step 2, step 6 (ship): PR open (2026-10-08).** Privacy page (planning your day,
+  Mapbox, the Weather Service, tasks and Home), Data safety notes (no new data type), and
+  `docs/versioncode15-phone-checklist.md`. **Owner:** approve the privacy wording and merge (it
+  publishes the page); in Play Console add *Calendar → Calendar events* (left from versionCode 14);
+  then say "build for Play" (versionCode 15).
 - **Day planner step 2, step 5 (tasks in the app): merged (#178), not built (2026-10-08).**
   Tasks tile and list, the task form (new/edit), ＋ Add with Find a time in My day, and
   `update_item` `today` (the phone's date for repeating tasks; server, live after the `mcp` and
