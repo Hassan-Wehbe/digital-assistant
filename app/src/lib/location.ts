@@ -71,13 +71,14 @@ export const deviceLocation: LocationDeps = {
 
 /**
  * The phone's map lookup for a shared place (placeLookup.ts). It sends only the text it is given
- * (the place's name and address), never where the phone is; Android still wants the location
- * permission before it answers.
+ * (the place's name and address) and then the spot that text matched (for its street and town),
+ * never where the phone is; Android still wants the location permission before it answers.
  */
 export const deviceGeocoder: GeocodeDeps = {
   permission: () => pkg().getForegroundPermissionsAsync(),
   askPermission: () => pkg().requestForegroundPermissionsAsync(),
   geocode: (query) => pkg().geocodeAsync(query),
+  describe: (point) => pkg().reverseGeocodeAsync(point),
 };
 
 function pkg(): LocationPackage {

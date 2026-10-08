@@ -1,4 +1,5 @@
-// A place's fields on its note, with Open in Maps (Google Maps, or a search for the address)
+// A place's fields on its note, with Open in Maps (the saved location, else the Google Maps link or
+// a search for the address; lib/places.ts mapsLink)
 // and We went again (a visit added through update_item's add_visit; the server checks it).
 import { useState } from 'react';
 import { Linking, Text, TextInput } from 'react-native';
