@@ -29,9 +29,9 @@ export const MAX_AGENDA_EVENTS = 300;
 /** Stands in for an event's title or place that looks like it holds a password (rule 1). */
 export const HIDDEN_TEXT = "(hidden: looked like a password)";
 
-const DAY = /^\d{4}-\d{2}-\d{2}$/;
+export const DAY = /^\d{4}-\d{2}-\d{2}$/;
 /** A local wall-clock time, without a zone: the agenda's time_zone says which. */
-const LOCAL_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+export const LOCAL_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 
 /** "2026-10-08" as a real calendar day (not 2026-02-30), in days since 1970. */
 function dayNumber(d: string): number | null {
@@ -61,7 +61,7 @@ export function isTimeZone(tz: string): boolean {
 const when = z.string().refine((v) => LOCAL_TIME.test(v) || dayNumber(v) !== null, "a local time YYYY-MM-DDTHH:MM or a day");
 
 /** One event as the app sends it. Unknown keys (a description, attendees, links) are dropped. */
-const eventSchema = z.object({
+export const eventSchema = z.object({
   title: z.string().max(300),
   start: when,
   end: when,

@@ -119,7 +119,7 @@ export const registerFindPlaces: RegisterTool = (server, { db, assistantName, di
         unit: z.enum(["mi", "km"]).optional().describe(`The unit of within, when the user named one; default ${unit}`),
         within_km: z.number().positive().max(20000).optional().describe("Older form of within, in km"),
         space: z.string().optional().describe("Only this space and its sub-spaces (name, path or id)"),
-        kind: z.string().optional().describe("restaurant, cafe, bar, shop, to-visit, hotel or other"),
+        kind: z.string().optional().describe("restaurant, cafe, bar, shop, to-visit, hotel, home or other"),
         status: z.enum(["want", "been"]).optional().describe('"want" (not been yet) or "been"'),
         cuisine: z.string().max(40).optional().describe("e.g. italian"),
         occasion: z.string().max(40).optional()
@@ -213,6 +213,8 @@ export const registerFindPlaces: RegisterTool = (server, { db, assistantName, di
           anchorId = anchor.id;
           from = { place: anchor.title, id: anchor.id };
         }
+        // Home is where distances may be measured from ("restaurants near home"), never a place to suggest.
+        if (kind === undefined || singular(kind) !== "home") rows = rows.filter((r) => r.metadata?.kind !== "home");
 
         const pathOf = new Map(spaces.map((s) => [s.id, s.path]));
         const list = (v: unknown) => (Array.isArray(v) ? v.map((x) => String(x).toLowerCase()) : []);

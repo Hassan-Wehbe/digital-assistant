@@ -2,7 +2,7 @@ import { z } from "zod";
 import { type Chunk, chunkAndEmbed, hasPending, scheduleEmbedPending } from "../lib/embed.ts";
 import { loadSpaces, resolveSpace } from "../lib/spaces.ts";
 import { rejectCredentials } from "../lib/credentials.ts";
-import { addVisit, isPlace, normalizePlace, type PlaceMetadata, placePoint, withPlace } from "../lib/places.ts";
+import { addVisit, assertOnlyHome, HOME_KIND, isPlace, normalizePlace, type PlaceMetadata, placePoint, withPlace } from "../lib/places.ts";
 import { withLinkLocation } from "../lib/maps_link.ts";
 import { isTask, normalizeTask, setTaskDone, type TaskMetadata, withTask } from "../lib/tasks.ts";
 import { taskPlaceTitle } from "./save_item.ts";
@@ -18,7 +18,8 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
         "in the item's history before the edit is applied. Passing tags replaces the whole tag list. " +
         "For a place, add_visit records a visit (\"we went again last Friday with Sarah\") and keeps " +
         "the rest of its fields; metadata replaces them all. For a task, task_done: true marks it done " +
-        "(\"I picked up the dry cleaning\") and false opens it again, keeping its other fields.",
+        "(\"I picked up the dry cleaning\") and false opens it again, keeping its other fields; a repeating task " +
+        "moves to its next date instead.",
       inputSchema: {
         item_id: z.string().uuid(),
         title: z.string().trim().min(1).max(300).optional(),
@@ -96,6 +97,7 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
           const removed = placePoint(current.metadata) !== null && current.metadata?.maps_url === place.maps_url;
           if (!removed) ({ place, filled: locationFromLink } = withLinkLocation(place));
         }
+        if (place && fieldsChanged && place.kind === HOME_KIND) await assertOnlyHome(db, args.item_id);
         const newMetadata = place && fieldsChanged ? place : task && fieldsChanged ? task : metadata ?? null;
 
         // Text or place fields changed: re-chunk the new current version (only it is searchable).

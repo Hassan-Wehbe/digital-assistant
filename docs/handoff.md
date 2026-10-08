@@ -12,6 +12,18 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Day planner step 2, PR 2 (planner core, Pro switch, Home, repeating tasks): PR open, not
+  deployed, migration not applied (2026-10-08).** Details: plan step 2 "As built". 372 Deno tests,
+  SQL test 13, 104 evaluation cases; **evaluation run 37807486314: Luna 103/104, 0 leaks, $0.05**
+  (the miss, "since the summer", passed 5/5 on its own, run 37808971148). **Owner:** (1) run the dry run of
+  `20261009120000_day_plan.sql` with SQL test 13 in the Supabase SQL editor (the connector times
+  out on it; Claude gives the script; every line must say ok), then apply the migration there;
+  (2) ~~evaluation~~ (done); (3) set Pro for the owner's account and the Play review
+  account (owner, 2026-10-08: both; Claude runs it once the migration is applied); (4) merge, then OK the `chat` and `mcp`
+  deploys. Nothing in the app uses My day until step 4. **Access token (owner, 2026-10-08):**
+  `SUPABASE_ACCESS_TOKEN` stays set in GitHub while the day planner is built (the owner is the
+  repository's only collaborator; an expiry date if Supabase offers one); deleted in Supabase and
+  GitHub when that work is done. Do not ask the owner to delete it after each deploy.
 - **Day planner step 2, PR 1 (Wilma tasks, server): merged (#169); live: `mcp` version 23 and `chat`
   version 15 (2026-10-08, owner's OK).** `chat` deployed by the workflow (run 37803132438) from
   `main` at 79448d0: 52/52 listed files identical to `main`, 401 without sign-in and with a fake
