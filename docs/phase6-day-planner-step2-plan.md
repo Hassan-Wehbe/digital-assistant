@@ -356,6 +356,22 @@ Log lines: counts and timings only, never places, titles or coordinates.
    "Is this it?" does), when location is already allowed.
 5. **App: tasks in the app.** Tasks tile and list, task fields in new/edit note, ＋ Add with
    options.
+   **As built (2026-10-08, PR open; no build: step 6):** `src/lib/tasks.ts` (the form's checks with
+   the server's limits in plain words, kept fields on an edit, the list's groups Today (overdue,
+   due, or planned today) / This week / Later / Done, the one-line summary, `planned_at` with the
+   phone's offset), `app/tasks.tsx` (the list; ☐ marks done), `app/task.tsx` (new and edit: what,
+   how long, where (a saved place or an address, the My day picker), by when (Today, Tomorrow,
+   Saturday, Next Monday or a date), repeats, normal or important, a note), a ✅ Tasks tile on Home,
+   "✅ Task" on New note, Edit on a task opens the task form, and the task's fields on its page. **＋
+   Add in My day:** type a task → Find a time saves it (due that day) and asks the planner
+   (`options_for`); a suggestion sets only `planned_at` (the user's choice), with "✓ … at 4:05 pm.
+   Leave at 3:39 pm instead of 4:10 pm." on screen; Not today moves it to the next day; "Not placed
+   yet" tasks get Find a time too. Text that looks like a password is held on the phone (rule 9;
+   the server refuses it too). **Q12:** `update_item` takes `today` (the phone's date) with
+   `task_done`, so a repeating task ticked in the evening no longer skips a day (server, needs the
+   `mcp` and `chat` deploys). The app's chat counts `find_tasks` and `get_day_agenda` as reading.
+   15 new Jest tests (654), 1 Deno test (392). Not done: the mockup's outlined rows with the old
+   time crossed out (the note above says the same in words).
 6. **Ship:** privacy page (Mapbox and NWS, Home, tasks), Play Data safety, phone checklist
    (`docs/versioncode15-phone-checklist.md`), then "build for Play" (versionCode 15), together with
    the Play Console change left over from versionCode 14 (*Calendar → Calendar events*).
@@ -379,7 +395,7 @@ Log lines: counts and timings only, never places, titles or coordinates.
 - **Q11 Fair use:** 30 plans per user per day.
 - **Q12 Repeating tasks (owner, 2026-10-08):** one time, daily, weekdays, weekly, every 2 weeks or
   monthly; done moves a repeating task to its next date. Dates are the server's day (UTC) when done
-  through the chat; the app sends the phone's date in step 5.
+  through the chat; the app sends the phone's date (step 5, `update_item` `today`).
 - **Q9 Apple Reminders** (iPhone, step 1 Q6): with the iPhone build, as a second task source.
 
 ## Privacy page wording (draft, for the owner's approval in step 6)

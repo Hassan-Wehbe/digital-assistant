@@ -15,6 +15,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Linking, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 
+import { AddTaskSheet, type NewDayTask, type SheetStep } from '@/components/AddTaskSheet';
 import { DayEventDetail } from '@/components/DayEventDetail';
 import { PlacePicker } from '@/components/PlacePicker';
 import { ProCard, useProPlan } from '@/components/ProCard';
@@ -28,15 +29,18 @@ import {
   answerPlace, choicesFor, EMPTY_MEMORY, forgetPlace, rememberFound, resetChoices, separate, takeBoth, textKey, toggleNotDriving,
   type DayMemory, type EventPlace,
 } from '@/lib/dayChoices';
-import type { DayEventRow, DayPlan, DayRow } from '@/lib/dayPlan';
+import type { DayEventRow, DayPlan, DayRow, TaskOption } from '@/lib/dayPlan';
 import {
   alertText, clock, dayChips, dayNotes, dayTitle, directionsLink, driveText, eventLine, freeText, minutesText, overlapText,
   rainText, rowTime, titles, todayAndTomorrow,
 } from '@/lib/dayView';
 import { deviceDayMemory, deviceSettingsStore } from '@/lib/deviceStorage';
 import { saveHome, type PickedSpot } from '@/lib/homePlace';
+import { findCredential } from '@/lib/credentials';
 import { deviceGeocoder } from '@/lib/location';
+import { LOOKS_LIKE_SECRET, editError } from '@/lib/noteEdit';
 import { needsPro } from '@/lib/pro';
+import { addDays, EMPTY_TASK, plannedAt, taskMetadata, type TaskMetadata } from '@/lib/tasks';
 import { WilmaError } from '@/lib/wilma';
 
 type Screen =
@@ -70,6 +74,12 @@ export default function MyDay() {
   const [homeError, setHomeError] = useState<string | null>(null);
   const [kept, setKept] = useState<Set<string>>(new Set());
   const [memory, setMemory] = useState<DayMemory>(EMPTY_MEMORY);
+  // ＋ Add / Find a time: the sheet, the task it is for, and what was just put in the day.
+  const [sheet, setSheet] = useState<SheetStep | null>(null);
+  const [sheetTask, setSheetTask] = useState<{ id: string; title: string; metadata: TaskMetadata } | null>(null);
+  const [sheetBusy, setSheetBusy] = useState(false);
+  const [sheetError, setSheetError] = useState<string | null>(null);
+  const [added, setAdded] = useState<string | null>(null);
 
   // The day's events as read (with keys), their places, and the zone: reused when only a choice changes.
   const raw = useRef<DayEvent[] | null>(null);
@@ -102,8 +112,8 @@ export default function MyDay() {
 
   /** Reads the calendar (when asked, or not read yet), finds places, and asks for the plan. */
   const load = useCallback(
-    async (reread: boolean) => {
-      if (!userId) return;
+    async (reread: boolean, optionsFor?: string): Promise<DayPlan | null> => {
+      if (!userId) return null;
       const mine = ++request.current;
       const current = () => alive.current && mine === request.current;
       setBusy(true);
@@ -113,28 +123,29 @@ export default function MyDay() {
           mem.current = await deviceDayMemory.load(userId, days.today);
           setMemory(mem.current);
           const read = await readAgenda(deviceCalendar, await loadChoice(deviceSettingsStore, userId), date, date, phoneTimeZone());
-          if (!current()) return;
+          if (!current()) return null;
           if ('problem' in read) {
             raw.current = null;
             setPlan(null);
             setScreen({ step: 'calendar', problem: read.problem === 'bad_days' ? 'failed' : read.problem });
-            return;
+            return null;
           }
           raw.current = withKeys(read.agenda.events);
           zone.current = read.agenda.time_zone;
         }
         const out = await placeEvents(raw.current, mem.current, phoneGeocode(deviceGeocoder));
-        if (!current()) return;
+        if (!current()) return null;
         setPlaced(out.events);
         if (Object.keys(out.found).length) keepMemory(rememberFound(mem.current, out.found));
 
-        const got = await day.plan(dayBody(date, zone.current ?? phoneTimeZone() ?? 'UTC', timeText(new Date()), out.events, mem.current));
-        if (!current()) return;
+        const got = await day.plan(dayBody(date, zone.current ?? phoneTimeZone() ?? 'UTC', timeText(new Date()), out.events, mem.current, optionsFor));
+        if (!current()) return null;
         if ('plan' in got) {
           setPlan(got.plan);
           shown.current = true;
           setUpdatedAt(clock(timeText(new Date())));
           setScreen({ step: 'plan' });
+          return got.plan;
         } else if (got.problem === 'pro_required') {
           setPlan(null);
           setScreen({ step: 'pro' });
@@ -147,7 +158,7 @@ export default function MyDay() {
       } catch (e) {
         if (e instanceof WilmaError && e.signedOut) {
           void signOutRef.current();
-          return;
+          return null;
         }
         if (current()) {
           if (shown.current) setNote(CONNECTION);
@@ -156,6 +167,7 @@ export default function MyDay() {
       } finally {
         if (current()) setBusy(false);
       }
+      return null;
     },
     [userId, date, day, days.today, keepMemory],
   );
@@ -204,6 +216,98 @@ export default function MyDay() {
     }
     setHomeOpen(false);
     void load(false);
+  };
+
+  // ---- ＋ Add and Find a time ----
+
+  const closeSheet = () => {
+    setSheet(null);
+    setSheetTask(null);
+    setSheetError(null);
+  };
+
+  /** Asks the planner where this task fits, and shows its suggestions. */
+  const findTime = async (task: { id: string; title: string; metadata: TaskMetadata }) => {
+    setSheetTask(task);
+    setSheetBusy(true);
+    setSheetError(null);
+    const p = await load(false, task.id);
+    if (!alive.current) return;
+    setSheetBusy(false);
+    const o = p?.options?.task_id === task.id ? p.options : null;
+    if (o) setSheet({ step: 'options', title: task.title, options: o.options, ...(o.note ? { note: o.note } : {}) });
+    else setSheetError('Could not find a time just now. Try again.');
+  };
+
+  /** ＋ Add → Find a time: saved as a task due this day first (the server checks it), then its options. */
+  const addAndFind = async (t: NewDayTask) => {
+    const fields = taskMetadata({
+      ...EMPTY_TASK,
+      title: t.title,
+      duration: t.duration,
+      dueOn: date,
+      ...(t.place?.id ? { place: { id: t.place.id, title: t.place.label } } : t.place ? { address: t.place.address ?? t.place.label } : {}),
+    });
+    if ('error' in fields) return setSheetError(fields.error);
+    if (findCredential(t.title)) return setSheetError(LOOKS_LIKE_SECRET);
+    setSheetBusy(true);
+    setSheetError(null);
+    try {
+      const saved = await wilma.saveTask({ title: t.title.trim(), metadata: fields.metadata });
+      await findTime({ id: saved.id, title: t.title.trim(), metadata: fields.metadata });
+    } catch (e) {
+      setSheetBusy(false);
+      setSheetError(editError(e instanceof Error ? e.message : String(e)));
+    }
+  };
+
+  /** "Not placed yet" → Find a time: its fields as saved, then its options. */
+  const findTimeFor = async (id: string, title: string) => {
+    setSheet({ step: 'form' });
+    setSheetBusy(true);
+    try {
+      const item = await wilma.getItem(id);
+      await findTime({ id, title, metadata: (item.metadata ?? {}) as unknown as TaskMetadata });
+    } catch (e) {
+      setSheetBusy(false);
+      setSheetError(e instanceof Error ? e.message : 'Could not open the task.');
+    }
+  };
+
+  /** A suggestion picked: the task is put at that time (planned_at, the user's choice), then the plan again. */
+  const pickOption = async (o: TaskOption) => {
+    const at = plannedAt(o.start);
+    if (!sheetTask || !at) return;
+    setSheetBusy(true);
+    try {
+      await wilma.updateItem(sheetTask.id, { metadata: { ...sheetTask.metadata, planned_at: at } });
+      const moved = o.leave_at && o.was_leave_at ? ` Leave at ${clock(o.leave_at)} instead of ${clock(o.was_leave_at)}.` : '';
+      setAdded(`✓ ${sheetTask.title} at ${clock(o.start)}.${moved}`);
+      closeSheet();
+      void load(false);
+    } catch (e) {
+      setSheetError(editError(e instanceof Error ? e.message : String(e)));
+    } finally {
+      setSheetBusy(false);
+    }
+  };
+
+  /** Not today: a task due this day moves to the next one; it stays in Tasks either way. */
+  const notToday = async () => {
+    const task = sheetTask;
+    if (!task) return closeSheet();
+    setSheetBusy(true);
+    try {
+      if (task.metadata.due_on && task.metadata.due_on <= date && !task.metadata.repeat) {
+        await wilma.updateItem(task.id, { metadata: { ...task.metadata, due_on: addDays(date, 1) } });
+      }
+      closeSheet();
+      void load(false);
+    } catch (e) {
+      setSheetError(editError(e instanceof Error ? e.message : String(e)));
+    } finally {
+      setSheetBusy(false);
+    }
   };
 
   const t = plan ? titles(plan) : new Map<string, string>();
@@ -392,6 +496,21 @@ export default function MyDay() {
     content = (
       <View style={{ gap: space.m }}>
         {homeCard}
+        {sheet ? (
+          <AddTaskSheet
+            sheet={sheet}
+            titles={t}
+            busy={sheetBusy}
+            error={sheetError}
+            onFind={(task) => void addAndFind(task)}
+            onPick={(o) => void pickOption(o)}
+            onNotToday={() => void notToday()}
+            onClose={closeSheet}
+          />
+        ) : (
+          <Button title="＋ Add" kind="plain" onPress={() => setSheet({ step: 'form' })} />
+        )}
+        {added ? <Text style={[box(c.goodBg, c.good), { color: c.good, fontSize: 14 }]}>{added}</Text> : null}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.xs }}>
           {chips.map((ch) => (
             <Text key={ch.text} style={chipStyle(c, ch.tone)}>{ch.text}</Text>
@@ -406,9 +525,12 @@ export default function MyDay() {
           <View style={[box(c.card, c.line, true), { gap: space.xs }]}>
             <Text style={{ color: c.text, fontSize: 14, fontWeight: '600' }}>Not placed yet</Text>
             {plan.tasks_not_placed.map((task) => (
-              <Text key={task.id} style={{ color: c.text, fontSize: 14 }}>
-                {`☐ ${task.title}${task.duration_min ? ` · ${minutesText(task.duration_min)}` : ''}${task.overdue ? ' · overdue' : ''}`}
-              </Text>
+              <View key={task.id} style={{ flexDirection: 'row', alignItems: 'center', gap: space.s }}>
+                <Text style={{ color: c.text, fontSize: 14, flex: 1 }}>
+                  {`☐ ${task.title}${task.duration_min ? ` · ${minutesText(task.duration_min)}` : ''}${task.overdue ? ' · overdue' : ''}`}
+                </Text>
+                {!sheet ? <TextLink title="Find a time" onPress={() => void findTimeFor(task.id, task.title)} /> : null}
+              </View>
             ))}
           </View>
         ) : null}
@@ -429,6 +551,8 @@ export default function MyDay() {
     if (d === date) return;
     setDetail(null);
     setAsking(null);
+    setAdded(null);
+    closeSheet();
     setPlan(null);
     shown.current = false;
     raw.current = null;

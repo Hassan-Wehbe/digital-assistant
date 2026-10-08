@@ -47,6 +47,8 @@ const READ_ONLY_TOOLS = new Set([
   'get_secret',
   'get_attachment_link',
   'list_deleted_items',
+  'find_tasks',
+  'get_day_agenda',
 ]);
 
 export type ErrorButton = 'search' | 'vault' | 'try_again';

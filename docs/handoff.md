@@ -12,6 +12,12 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Day planner step 2, step 5 (tasks in the app): PR open, stacked on #176, not built
+  (2026-10-08).** Tasks tile and list, the task form (new/edit), ＋ Add with Find a time in My day,
+  and `update_item` `today` (the phone's date for repeating tasks; server). Details: plan step 5
+  "As built". 654 app tests, 392 Deno tests. **Owner:** merge #176 first (still open on GitHub),
+  then this PR; then the `mcp` and `chat` deploys (together with #177's). **Next:** step 6, ship
+  (privacy page, Data safety, phone checklist, build versionCode 15; Sonnet).
 - **Day planner step 2, step 4 (the app's My day): PR open, not built (2026-10-08).** The 🌅 My
   day tile on Home and the 🌅 Plan my day chip in an empty chat (PRO badge and the Pro card without
   Pro), the My day timeline from `{"mode":"day"}` (drive, rain, alert, overlap, free, task rows;
