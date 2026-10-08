@@ -128,7 +128,9 @@ export type Entry =
   /** Wilma asked where the user is: Not now / 📍 Share where I am, which sends `question` again. */
   | { kind: 'location'; id: string; question: string; state: LocationState; error?: string }
   /** Wilma asked for the calendar but it could not be read: why, and Settings → Calendars. */
-  | { kind: 'calendar'; id: string; problem: CalendarProblem };
+  | { kind: 'calendar'; id: string; problem: CalendarProblem }
+  /** Wilma's answer used a day plan: Open my day for that date. Only the date: never the plan. */
+  | { kind: 'day'; id: string; date: string };
 
 /** Why the calendar was not read: turned off (or nothing ticked), not allowed, or a failure. */
 export type CalendarProblem = 'off' | 'permission' | 'failed';
@@ -154,6 +156,8 @@ export interface ChatState {
   answerId: string | null;
   /** Tools seen during the current answer. */
   tools: string[];
+  /** The current answer used a day plan for this date: Open my day goes under it when it ends. */
+  dayPlan: string | null;
   /** The allowance banner's text, once the server sent it. */
   notice: string | null;
   /** The month ("2026-10") in which the banner was dismissed. */
@@ -215,6 +219,7 @@ export function initialChat(entries: Entry[] = [], noticeDismissed: string | nul
     status: null,
     answerId: null,
     tools: [],
+    dayPlan: null,
     notice: null,
     noticeDismissed,
     blocked: null,
@@ -319,11 +324,11 @@ export function noteRef(n: NoteRef): NoteRef {
 }
 
 function startAnswer(state: ChatState): ChatState {
-  return { ...state, streaming: true, status: null, answerId: null, tools: [] };
+  return { ...state, streaming: true, status: null, answerId: null, tools: [], dayPlan: null };
 }
 
 function endAnswer(state: ChatState): ChatState {
-  return { ...state, streaming: false, status: null, answerId: null, tools: [] };
+  return { ...state, streaming: false, status: null, answerId: null, tools: [], dayPlan: null };
 }
 
 function add(state: ChatState, entry: Entry): ChatState {
@@ -410,6 +415,9 @@ function onEvent(state: ChatState, event: ChatEvent): ChatState {
     case 'agenda_request':
       // Nothing to show: the app reads the calendar after the answer ends (chat.tsx).
       return state;
+    case 'day_plan':
+      // Shown under the answer, once it has ended (the card follows Wilma's words).
+      return { ...state, dayPlan: event.date };
     case 'location_request': {
       // One card per answer, for the question it answers; nothing to ask again without one.
       const question = lastUserText(state.entries);
@@ -430,8 +438,11 @@ function onEvent(state: ChatState, event: ChatEvent): ChatState {
       const next = { ...add(state, entry), status: null };
       return event.code === 'allowance_used' ? { ...next, blocked: event.message } : next;
     }
-    case 'done':
-      return endAnswer(state);
+    case 'done': {
+      const last = state.entries[state.entries.length - 1];
+      const date = last?.kind !== 'error' ? state.dayPlan : null;
+      return endAnswer(date ? add(state, { kind: 'day', id, date }) : state);
+    }
   }
 }
 

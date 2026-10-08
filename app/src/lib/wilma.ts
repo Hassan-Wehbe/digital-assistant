@@ -253,7 +253,7 @@ export function wilmaClient({ url, token, refresh, fetch: f = fetch }: ClientOpt
     updateSpace: (id: string, changes: SpaceChanges) =>
       call<{ id: string; path: string; previous_path: string; description: string | null }>('update_space', { space: id, ...changes }),
     // close_matches_only: loosely related items are left out ("password" no longer finds a recipe).
-    search: async (opts: { query?: string; space?: string; limit?: number; close_matches_only?: boolean }) =>
+    search: async (opts: { query?: string; space?: string; limit?: number; close_matches_only?: boolean; item_type?: string }) =>
       (await call<{ results: SearchResult[] }>('search_items', opts)).results,
     getItem: (id: string) => call<Item>('get_item', { item_id: id }),
     attachmentLink: (id: string) => call<AttachmentLink>('get_attachment_link', { attachment_id: id }),
