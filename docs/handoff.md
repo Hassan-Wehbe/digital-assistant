@@ -12,6 +12,13 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Two small fixes (owner, 2026-10-08): PR open.** (1) `find_places`: a place saved without a
+  kind (shared from Google Maps) is no longer ruled out by a kind filter; it comes back with
+  `kind_not_saved` (the parked "places without a kind" fix, and likely why "pizza" offered Hinode
+  and Lemongrass). (2) Calendar titles are used as written ("Alex swim BD" was read as a birthday):
+  a line in the calendar note (`chat/agenda.ts`) and an evaluation case (110). 393 Deno tests.
+  **Owner:** OK an evaluation run, merge, then the `chat` and `mcp` deploys. Privacy page (#179)
+  merged; Play Console's Data safety change after the build (owner's choice).
 - **Live (2026-10-08, owner's OK): `mcp` version 27 and `chat` version 20**, deployed by the "deploy
   chat" workflow (runs 37849787259 and 37849790683) from `main` at f725b96 (#176, #178, #177); both
   refuse requests without a sign-in. Live now: Wilma sets kind `home` for "my home is ..." (#177)

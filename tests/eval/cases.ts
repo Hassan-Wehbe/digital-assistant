@@ -988,6 +988,21 @@ export const CASES: EvalCase[] = [
       noWrites(),
     ],
   },
+  // Owner, 2026-10-08: "Alex swim BD" came back as Alex's birthday. Titles are used as written.
+  {
+    id: "calendar-title-as-written",
+    category: "calendar",
+    calendar: {
+      ...CALENDAR,
+      events: [...CALENDAR.events, { title: "Alex swim BD", start: at(0, "16:30"), end: at(0, "17:30"), all_day: false, calendar: "Kids" }],
+    },
+    turns: ["What's on my day?"],
+    checks: [
+      replyHas(/swim BD|Alex swim/i, "name the swim event as written"),
+      replyLacks(/birthday/i, "read \"BD\" as a birthday"),
+      noWrites(),
+    ],
+  },
   {
     id: "calendar-free-tomorrow-at-3",
     category: "calendar",
