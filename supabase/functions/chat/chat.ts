@@ -23,6 +23,7 @@
 //             {"type":"places","cards":[...]}                          place cards (actions.ts)
 //             {"type":"location_request"}                             📍 Share where I am card
 //             {"type":"agenda_request","from":...,"to":...}            read the calendar, send again
+//             {"type":"day_plan","date":...}                            the answer used a day plan: Open my day
 //             {"type":"error","code":"allowance_used"|"service_paused"|"connection","message":...}
 //             {"type":"done","counted":true|false}                    always last
 //
@@ -51,8 +52,7 @@ import {
   TOO_MANY_STEPS,
 } from "./messages.ts";
 import { connectTools, type ToolSession } from "./tools.ts";
-import { dayPlan, type DayLog } from "./day.ts";
-import type { DriveTimes } from "../_shared/dayplan/plan.ts";
+import { type ChatPlan, dayPlan, type DayDeps, type DayLog, planForChat } from "./day.ts";
 
 /** Model calls per message, as in the evaluation (tests/eval/harness.ts). */
 export const MAX_ROUNDS = 8;
@@ -84,6 +84,8 @@ export interface LogEntry {
   /** The calendar: asked of the app this time, or read (sent with this message); counts only. */
   agenda?: "requested" | "read";
   agenda_events?: number;
+  /** The planner on a re-sent day: made, or why not (counts in its own "day" line). */
+  day_plan?: "made" | "pro_required" | "fair_use" | "connection";
 }
 
 export interface ChatDeps {
@@ -93,8 +95,10 @@ export interface ChatDeps {
   clientFor(token: string): SupabaseClient;
   /** The configured model routes. May throw RoutesConfigError (LLM_ROUTES missing or invalid). */
   llm(): Pick<Llm, "stream">;
-  /** Drive times for My day (Mapbox from day planner step 3); none until then. */
-  drives?(): DriveTimes | null;
+  /** Drive times for one day plan (Mapbox; none without MAPBOX_TOKEN). */
+  drives?: DayDeps["drives"];
+  /** Weather for one day plan (US National Weather Service; none without NWS_CONTACT). */
+  weather?: DayDeps["weather"];
   log(entry: LogEntry | ClassifyLog | DayLog): void;
 }
 
@@ -320,12 +324,6 @@ async function runChat({ deps, token, userId, messages, here, tz, canCalendar, a
     return;
   }
   messages = screened.messages;
-  if (agenda) {
-    // The calendar the app read for this question, as the result of the model's own call (agenda.ts).
-    messages = withAgenda(messages, agenda);
-    log.agenda = "read";
-    log.agenda_events = agenda.events.length;
-  }
 
   const db = deps.clientFor(token);
 
@@ -347,6 +345,22 @@ async function runChat({ deps, token, userId, messages, here, tz, canCalendar, a
   }
   if (Number(before.used_fraction) >= ALLOWANCE_WARN) {
     emit({ type: "notice", code: "allowance_low", message: ALLOWANCE_LOW, used_fraction: before.used_fraction });
+  }
+
+  let plan: ChatPlan | undefined;
+  if (agenda) {
+    // One day re-sent ("plan my day"): the planner's numbers go with the calendar (day.ts, Pro only).
+    plan = await planForChat(deps, db, userId, agenda);
+    if (plan.made) {
+      log.day_plan = "made";
+      emit({ type: "day_plan", date: agenda.from });
+    } else if (plan.reason !== "not_one_day") {
+      log.day_plan = plan.reason;
+    }
+    // The calendar the app read for this question, as the result of the model's own call (agenda.ts).
+    messages = withAgenda(messages, agenda, plan);
+    log.agenda = "read";
+    log.agenda_events = agenda.events.length;
   }
 
   // 2. The conversation loop: model, tool calls, results, model (as tests/eval/harness.ts).
@@ -401,7 +415,7 @@ async function runChat({ deps, token, userId, messages, here, tz, canCalendar, a
         }
         if (call.name === AGENDA_TOOL) {
           // Never run here: the phone's calendar comes from the app (agenda.ts).
-          const out = agendaCall(call.input, canCalendar, agenda);
+          const out = agendaCall(call.input, canCalendar, agenda, plan);
           if (out.request && !askedApp) {
             emit({ type: "status", tool: call.name, text: STATUS[call.name] });
             emit(out.request);

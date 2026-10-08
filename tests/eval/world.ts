@@ -80,6 +80,9 @@ export class World {
   assistantName = "Wilma";
   /** app_user.distance_unit (places step 8): miles unless a case sets km. */
   distanceUnit: "mi" | "km" = "mi";
+  /** app_user.plan (migration day_plan): free unless a case makes the user Pro; and plans made today. */
+  plan: "free" | "pro" = "free";
+  dayPlansUsed = 0;
   /** What the tools handed out: vault entry links, reveal links, upload links. */
   secretEntries: { secret_id: string; name: string; space_id: string; secret_type: string }[] = [];
   reveals: string[] = [];
@@ -605,6 +608,13 @@ function rpc(w: World, name: string, p: Record<string, unknown>): Result {
     case "set_attachment_description":
     case "delete_attachment":
       return err("attachment not found", "P0002");
+    case "use_day_plan": {
+      // As the migration's function: Pro only, at most 30 plans a day, counted when allowed.
+      if (w.plan !== "pro") return ok({ allowed: false, reason: "pro_required" });
+      if (w.dayPlansUsed >= 30) return ok({ allowed: false, reason: "fair_use", used: w.dayPlansUsed, limit: 30 });
+      w.dayPlansUsed += 1;
+      return ok({ allowed: true, used: w.dayPlansUsed, limit: 30 });
+    }
     default:
       return err(`function ${name} is not part of the evaluation world`);
   }

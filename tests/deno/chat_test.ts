@@ -12,6 +12,7 @@ import {
   ALLOWANCE_LOW, CONNECTION_TROUBLE, heldText, REMOVED_TEXT, SERVICE_PAUSED, STATUS, TOO_MANY_STEPS,
 } from "../../supabase/functions/chat/messages.ts";
 import { findCredential } from "../../supabase/functions/mcp/lib/credentials.ts";
+import { HIDDEN_TEXT } from "../../supabase/functions/chat/agenda.ts";
 import { ALL_TOOLS } from "../../supabase/functions/mcp/tools/all.ts";
 import {
   type ChatRequest, LlmError, QUOTA_EXCEEDED, RoutesConfigError, type StreamEvent, type ToolCall,
@@ -150,7 +151,7 @@ interface Setup {
   handler: (req: Request) => Promise<Response>;
 }
 
-function setup(steps: Step[], opts: { llm?: ChatDeps["llm"] } = {}): Setup {
+function setup(steps: Step[], opts: { llm?: ChatDeps["llm"]; drives?: ChatDeps["drives"]; weather?: ChatDeps["weather"] } = {}): Setup {
   const account = new Account();
   const model = new Model(steps);
   const logs: LogEntry[] = [];
@@ -158,6 +159,8 @@ function setup(steps: Step[], opts: { llm?: ChatDeps["llm"] } = {}): Setup {
     verifyToken: (t) => Promise.resolve(t === "good-token" ? "eval-user" : null),
     clientFor: () => account.client(),
     llm: opts.llm ?? model.llm(),
+    drives: opts.drives,
+    weather: opts.weather,
     log: (e) => e.event === "chat" && logs.push(e),
   });
   return { account, model, logs, handler };
@@ -235,12 +238,14 @@ Deno.test("chat: the reply streams to the app as it is written", async () => {
   const reader = res.body!.pipeThrough(new TextDecoderStream()).getReader();
   let got = "";
   // The first word arrives while the model is still "writing" (the gate holds the rest back).
-  const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("not streamed")), 2000));
+  let timer: number | undefined;
+  const timeout = new Promise<never>((_, reject) => timer = setTimeout(() => reject(new Error("not streamed")), 2000));
   while (!got.includes('"Hello"')) {
     const { value, done } = await Promise.race([reader.read(), timeout]);
     if (done) break;
     got += value;
   }
+  clearTimeout(timer);
   assert(got.includes('{"type":"text","text":"Hello"}'));
   assertFalse(got.includes("there"), "the rest is not written yet");
   release();
@@ -1064,4 +1069,101 @@ Deno.test("chat: calendar text never appears in a log line", async () => {
   await chatHere(s, { messages: ASK, can: ["calendar"], tz: "America/New_York", agenda: CAL });
   const logged = JSON.stringify(s.logs);
   for (const t of ["Dentist", "Oviedo", "Therapy", "America/New_York", "2026-10-08"]) assertFalse(logged.includes(t), t);
+});
+
+// ---- Plan my day: the planner's numbers with a re-sent day (day planner step 3) ---------------
+
+const POOL_AT = { lat: 28.67, lng: -81.23 };
+const PLAN_DAY = {
+  from: "2026-10-08", to: "2026-10-08", time_zone: "America/New_York", calendars: 1,
+  events: [
+    { title: "Swim: Sara", start: "2026-10-08T16:30", end: "2026-10-08T18:30", all_day: false, location: "Aquatic Center", calendar: "Kids", point: POOL_AT },
+    { title: "Swim: Adam", start: "2026-10-08T17:00", end: "2026-10-08T19:00", all_day: false, location: "Aquatic Center", calendar: "Kids", point: POOL_AT },
+  ],
+};
+const PLAN_ASK = [{ role: "user", content: "Plan my day" }];
+
+/** A Pro account with a Home; drive times 15 minutes (10 usually), rain 60% at 4 pm. */
+function proSetup(steps: Step[], pro = true) {
+  const asked: string[] = [];
+  const s = setup(steps, {
+    drives: () => ({
+      leg: (_f, _t, depart) => {
+        asked.push(depart);
+        return Promise.resolve({ minutes: 15, typical_minutes: 10 });
+      },
+    }),
+    weather: () => ({
+      at: () => {
+        asked.push("weather");
+        return Promise.resolve({ hourly: [{ at: "2026-10-08T16:00", rain_pct: 60 }], alerts: [] });
+      },
+    }),
+  });
+  if (pro) s.account.world.plan = "pro";
+  s.account.world.items.push({
+    id: "00000000-0000-4000-8000-0000000003a1", space_id: IDS.home, title: "Home", item_type: "place", summary: null,
+    body_markdown: "", metadata: { status: "want", kind: "home", lat: 28.65, lng: -81.2 }, tags: [],
+    created_at: "2026-10-01T00:00:00Z", updated_at: "2026-10-01T00:00:00Z", deleted_at: null, revisions: 0,
+  });
+  return { s, asked };
+}
+
+const dayPlanSent = (s: Setup) => JSON.parse((s.model.requests[0].messages[2] as { results: { content: string }[] }).results[0].content).day_plan;
+
+Deno.test("chat: plan my day (Pro): the model gets the planner's leave-by, drive and rain numbers; Open my day", async () => {
+  const { s } = proSetup([{ text: ["Leave at 4:10 for swim."] }]);
+  const events = await chatHere(s, { messages: PLAN_ASK, can: ["calendar"], tz: "America/New_York", agenda: PLAN_DAY });
+  const plan = dayPlanSent(s);
+  const drive = plan.rows.find((r: { kind: string }) => r.kind === "drive");
+  assertEquals([drive.from, drive.to, drive.leave_at, drive.minutes_with_traffic, drive.usual_minutes, drive.buffer_min_included],
+    ["Home", "Aquatic Center", "2026-10-08T16:10", 15, 10, 5]);
+  assertEquals(drive.for, ["Swim: Sara"]);
+  const overlap = plan.rows.find((r: { kind: string }) => r.kind === "overlap");
+  assertEquals([overlap.events, overlap.same_place, overlap.fix], [["Swim: Sara", "Swim: Adam"], true, "one trip for both (Take both in My day)"]);
+  assertEquals(plan.rows.find((r: { kind: string }) => r.kind === "rain").chance_pct, 60);
+  assertFalse(JSON.stringify(plan).includes("28.6"), "no coordinates for the model");
+  assertFalse(JSON.stringify(plan).includes('"e0"'), "events by title, not by key");
+  assertEquals(ofType(events, "day_plan"), [{ type: "day_plan", date: "2026-10-08" }]);
+  assertEquals(s.logs[0].day_plan, "made");
+  assertEquals(s.account.world.dayPlansUsed, 1, "a chat plan counts as one plan for fair use");
+  assert(s.model.requests[0].system.includes("Never work\nout or invent drive times"), "the instructions say so");
+});
+
+Deno.test("chat: plan my day without Pro: no drive times or weather, a note to mention Pro once; nothing asked", async () => {
+  const { s, asked } = proSetup([{ text: ["You have two swims."] }], false);
+  const events = await chatHere(s, { messages: PLAN_ASK, can: ["calendar"], tz: "America/New_York", agenda: PLAN_DAY });
+  const plan = dayPlanSent(s);
+  assertEquals(plan.made, false);
+  assert(plan.note.includes("part of Pro"));
+  assertEquals(asked, [], "no drive or weather request");
+  assertEquals(ofType(events, "day_plan"), []);
+  assertEquals(s.logs[0].day_plan, "pro_required");
+});
+
+Deno.test("chat: several days are never planned (no plan counted); a used-up allowance plans nothing", async () => {
+  const week = proSetup([{ text: ["ok"] }]);
+  await chatHere(week.s, { messages: PLAN_ASK, can: ["calendar"], agenda: { ...PLAN_DAY, to: "2026-10-09" } });
+  assertEquals(dayPlanSent(week.s), undefined);
+  assertFalse(week.s.account.rpcs.includes("use_day_plan"));
+  assertEquals(week.asked, []);
+
+  const spent = proSetup([]);
+  spent.s.account.usedCents = 100;
+  const events = await chatHere(spent.s, { messages: PLAN_ASK, can: ["calendar"], agenda: PLAN_DAY });
+  assertEquals(ofType(events, "error")[0].code, "allowance_used");
+  assertFalse(spent.s.account.rpcs.includes("use_day_plan"));
+  assertEquals(spent.asked, []);
+});
+
+Deno.test("chat: in the plan too, text that looks like a password never reaches the model (rule 1)", async () => {
+  const { s } = proSetup([{ text: ["ok"] }]);
+  const agenda = {
+    ...PLAN_DAY,
+    events: [{ ...PLAN_DAY.events[0], title: "my password is Tulip#5521", location: "door code: 4512, PIN 7731" }],
+  };
+  await chatHere(s, { messages: PLAN_ASK, can: ["calendar"], tz: "America/New_York", agenda });
+  const sent = JSON.stringify(s.model.requests[0].messages);
+  for (const v of ["Tulip#5521", "7731"]) assertFalse(sent.includes(v), v);
+  assert(JSON.stringify(dayPlanSent(s)).includes(HIDDEN_TEXT));
 });

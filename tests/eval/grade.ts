@@ -1,6 +1,6 @@
 // Grading: each case lists checks; every case is also checked for leaks of its secret values.
 // No model grades another model: all checks are plain code, so a run is repeatable and free.
-import type { PhoneCalendar, RunRecord, ToolCallRecord } from "./harness.ts";
+import type { PhoneCalendar, RunOptions, RunRecord, ToolCallRecord } from "./harness.ts";
 import { type Item, World } from "./world.ts";
 
 export type Category = "save" | "lookup" | "secret" | "edit" | "calendar" | "other";
@@ -31,6 +31,8 @@ export interface EvalCase {
   here?: { lat: number; lng: number };
   /** The phone's calendar, read by the app when Wilma asks (day planner step 1). */
   calendar?: PhoneCalendar;
+  /** Fake drive times and weather for the day planner (Pro cases make the user Pro in setup). */
+  planner?: RunOptions["planner"];
   checks: Check[];
 }
 

@@ -5,12 +5,16 @@
 // run here exactly as in the chat function. Records every tool call, event and reply for grading.
 // The phone's calendar (chat/agenda.ts): when the model calls get_day_agenda, the harness plays the
 // app: it reads the case's calendar for those days and sends the question again with it, as the
-// chat function receives it.
+// chat function receives it, with the day planner's numbers for one day (chat/day.ts planForChat;
+// Pro cases only, with fake drive times and weather: no Mapbox or NWS request is made).
 import { ACTION_NAMES, ACTION_SPECS, ChatActions } from "../../supabase/functions/chat/actions.ts";
 import {
   type Agenda, type AgendaEvent, AGENDA_TOOL, agendaCall, agendaSchema, withAgenda,
 } from "../../supabase/functions/chat/agenda.ts";
 import { connectTools } from "../../supabase/functions/chat/tools.ts";
+import { type ChatPlan, planForChat } from "../../supabase/functions/chat/day.ts";
+import type { DriveTimes } from "../../supabase/functions/_shared/dayplan/plan.ts";
+import type { Weather } from "../../supabase/functions/_shared/dayplan/nws.ts";
 import type { ToolContext } from "../../supabase/functions/mcp/tools/_shared.ts";
 import { ALL_TOOLS } from "../../supabase/functions/mcp/tools/all.ts";
 import {
@@ -114,6 +118,8 @@ export interface RunOptions {
   /** The phone's calendar (the ticked calendars, already trimmed by the app) and time zone. Without
    * it the app is an older one that cannot read the calendar. */
   calendar?: PhoneCalendar;
+  /** Fake drive times and weather for the day planner (a Pro case sets world.plan in setup). */
+  planner?: { drives?: DriveTimes; weather?: Weather };
 }
 
 export interface PhoneCalendar {
@@ -151,6 +157,7 @@ export async function runConversation(
       const actions = session.actions();
       const asked = messages.length; // the conversation as the app sends it, ending with this message
       let agenda: Agenda | undefined;
+      let plan: ChatPlan | undefined;
       for (let step = 0; ; step++) {
         if (step >= (opts.maxStepsPerTurn ?? 8)) {
           turn.stop = "other";
@@ -176,7 +183,7 @@ export async function runConversation(
           if (c.invalidInput) {
             out = { isError: true, text: "The tool arguments were not a JSON object." };
           } else if (c.name === AGENDA_TOOL) {
-            const a = agendaCall(c.input, !!opts.calendar, agenda);
+            const a = agendaCall(c.input, !!opts.calendar, agenda, plan);
             if (a.request && !request) {
               turn.events.push(a.request);
               request = a.request;
@@ -196,7 +203,15 @@ export async function runConversation(
         if (request && opts.calendar) {
           // The app reads those days and sends the same conversation again, with the calendar.
           agenda = readCalendar(opts.calendar, request.from, request.to);
-          messages.splice(asked, messages.length - asked, ...withAgenda([], agenda));
+          // As the chat function: the planner for one day (Pro), its numbers with the calendar.
+          plan = await planForChat({
+            clientFor: () => world.client(),
+            drives: () => opts.planner?.drives ?? null,
+            weather: () => opts.planner?.weather ?? null,
+            log: () => {},
+          }, world.client(), "eval-user", agenda);
+          if (plan.made) turn.events.push({ type: "day_plan", date: agenda.from });
+          messages.splice(asked, messages.length - asked, ...withAgenda([], agenda, plan));
         }
       }
     }
