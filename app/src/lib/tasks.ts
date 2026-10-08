@@ -94,11 +94,33 @@ export interface TaskForm {
   address: string;
   /** "YYYY-MM-DD", or empty for no date. */
   dueOn: string;
+  /** A set time to do it (planned_at): its day "YYYY-MM-DD" and time "HH:MM", both or neither. */
+  plannedDay: string;
+  plannedTime: string;
   repeat: TaskRepeat | null;
   important: boolean;
 }
 
-export const EMPTY_TASK: TaskForm = { title: '', duration: '', place: null, address: '', dueOn: '', repeat: null, important: false };
+export const EMPTY_TASK: TaskForm = { title: '', duration: '', place: null, address: '', dueOn: '', plannedDay: '', plannedTime: '', repeat: null, important: false };
+
+const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** A planned_at moment as written, "2026-10-09T17:05:00-04:00" → day and time (its own clock, as My day shows it). */
+export function plannedParts(at: string | undefined): { day: string; time: string } | null {
+  const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(at ?? '');
+  return m && isDay(m[1]) && TIME.test(m[2]) ? { day: m[1], time: m[2] } : null;
+}
+
+/** A Date from the phone's picker as "YYYY-MM-DD" and "HH:MM" on this phone's clock. */
+export function localParts(d: Date): { day: string; time: string } {
+  return { day: `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}`, time: `${two(d.getHours())}:${two(d.getMinutes())}` };
+}
+
+/** "12:30 pm" for "12:30". */
+export function timeText(time: string): string {
+  const [h, m] = time.split(':').map(Number);
+  return `${h % 12 || 12}:${two(m)} ${h < 12 ? 'am' : 'pm'}`;
+}
 
 /** The form for a task as saved (its place's name when known). */
 export function taskForm(title: string, m: Partial<TaskMetadata> | null, placeTitle?: string): TaskForm {
@@ -108,15 +130,17 @@ export function taskForm(title: string, m: Partial<TaskMetadata> | null, placeTi
     place: m?.place_id ? { id: m.place_id, title: placeTitle ?? 'A saved place' } : null,
     address: m?.address ?? '',
     dueOn: m?.due_on ?? '',
+    plannedDay: plannedParts(m?.planned_at)?.day ?? '',
+    plannedTime: plannedParts(m?.planned_at)?.time ?? '',
     repeat: m?.repeat && (TASK_REPEATS as readonly string[]).includes(m.repeat) ? m.repeat : null,
     important: m?.priority === 'important',
   };
 }
 
 /**
- * The fields to save, or why they cannot be. Fields the form does not show (done, when it was put
- * in the day, the last day a repeating one was done) are kept from `base`; a duration the user
- * typed is no longer Wilma's estimate.
+ * The fields to save, or why they cannot be. Fields the form does not show (done, the last day a
+ * repeating one was done) are kept from `base`; a set time left as it was keeps its saved moment;
+ * a duration the user typed is no longer Wilma's estimate.
  */
 export function taskMetadata(form: TaskForm, base: Partial<TaskMetadata> | null = null): { metadata: TaskMetadata } | { error: string } {
   if (!form.title.trim()) return { error: 'Say what the task is.' };
@@ -147,7 +171,15 @@ export function taskMetadata(form: TaskForm, base: Partial<TaskMetadata> | null 
     if (base?.last_done_on) out.last_done_on = base.last_done_on;
   }
   if (out.status === 'done' && base?.done_at) out.done_at = base.done_at;
-  if (base?.planned_at) out.planned_at = base.planned_at;
+  const day = form.plannedDay.trim();
+  const time = form.plannedTime.trim();
+  if (day || time) {
+    if (!isDay(day) || !TIME.test(time)) return { error: 'At a set time: pick both a day and a time, or remove it.' };
+    const saved = plannedParts(base?.planned_at);
+    const at = saved && saved.day === day && saved.time === time ? base!.planned_at! : plannedAt(`${day}T${time}`);
+    if (!at) return { error: 'At a set time: pick both a day and a time, or remove it.' };
+    out.planned_at = at;
+  }
   return { metadata: out };
 }
 
@@ -187,12 +219,14 @@ export function groupTasks(tasks: TaskRow[], today: string): TaskGroups {
   return out;
 }
 
-/** "20 min · Bright Cleaners · by Fri · ↻ weekly · important" (whatever the task has). */
+/** "20 min · Bright Cleaners · today at 12:30 pm · by Fri · ↻ weekly · important" (whatever the task has). */
 export function taskLine(t: TaskRow, today: string): string {
   const parts: string[] = [];
   if (t.duration_min) parts.push(`${t.duration_estimated ? 'about ' : ''}${t.duration_min} min`);
   if (t.place) parts.push(t.place.title);
   else if (t.address) parts.push(t.address);
+  const at = plannedParts(t.planned_at);
+  if (t.status === 'open' && at) parts.push(`${shortDay(at.day, today)} at ${timeText(at.time)}`);
   if (t.status === 'open' && t.due_on) parts.push(t.overdue || t.due_on < today ? `overdue (${shortDay(t.due_on, today)})` : `by ${shortDay(t.due_on, today)}`);
   if (t.repeat && t.repeat in REPEAT_LABELS) parts.push(`↻ ${REPEAT_LABELS[t.repeat as TaskRepeat].toLowerCase()}`);
   if (t.priority === 'important') parts.push('important');

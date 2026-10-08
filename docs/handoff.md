@@ -12,6 +12,25 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **versionCode 15 phone test, fixes A and B (2026-10-08): on branch `claude/serene-galileo-dhbmes`,
+  no PR yet.** Owner's feedback: (1) the task form has no way to set a time; (2) ＋ Add → Find a time
+  for "lunch at Craft & Commons" offered only stops on the way (before dropping the car or the
+  kids) and the minute after the morning stop, never the free hours in between. Not the weather:
+  rain rows are never busy time. Cause: options ranked by least extra driving, cut to 3, and a
+  free gap offered only at its first minute. **B (planner, server; live after a `chat` deploy):**
+  at most 2 stops on the way, the rest free time, each gap offered at its middle (on a quarter
+  hour) before its first minute, roomiest gap first, up to 4, listed by time
+  (`_shared/dayplan/plan.ts` `taskOptions`; a Deno test with the owner's day: lunch now 11:30).
+  The versionCode 15 app shows the first 3 of them. **A (app; next build):** the task form gets
+  "At a set time (optional)" (planned_at; My day shows the task then) and the phone's calendar for
+  By when, with `@react-native-community/datetimepicker` 9.1.0 (Expo SDK 57's version; added with
+  npm because `expo install` could not reach Expo's servers from Claude's environment). The task
+  line shows "tomorrow at 12:30 pm". App option limit 3 → 4. 394 Deno tests, 657 app tests. No
+  evaluation run needed (no prompt or tool change). **Larger items, later (strongest model):**
+  (C) Wilma sets a task's time when told one (her task tools never mention planned_at; she must
+  write it with the user's offset, since the app shows planned_at's clock as written); (D) meals
+  at mealtimes in Find a time. **Owner:** review and merge; OK the `chat` deploy for B; A ships in
+  versionCode 16.
 - **Day planner step 2 done; versionCode 15 in internal testing (2026-10-08 22:25 UTC).** Merged:
   #176 My day, #178 tasks, #177 Wilma sets Home, #179 privacy page, #180 places without a kind and
   calendar titles as written. **Live: `mcp` version 28 and `chat` version 21** (the entries below

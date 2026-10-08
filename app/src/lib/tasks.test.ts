@@ -10,7 +10,7 @@ import { toDayPlan } from './dayPlan';
 import { PLAN } from './dayPlan.fixture';
 import { optionText, titles } from './dayView';
 import {
-  addDays, duePicks, EMPTY_TASK, groupTasks, plannedAt, shortDay, taskForm, taskLine, taskMetadata, toTaskRows, type TaskRow,
+  addDays, duePicks, EMPTY_TASK, groupTasks, localParts, plannedAt, plannedParts, shortDay, taskForm, taskLine, taskMetadata, timeText, toTaskRows, type TaskRow,
 } from './tasks';
 
 const TODAY = '2026-10-09'; // a Friday
@@ -38,6 +38,28 @@ describe('the task form', () => {
     expect(form).toMatchObject({ duration: '20', dueOn: TODAY, repeat: 'weekly' });
     expect(taskMetadata(form, base)).toEqual({ metadata: { ...base } });
     expect(taskMetadata({ ...form, duration: '25' }, base)).toEqual({ metadata: { status: 'open', priority: 'normal', duration_min: 25, due_on: TODAY, repeat: 'weekly', last_done_on: '2026-10-02', planned_at: base.planned_at } });
+  });
+
+  it('a set time (owner’s phone test, versionCode 15): saved as planned_at, kept as it was, moved, removed', () => {
+    const set = taskMetadata({ ...EMPTY_TASK, title: 'Lunch at Craft & Commons', plannedDay: TODAY, plannedTime: '12:30' });
+    expect(set).toEqual({ metadata: { status: 'open', priority: 'normal', planned_at: plannedAt(`${TODAY}T12:30`) } });
+    const base = { status: 'open' as const, priority: 'normal' as const, planned_at: '2026-10-09T17:05:00-04:00' };
+    const form = taskForm('Dry cleaning', base);
+    expect(form).toMatchObject({ plannedDay: TODAY, plannedTime: '17:05' });
+    expect(taskMetadata(form, base)).toEqual({ metadata: base }); // unchanged: the saved moment, offset and all
+    expect(taskMetadata({ ...form, plannedTime: '18:15' }, base)).toEqual({ metadata: { ...base, planned_at: plannedAt(`${TODAY}T18:15`) } });
+    expect(taskMetadata({ ...form, plannedDay: '', plannedTime: '' }, base)).toEqual({ metadata: { status: 'open', priority: 'normal' } });
+    expect(taskMetadata({ ...EMPTY_TASK, title: 'x', plannedTime: '12:30' })).toMatchObject({ error: expect.stringMatching(/both a day and a time/) });
+    expect(taskMetadata({ ...EMPTY_TASK, title: 'x', plannedDay: TODAY, plannedTime: '25:00' })).toMatchObject({ error: expect.stringMatching(/both a day and a time/) });
+  });
+
+  it('reads a planned_at as written, and a picked Date on this phone’s clock', () => {
+    expect(plannedParts('2026-10-09T17:05:00-04:00')).toEqual({ day: TODAY, time: '17:05' });
+    expect(plannedParts('soon')).toBeNull();
+    expect(plannedParts(undefined)).toBeNull();
+    expect(localParts(new Date(2026, 9, 10, 9, 5))).toEqual({ day: '2026-10-10', time: '09:05' });
+    expect(timeText('12:30')).toBe('12:30 pm');
+    expect(timeText('00:15')).toBe('12:15 am');
   });
 
   it('offers today, tomorrow, Saturday and next Monday', () => {
@@ -71,6 +93,7 @@ describe('the list', () => {
     expect(taskLine(task({ duration_min: 15, duration_estimated: true, due_on: '2026-10-13', repeat: 'weekly', priority: 'important' }), TODAY))
       .toBe('about 15 min · by Tue · ↻ weekly · important');
     expect(taskLine(task({ due_on: '2026-10-07', overdue: true }), TODAY)).toBe('overdue (Oct 7)');
+    expect(taskLine(task({ duration_min: 60, planned_at: '2026-10-10T12:30:00-04:00', due_on: '2026-10-10' }), TODAY)).toBe('60 min · tomorrow at 12:30 pm · by tomorrow');
     expect(shortDay('2026-10-10', TODAY)).toBe('tomorrow');
     expect(addDays('2026-10-31', 1)).toBe('2026-11-01');
   });
@@ -124,6 +147,13 @@ describe('the screens', () => {
   it('a task that looks like it holds a password is never sent (rule 9), in the form and in ＋ Add', () => {
     expect(read('app/task.tsx')).toMatch(/findCredential\(form\.title\) \|\| findCredential\(form\.address\) \|\| findCredential\(body\)\) return setError\(LOOKS_LIKE_SECRET\)/);
     expect(read('app/day.tsx')).toContain('if (findCredential(t.title)) return setSheetError(LOOKS_LIKE_SECRET);');
+  });
+
+  it('the task form picks dates and the time with the phone’s own calendar and clock (Android)', () => {
+    const screen = read('app/task.tsx');
+    expect(screen).toContain("import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';");
+    expect(screen).toContain("{label('AT A SET TIME (OPTIONAL)')}");
+    expect(screen).toContain('<Button title="🕒 Pick a time"');
   });
 
   it('ticking done sends the phone’s date (a repeating task’s next date, Q12)', () => {
