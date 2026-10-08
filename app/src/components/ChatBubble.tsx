@@ -3,7 +3,7 @@
 import { Text, View } from 'react-native';
 
 import { ChatCard, ChatCardText } from '@/components/ChatCard';
-import { DeleteCard, LocationCard, NotesCard, PlacesCard, VaultCard } from '@/components/ChatCards';
+import { CalendarCard, DeleteCard, LocationCard, NotesCard, PlacesCard, VaultCard } from '@/components/ChatCards';
 import { Button, Muted, useColors } from '@/components/ui';
 import type { Entry, ErrorButton } from '@/lib/chatThread';
 
@@ -98,5 +98,7 @@ export function ChatBubble({
           onNotNow={() => onNotNow?.(entry.id)}
         />
       );
+    case 'calendar':
+      return <CalendarCard entry={entry} />;
   }
 }

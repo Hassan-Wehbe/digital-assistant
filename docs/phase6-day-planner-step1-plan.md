@@ -137,6 +137,15 @@ chat checks it again, gives it to the model as that call's result ──► Wilm
    changes or deletes. iPhone: full-access wording set, reminders not asked for (Q6 later).
    Time zone: the phone's (`Intl`), else a ticked calendar's own zone. All-day events on Android
    are stored at midnight UTC and read as such. 569 app tests.
+   **As built (2b):** every chat message now says `can: ["calendar"]` and sends the phone's
+   `tz` (chatClient.ts `chatBody`). When Wilma's answer ends with an `agenda_request`
+   (chatStream.ts checks the days), the chat provider (chat.tsx) reads the ticked calendars for
+   those days (chatCalendar.ts → calendar.ts `readAgenda`) and sends the same question again with
+   `agenda`, once (a `resend` action: no new message in the thread; what is sent still ends with
+   the question). Off or nothing ticked, not allowed, or a failure: a 📅 card says why, with
+   "Open Settings → Calendars" (not after a failure). Never a second round trip for one
+   question. The calendar lines are never kept: not in the thread, not on the phone. A new
+   message, Stop or sign-out while the calendar is read: nothing is sent. 581 app tests.
 3. **Ship:** privacy page and Play Data safety wording (calendar events: read on the phone, the
    needed lines sent to the AI provider for the answer, not stored), phone checklist
    (`docs/day-planner-step1-phone-checklist.md`), "build for Play". iPhone: same code when the iOS

@@ -1,6 +1,7 @@
 import { describe, expect, it, jest } from '@jest/globals';
 
-import { chatClient, toVerdict, type StreamingFetch } from './chatClient';
+import type { Agenda } from './calendar';
+import { CAN, chatBody, chatClient, toVerdict, type StreamingFetch } from './chatClient';
 import { CONNECTION_MESSAGE, type ChatEvent } from './chatStream';
 import type { Entry } from './chatThread';
 import { WilmaError } from './wilma';
@@ -71,17 +72,22 @@ describe('chat client', () => {
     expect(init.headers.Authorization).toBe(`Bearer ${TOKEN}`);
     expect(init.headers['Content-Type']).toBe('application/json');
     expect(init.signal).toBe(signal);
-    expect(JSON.parse(init.body)).toEqual({ messages: [{ role: 'user', content: 'Hello' }] });
+    const body = JSON.parse(init.body);
+    expect(body.messages).toEqual([{ role: 'user', content: 'Hello' }]);
+    expect(body.can).toEqual(['calendar']);
+    expect(Object.keys(body).sort()).toEqual(expect.arrayContaining(['can', 'messages']));
+    expect(body).not.toHaveProperty('agenda');
   });
 
   it('sends the 📍 location with that one message, lat and lng only', async () => {
     const { client, fetch } = setup([streamed(200, answer), streamed(200, answer)]);
     const here = { lat: 33.895123, lng: 35.517123, accuracy: 12 } as { lat: number; lng: number };
     await all(client.send(hello, undefined, here));
-    expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({
+    expect(JSON.parse(fetch.mock.calls[0][1].body)).toMatchObject({
       messages: [{ role: 'user', content: 'Hello' }],
       here: { lat: 33.895123, lng: 35.517123 },
     });
+    expect(JSON.parse(fetch.mock.calls[0][1].body).here).toEqual({ lat: 33.895123, lng: 35.517123 });
     await all(client.send(hello));
     expect(JSON.parse(fetch.mock.calls[1][1].body)).not.toHaveProperty('here');
   });
@@ -216,5 +222,31 @@ describe('classify (A5d step 6)', () => {
     for (const odd of [null, 'search', { route: 'search' }, { route: 'search', query: '' }, { route: 'delete', query: 'x' }, { route: 'search', query: 'x'.repeat(101) }]) {
       expect(toVerdict(odd)).toEqual({ route: 'wilma' });
     }
+  });
+});
+
+describe('chatBody (what goes to the server)', () => {
+  const AGENDA: Agenda = {
+    from: '2026-10-08', to: '2026-10-08', time_zone: 'America/New_York', calendars: 1,
+    events: [{ title: 'Dentist', start: '2026-10-08T09:00', end: '2026-10-08T09:45', all_day: false, calendar: 'Personal' }],
+  };
+
+  it('says the app can read the calendar, and gives the phone’s time zone for "today"', () => {
+    expect(JSON.parse(chatBody(hello, undefined, undefined, 'America/New_York'))).toEqual({
+      messages: [{ role: 'user', content: 'Hello' }], can: CAN, tz: 'America/New_York',
+    });
+    expect(JSON.parse(chatBody(hello, undefined, undefined, null))).not.toHaveProperty('tz');
+  });
+
+  it('sends the calendar Wilma asked for with the question again, and the 📍 point when there is one', () => {
+    expect(JSON.parse(chatBody(hello, { lat: 1, lng: 2 }, AGENDA, 'UTC'))).toEqual({
+      messages: [{ role: 'user', content: 'Hello' }], can: CAN, tz: 'UTC', here: { lat: 1, lng: 2 }, agenda: AGENDA,
+    });
+  });
+
+  it('send() passes the calendar on', async () => {
+    const { client, fetch } = setup([streamed(200, answer)]);
+    await all(client.send(hello, undefined, undefined, AGENDA));
+    expect(JSON.parse(fetch.mock.calls[0][1].body).agenda).toEqual(AGENDA);
   });
 });

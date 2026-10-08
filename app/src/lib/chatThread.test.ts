@@ -376,3 +376,42 @@ describe('notes from the classifier (A5d step 6)', () => {
     expect(notesMessage('roof', [{ id: 'a', title: 'Roof quote', space: 'Home' }])).toBe('Notes for “roof”: Roof quote (Home).');
   });
 });
+
+describe('the phone’s calendar (day planner step 1: ask, then re-send)', () => {
+  const ASK = ev({ type: 'agenda_request', from: '2026-10-08', to: '2026-10-08' });
+
+  it('Wilma’s calendar request shows nothing itself; the answer ends as usual', () => {
+    const s = run(initialChat(), send("What's on my day?"), status('get_day_agenda', 'Reading your calendar…'), ASK, DONE);
+    expect(s.streaming).toBe(false);
+    expect(s.entries.map((e) => e.kind)).toEqual(['user']);
+  });
+
+  it('resend: the same question goes to Wilma again, with no new message; the calendar is never in the thread', () => {
+    const asked = run(initialChat(), send("What's on my day?"), text('Let me check your calendar.'), ASK, DONE);
+    const s = run(asked, { type: 'resend' });
+    expect(s.streaming).toBe(true);
+    expect(s.entries.filter((e) => e.kind === 'user')).toHaveLength(1);
+    // What is sent ends with the question (the "let me check" line after it is left out).
+    expect(messagesToSend(s.entries)).toEqual([{ role: 'user', content: "What's on my day?" }]);
+    const answered = run(s, text('You have the dentist at 9.'), DONE);
+    expect(JSON.stringify(answered.entries)).not.toContain('agenda');
+  });
+
+  it('resend only between answers, and only with a question in the thread', () => {
+    const streaming = run(initialChat(), send('Hi'));
+    expect(run(streaming, { type: 'resend' })).toBe(streaming);
+    const empty = initialChat();
+    expect(run(empty, { type: 'resend' })).toBe(empty);
+  });
+
+  it('a calendar card says why it was not read, and is kept with the thread', () => {
+    const s = run(initialChat(), send("What's on my day?"), ASK, DONE, { type: 'calendar_card', problem: 'off' });
+    const card = s.entries[s.entries.length - 1];
+    expect(card).toMatchObject({ kind: 'calendar', problem: 'off' });
+    expect(toEntry(JSON.parse(JSON.stringify(card)))).toEqual(card);
+    expect(toEntry({ kind: 'calendar', id: '9', problem: 'something else' })).toBeNull();
+    // Not while an answer streams.
+    const streaming = run(initialChat(), send('Hi'));
+    expect(run(streaming, { type: 'calendar_card', problem: 'failed' })).toBe(streaming);
+  });
+});

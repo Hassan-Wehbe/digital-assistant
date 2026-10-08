@@ -10,7 +10,8 @@
 
 import { toPlaceCard } from './chatStream';
 import {
-  errorButtons, MAX_ENTRIES, MAX_TEXT, noteRef, PARTIAL_NOTE, type ConfirmState, type Entry, type LocationState, type NoteRef, type PlaceRef,
+  CALENDAR_PROBLEMS, errorButtons, MAX_ENTRIES, MAX_TEXT, noteRef, PARTIAL_NOTE, type CalendarProblem, type ConfirmState, type Entry,
+  type LocationState, type NoteRef, type PlaceRef,
 } from './chatThread';
 import type { AuthStorage } from './sessionStorage';
 
@@ -137,6 +138,8 @@ export function toEntry(raw: unknown): Entry | null {
       const state = raw.state === 'locating' ? 'pending' : (raw.state as LocationState);
       return { kind: 'location', id, question: cut(raw.question), state };
     }
+    case 'calendar':
+      return CALENDAR_PROBLEMS.includes(raw.problem as CalendarProblem) ? { kind: 'calendar', id, problem: raw.problem as CalendarProblem } : null;
     default:
       return null;
   }
