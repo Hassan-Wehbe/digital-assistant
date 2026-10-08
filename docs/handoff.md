@@ -12,6 +12,18 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **versionCode 13 building (owner: "build for Play when job 4 is merged", 2026-10-08).** Production
+  build from `main` at c0675e8 (GitHub run 37705215361, checks passed), Expo build
+  08981365-f3b9-43d2-8050-182b8476be28, auto-submit scheduled (submission
+  682b25a7-f5bb-4531-aeee-024b2b7b7b4d). Carries the password-crash fix (#152), 🔒 vault rows in
+  spaces (job 3, #155) and "Is this it?" for places shared from Google Maps (job 4, #158; geocoder
+  tested by the owner in Expo Go: all four lookups right). Server: `mcp` v21, `chat` v13 (job 5).
+  Privacy page: the approved job 4 wording is live; the 🔎 Find it on the map tap is not named in the
+  Location paragraph (owner did not choose; offered as a follow-up). **Next: the owner tries it on
+  the phone** (share Hinode Sushi from Google Maps → "Is this it?" → Open in Maps → Yes → Save; a
+  space with vault entries shows 🔒 rows; typing "password" in Wilma no longer crashes; "restaurants
+  close by" names both places), plus the open lines of `docs/versioncode12-phone-checklist.md`. Then
+  the calendar (day planner step 1), then invite-only sign-up.
 - **Job 4 (locations for shared places): PR open, app only, not built.** The owner's Expo Go test
   passed (both restaurants, "Hinode Sushi" alone and a Starbucks found by `geocodeAsync`), so the
   OpenStreetMap lookup stays dropped. A place shared from Google Maps is looked up by "name,
