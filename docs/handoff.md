@@ -18,8 +18,8 @@ tokens or keys in chat.
   (the miss, "since the summer", passed 5/5 on its own, run 37808971148). **Owner:** (1) run the dry run of
   `20261009120000_day_plan.sql` with SQL test 13 in the Supabase SQL editor (the connector times
   out on it; Claude gives the script; every line must say ok), then apply the migration there;
-  (2) ~~evaluation~~ (done); (3) set yourself to Pro
-  (`admin_set_plan`, Claude can run it with your OK); (4) merge, then OK the `chat` and `mcp`
+  (2) ~~evaluation~~ (done); (3) set Pro for the owner's account and the Play review
+  account (owner, 2026-10-08: both; Claude runs it once the migration is applied); (4) merge, then OK the `chat` and `mcp`
   deploys (fresh `SUPABASE_ACCESS_TOKEN`, deleted after). Nothing in the app uses My day until
   step 4.
 - **Day planner step 2, PR 1 (Wilma tasks, server): merged (#169); live: `mcp` version 23 and `chat`
