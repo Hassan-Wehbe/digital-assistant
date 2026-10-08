@@ -1,0 +1,453 @@
+<title>Wilma Day Planner Mockups</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a reading column of numbered screens; each is a phone frame in the app's own colours (app/src/constants/theme.ts) beside notes. Same tokens as docs/ui-review-mockups.html. */
+:root {
+  --page: #eef0f3; --ink: #1c1f24; --soft: #5d6570; --rule: #d3d8de;
+  --bg: #f6f7f9; --card: #ffffff; --line: #dde1e6; --accent: #2754c5; --danger: #b3261e; --warn: #9a6400;
+  --tint: #e8eefb; --good: #1d6b3a; --good-bg: #e3f2e8; --bad-bg: #fbe7e5; --warn-bg: #fbf1de; --rain: #2f6f8f; --rain-bg: #e2f0f6;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --page: #0c0e11; --ink: #e8eaed; --soft: #9aa2ad; --rule: #2a2f36;
+  --bg: #121417; --card: #1b1e23; --line: #2e333a; --accent: #7aa2ff; --danger: #ff8a80; --warn: #f0b44c;
+  --tint: #1d2638; --good: #8fd6a6; --good-bg: #16261c; --bad-bg: #2c1a19; --warn-bg: #2a2214; --rain: #8cc8e6; --rain-bg: #15252e; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --page: #0c0e11; --ink: #e8eaed; --soft: #9aa2ad; --rule: #2a2f36;
+  --bg: #121417; --card: #1b1e23; --line: #2e333a; --accent: #7aa2ff; --danger: #ff8a80; --warn: #f0b44c;
+  --tint: #1d2638; --good: #8fd6a6; --good-bg: #16261c; --bad-bg: #2c1a19; --warn-bg: #2a2214; --rain: #8cc8e6; --rain-bg: #15252e; color-scheme: dark }
+body { background: var(--page); color: var(--ink); font: 15px/1.55 var(--sans); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 64px; display: grid; gap: 40px; }
+h1 { font-size: 28px; line-height: 1.2; margin: 0; text-wrap: balance; }
+h2 { font-size: 21px; margin: 0; text-wrap: balance; }
+p { margin: 0; max-width: 68ch; }
+.lede { color: var(--soft); }
+.eyebrow { font: 600 12px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--soft); }
+nav { display: flex; flex-wrap: wrap; gap: 8px; }
+nav a { color: var(--accent); text-decoration: none; border: 1px solid var(--rule); border-radius: 999px; padding: 4px 12px; font-size: 14px; }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+section { display: grid; gap: 20px; border-top: 1px solid var(--rule); padding-top: 24px; }
+section > header { display: grid; gap: 6px; }
+.tag { font: 600 11px/1 var(--mono); letter-spacing: .05em; text-transform: uppercase; padding: 5px 8px; border-radius: 4px; background: var(--tint); color: var(--accent); justify-self: start; }
+.row { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+.col { display: grid; gap: 8px; flex: 0 0 310px; max-width: 100%; }
+.notes { flex: 1 1 300px; min-width: 0; display: grid; gap: 10px; align-content: start; }
+.notes ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.notes h3 { font-size: 15px; margin: 0; }
+.q { border-left: 3px solid var(--warn); padding-left: 10px; }
+
+/* Phone */
+.phone { position: relative; border: 1px solid var(--line); border-radius: 22px; background: var(--bg); overflow: hidden; font-size: 13px; line-height: 1.4; display: flex; flex-direction: column; height: 640px; }
+.phone.short { height: auto; min-height: 420px; }
+.bar { display: flex; align-items: center; gap: 8px; padding: 12px 14px; background: var(--card); border-bottom: 1px solid var(--line); font-weight: 600; font-size: 15px; }
+.bar .sp { flex: 1; }
+.lnk { color: var(--accent); font-weight: 500; font-size: 13px; }
+.scroll { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.muted { color: var(--soft); font-size: 12px; }
+.btn { font: inherit; border-radius: 8px; padding: 7px 10px; font-weight: 600; text-align: center; border: 1px solid var(--line); color: var(--accent); background: transparent; cursor: pointer; white-space: nowrap; }
+.btn.pri { background: var(--accent); color: var(--card); border-color: var(--accent); }
+.btn:disabled { opacity: .5; cursor: default; }
+.acts { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+
+/* Chat */
+.me { align-self: flex-end; max-width: 80%; background: var(--accent); color: var(--card); border-radius: 14px; padding: 8px 10px; }
+.her { align-self: flex-start; max-width: 92%; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px; display: grid; gap: 8px; }
+.pbp { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; margin: 0; }
+.pbp dt { font: 600 12px/1.45 var(--mono); color: var(--soft); font-variant-numeric: tabular-nums; }
+.pbp dd { margin: 0; }
+.comp { border-top: 1px solid var(--line); padding: 10px; background: var(--bg); }
+.in { border: 1px solid var(--line); background: var(--card); border-radius: 20px; padding: 9px 12px; color: var(--soft); }
+.status { align-self: flex-start; color: var(--soft); font-size: 12px; font-style: italic; }
+
+/* Day strip */
+.strip { display: grid; gap: 6px; padding: 10px 12px; background: var(--card); border-bottom: 1px solid var(--line); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 3px 9px; font-size: 12px; background: var(--tint); color: var(--accent); }
+.chip.rain { background: var(--rain-bg); color: var(--rain); }
+.chip.warn { background: var(--warn-bg); color: var(--warn); }
+.chip.good { background: var(--good-bg); color: var(--good); }
+
+/* Timeline */
+.tl { display: grid; grid-template-columns: 46px 1fr; gap: 0 8px; }
+.tl .t { font: 600 12px/1.3 var(--mono); color: var(--soft); text-align: right; padding-top: 9px; font-variant-numeric: tabular-nums; }
+.tl .b { padding-block: 4px; min-width: 0; }
+.ev { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; display: grid; gap: 2px; }
+.ev b { font-weight: 600; }
+.ev.task { border-style: dashed; }
+.drive, .gap, .wx { border-radius: 8px; padding: 6px 10px; font-size: 12px; display: grid; gap: 2px; }
+.drive { background: var(--tint); color: var(--ink); }
+.drive b { color: var(--accent); }
+.gap { color: var(--soft); border: 1px dashed var(--line); }
+.wx { background: var(--rain-bg); color: var(--rain); }
+.clash { border: 1px solid var(--warn); background: var(--card); border-radius: 10px; padding: 9px 10px; display: grid; gap: 6px; }
+.clash .hd { color: var(--warn); font-weight: 600; }
+.was { color: var(--soft); text-decoration: line-through; font-weight: 400; }
+.new { outline: 2px solid var(--good); outline-offset: 1px; }
+.fab { position: absolute; right: 14px; bottom: 14px; border-radius: 999px; padding: 10px 16px; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+
+/* Sheet */
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; top: 30%; background: var(--bg); border-top: 1px solid var(--line); border-radius: 18px 18px 0 0; display: flex; flex-direction: column; box-shadow: 0 -6px 18px rgba(0,0,0,.18); }
+.grab { width: 36px; height: 4px; border-radius: 2px; background: var(--line); margin: 6px auto 0; }
+.field { display: grid; gap: 4px; }
+.field label { font: 600 10px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--soft); }
+.field input { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+.opt { text-align: left; font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; display: grid; gap: 3px; cursor: pointer; }
+.opt:hover { border-color: var(--accent); }
+.opt b { color: var(--accent); }
+.detail { display: grid; gap: 10px; }
+.hours { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; text-align: center; }
+.hours div { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 2px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.hours .hi { border-color: var(--rain); color: var(--rain); font-weight: 600; }
+.group { border: 1px solid var(--line); background: var(--card); border-radius: 10px; overflow: hidden; }
+.group > div { padding: 9px 10px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 8px; }
+.group > div:first-child { border-top: 0; }
+.lbl { font: 600 10px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--soft); }
+.reset { justify-self: start; }
+@media (prefers-reduced-motion: no-preference) { .new { transition: outline-color .4s; } }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:10px">
+    <span class="eyebrow">Day planner · step 2 · mockups for review</span>
+    <h1>Wilma plans your day</h1>
+    <p class="lede">Your choices: Wilma answers in the chat with a play-by-play (C) and <b>Open my day</b> opens a timeline (A). Drive times from Mapbox with traffic, weather from the US National Weather Service, Wilma tasks you can add. All names, places and times below are <b>made-up examples</b> for one Thursday.</p>
+    <nav><a href="#chat">1 · In the chat</a><a href="#day">2 · My day (try it)</a><a href="#event">3 · One event</a><a href="#tasks">4 · Tasks</a><a href="#setup">5 · First use</a><a href="#questions">Questions</a></nav>
+  </header>
+
+  <section id="chat">
+    <header><span class="tag">1 · Wilma's answer in the chat</span><h2>"Plan my day" gets a play-by-play</h2></header>
+    <div class="row">
+      <div class="col">
+        <div class="phone">
+          <div class="bar"><span class="lnk">‹</span>Wilma<span class="sp"></span><span class="lnk">New chat</span></div>
+          <div class="scroll">
+            <div class="me">plan my day</div>
+            <div class="status">Reading your calendar · checking traffic and weather…</div>
+            <div class="her">
+              <div><b>Thursday, Oct 9.</b> Busy afternoon, and rain from 4 to 6.</div>
+              <dl class="pbp">
+                <dt>7:40</dt><dd>Leave for school drop-off (12 min)</dd>
+                <dt>10:00</dt><dd>Design review, video call</dd>
+                <dt>12:10</dt><dd>Leave for lunch with Sam at Hinode Sushi</dd>
+                <dt>4:15</dt><dd>Leave for swim: 15 min with traffic. <b>90% chance of rain</b>, take umbrellas</dd>
+                <dt>7:00</dt><dd>Pick up the kids, home by 7:20</dd>
+              </dl>
+              <div class="clash"><span class="hd">⚠ One thing to sort</span><span>Sara (4:30–6:30) and Adam (5:00–7:00) both swim at the Aquatic Center. Take them together at 4:15 and you drive there once.</span></div>
+              <div class="acts"><button class="btn" type="button">Take both</button><button class="btn pri" type="button">Open my day</button></div>
+            </div>
+          </div>
+          <div class="comp"><div class="in">Message Wilma…</div></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="phone short">
+          <div class="bar"><span class="lnk">‹</span>Wilma<span class="sp"></span><span class="lnk">New chat</span></div>
+          <div class="scroll">
+            <div class="me">when should I leave for swim?</div>
+            <div class="her">
+              <div><b>Leave at 4:15.</b> It's 15 minutes with traffic at that time (usually 10), plus 5 to park and walk in.</div>
+              <div><span class="chip rain">🌧 90% rain at 4:30</span></div>
+              <div class="acts"><button class="btn" type="button">Directions</button><button class="btn pri" type="button">Open my day</button></div>
+            </div>
+            <div class="me">I'll take Adam too</div>
+            <div class="her"><div>Done for today's plan: one trip at 4:15, pick up both at 7:00. Your calendar isn't changed.</div></div>
+          </div>
+          <div class="comp"><div class="in">Message Wilma…</div></div>
+        </div>
+      </div>
+      <div class="notes">
+        <h3>What you see</h3>
+        <ul>
+          <li>A short, timed list in Wilma's words: when to leave, not just when things start.</li>
+          <li>Anything that needs a decision (an overlap, a tight gap) comes first as "One thing to sort", with a one-tap fix.</li>
+          <li><b>Open my day</b> opens the timeline (screen 2). Small questions ("when should I leave?") get a small answer.</li>
+        </ul>
+        <h3>Who works out what</h3>
+        <ul>
+          <li><b>Code</b> works out drive times, leave-by times, rain chances and overlaps. Wilma never guesses a number.</li>
+          <li><b>Wilma</b> picks what matters, writes it up and suggests fixes (the same pool, so take both).</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="day">
+    <header><span class="tag">2 · My day, the timeline · tap to try</span><h2>Leave-by times, weather and overlaps in one list</h2></header>
+    <div class="row">
+      <div class="col">
+        <div class="phone" id="dayPhone">
+          <div class="bar"><span class="lnk">‹</span>Thursday, Oct 9<span class="sp"></span><span class="lnk">Today ▾</span></div>
+          <div class="strip">
+            <div class="chips" id="dayChips"></div>
+          </div>
+          <div class="scroll"><div class="tl" id="timeline"></div><div style="height:48px"></div></div>
+          <button class="btn pri fab" type="button" id="addBtn">＋ Add</button>
+          <div class="sheet" id="sheet" hidden>
+            <div class="grab"></div>
+            <div class="scroll" id="sheetBody"></div>
+          </div>
+        </div>
+        <button class="btn reset" type="button" id="resetBtn">↺ Start over</button>
+      </div>
+      <div class="notes">
+        <h3>Try it</h3>
+        <ul>
+          <li>Tap <b>Take both</b> on the overlap.</li>
+          <li>Tap <b>＋ Add</b>, then <b>Find a time</b> for the dry cleaning, and pick an option. Changed rows get a green outline and keep the old time crossed out.</li>
+        </ul>
+        <h3>The rows</h3>
+        <ul>
+          <li><b>White cards</b> are calendar events. <b>Dashed cards</b> are Wilma tasks.</li>
+          <li><b>Blue rows</b> are drives: leave-by time, minutes with traffic, and the usual minutes when traffic adds a lot.</li>
+          <li><b>Rain rows</b> show only when the chance is 50% or more at an event you drive to.</li>
+          <li><b>Free</b> rows show gaps of 30 minutes or more, where tasks can go.</li>
+        </ul>
+        <h3>What it doesn't do</h3>
+        <ul>
+          <li>It never changes your calendar. The plan is a suggestion. Writing it back comes later, and only if you turn it on.</li>
+          <li>Video calls and events without a place get no drive row.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="event">
+    <header><span class="tag">3 · Tap an event</span><h2>Why Wilma says 4:15</h2></header>
+    <div class="row">
+      <div class="col">
+        <div class="phone short">
+          <div class="bar"><span class="lnk">‹ My day</span><span class="sp"></span></div>
+          <div class="scroll detail">
+            <div class="ev"><b>Swim: Sara</b><span class="muted">4:30–6:30 · from your calendar "Kids"</span><span>📍 Aquatic Center</span></div>
+            <div class="group">
+              <div><span>Drive from Home</span><b>15 min</b></div>
+              <div><span>Usually at this time</span><span>10 min</span></div>
+              <div><span>Park and walk in</span><span>5 min</span></div>
+              <div><span><b>Leave by</b></span><b style="color:var(--accent)">4:15</b></div>
+            </div>
+            <span class="lbl">Rain chance at the pool</span>
+            <div class="hours"><div>3 pm<br>30%</div><div class="hi">4 pm<br>90%</div><div class="hi">5 pm<br>80%</div><div>6 pm<br>40%</div></div>
+            <span class="muted">Traffic: Mapbox, checked 2:52 pm. Weather: National Weather Service.</span>
+            <div class="acts"><button class="btn" type="button">Not driving</button><button class="btn pri" type="button">Directions</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="notes">
+        <h3>What you see</h3>
+        <ul>
+          <li>The sum behind the leave-by time, so you can trust it or overrule it.</li>
+          <li>The hourly rain chance at the event's place, not at home.</li>
+          <li><b>Not driving</b> drops the drive row, for example when someone else takes them.</li>
+          <li><b>Directions</b> opens your maps app.</li>
+        </ul>
+        <h3>When it's checked</h3>
+        <ul>
+          <li>Traffic for later today is a forecast. Wilma checks again when you open the day, and later (step 5) about 30 minutes before you need to leave.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="tasks">
+    <header><span class="tag">4 · Wilma tasks</span><h2>Things to do that aren't on the calendar</h2></header>
+    <div class="row">
+      <div class="col">
+        <div class="phone short">
+          <div class="bar"><span class="lnk">‹</span>Tasks<span class="sp"></span><span class="lnk">＋ New</span></div>
+          <div class="scroll">
+            <span class="lbl">Today</span>
+            <div class="group">
+              <div><span>☐ Pick up dry cleaning<br><span class="muted">20 min · Bright Cleaners · in the plan at 5:05</span></span></div>
+              <div><span>☐ Call the insurance<br><span class="muted">15 min · anywhere · not placed yet</span></span></div>
+            </div>
+            <span class="lbl">This week</span>
+            <div class="group">
+              <div><span>☐ Book Adam's dentist<br><span class="muted">by Fri · 10 min</span></span></div>
+              <div><span>☐ Return the library books<br><span class="muted">by Sat · 15 min · City Library</span></span></div>
+            </div>
+            <span class="lbl">Done</span>
+            <div class="group"><div><span class="muted">☑ Buy swim goggles</span></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="phone short">
+          <div class="bar"><span class="lnk">Cancel</span><span class="sp"></span>New task<span class="sp"></span><span class="lnk">Save</span></div>
+          <div class="scroll">
+            <div class="field"><label for="t1">What</label><input id="t1" value="Return the library books"></div>
+            <div class="field"><label for="t2">How long</label><input id="t2" value="15 min"></div>
+            <div class="field"><label for="t3">Where (optional)</label><input id="t3" value="City Library (saved place)"></div>
+            <div class="field"><label for="t4">By when</label><input id="t4" value="Saturday"></div>
+            <div class="chips"><span class="chip">Normal</span><span class="chip warn">Important</span></div>
+            <span class="muted">Or just tell Wilma: "remind me to return the library books by Saturday, 15 minutes".</span>
+          </div>
+        </div>
+      </div>
+      <div class="notes">
+        <h3>How tasks work</h3>
+        <ul>
+          <li>A task is a note of its own kind: what, how long, where, by when, and how important. It is kept and searchable like your other notes.</li>
+          <li>Wilma places today's tasks into free gaps or onto drives you're already making. If a task doesn't fit, it's listed as "not placed yet" and never squeezed in silently.</li>
+          <li>If you leave out how long it takes, Wilma estimates and says so ("about 20 min").</li>
+          <li>Later (D25): assign a task to another Wilma user, like your spouse, and it shows in their day.</li>
+        </ul>
+        <p class="q">Where should Tasks live? I'd add a <b>Tasks</b> tile on Home next to Vault, and also show them in My day.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="setup">
+    <header><span class="tag">5 · First use, and missing places</span><h2>Wilma asks only what she needs</h2></header>
+    <div class="row">
+      <div class="col">
+        <div class="phone short">
+          <div class="bar"><span class="lnk">‹</span>My day<span class="sp"></span></div>
+          <div class="scroll">
+            <div class="clash" style="border-color:var(--accent)">
+              <b>Where do you leave from?</b>
+              <span>Wilma times your drives from home. It's saved as a place called Home, and you can change it later.</span>
+              <div class="acts" style="justify-content:flex-start"><button class="btn" type="button">Pick a saved place</button><button class="btn" type="button">Type an address</button><button class="btn pri" type="button">Use where I am now</button></div>
+            </div>
+            <span class="muted">Until then, the day shows without drive rows.</span>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="phone short">
+          <div class="bar"><span class="lnk">‹</span>Thursday, Oct 9<span class="sp"></span></div>
+          <div class="scroll">
+            <div class="tl">
+              <div class="t">2:00</div>
+              <div class="b"><div class="ev"><b>Dentist</b><span class="muted">2:00–2:45</span>
+                <div class="clash" style="margin-top:6px"><span class="hd">📍 Where is this?</span><span>The calendar event has no address, so there's no drive time yet.</span><div class="acts"><button class="btn" type="button">Not a trip</button><button class="btn pri" type="button">Pick a place</button></div></div>
+              </div></div>
+              <div class="t">3:00</div>
+              <div class="b"><div class="ev"><b>Piano: Sara</b><span class="muted">3:00–3:45 · 📍 found by name: Music Studio, Oviedo</span><span class="acts" style="justify-content:flex-start"><button class="btn" type="button">Is this right?</button></span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="notes">
+        <h3>Places on events</h3>
+        <ul>
+          <li>The event's address is looked up on the phone, the same way "Is this it?" works for places you share.</li>
+          <li>When only a name was found, Wilma says so and lets you check it, after the Craft &amp; Common lesson.</li>
+          <li>Your answer is remembered for that event name ("Dentist" is Dr. Lee's office), so you're asked once.</li>
+        </ul>
+        <h3>Privacy</h3>
+        <ul>
+          <li>Event places and home are sent to Mapbox (drive times) and the Weather Service (forecast), only when you open or ask about your day. Event titles are not sent to them.</li>
+          <li>The privacy page and Play's Data safety form need your approval before this ships. That goes in the Play Console work we left for the end.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="questions">
+    <header><span class="tag">Questions for you</span><h2>Before I write the plan</h2></header>
+    <div class="notes" style="flex:none">
+      <ul>
+        <li><b>Buffer:</b> 5 minutes to park and walk in, for every drive? (Or set per place, e.g. 10 at the pool.)</li>
+        <li><b>Rain:</b> warn at 50% or more? Heat, storms and other weather alerts too?</li>
+        <li><b>Overlaps:</b> besides "take both", should Wilma offer "ask someone else to drive" (useful once tasks can be assigned)?</li>
+        <li><b>Tasks:</b> a Tasks tile on Home, as above?</li>
+        <li><b>Days:</b> today only at first, then tomorrow? ("Plan tomorrow" the night before is useful for school mornings.)</li>
+        <li>Anything on these screens you'd change, add or drop.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  var state = { both: false, task: null, sheet: null };
+  var tl = document.getElementById('timeline');
+  var chips = document.getElementById('dayChips');
+  var sheet = document.getElementById('sheet');
+  var sheetBody = document.getElementById('sheetBody');
+
+  function row(t, html, cls) { return '<div class="t">' + (t || '') + '</div><div class="b"><div class="' + cls + '">' + html + '</div></div>'; }
+
+  function render() {
+    var lunchMoved = state.task === 'lunch';
+    var poolTask = state.task === 'pool';
+    var h = '';
+    h += row('7:40', '<b>🚗 Leave for school</b><span>12 min</span>', 'drive');
+    h += row('8:00', '<b>School drop-off</b><span class="muted">📍 Kids\' school</span>', 'ev');
+    h += row('', 'Free 8:15 – 10:00', 'gap');
+    h += row('10:00', '<b>Design review</b><span class="muted">10:00–11:00 · video call, no drive</span>', 'ev');
+    if (lunchMoved) {
+      h += row('11:45', '<b>🚗 Leave for lunch, via the cleaners</b><span>35 min with the stop <span class="was">12:10</span></span>', 'drive new');
+      h += row('11:55', '<b>☐ Pick up dry cleaning</b><span class="muted">20 min · Bright Cleaners, on the way</span>', 'ev task new');
+    } else {
+      h += row('12:10', '<b>🚗 Leave for lunch</b><span>18 min with traffic (usually 14)</span>', 'drive');
+    }
+    h += row('12:30', '<b>Lunch with Sam</b><span class="muted">12:30–1:30 · 📍 Hinode Sushi</span>', 'ev');
+    h += row('1:30', '<b>🚗 Home</b><span>18 min</span>', 'drive');
+    h += row('', 'Free 1:50 – 4:15 · 2 h 25 min', 'gap');
+    h += row('4:15', '<b>🚗 Leave for swim' + (state.both ? ' with Sara and Adam' : ' with Sara') + '</b><span>15 min with traffic (usually 10) + 5 to park</span>', 'drive' + (state.both ? ' new' : ''));
+    h += row('', '🌧 90% chance of rain at 4:30, until about 6. Take umbrellas.', 'wx');
+    h += row('4:30', '<b>Swim: Sara</b><span class="muted">4:30–6:30 · 📍 Aquatic Center</span>', 'ev');
+    if (state.both) {
+      h += row('5:00', '<b>Swim: Adam</b><span class="muted">5:00–7:00 · same pool, he waits 30 min</span>', 'ev new');
+      if (poolTask) {
+        h += row('5:05', '<b>🚗 To the cleaners and back</b><span>6 min each way</span>', 'drive new');
+        h += row('5:11', '<b>☐ Pick up dry cleaning</b><span class="muted">20 min · Bright Cleaners · back at the pool by 5:40</span>', 'ev task new');
+      } else {
+        h += row('', 'At the pool 4:30 – 7:00. Home and back is 24 min of driving, so staying is easier.', 'gap');
+      }
+      h += row('7:00', '<b>🚗 Pick up both, home</b><span>home by 7:20</span>', 'drive new');
+    } else {
+      h += row('5:00', '<div class="clash"><span class="hd">⚠ Overlap 5:00 – 6:30</span><span><b>Swim: Adam</b> 5:00–7:00 at the same pool as Sara. As planned you\'d drive there twice and be in two places at 4:45.</span><span>💡 Take both at 4:15: Adam waits 30 min (homework?), one trip each way.</span><div class="acts"><button class="btn" type="button" data-act="keep">Keep as is</button><button class="btn pri" type="button" data-act="both">Take both</button></div></div>', 'b0');
+      h += row('6:30', '<b>🚗 Pick up Sara</b><span>home by 6:50</span>', 'drive');
+    }
+    h += row('', 'Free from 7:20', 'gap');
+    if (!state.task) h += row('', '<b>Not placed yet</b><span class="muted">☐ Pick up dry cleaning · 20 min. Tap ＋ Add to fit it in.</span>', 'ev task');
+    tl.innerHTML = h;
+
+    var c = '<span class="chip">🚗 ' + (state.both ? 4 : 5) + ' drives</span><span class="chip rain">🌧 Rain 4–6 pm, 90%</span>';
+    c += state.both ? '<span class="chip good">✓ Nothing to sort</span>' : '<span class="chip warn">⚠ 1 to sort</span>';
+    chips.innerHTML = c;
+  }
+
+  function openSheet(step) {
+    state.sheet = step;
+    sheet.hidden = false;
+    if (step === 'form') {
+      sheetBody.innerHTML =
+        '<b>Add to today</b>' +
+        '<div class="field"><label for="addWhat">What</label><input id="addWhat" value="Pick up dry cleaning"></div>' +
+        '<div class="field"><label for="addLong">How long</label><input id="addLong" value="20 min"></div>' +
+        '<div class="field"><label for="addWhere">Where</label><input id="addWhere" value="Bright Cleaners (saved place)"></div>' +
+        '<span class="muted">Saved as a Wilma task. Wilma suggests where it fits.</span>' +
+        '<div class="acts"><button class="btn" type="button" data-act="close">Cancel</button><button class="btn pri" type="button" data-act="find">Find a time</button></div>';
+    } else {
+      var opts = '';
+      if (state.both) opts += '<button class="opt" type="button" data-act="pool"><b>While the kids swim, 5:05</b><span>The cleaners are 6 min from the pool. Back by 5:40, nothing else moves.</span></button>';
+      opts += '<button class="opt" type="button" data-act="lunch"><b>On the way to lunch</b><span>Leave at 11:45 instead of 12:10. Still at Hinode by 12:30.</span></button>';
+      if (!state.both) opts += '<button class="opt" type="button" data-act="both-pool"><b>While the kids swim, 5:05</b><span>Only if you take both at 4:15 (the overlap above). Back by 5:40.</span></button>';
+      opts += '<button class="opt" type="button" data-act="close"><b>Not today</b><span>Keep it in Tasks for tomorrow.</span></button>';
+      sheetBody.innerHTML = '<b>Where Pick up dry cleaning fits</b><span class="muted">Wilma\'s suggestions. Your calendar isn\'t changed.</span>' + opts;
+    }
+  }
+  function closeSheet() { state.sheet = null; sheet.hidden = true; }
+
+  document.getElementById('dayPhone').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-act]');
+    if (!b) return;
+    var a = b.getAttribute('data-act');
+    if (a === 'both') state.both = true;
+    else if (a === 'keep') { /* the overlap stays flagged */ }
+    else if (a === 'close') closeSheet();
+    else if (a === 'find') openSheet('options');
+    else if (a === 'lunch') { state.task = 'lunch'; closeSheet(); }
+    else if (a === 'pool') { state.task = 'pool'; closeSheet(); }
+    else if (a === 'both-pool') { state.both = true; state.task = 'pool'; closeSheet(); }
+    render();
+  });
+  document.getElementById('addBtn').addEventListener('click', function () { openSheet('form'); });
+  document.getElementById('resetBtn').addEventListener('click', function () { state = { both: false, task: null, sheet: null }; closeSheet(); render(); });
+  render();
+})();
+</script>
