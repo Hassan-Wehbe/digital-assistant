@@ -12,8 +12,19 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **Day planner step 2, PR 2 (planner core, Pro switch, Home, repeating tasks): PR open, not
-  deployed, migration not applied (2026-10-08).** Details: plan step 2 "As built". 372 Deno tests,
+- **Day planner step 2, PR 2: merged (#172) and live: `chat` version 16, `mcp` version 24;
+  migration applied; owner and Play review accounts Pro (2026-10-08, owner's OK).** Migration
+  `20261009120000_day_plan.sql` was run by the owner in the SQL editor (the dry run did not run
+  first: two pastes failed at once, with chat text and a fragment, changing nothing). Checked by
+  Claude after: column, checks, `day_plan_usage` (keys, RLS, own-rows policy), both functions'
+  code identical to the file, limit 30, anon refused, users read but cannot update `plan` or write
+  counts. Behaviour test 13 was not run on the live database (the connector times out on it);
+  optional: `tests/sql/dry_runs/13_day_plan_check.sql` (rolled back). Pro set for
+  hassan.wehbe@gmail.com and hassan.wehbe+playreview@gmail.com. Deployed by the "deploy chat"
+  workflow from `main` at 5684b78 (runs 37818213859 and 37818217591): 54/54 and 38/38 listed files
+  identical to `main`; 401 without sign-in and with a fake token. Nothing in the app calls the day
+  route until step 4; drive times say "unavailable" until step 3. **Next: step 3, Mapbox and NWS**
+  (strongest model, fresh session; owner first: a Mapbox account and token). Earlier state: Details: plan step 2 "As built". 372 Deno tests,
   SQL test 13, 104 evaluation cases; **evaluation run 37807486314: Luna 103/104, 0 leaks, $0.05**
   (the miss, "since the summer", passed 5/5 on its own, run 37808971148). **Owner:** (1) run the dry run of
   `20261009120000_day_plan.sql` with SQL test 13 in the Supabase SQL editor (the connector times
