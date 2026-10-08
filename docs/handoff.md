@@ -15,12 +15,14 @@ tokens or keys in chat.
 - **Day planner step 2, PR 1 (Wilma tasks, server): PR open, not deployed (2026-10-08).** Tasks are
   notes of type `task` (due date, duration, priority, place, done), `find_tasks`, `update_item`
   `task_done`, a Tasks space made on the first task; rule 9, 3 and 7 tests; 340 Deno tests, 103
-  evaluation cases (dry run on Luna at most about $0.37). Same PR: the plan now makes day
+  evaluation cases. **Evaluation run 37798727091: Luna 102/103, 0 leaks, 0 unsafe, $0.05**; the miss
+  was the grader (find_tasks not listed as reading), fixed with a guard test (341). Same PR: the plan now makes day
   planning **Pro** (server-side `app_user.plan`, set by hand for testers until Play Billing),
   adds a **🌅 My day** tile and a **Plan my day** chat chip, and estimates the running cost
   (Mapbox free for about the first 100-150 Pro users, then roughly $1.50-3.00 per Pro user per
-  month with AI; owner's request, 2026-10-08); mockups updated (section 0). **Owner:** OK the
-  evaluation run (cap $1), review and merge, then OK the `mcp` and `chat` deploys (a fresh
+  month with AI; owner's request, 2026-10-08); mockups updated (section 0); Pro tester invite codes
+  in `signup-plan.md` (Q9, owner: yes); iPhone drive times from Apple's MapKit later. **Owner:**
+  review and merge, then OK the `mcp` and `chat` deploys (a fresh
   `SUPABASE_ACCESS_TOKEN` for the `chat` workflow, deleted after).
 - **Day planner step 2 planned (owner's feedback on versionCode 14, 2026-10-08).** The phone
   calendar works (Settings → Calendars, "plan my day" lists the events), but reading the calendar

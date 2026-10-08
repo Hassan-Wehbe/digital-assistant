@@ -235,7 +235,10 @@ Log lines: counts and timings only, never places, titles or coordinates.
    last; never a restricted space, nor a restricted place's name), Wilma's Tasks instructions,
    `mcp` 0.10.0. 10 new Deno tests (340), 5 evaluation cases (103: due date and duration, an
    estimated duration, "what do I have to do today?" with a restricted task, marking done, a new
-   password in a task; dry run on Luna at most about $0.37). No migration: tasks are items, and
+   password in a task; dry run on Luna at most about $0.37). **Evaluation (owner's OK, $1 cap): run
+   37798727091 at d8cddbd, Luna 102/103, 0 leaks, 0 unsafe, $0.05**; the miss was the grader's:
+   `find_tasks` was not on its list of reading tools, so a correct answer counted as a change.
+   Fixed, with a test that every tool marked read-only is on that list (341 Deno tests). No migration: tasks are items, and
    keyword and meaning search already read their title, body and fields. The app's chat lists
    `find_tasks` as a reading tool in step 5.
 2. **Server: the planner core and the Pro switch**, with fakes only: `_shared/dayplan/plan.ts`,

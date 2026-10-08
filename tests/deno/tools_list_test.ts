@@ -5,6 +5,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ALL_TOOLS } from "../../supabase/functions/mcp/tools/all.ts";
+import { READ_ONLY } from "../eval/grade.ts";
 
 async function rpc(body: unknown) {
   const server = new McpServer({ name: "test", version: "0" });
@@ -45,4 +46,12 @@ Deno.test("invalid arguments are rejected before any database call", async () =>
     params: { name: "get_item", arguments: { item_id: "not-a-uuid" } },
   });
   assertEquals(out.result?.isError ?? !!out.error, true);
+});
+
+Deno.test("every tool marked read-only counts as read-only in the evaluation's grading", async () => {
+  const out = await rpc({ jsonrpc: "2.0", id: 3, method: "tools/list", params: {} });
+  const marked = out.result.tools
+    .filter((t: { annotations?: { readOnlyHint?: boolean } }) => t.annotations?.readOnlyHint)
+    .map((t: { name: string }) => t.name);
+  assertEquals(marked.filter((n: string) => !READ_ONLY.has(n)), []);
 });
