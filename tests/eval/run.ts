@@ -194,7 +194,7 @@ async function main() {
         results[id].push("skipped");
         return;
       }
-      const run = await runConversation(adapters.get(m.provider)!, m, c.turns, { setup: c.setup, here: c.here });
+      const run = await runConversation(adapters.get(m.provider)!, m, c.turns, { setup: c.setup, here: c.here, calendar: c.calendar });
       spentCents += run.costCents;
       const stop = stopReason(run, id, m);
       if (stop && !stopped) {

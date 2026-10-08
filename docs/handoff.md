@@ -12,14 +12,25 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **versionCode 13 feedback (2026-10-08): wrong spots for places shared by name only. App PR
-  open, not built.** Two new places got a wrong location from "Is this it?": Craft & Common
+- **Day planner step 1, server: PR open, not deployed (2026-10-08).** Owner's choice: "ask, then
+  re-send" instead of pausing `chat` (it keeps nothing between requests). Wilma's get_day_agenda
+  makes `chat` send the app an `agenda_request` and end the answer; the app (step 2, not built)
+  reads the ticked calendars and sends the question again with the trimmed events, which `chat`
+  checks and hands to the model as calendar data. Also the phone's time zone for "today". 330
+  Deno tests; 98 evaluation cases. **Evaluation (owner's OK, $1 cap): run 37712976912 at e6bb6ef,
+  Luna 97/98, 0 leaks, 0 unsafe, $0.04**; the miss: "save the details of today's key pickup" got a
+  question instead of a calendar read (nothing saved). Fix f0da46d (one phrase in the
+  instructions: requests about something on the calendar read it too); **calendar cases re-run,
+  run 37714915747: 5/5, 0 leaks, under $0.01.** **Owner:** review and merge; then the `chat` deploy
+  (workflow, fresh access token) and the `mcp` deploy, each only with your OK. Details: `phase6-day-planner-step1-plan.md` "How it works" and step 1.
+- **versionCode 13 feedback (2026-10-08): wrong spots for places shared by name only. Merged
+  (#160), not built.** Two new places got a wrong location from "Is this it?": Craft & Common
   (Oviedo FL) in downtown Orlando, so Wilma said "none within 10 miles, the nearest is 15.2 miles"
   (her maths was right for that spot), and a pizza place in Oviedo, Spain. Google Maps shared no
   address, the card showed only the name, and the note's Open in Maps opened Google's (right)
-  link. Fix in the PR (`places-plan.md` step 8, "Fix (owner, versionCode 13)"): the card says
+  link. Fix (`places-plan.md` step 8, "Fix (owner, versionCode 13)"): the card says
   "📍 Found at: <street>, <town>", warns when only the name was looked up, and Open in Maps opens
-  the saved location first. Privacy wording approved by the owner and in the PR. **Owner:** for
+  the saved location first. Privacy wording approved by the owner. **Owner:** for
   Craft & Common and the pizza place, Edit note → Remove the location (or Use where I am now
   there). **Parked (server, small):** a place saved without a kind is left out by a kind filter,
   and the forgiving filters offered Hinode and Lemongrass for "pizza".
