@@ -20,6 +20,17 @@ tokens or keys in chat.
   Deno tests; 98 evaluation cases (dry run on Luna at most about $0.35). **Owner:** review; then
   the evaluation run, the `chat` deploy (workflow, fresh access token) and the `mcp` deploy, each
   only with your OK. Details: `phase6-day-planner-step1-plan.md` "How it works" and step 1.
+- **versionCode 13 feedback (2026-10-08): wrong spots for places shared by name only. Merged
+  (#160), not built.** Two new places got a wrong location from "Is this it?": Craft & Common
+  (Oviedo FL) in downtown Orlando, so Wilma said "none within 10 miles, the nearest is 15.2 miles"
+  (her maths was right for that spot), and a pizza place in Oviedo, Spain. Google Maps shared no
+  address, the card showed only the name, and the note's Open in Maps opened Google's (right)
+  link. Fix (`places-plan.md` step 8, "Fix (owner, versionCode 13)"): the card says
+  "📍 Found at: <street>, <town>", warns when only the name was looked up, and Open in Maps opens
+  the saved location first. Privacy wording approved by the owner. **Owner:** for
+  Craft & Common and the pizza place, Edit note → Remove the location (or Use where I am now
+  there). **Parked (server, small):** a place saved without a kind is left out by a kind filter,
+  and the forgiving filters offered Hinode and Lemongrass for "pizza".
 - **versionCode 13 building (owner: "build for Play when job 4 is merged", 2026-10-08).** Production
   build from `main` at c0675e8 (GitHub run 37705215361, checks passed), Expo build
   08981365-f3b9-43d2-8050-182b8476be28, auto-submit scheduled (submission

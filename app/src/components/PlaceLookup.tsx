@@ -1,7 +1,8 @@
 // "Is this it?" on the share screen (job 4, lib/placeLookup.ts): a place shared from Google Maps
 // is looked up by its name and address with the phone's map lookup, never by where the phone is.
-// Open in Maps shows the point found; only Yes hands it to the form. No, or nothing found: the
-// place is saved without a location, as before.
+// The card says the street and town of the spot found, and warns when only a name was looked up
+// (it can match another place in another town). Open in Maps shows the point found; only Yes
+// hands it to the form. No, or nothing found: the place is saved without a location, as before.
 import { useEffect, useRef, useState } from 'react';
 import { Linking, Text, View } from 'react-native';
 
@@ -69,12 +70,21 @@ export function PlaceLookup({
     );
   }
 
-  const point = state.found;
+  const { found: point, where } = state;
   const link = mapsLink(point);
+  const nameOnly = !address.trim();
   return (
     <Card style={{ gap: 8 }}>
       <Text style={{ color: c.text, fontSize: 16, fontWeight: '600' }}>Is this it?</Text>
       <Text style={{ color: c.text, fontSize: 15 }}>{query}</Text>
+      {where ? (
+        <Text style={{ color: c.text, fontSize: 15 }}>📍 Found at: {where}</Text>
+      ) : (
+        <Muted>The map lookup did not say which street or town this is: check it with Open in Maps.</Muted>
+      )}
+      {nameOnly ? (
+        <Muted>Google Maps shared no address, so this was found by its name only. It may be another place with the same name: check the town before tapping Yes.</Muted>
+      ) : null}
       {link ? (
         <TextLink
           title="Open in Maps"

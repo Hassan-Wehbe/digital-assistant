@@ -381,6 +381,20 @@ Step 3 shows them (cuisine chips, price, occasions, dishes, **We went again** ad
      the user's own location is not involved, and a place's location stored with its note is
      already declared (*Location → Precise location*). No new regex on the phone. 541 app tests.
      Ships with the next Play build.
+     **Fix (owner, versionCode 13, 2026-10-08): a name alone can match the wrong town.** Google
+     Maps shared no address for the owner's last two places, so the lookup used the name alone:
+     Craft & Common (Oviedo FL) was saved in downtown Orlando, about 15 miles off, and "Mister O1
+     Extraordinary Pizza Oviedo" in Oviedo, Spain. The owner tapped Yes without Open in Maps (the
+     card showed only the shared name), and the note's Open in Maps opened Google's link, so the
+     wrong spot never showed; Wilma then measured from it. Fix, app only: (1) the card's
+     "📍 Found at: <street>, <town>, <region>, <country>" from the phone's reverse lookup of the spot found
+     (`deviceGeocoder.describe`, `reverseGeocodeAsync`; the place's spot, never the phone's;
+     5 s, else a line says to check with Open in Maps); (2) when only the name was looked up, a
+     line says so and asks to check the town before Yes; (3) Open in Maps (note and chat cards,
+     `mapsLink`) opens the saved location first, then Google's link, then the address, so what
+     you see is what Wilma measures from. Privacy: the owner's approved wording ("…and then the
+     spot it found, to show you its street and town…"). Data safety unchanged. No regex added.
+     546 app tests. Ships with versionCode 14.
      8. **Phone checklist** (Sonnet), then the Play build carrying the UI tidy-up and places.
         **As built:** `docs/versioncode12-phone-checklist.md`, one list with the UI tidy-up's and
         the owner's parked to-dos (it also replaces the unrecorded versionCode 10 and 11 lists).
