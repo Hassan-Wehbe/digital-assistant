@@ -164,3 +164,34 @@ describe('the location package is loaded only by lib/location.ts, and only on us
     expect(src).not.toMatch(/Background|watchPosition|startLocationUpdates|Geofencing/);
   });
 });
+
+describe('the calendar (day planner step 1)', () => {
+  const all: string[] = [];
+  const walk = (dir: string) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (/\.tsx?$/.test(e.name) && !/\.test\.tsx?$/.test(e.name)) all.push(p);
+    }
+  };
+  walk(SRC);
+
+  it('the package is loaded only by lib/calendar.ts, with a require() inside a function', () => {
+    const users = all.filter((f) => readFileSync(f, 'utf8').includes("'expo-calendar'"));
+    expect(users.map((f) => f.slice(SRC.length + 1))).toEqual(['lib/calendar.ts']);
+    const src = readFileSync(join(SRC, 'lib/calendar.ts'), 'utf8');
+    const lines = src.split('\n').filter((l) => l.includes("'expo-calendar'") && !l.trim().startsWith('//'));
+    for (const l of lines) expect(l).toMatch(/^type \w+ = typeof import\('expo-calendar'\);$|^\s+const \w+(: \w+)? = require\('expo-calendar'\);$/);
+  });
+
+  it('Wilma only reads: nothing creates, changes or deletes a calendar, an event or a reminder', () => {
+    const src = readFileSync(join(SRC, 'lib/calendar.ts'), 'utf8');
+    expect(src).not.toMatch(/createEvent|createCalendar|createReminder|createAttendee|\.update\(|\.delete\(|addEventWithForm|Reminders/);
+  });
+
+  it('the permission is explained, and reminders are not asked for', () => {
+    const options = pluginOptions('expo-calendar');
+    expect(options?.calendarPermission).toMatch(/only when you ask about your day/);
+    expect(options?.remindersPermission).toBe(false);
+  });
+});

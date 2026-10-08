@@ -124,6 +124,19 @@ chat checks it again, gives it to the model as that call's result ──► Wilm
 2. **App:** `expo-calendar` (a native package: new build needed; read the handoff's "Lessons ...
    before adding native packages"), Settings → Calendars, permission flow, reading and trimming,
    answering the app-tool request, the card. Preview build on Android.
+   **Split into PRs (owner, 2026-10-08: the calendar goes into versionCode 14 with #160):**
+   (2a) the calendar on the phone: `expo-calendar` 57.0.5, `lib/calendar.ts` (read and trim,
+   the only file that loads the package, read-only), `lib/calendarSettings.ts` (the ticks, on the
+   phone per account), `app/calendars.tsx` (Settings → Calendars); nothing goes to Wilma yet.
+   (2b) the chat: `can`, `tz`, the re-send with `agenda`, the "Use my calendar" card. (3) privacy
+   page, Data safety, phone checklist.
+   **As built (2a):** the package has no start-up code (checked its Android module). **Android
+   asks for read and write calendar access together:** `expo-calendar` requests both and refuses
+   to read without both, so `WRITE_CALENDAR` cannot be blocked; the phone shows one "Calendar"
+   prompt either way. Wilma never writes: a test checks `calendar.ts` calls nothing that creates,
+   changes or deletes. iPhone: full-access wording set, reminders not asked for (Q6 later).
+   Time zone: the phone's (`Intl`), else a ticked calendar's own zone. All-day events on Android
+   are stored at midnight UTC and read as such. 569 app tests.
 3. **Ship:** privacy page and Play Data safety wording (calendar events: read on the phone, the
    needed lines sent to the AI provider for the answer, not stored), phone checklist
    (`docs/day-planner-step1-phone-checklist.md`), "build for Play". iPhone: same code when the iOS

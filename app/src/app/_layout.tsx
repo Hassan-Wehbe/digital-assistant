@@ -52,6 +52,7 @@ function Screens() {
         <Stack.Screen name="bin" options={{ title: 'Recycle bin' }} />
         <Stack.Screen name="account" options={{ title: 'Sign-in password' }} />
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+        <Stack.Screen name="calendars" options={{ title: 'Calendars' }} />
         <Stack.Screen name="share" options={{ title: 'Share to Wilma' }} />
         <Stack.Screen name="vault/index" options={{ title: 'Vault' }} />
         <Stack.Screen name="vault/[id]" options={{ title: 'Secret' }} />
