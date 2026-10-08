@@ -54,6 +54,7 @@ export const STATUS: Record<string, string> = {
   get_item: "Reading your note…",
   search_items: "Searching your notes…",
   find_places: "Looking for places nearby…",
+  find_tasks: "Checking your tasks…",
   get_day_agenda: "Reading your calendar…",
   link_items: "Linking your notes…",
   save_secret: "Preparing your vault…",

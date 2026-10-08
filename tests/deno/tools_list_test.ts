@@ -30,13 +30,13 @@ Deno.test("tools/list advertises the milestone-1, vault, settings and attachment
   const names = out.result.tools.map((t: { name: string }) => t.name).sort();
   assertEquals(names, [
     "attach_file", "create_space", "delete_attachment", "delete_item", "delete_secret", "delete_space",
-    "describe_attachment", "find_places", "find_secret", "get_attachment_link", "get_day_agenda", "get_item",
+    "describe_attachment", "find_places", "find_secret", "find_tasks", "get_attachment_link", "get_day_agenda", "get_item",
     "get_secret", "link_items",
     "list_deleted_items", "list_spaces", "purge_item", "restore_item", "save_item", "save_secret",
     "search_items", "set_assistant_name", "update_item", "update_secret", "update_space",
   ]);
   const save = out.result.tools.find((t: { name: string }) => t.name === "save_item");
-  assertEquals(save.inputSchema.required.sort(), ["body", "item_type", "space", "title"]);
+  assertEquals(save.inputSchema.required.sort(), ["body", "item_type", "title"]);
 });
 
 Deno.test("invalid arguments are rejected before any database call", async () => {

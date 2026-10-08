@@ -41,6 +41,55 @@ checks, the chat loop, location data leaving the phone, an outside service key);
   your **Home** place. An event without an address shows "📍 Where is this?" (**Pick a place** or
   **Not a trip**); an address found by name only says so and can be checked.
 - **Never:** the calendar is never changed. The plan is a suggestion.
+- **One tap to start (owner, 2026-10-08):** a **🌅 My day** tile on Home (next to Vault) opens My day
+  straight away, with no typing and no AI request; in the chat, an empty thread offers a **🌅 Plan my
+  day** chip that sends "plan my day". (The sunrise is a placeholder; a drawn icon can replace it
+  with the app's icon set.)
+- **Premium (owner, 2026-10-08):** planning the day is a **Pro** feature. Without Pro, the tile and
+  the chip show a small **Pro** badge and open a card saying what My day does, with **See Pro**
+  (no purchase yet, see below). Reading the calendar ("what's on my day?", step 1) and tasks stay
+  free: they cost nothing to run beyond the chat request.
+
+## Premium: how it is gated
+
+- **Who has Pro is decided by the server, never by the app** (an app can be changed; the server
+  cannot). A new column `app_user.plan` (`free` | `pro`, default `free`) that the user cannot
+  change themselves: RLS lets them read it, and only an admin function sets it, like
+  `admin_set_ai_limit` today. The owner and testers get `pro` by hand until purchases exist.
+- **What Pro unlocks:** the `mode: "day"` route (drive times, weather, overlaps, task options), the
+  planner's numbers in the chat answer, and later leave-by alerts and the morning briefing. Without
+  Pro, the day route answers `pro_required` (403) and `chat` keeps answering calendar questions as
+  in step 1, without drive times or weather, and says planning is part of Pro once.
+- **Buying Pro comes later:** a purchase goes through Google Play Billing (and Apple later), which
+  needs the company's merchant account (D22, D28). Then the server verifies the purchase with Google
+  and sets `plan`; Play's "purchase digital goods" answer, Data safety and the privacy page are
+  re-checked before that build (D25). Until then **See Pro** says "Pro is coming; ask the owner".
+- **A fair-use cap** protects against runaway cost: at most 30 day plans per user per day (each
+  open or refresh counts one), counted on the server; above it the last plan is shown with "updated
+  at ...". Normal use is 2 to 5 a day.
+
+## What it costs to run (estimates, 2026-10-08)
+
+Per **active Pro user per month**, assuming a busy day plan is opened or refreshed about 3 times a
+day and "plan my day" is asked in the chat about once a day.
+
+| Piece | Per plan | Per user per month | Notes |
+|---|---|---|---|
+| Mapbox drive times | about 6-10 requests (one per drive; "usually" from the same answer if Mapbox's traffic profile returns a typical duration, else double) | about 600-900 requests | First 100,000 a month free, then about **$2.00 per 1,000** (third-party summaries of Mapbox's pricing; to confirm on Mapbox's own page in step 3) |
+| Mapbox for task options | 2-3 requests per ＋ Add | about 50 | Same price |
+| Weather (NWS) | 1-3 requests | about 300 | **Free**, no key |
+| Event places | on the phone | 0 | The phone's geocoder, free |
+| AI (chat "plan my day") | 2 model calls (ask, then the re-send with the calendar and the plan, about 3,000-5,000 words of input) | about 30 answers | About **$0.002 each on Luna**, about $0.03-0.04 on Sonnet (D21 prices): **$0.06-1.20** a month |
+| My day screen | no model call | 0 | |
+
+- **Up to about 100-150 active Pro users, Mapbox costs nothing** (inside the free 100,000 requests).
+- **After that, about $1.30-2.00 per Pro user per month** for Mapbox, plus $0.06 (Luna) to $1.20
+  (Sonnet) for the AI: roughly **$1.50-3.00 a month** at the worst case, against the sketch price of
+  $12.99 for Pro (D22; about $11 after the store's fee). The fair-use cap keeps one heavy user from
+  costing much more.
+- Ways to lower it if needed: reuse a drive time for the same trip for 15 minutes when Mapbox's
+  terms allow it, check traffic only for drives in the next few hours (later ones use the typical
+  time until the screen is refreshed), or Google Routes / HERE under the company account.
 
 ## How it works
 
@@ -165,16 +214,30 @@ Log lines: counts and timings only, never places, titles or coordinates.
 
 ## Steps (each a small PR; the owner approves merges, deploys and builds)
 
-1. **Server: Wilma tasks.** Item type, `normalizeTask`, `find_tasks`, Tasks space, prompt line,
+1. **Server: Wilma tasks** (free for everyone). Item type, `normalizeTask`, `find_tasks`, Tasks space, prompt line,
    Deno tests, evaluation cases. Deploy `mcp` and `chat`. (The Claude connector can save tasks
    from then on.)
-2. **Server: the planner core**, with fakes only: `_shared/dayplan/plan.ts`, the `mode: "day"`
-   route, place kind `home`, Deno tests. Deploy `chat` (the route answers with drives "not
+   **As built (2026-10-08, PR open):** `mcp/lib/tasks.ts` (`normalizeTask`, `setTaskDone`,
+   `tasksSpace`: the top-level Tasks space, made on the first task, never a restricted one),
+   `save_item` (space optional for a task; `place_id` must be one of the user's visible saved
+   places), `update_item` (`task_done` true/false keeps the other fields; a revision as always),
+   `mcp/tools/find_tasks.ts` (open by default, overdue first, important first on a day, undated
+   last; never a restricted space, nor a restricted place's name), Wilma's Tasks instructions,
+   `mcp` 0.10.0. 10 new Deno tests (340), 5 evaluation cases (103: due date and duration, an
+   estimated duration, "what do I have to do today?" with a restricted task, marking done, a new
+   password in a task; dry run on Luna at most about $0.37). No migration: tasks are items, and
+   keyword and meaning search already read their title, body and fields. The app's chat lists
+   `find_tasks` as a reading tool in step 5.
+2. **Server: the planner core and the Pro switch**, with fakes only: `_shared/dayplan/plan.ts`,
+   the `mode: "day"` route, place kind `home`, migration for `app_user.plan` (admin-only change,
+   `anon` revoked) and the fair-use count, Deno tests (a free user gets `pro_required`; a user
+   cannot make themselves Pro). **Owner:** apply the migration (dry run first) and set `pro` for
+   yourself. Deploy `chat` (the route answers with drives "not
    available" until step 3).
 3. **Server: Mapbox and NWS**, and the planner in the chat answer (`get_day_agenda` re-send).
    **Owner first:** a Mapbox account and a token, pasted as Supabase secret `MAPBOX_TOKEN` (and
    `NWS_CONTACT`) in the Supabase dashboard, never in chat. Evaluation run, deploy `chat`.
-4. **App: My day.** Timeline, Home setup card, event detail, Where is this?, choices on the phone,
+4. **App: My day.** The 🌅 My day tile and the Plan my day chip (Pro badge and card without Pro), timeline, Home setup card, event detail, Where is this?, choices on the phone,
    Open my day from the chat card.
 5. **App: tasks in the app.** Tasks tile and list, task fields in new/edit note, ＋ Add with
    options.
@@ -193,8 +256,12 @@ Log lines: counts and timings only, never places, titles or coordinates.
 - **Q6 Go home or stay:** stay when home and back would leave under 30 minutes at home.
 - **Q7 Where choices live:** on the phone (Take both, Not driving, event places); tasks'
   `planned_at` on the task.
-- **Q8 Cost:** the timeline uses no AI request; a chat question counts as one, as today. Day
-  planning becomes a Pro feature at launch (D25), not now.
+- **Q8 Cost and Pro:** the timeline uses no AI request; a chat question counts as one, as today.
+  Day planning is **Pro from the start** (owner, 2026-10-08), gated by the server's
+  `app_user.plan`; testers are set to Pro by hand until Play Billing exists.
+- **Q10 Without Pro:** "what's on my day?" still reads the calendar (step 1), tasks stay free, and
+  the My day tile shows the Pro card. Alternative: a free preview (one plan a week).
+- **Q11 Fair use:** 30 plans per user per day.
 - **Q9 Apple Reminders** (iPhone, step 1 Q6): with the iPhone build, as a second task source.
 
 ## Privacy page wording (draft, for the owner's approval in step 6)
