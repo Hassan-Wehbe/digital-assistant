@@ -140,6 +140,9 @@ export function toEntry(raw: unknown): Entry | null {
     }
     case 'calendar':
       return CALENDAR_PROBLEMS.includes(raw.problem as CalendarProblem) ? { kind: 'calendar', id, problem: raw.problem as CalendarProblem } : null;
+    case 'day':
+      // The date only: the plan itself is never kept (Mapbox's terms; day planner step 3).
+      return str(raw.date) && /^\d{4}-\d{2}-\d{2}$/.test(raw.date) ? { kind: 'day', id, date: raw.date } : null;
     default:
       return null;
   }

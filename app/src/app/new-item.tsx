@@ -1,5 +1,5 @@
 // Save a new note in a space, optionally with pictures or Visio files (saveNote.ts). Choosing
-// Place adds an address, a Google Maps link, the kind and so on (places.ts).
+// Place adds an address, a Google Maps link, the kind and so on (places.ts); Task opens task.tsx.
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Text, TextInput } from 'react-native';
@@ -14,9 +14,11 @@ import { EMPTY_PLACE, placeMetadata, type PlaceForm } from '@/lib/places';
 import { saveNote } from '@/lib/saveNote';
 import type { PickedFile } from '@/lib/upload';
 
-const KINDS_OF_NOTE = [
+// ✅ Task opens the task form (task.tsx): a task has its own fields and lives in the Tasks space.
+const KINDS_OF_NOTE: { value: boolean | 'task'; label: string }[] = [
   { value: false, label: 'Note' },
   { value: true, label: '📍 Place' },
+  { value: 'task', label: '✅ Task' },
 ];
 
 export default function NewItem() {
@@ -88,7 +90,7 @@ export default function NewItem() {
         <Chips
           options={KINDS_OF_NOTE}
           selected={(v) => v === isPlace}
-          onPress={setIsPlace}
+          onPress={(v) => (v === 'task' ? router.replace('/task') : setIsPlace(v))}
           disabled={busy || !!createdId}
         />
         <TextInput

@@ -63,6 +63,10 @@ export interface AgendaEvent {
   location?: string;
   calendar: string;
   busy_only?: true;
+  /** Where the phone found the event's place (day planner; never shown to the model). */
+  point?: { lat: number; lng: number; by_name_only?: true };
+  /** The user said this event is not a trip (or it is a video call). */
+  not_a_trip?: true;
 }
 
 export interface Agenda {
@@ -71,6 +75,8 @@ export interface Agenda {
   time_zone: string;
   calendars: number;
   events: AgendaEvent[];
+  /** One day only: the choices kept on the phone (Take both, Not driving), events named "e0", "e1", ... */
+  choices?: { together?: string[][]; not_driving?: string[] };
 }
 
 export const NO_PERMISSION =

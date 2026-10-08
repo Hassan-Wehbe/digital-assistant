@@ -325,8 +325,53 @@ Log lines: counts and timings only, never places, titles or coordinates.
      privacy text already names Mapbox and what is sent.
 4. **App: My day.** The 🌅 My day tile and the Plan my day chip (Pro badge and card without Pro), timeline, Home setup card, event detail, Where is this?, choices on the phone,
    Open my day from the chat card.
+   **As built (2026-10-08, PR open; no build: that is step 6):** `src/lib/dayPlan.ts` (the plan
+   checked field by field, unknown rows dropped; `dayClient` posts `{"mode":"day"}` with the token,
+   one refresh after a 401; 403 → the Pro card, 429 → the fair-use note, else "could not make the
+   plan"), `src/lib/dayAgenda.ts` (event keys; each event's place found on the phone: the user's
+   answer for that title, video calls and links are not trips, else the location text through the
+   phone's geocoder, only when the location permission is already given, at most 15 lookups a plan,
+   never a title and never a text that looks like a password; a text with no street number is "found
+   by name only"; the My day body; the chat's re-sent agenda for one day with `point`, `not_a_trip`
+   and the choices renamed `e0`, `e1`, ...), `src/lib/dayChoices.ts` (kept on the phone, encrypted
+   per account like the chat thread, forgotten on sign-out: Take both and Not driving per day,
+   dropped once the day has passed; answers per event title; the geocoder's results per location
+   text; **never a plan**: the stored shape has no place for one, tested), `src/lib/dayView.ts` (the
+   words and chips; every number from the plan), `src/lib/homePlace.ts` (Home: one place of kind
+   `home` in an unrestricted Places space, made when missing; changing it updates the same note),
+   `src/lib/pro.ts` (reads `app_user.plan`; the badge and the Pro card only when the server says
+   free; unreadable: the server decides). Screens: `app/day.tsx` (My day: Today / Tomorrow, chips,
+   the timeline's drive, rain, alert, overlap (Take both, Keep as is), free, task and event rows,
+   "Not placed yet", the credits, "Updated 4:52 pm"; first use "Where do you leave from?" (a saved
+   place, an address, or where I am now); "📍 Where is this?" (Pick a place / Not a trip) and "found
+   by name: … Is this right?"; ↺ Start over; **the plan is only in the screen's memory**, and above
+   the fair-use limit the plan still on screen stays with a note), `components/DayEventDetail.tsx`
+   (the sum behind the leave-by time, hourly rain from `weather_at`, Not driving, Directions to
+   Google Maps), `components/PlacePicker.tsx`, `components/ProCard.tsx` and `app/pro.tsx`; Home's
+   🌅 My day tile and the chat's 🌅 Plan my day chip (an empty thread; it sends "plan my day" past
+   the router), both with the PRO badge and the Pro card without Pro; the chat's **Open my day**
+   card from `{"type":"day_plan","date"}`, under the answer once it ends (the thread keeps the date
+   only). Editing the Home note keeps its kind. 58 new Jest tests (639). **For step 6's privacy
+   text:** opening My day looks up the events' location texts with the phone's own map lookup (as
+   "Is this it?" does), when location is already allowed.
 5. **App: tasks in the app.** Tasks tile and list, task fields in new/edit note, ＋ Add with
    options.
+   **As built (2026-10-08, PR open; no build: step 6):** `src/lib/tasks.ts` (the form's checks with
+   the server's limits in plain words, kept fields on an edit, the list's groups Today (overdue,
+   due, or planned today) / This week / Later / Done, the one-line summary, `planned_at` with the
+   phone's offset), `app/tasks.tsx` (the list; ☐ marks done), `app/task.tsx` (new and edit: what,
+   how long, where (a saved place or an address, the My day picker), by when (Today, Tomorrow,
+   Saturday, Next Monday or a date), repeats, normal or important, a note), a ✅ Tasks tile on Home,
+   "✅ Task" on New note, Edit on a task opens the task form, and the task's fields on its page. **＋
+   Add in My day:** type a task → Find a time saves it (due that day) and asks the planner
+   (`options_for`); a suggestion sets only `planned_at` (the user's choice), with "✓ … at 4:05 pm.
+   Leave at 3:39 pm instead of 4:10 pm." on screen; Not today moves it to the next day; "Not placed
+   yet" tasks get Find a time too. Text that looks like a password is held on the phone (rule 9;
+   the server refuses it too). **Q12:** `update_item` takes `today` (the phone's date) with
+   `task_done`, so a repeating task ticked in the evening no longer skips a day (server, needs the
+   `mcp` and `chat` deploys). The app's chat counts `find_tasks` and `get_day_agenda` as reading.
+   15 new Jest tests (654), 1 Deno test (392). Not done: the mockup's outlined rows with the old
+   time crossed out (the note above says the same in words).
 6. **Ship:** privacy page (Mapbox and NWS, Home, tasks), Play Data safety, phone checklist
    (`docs/versioncode15-phone-checklist.md`), then "build for Play" (versionCode 15), together with
    the Play Console change left over from versionCode 14 (*Calendar → Calendar events*).
@@ -350,7 +395,7 @@ Log lines: counts and timings only, never places, titles or coordinates.
 - **Q11 Fair use:** 30 plans per user per day.
 - **Q12 Repeating tasks (owner, 2026-10-08):** one time, daily, weekdays, weekly, every 2 weeks or
   monthly; done moves a repeating task to its next date. Dates are the server's day (UTC) when done
-  through the chat; the app sends the phone's date in step 5.
+  through the chat; the app sends the phone's date (step 5, `update_item` `today`).
 - **Q9 Apple Reminders** (iPhone, step 1 Q6): with the iPhone build, as a second task source.
 
 ## Privacy page wording (draft, for the owner's approval in step 6)

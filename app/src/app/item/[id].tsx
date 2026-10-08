@@ -9,7 +9,9 @@ import { PlaceCard } from '@/components/PlaceCard';
 import { Button, Card, confirm, ErrorBox, Loading, Muted, styles, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { placeOf } from '@/lib/places';
-import { fileSize, type Attachment } from '@/lib/wilma';
+import { todayAndTomorrow } from '@/lib/dayView';
+import { isTask, taskLine, type TaskMetadata } from '@/lib/tasks';
+import { fileSize, type Attachment, type Item } from '@/lib/wilma';
 
 export default function ItemScreen() {
   const c = useColors();
@@ -43,6 +45,7 @@ export default function ItemScreen() {
             {item.title}
           </Text>
           <Muted>{meta}</Muted>
+          {isTask(item.item_type) ? <Muted>{taskSummary(item)}</Muted> : null}
           {item.summary ? (
             <Text style={[styles.body, { color: c.text, fontStyle: 'italic' }]} selectable>
               {item.summary}
@@ -69,9 +72,13 @@ export default function ItemScreen() {
           </>
         )}
         <Button
-          title="Edit note"
+          title={isTask(item.item_type) ? 'Edit task' : 'Edit note'}
           kind="plain"
-          onPress={() => router.push({ pathname: '/edit-item', params: { id: item.id } })}
+          onPress={() =>
+            isTask(item.item_type)
+              ? router.push({ pathname: '/task', params: { id: item.id } })
+              : router.push({ pathname: '/edit-item', params: { id: item.id } })
+          }
         />
         <Button
           title="Add photos or files"
@@ -200,4 +207,15 @@ function AttachmentCard({ attachment: a, onDeleted }: { attachment: Attachment; 
       </View>
     </Card>
   );
+}
+
+/** A task's fields in one line ("☐ 20 min · by Fri · ↻ weekly"); the place shows by name in Tasks. */
+function taskSummary(item: Item): string {
+  const m = (item.metadata ?? {}) as Partial<TaskMetadata>;
+  const today = todayAndTomorrow(new Date()).today;
+  const line = taskLine(
+    { id: item.id, title: item.title, space: null, status: m.status === 'done' ? 'done' : 'open', priority: m.priority === 'important' ? 'important' : 'normal', ...m },
+    today,
+  );
+  return `${m.status === 'done' ? '☑ Done' : '☐ To do'}${line ? ` · ${line}` : ''}`;
 }

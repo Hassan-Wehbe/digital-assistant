@@ -12,15 +12,35 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **Wilma sets kind `home` (owner's phone test, 2026-10-08): PR open.** The owner asked Wilma to
+- **Day planner step 2, step 5 (tasks in the app): merged (#178), not built (2026-10-08).**
+  Tasks tile and list, the task form (new/edit), ＋ Add with Find a time in My day, and
+  `update_item` `today` (the phone's date for repeating tasks; server, live after the `mcp` and
+  `chat` deploys). Details: plan step 5 "As built". 654 app tests, 392 Deno tests. My day (#176)
+  merged too. **Owner:** OK the `mcp` and `chat` deploys (together with #177's). **Next:** step 6,
+  ship (privacy page, Data safety, phone checklist, build versionCode 15; Sonnet).
+- **Wilma sets kind `home` (owner's phone test, 2026-10-08): merged (#177).** The owner asked Wilma to
   save a place "Home"; it was saved without kind `home`, so the planner said no Home. Claude set
   that note's kind to `home` with the owner's OK (one SQL update; the revision trigger kept the old
   version). Fix: one line in Wilma's place instructions (`mcp/lib/assistant.ts`: home is kind
   `home`, only one, give an existing one the kind instead of saving another) and 2 evaluation cases
   (109). **Evaluation (owner's OK, $1 cap): run 37847123220 at 4e8ac71, Luna 108/109, 0 leaks, 0
   unsafe, about $0.05**; both Home cases pass; the miss is `place-not-since-summer` again (passed
-  5/5 alone in run 37808971148; untouched here). **Owner:** review and merge, then OK the `chat`
-  and `mcp` deploys.
+  5/5 alone in run 37808971148; untouched here). **Owner:** OK the `chat` and `mcp`
+  deploys (with #178's server change).
+- **Day planner step 2, step 4 (the app's My day): merged (#176), not built (2026-10-08).** The 🌅 My
+  day tile on Home and the 🌅 Plan my day chip in an empty chat (PRO badge and the Pro card without
+  Pro), the My day timeline from `{"mode":"day"}` (drive, rain, alert, overlap, free, task rows;
+  credits), first-use "Where do you leave from?" (saves Home), the event detail (the sum, hourly
+  rain, Not driving, Directions), "📍 Where is this?" / Not a trip, choices and place answers kept
+  on the phone (encrypted per account), and **Open my day** from the chat's `day_plan` event. The
+  chat's "plan my day" now re-sends events with the phone's places and the day's choices. **The plan
+  is never saved on the phone** (Mapbox's terms). Details: plan step 4 "As built". 639 app tests (58 new).
+  No server change, no migration, no evaluation run needed (the chat's prompt and tools are
+  unchanged). It ships with step 6's build (versionCode 15). **Secrets checked
+  (2026-10-08):** the owner's "plan my day" requests logged both providers (so `MAPBOX_TOKEN` and
+  `NWS_CONTACT` are set) with 0 requests and 0 failures: no event had a place the server could
+  find (the build on the phone sends no points; a location must equal a saved place's name). **Next:** step 5, tasks in the app
+  (strongest model, fresh session).
 - **Day planner step 2, PR 3 (Mapbox drive times, NWS weather, the planner in "plan my day"):
   merged (#174) and live: `chat` version 19 (2026-10-08, owner's OK).** Deployed by the "deploy
   chat" workflow (run 37834222424) from `main` at b714258: 57/57 deployed files identical to

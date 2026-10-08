@@ -7,6 +7,7 @@ import { Platform } from 'react-native';
 
 import type { SettingsStore } from './calendarSettings';
 import { chatStore, EMPTY_CHAT, type ChatStore } from './chatStore';
+import { dayMemoryStore, EMPTY_MEMORY, type DayMemoryStore } from './dayChoices';
 import { base64Bytes, encryptedStorage, utf8Bytes, utf8Text, type Cipher, type KeyStore } from './sessionStorage';
 
 // Kept on this device only: not synced to other devices or copied into backups.
@@ -56,6 +57,15 @@ export const deviceChatStore: ChatStore =
   Platform.OS !== 'web'
     ? chatStore(encryptedStorage(secureKeys, localData, deviceCipher), () => kv.getAllKeysAsync())
     : { load: async () => EMPTY_CHAT, save: async () => {}, clear: async () => {}, forgetOthers: async () => {} };
+
+/**
+ * My day's choices and event places (dayChoices.ts): same mechanism, its own AES key per account.
+ * Never a plan. The web build keeps none.
+ */
+export const deviceDayMemory: DayMemoryStore =
+  Platform.OS !== 'web'
+    ? dayMemoryStore(encryptedStorage(secureKeys, localData, deviceCipher), () => kv.getAllKeysAsync())
+    : { load: async () => EMPTY_MEMORY, save: async () => {}, forgetOthers: async () => {} };
 
 /** Plain settings kept on this phone (Settings → Calendars' choice; calendarSettings.ts). */
 export const deviceSettingsStore: SettingsStore = {

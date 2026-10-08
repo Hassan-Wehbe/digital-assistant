@@ -5,7 +5,8 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { chatClient, type ChatClient } from './chatClient';
 import { threadsToKeep } from './chatStore';
 import { CHAT_URL, MCP_URL } from './config';
-import { deviceChatStore } from './deviceStorage';
+import { dayClient, type DayClient } from './dayPlan';
+import { deviceChatStore, deviceDayMemory } from './deviceStorage';
 import { changePassword as changePasswordFlow } from './password';
 import { sessionToken } from './sessionToken';
 import { supabase } from './supabase';
@@ -20,6 +21,8 @@ interface AuthState {
   wilma: WilmaClient;
   /** Chat with Wilma (streamed answers); used by ChatProvider. */
   chat: ChatClient;
+  /** My day's plans (the chat function's day route; no model call). */
+  day: DayClient;
   signIn(email: string, password: string): Promise<string | null>;
   signOut(): Promise<void>;
   /** New sign-in password; the current one is checked first. */
@@ -49,6 +52,7 @@ const refresh = async () => {
 
 const wilma = wilmaClient({ url: MCP_URL, token, refresh });
 const chat = chatClient({ url: CHAT_URL, token, refresh });
+const day = dayClient({ url: CHAT_URL, token, refresh });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -82,7 +86,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signedIn = !!session || waitingForConnection;
   useEffect(() => {
     const keep = threadsToKeep(loading, signedIn, userId);
-    if (keep !== undefined) deviceChatStore.forgetOthers(keep);
+    if (keep === undefined) return;
+    deviceChatStore.forgetOthers(keep);
+    // My day's choices and event places go the same way.
+    deviceDayMemory.forgetOthers(keep);
   }, [loading, signedIn, userId]);
 
   const value = useMemo<AuthState>(
@@ -92,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       wilma,
       chat,
+      day,
       async signIn(email, password) {
         const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (!error) return null;

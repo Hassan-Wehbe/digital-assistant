@@ -261,3 +261,16 @@ Deno.test("update_item task_done on a repeating task keeps it open with its next
   const listed = await call(w, "find_tasks", {});
   assertEquals(listed.json.tasks[0].repeat, "daily");
 });
+
+Deno.test("update_item task_done uses the phone's date for a repeating task (Q12)", async () => {
+  const w = new World();
+  // Ticked on the evening of Oct 9 in Florida: already Oct 10 in UTC, but the next date is Oct 10.
+  const saved = await call(w, "save_item", task("Water the plants", { repeat: "daily", due_on: "2026-10-09" }));
+  const done = await call(w, "update_item", { item_id: saved.json.id, task_done: true, today: "2026-10-09" });
+  assertEquals(done.isError, false, done.text);
+  const m = w.items.find((i) => i.id === saved.json.id)!.metadata;
+  assertEquals(m.due_on, "2026-10-10");
+  assertEquals(m.last_done_on, "2026-10-09");
+  const bad = await call(w, "update_item", { item_id: saved.json.id, task_done: true, today: "tomorrow" });
+  assertEquals(bad.isError, true);
+});

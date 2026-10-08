@@ -4,7 +4,7 @@ import { loadSpaces, resolveSpace } from "../lib/spaces.ts";
 import { rejectCredentials } from "../lib/credentials.ts";
 import { addVisit, assertOnlyHome, HOME_KIND, isPlace, normalizePlace, type PlaceMetadata, placePoint, withPlace } from "../lib/places.ts";
 import { withLinkLocation } from "../lib/maps_link.ts";
-import { isTask, normalizeTask, setTaskDone, type TaskMetadata, withTask } from "../lib/tasks.ts";
+import { isTask, normalizeTask, setTaskDone, type TaskMetadata, taskDate, withTask } from "../lib/tasks.ts";
 import { taskPlaceTitle } from "./save_item.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
@@ -36,6 +36,7 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
           rating: z.number().int().min(1).max(5).optional().describe("New rating for the place, 1-5"),
         }).optional().describe("Places only: add a visit, newest first; the place becomes \"been\""),
         task_done: z.boolean().optional().describe("Tasks only: true marks it done, false opens it again"),
+        today: z.string().optional().describe("With task_done: the user's local date, YYYY-MM-DD (a repeating task's next date is after it)"),
         change_note: z.string().max(500).optional().describe("Why it changed, kept with the old version"),
       },
     },
@@ -43,6 +44,8 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
       guarded(async () => {
         // Rule 9: enforced here, not left to the model.
         const { title, body, summary, tags, metadata, item_type, change_note, add_visit, task_done } = args;
+        // The phone's date (the app sends it; Q12): without it, today in UTC.
+        const today = taskDate(args.today, "today");
         rejectCredentials({ title, body, summary, tags, metadata, item_type, change_note, add_visit }, assistantName);
         const targetSpace = args.space ? resolveSpace(await loadSpaces(db), args.space) : null;
 
@@ -67,7 +70,7 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
         if (current && isTask(finalType)) {
           const base = metadata ?? current.metadata;
           if (fieldsChanged) {
-            task = task_done !== undefined ? setTaskDone(base, task_done) : normalizeTask(base);
+            task = task_done !== undefined ? setTaskDone(base, task_done, new Date(), today) : normalizeTask(base);
             if (task.place_id && metadata !== undefined) await taskPlaceTitle(db, task.place_id);
           } else {
             try {

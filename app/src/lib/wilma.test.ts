@@ -110,15 +110,34 @@ describe('wilma client', () => {
 
   it('uses the knowledge tools and only the vault tools that return names and links', () => {
     expect([...APP_TOOLS].sort()).toEqual([
-      'attach_file', 'create_space', 'delete_attachment', 'delete_item', 'delete_secret', 'delete_space', 'find_secret',
+      'attach_file', 'create_space', 'delete_attachment', 'delete_item', 'delete_secret', 'delete_space', 'find_secret', 'find_tasks',
       'get_attachment_link', 'get_item', 'get_secret', 'list_deleted_items', 'list_spaces', 'purge_item', 'restore_item', 'save_item', 'save_secret',
       'search_items', 'update_item', 'update_secret', 'update_space',
     ]);
     expect(Object.keys(setup([]).client).sort()).toEqual(
-      ['addVisit', 'attachmentLink', 'createSpace', 'deleteAttachment', 'deleteItem', 'deleteSecret', 'deleteSpace', 'findSecrets', 'getItem', 'listSpaces',
-        'newValueLink', 'purgeItem', 'recycleBin', 'restoreItem', 'revealLink', 'saveItem', 'saveSecret', 'search', 'updateItem',
+      ['addVisit', 'attachmentLink', 'createSpace', 'deleteAttachment', 'deleteItem', 'deleteSecret', 'deleteSpace', 'findSecrets', 'findTasks', 'getItem', 'listSpaces',
+        'newValueLink', 'purgeItem', 'recycleBin', 'restoreItem', 'revealLink', 'saveItem', 'saveSecret', 'saveTask', 'search', 'taskDone', 'updateItem',
         'updateSecret', 'updateSpace', 'uploadLink'],
     );
+  });
+
+  it('lists tasks, saves one in the Tasks space, and sends the phone’s date when one is done', async () => {
+    const { client, fetch } = setup([
+      reply(200, toolResult({ tasks: [{ id: 't1', title: 'Pick up dry cleaning', status: 'open', priority: 'normal', due_on: '2026-10-09', secret: 'x' }] })),
+      reply(200, toolResult({ id: 't2', space: 'Tasks' })),
+      reply(200, toolResult({ id: 't1', updated: true })),
+    ]);
+    expect(await client.findTasks({ status: 'all', today: '2026-10-09' })).toEqual([
+      { id: 't1', title: 'Pick up dry cleaning', space: null, status: 'open', priority: 'normal', due_on: '2026-10-09' },
+    ]);
+    await client.saveTask({ title: 'Call the insurance', metadata: { status: 'open', priority: 'normal', duration_min: 15 } });
+    await client.taskDone('t1', true, '2026-10-09');
+    const params = fetch.mock.calls.map(([, init]) => JSON.parse(init.body as string).params);
+    expect(params).toEqual([
+      { name: 'find_tasks', arguments: { limit: 100, status: 'all', today: '2026-10-09' } },
+      { name: 'save_item', arguments: { title: 'Call the insurance', body: '', item_type: 'task', metadata: { status: 'open', priority: 'normal', duration_min: 15 } } },
+      { name: 'update_item', arguments: { item_id: 't1', task_done: true, today: '2026-10-09' } },
+    ]);
   });
 
   it('creates a space with only the fields given', async () => {

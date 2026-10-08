@@ -5,6 +5,7 @@
 // stateless and answers with JSON.
 
 import type { NewVisit, PlaceMetadata } from './places';
+import { toTaskRows, type TaskMetadata } from './tasks';
 
 /**
  * The tools this version of the app uses. The vault tools return metadata and one-time
@@ -31,6 +32,7 @@ export const APP_TOOLS = [
   'save_secret',
   'update_secret',
   'delete_secret',
+  'find_tasks',
 ] as const;
 export type AppTool = (typeof APP_TOOLS)[number];
 
@@ -122,8 +124,8 @@ export interface NoteChanges {
   space?: string;
   /** "place" turns a note into a place (with metadata). */
   item_type?: string;
-  /** Replaces all of the item's metadata. */
-  metadata?: PlaceMetadata;
+  /** Replaces all of the item's metadata (a place's, or a task's: tasks.ts). */
+  metadata?: PlaceMetadata | TaskMetadata;
 }
 
 export interface UploadLink {
@@ -253,7 +255,7 @@ export function wilmaClient({ url, token, refresh, fetch: f = fetch }: ClientOpt
     updateSpace: (id: string, changes: SpaceChanges) =>
       call<{ id: string; path: string; previous_path: string; description: string | null }>('update_space', { space: id, ...changes }),
     // close_matches_only: loosely related items are left out ("password" no longer finds a recipe).
-    search: async (opts: { query?: string; space?: string; limit?: number; close_matches_only?: boolean }) =>
+    search: async (opts: { query?: string; space?: string; limit?: number; close_matches_only?: boolean; item_type?: string }) =>
       (await call<{ results: SearchResult[] }>('search_items', opts)).results,
     getItem: (id: string) => call<Item>('get_item', { item_id: id }),
     attachmentLink: (id: string) => call<AttachmentLink>('get_attachment_link', { attachment_id: id }),
@@ -262,6 +264,13 @@ export function wilmaClient({ url, token, refresh, fetch: f = fetch }: ClientOpt
     /** Changes a note's title, text or place fields; the server keeps the previous version first. */
     updateItem: (id: string, changes: NoteChanges) =>
       call<{ id: string; updated: boolean }>('update_item', { item_id: id, ...changes }),
+    // Tasks (tasks.ts): saved in the Tasks space unless one is named; the server checks every field.
+    findTasks: async (opts: { status?: 'open' | 'done' | 'all'; today?: string; limit?: number } = {}) =>
+      toTaskRows(await call<unknown>('find_tasks', { limit: 100, ...opts })),
+    saveTask: (task: { title: string; body?: string; metadata: TaskMetadata; space?: string }) =>
+      call<{ id: string; space: string }>('save_item', { title: task.title, body: task.body ?? '', item_type: 'task', metadata: task.metadata, ...(task.space ? { space: task.space } : {}) }),
+    /** Done (a repeating task moves to its next date after `today`, the phone's date), or open again. */
+    taskDone: (id: string, done: boolean, today: string) => call<{ id: string; updated: boolean }>('update_item', { item_id: id, task_done: done, today }),
     /** "We went again": a visit goes first and the place counts as been (the server checks it). */
     addVisit: (id: string, visit: NewVisit) =>
       call<{ id: string; updated: boolean; place?: PlaceMetadata }>('update_item', { item_id: id, add_visit: visit }),

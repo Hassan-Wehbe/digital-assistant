@@ -53,6 +53,10 @@ function Screens() {
         <Stack.Screen name="account" options={{ title: 'Sign-in password' }} />
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
         <Stack.Screen name="calendars" options={{ title: 'Calendars' }} />
+        <Stack.Screen name="day" options={{ title: 'My day' }} />
+        <Stack.Screen name="tasks" options={{ title: 'Tasks' }} />
+        <Stack.Screen name="task" options={{ title: 'Task' }} />
+        <Stack.Screen name="pro" options={{ title: 'Wilma Pro', presentation: 'modal' }} />
         <Stack.Screen name="share" options={{ title: 'Share to Wilma' }} />
         <Stack.Screen name="vault/index" options={{ title: 'Vault' }} />
         <Stack.Screen name="vault/[id]" options={{ title: 'Secret' }} />
