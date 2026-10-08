@@ -299,8 +299,9 @@ Log lines: counts and timings only, never places, titles or coordinates.
    Prompt: plan a day with `get_day_agenda` for that one day and use only the planner's numbers.
    Log lines: request and failure counts only. 391 Deno tests (19 new; also a timer the streaming
    test left running); 107 evaluation cases (new: plan tomorrow with leave-by, rain and the overlap
-   first; when to leave; without Pro). **Owner:** set the two secrets; OK an evaluation run; review
-   and merge; OK the `chat` deploy.
+   first; when to leave; without Pro). Secrets set by the owner. **Evaluation (owner's OK, $1 cap):
+   run 37832337431 at b7de176, Luna 107/107, 0 leaks, 0 unsafe, $0.05.** **Owner:** review and
+   merge; OK the `chat` deploy.
 
    **Mapbox: pricing and terms (checked 2026-10-08).** Mapbox's own pages could not be opened from
    Claude's environment (blocked), so this comes from search results quoting them; the owner should

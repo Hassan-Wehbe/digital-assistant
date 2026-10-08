@@ -19,10 +19,11 @@ tokens or keys in chat.
   not save the plan on the phone**); no rule found that needs a Mapbox map for Directions results;
   queries must answer a person's request (**re-check before proactive alerts**). Mapbox's own pages
   are blocked from Claude's environment: the owner glances at them when making the account. 391
-  Deno tests, 107 evaluation cases (3 new). The prompt changed, so an evaluation run is due
-  (owner's OK and a cap). **Owner:** (1) Mapbox token and `MAPBOX_TOKEN`, `NWS_CONTACT` as Supabase
-  Edge Function secrets (steps in the PR; never in chat); (2) OK the evaluation run; (3) review and
-  merge; (4) OK the `chat` deploy (then drive times and weather go live for Pro). Next: step 4, the
+  Deno tests, 107 evaluation cases (3 new). Owner set `MAPBOX_TOKEN` and `NWS_CONTACT` (2026-10-08;
+  Claude cannot list secrets, so they are checked after the deploy: drive times no longer
+  "unavailable"). **Evaluation (owner's OK, $1 cap): run 37832337431 at b7de176, Luna 107/107, 0
+  leaks, 0 unsafe, $0.05**; the 3 plan cases pass. **Owner:** (1) review and merge; (2) OK the
+  `chat` deploy (then drive times and weather go live for Pro). Next: step 4, the
   app's My day (strongest model, fresh session).
 - **Day planner step 2, PR 2: merged (#172) and live: `chat` version 16, `mcp` version 24;
   migration applied; owner and Play review accounts Pro (2026-10-08, owner's OK).** Migration
