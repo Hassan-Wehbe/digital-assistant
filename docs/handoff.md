@@ -20,8 +20,10 @@ tokens or keys in chat.
   out on it; Claude gives the script; every line must say ok), then apply the migration there;
   (2) ~~evaluation~~ (done); (3) set Pro for the owner's account and the Play review
   account (owner, 2026-10-08: both; Claude runs it once the migration is applied); (4) merge, then OK the `chat` and `mcp`
-  deploys (fresh `SUPABASE_ACCESS_TOKEN`, deleted after). Nothing in the app uses My day until
-  step 4.
+  deploys. Nothing in the app uses My day until step 4. **Access token (owner, 2026-10-08):**
+  `SUPABASE_ACCESS_TOKEN` stays set in GitHub while the day planner is built (the owner is the
+  repository's only collaborator; an expiry date if Supabase offers one); deleted in Supabase and
+  GitHub when that work is done. Do not ask the owner to delete it after each deploy.
 - **Day planner step 2, PR 1 (Wilma tasks, server): merged (#169); live: `mcp` version 23 and `chat`
   version 15 (2026-10-08, owner's OK).** `chat` deployed by the workflow (run 37803132438) from
   `main` at 79448d0: 52/52 listed files identical to `main`, 401 without sign-in and with a fake
