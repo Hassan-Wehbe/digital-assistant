@@ -8,6 +8,7 @@ import { FlatList, RefreshControl, Text, TextInput, View } from 'react-native';
 
 import { MicButton } from '@/components/MicButton';
 import { PasswordHold } from '@/components/PasswordHold';
+import { useProPlan } from '@/components/ProCard';
 import { ItemRow } from '@/components/rows';
 import {
   ErrorBox,
@@ -32,6 +33,7 @@ import { useChat } from '@/lib/chat';
 import { lastUserText } from '@/lib/chatThread';
 import { VOICE_ENABLED } from '@/lib/config';
 import { findCredential } from '@/lib/credentials';
+import { needsPro } from '@/lib/pro';
 import { supabase } from '@/lib/supabase';
 import { loadAllowance, usageCounterText, usageSummary } from '@/lib/usage';
 import { appendDictation, useDictation } from '@/lib/voice';
@@ -43,6 +45,8 @@ export default function Home() {
   const c = useColors();
   const { wilma, session } = useAuth();
   const chat = useChat();
+  // 🌅 My day is Pro: without it the tile shows the badge and opens the Pro card.
+  const pro = useProPlan();
   const [text, setText] = useState('');
   const [query, setQuery] = useState('');
   // Shown under the box when a message for Wilma could not be sent (allowance used up).
@@ -173,6 +177,14 @@ export default function Home() {
         {/* Reads the location only after this tap, on the New note screen (places Q10). */}
         <Tile icon="📍" title="Save here" accessibilityLabel="Save where I am" onPress={() => go({ here: '1' })} />
         <Tile icon="🔒" title="Vault" onPress={() => router.push('/vault')} />
+        {/* Opens the timeline straight away: no typing and no AI request (day planner step 4). */}
+        <Tile
+          icon="🌅"
+          title="My day"
+          badge={needsPro(pro) ? 'PRO' : undefined}
+          accessibilityLabel={needsPro(pro) ? 'My day, part of Pro' : 'My day'}
+          onPress={() => router.push(needsPro(pro) ? '/pro' : '/day')}
+        />
       </View>
     </Panel>
   );

@@ -18,6 +18,9 @@ export const KIND_LABELS: Record<PlaceKind, string> = {
   other: 'Other',
 };
 
+/** The Home place the day planner drives from (at most one; set in My day, never in the kind picker). */
+export const HOME_KIND = 'home';
+
 export const OCCASIONS = ['date_night', 'kids', 'business', 'quick_lunch', 'group', 'special'] as const;
 export type Occasion = (typeof OCCASIONS)[number];
 export const OCCASION_LABELS: Record<Occasion, string> = {
@@ -46,7 +49,7 @@ export interface PlaceVisit {
 export interface PlaceMetadata {
   address?: string;
   maps_url?: string;
-  kind?: PlaceKind;
+  kind?: PlaceKind | typeof HOME_KIND;
   status?: 'want' | 'been';
   rating?: number;
   visited_on?: string;
@@ -118,7 +121,7 @@ const been = (p: PlaceMetadata) => p.status === 'been' || p.rating !== undefined
 
 /** One short line for lists: "Restaurant · italian · $$ · Been there ★4". */
 export function placeLine(p: PlaceMetadata): string {
-  const kind = p.kind && KIND_LABELS[p.kind] ? KIND_LABELS[p.kind] : 'Place';
+  const kind = p.kind === HOME_KIND ? 'Home' : p.kind && KIND_LABELS[p.kind] ? KIND_LABELS[p.kind] : 'Place';
   return [
     kind,
     p.cuisine?.length ? p.cuisine.join(', ') : null,
@@ -166,7 +169,7 @@ export function placeForm(p: PlaceMetadata | null): PlaceForm {
   return {
     address: p.address ?? '',
     mapsUrl: p.maps_url ?? '',
-    kind: p.kind && (PLACE_KINDS as readonly string[]).includes(p.kind) ? p.kind : null,
+    kind: p.kind && (PLACE_KINDS as readonly string[]).includes(p.kind) ? (p.kind as PlaceKind) : null,
     cuisine: (p.cuisine ?? []).join(', '),
     price: p.price_level ?? null,
     occasions: (p.occasions ?? []).filter((o) => (OCCASIONS as readonly string[]).includes(o)),
@@ -215,6 +218,8 @@ export function placeMetadata(form: PlaceForm, base: PlaceMetadata | null = null
     out.maps_url = link;
   }
   if (form.kind) out.kind = form.kind;
+  // The kind picker does not offer Home: editing the Home place keeps it Home.
+  else if (base?.kind === HOME_KIND) out.kind = HOME_KIND;
 
   const cuisine = words(form.cuisine, 'Cuisine', MAX_CUISINE, 40);
   if ('error' in cuisine) return cuisine;

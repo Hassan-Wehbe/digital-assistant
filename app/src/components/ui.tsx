@@ -225,9 +225,12 @@ export function Tile({
   onPress,
   accessibilityLabel,
   grow = 1,
+  badge,
 }: {
   icon: string;
   title: string;
+  /** A small label on the corner ("PRO"). */
+  badge?: string;
   /** A second, muted line ("where's the wifi note?"), cut to one line. */
   subtitle?: string;
   onPress: () => void;
@@ -252,7 +255,22 @@ export function Tile({
       <Text style={{ color: subtitle ? c.muted : c.text, fontSize: 13 }} numberOfLines={1}>
         {subtitle ?? title}
       </Text>
+      {badge ? <Badge text={badge} corner /> : null}
     </Pressable>
+  );
+}
+
+/** A small filled label ("PRO"); `corner` pins it to a tile's top right. */
+export function Badge({ text, corner }: { text: string; corner?: boolean }) {
+  const c = useColors();
+  return (
+    <View
+      style={[
+        { backgroundColor: c.warn, borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2 },
+        corner && { position: 'absolute', top: -6, right: -4 },
+      ]}>
+      <Text style={{ color: '#ffffff', fontSize: 10, fontWeight: '700', letterSpacing: 0.4 }}>{text}</Text>
+    </View>
   );
 }
 

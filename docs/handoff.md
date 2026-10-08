@@ -12,6 +12,19 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Day planner step 2, step 4 (the app's My day): PR open, not built (2026-10-08).** The 🌅 My
+  day tile on Home and the 🌅 Plan my day chip in an empty chat (PRO badge and the Pro card without
+  Pro), the My day timeline from `{"mode":"day"}` (drive, rain, alert, overlap, free, task rows;
+  credits), first-use "Where do you leave from?" (saves Home), the event detail (the sum, hourly
+  rain, Not driving, Directions), "📍 Where is this?" / Not a trip, choices and place answers kept
+  on the phone (encrypted per account), and **Open my day** from the chat's `day_plan` event. The
+  chat's "plan my day" now re-sends events with the phone's places and the day's choices. **The plan
+  is never saved on the phone** (Mapbox's terms). Details: plan step 4 "As built". 639 app tests (58 new).
+  No server change, no migration, no evaluation run needed (the chat's prompt and tools are
+  unchanged). **Owner:** review and merge; it ships with step 6's build (versionCode 15). Still
+  open from step 3: ask Wilma "plan my day for tomorrow" on a Pro account so Claude can check the
+  `day` log line (`drive_failures` and `weather_failures` 0). **Next:** step 5, tasks in the app
+  (strongest model, fresh session).
 - **Day planner step 2, PR 3 (Mapbox drive times, NWS weather, the planner in "plan my day"):
   merged (#174) and live: `chat` version 19 (2026-10-08, owner's OK).** Deployed by the "deploy
   chat" workflow (run 37834222424) from `main` at b714258: 57/57 deployed files identical to

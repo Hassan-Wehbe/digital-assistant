@@ -3,7 +3,7 @@
 import { Text, View } from 'react-native';
 
 import { ChatCard, ChatCardText } from '@/components/ChatCard';
-import { CalendarCard, DeleteCard, LocationCard, NotesCard, PlacesCard, VaultCard } from '@/components/ChatCards';
+import { CalendarCard, DayCard, DeleteCard, LocationCard, NotesCard, PlacesCard, VaultCard } from '@/components/ChatCards';
 import { Button, Muted, useColors } from '@/components/ui';
 import type { Entry, ErrorButton } from '@/lib/chatThread';
 
@@ -100,5 +100,7 @@ export function ChatBubble({
       );
     case 'calendar':
       return <CalendarCard entry={entry} />;
+    case 'day':
+      return <DayCard entry={entry} />;
   }
 }

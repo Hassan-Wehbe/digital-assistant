@@ -39,6 +39,8 @@ export type ChatEvent =
   /** Wilma asks for these days of the phone's calendar (day planner step 1): the app reads the
    * ticked calendars and sends the question again with them (chat.tsx). */
   | { type: 'agenda_request'; from: string; to: string }
+  /** The answer used a day plan (day planner step 3): the app shows Open my day for that date. */
+  | { type: 'day_plan'; date: string }
   | { type: 'error'; code: string; message: string }
   | { type: 'done'; counted: boolean };
 
@@ -132,6 +134,8 @@ export function toChatEvent(raw: unknown): ChatEvent | null {
       return { type: 'location_request' };
     case 'agenda_request':
       return isDay(raw.from) && isDay(raw.to) ? { type: 'agenda_request', from: raw.from, to: raw.to } : null;
+    case 'day_plan':
+      return isDay(raw.date) ? { type: 'day_plan', date: raw.date } : null;
     case 'done':
       return { type: 'done', counted: raw.counted === true };
     default:

@@ -21,6 +21,7 @@ import { Button, Muted, TextLink, useColors } from '@/components/ui';
 import { CANT_DO, checkDelete, needsVault } from '@/lib/chatDeletes';
 import { LOCATION_ASK, LOCATION_DONE } from '@/lib/chatHere';
 import { CALENDAR_TEXT, type Entry } from '@/lib/chatThread';
+import { dayTitle, todayAndTomorrow } from '@/lib/dayView';
 import { mapsLink, placeCardDetail } from '@/lib/places';
 import { distanceText } from '@/lib/units';
 import { vaultCardText, vaultRoute } from '@/lib/chatVault';
@@ -239,6 +240,22 @@ export function CalendarCard({ entry }: { entry: Extract<Entry, { kind: 'calenda
       icon="📅"
       actions={entry.problem !== 'failed' ? <Button title="Open Settings → Calendars" kind="plain" onPress={() => router.push('/calendars')} /> : undefined}>
       <ChatCardText>{CALENDAR_TEXT[entry.problem]}</ChatCardText>
+    </ChatCard>
+  );
+}
+
+/**
+ * Wilma's answer used a day plan (day planner step 4): Open my day for that date. Only today and
+ * tomorrow can be planned (Q5), so a card from an earlier day is one dimmed line.
+ */
+export function DayCard({ entry }: { entry: Extract<Entry, { kind: 'day' }> }) {
+  const { today } = todayAndTomorrow(new Date());
+  if (entry.date < today) return <ChatCardDone icon="🌅" text={`Plan for ${dayTitle(entry.date)}`} />;
+  return (
+    <ChatCard
+      icon="🌅"
+      actions={<Button title="Open my day" onPress={() => router.push({ pathname: '/day', params: { date: entry.date } })} />}>
+      <ChatCardText>{`Your plan for ${dayTitle(entry.date)}, with every drive and stop.`}</ChatCardText>
     </ChatCard>
   );
 }

@@ -9,7 +9,8 @@ import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 import { ChatBubble } from '@/components/ChatBubble';
 import { MicButton } from '@/components/MicButton';
 import { PasswordHold } from '@/components/PasswordHold';
-import { confirm, GroupList, GroupRow, IconButton, KeyboardScreen, Loading, Muted, space, styles, useColors, useLoad } from '@/components/ui';
+import { useProPlan } from '@/components/ProCard';
+import { Badge, confirm, GroupList, GroupRow, IconButton, KeyboardScreen, Loading, Muted, space, styles, useColors, useLoad } from '@/components/ui';
 import { BoxCounter, WilmaBox } from '@/components/WilmaBox';
 import { useAuth } from '@/lib/auth';
 import { useChat } from '@/lib/chat';
@@ -18,6 +19,7 @@ import { cardActive, type Entry, type ErrorButton, lastUserText, locationActive,
 import { VOICE_ENABLED } from '@/lib/config';
 import { findCredential } from '@/lib/credentials';
 import { deviceLocation } from '@/lib/location';
+import { needsPro, PLAN_MY_DAY } from '@/lib/pro';
 import { supabase } from '@/lib/supabase';
 import { loadAllowance, usageCounterText, usageSummary } from '@/lib/usage';
 import { appendDictation, useDictation } from '@/lib/voice';
@@ -30,6 +32,9 @@ export default function Chat() {
     shareLocation, dismissLocation,
   } = useChat();
   const [text, setText] = useState('');
+  // 🌅 Plan my day in an empty thread: Pro (the badge and the Pro card without it).
+  const pro = useProPlan();
+  const planMyDay = () => (needsPro(pro) ? router.push('/pro') : void askWilma(PLAN_MY_DAY));
   const list = useRef<FlatList>(null);
   const box = useRef<TextInput>(null);
   // The ＋ menu above the box.
@@ -155,7 +160,25 @@ export default function Chat() {
               onNotNow={dismissLocation}
             />
           )}
-          ListEmptyComponent={<Muted>Ask about your notes, save something new, or find a password in your vault.</Muted>}
+          ListEmptyComponent={
+            <View style={{ gap: space.m }}>
+              <Muted>Ask about your notes, save something new, or find a password in your vault. Or start with:</Muted>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.s }}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={needsPro(pro) ? 'Plan my day, part of Pro' : 'Plan my day'}
+                  disabled={!canSend}
+                  onPress={planMyDay}
+                  style={({ pressed }) => [
+                    { flexDirection: 'row', alignItems: 'center', gap: space.xs, borderRadius: 16, paddingVertical: space.xs, paddingHorizontal: space.m, backgroundColor: c.tint },
+                    (pressed || !canSend) && { opacity: 0.6 },
+                  ]}>
+                  <Text style={{ color: c.accent, fontSize: 14, fontWeight: '600' }}>🌅 Plan my day</Text>
+                  {needsPro(pro) ? <Badge text="PRO" /> : null}
+                </Pressable>
+              </View>
+            </View>
+          }
           ListFooterComponent={state.status ? <Muted>{state.status}</Muted> : routing ? <Muted>One moment…</Muted> : null}
           onContentSizeChange={() => list.current?.scrollToEnd({ animated: true })}
           keyboardShouldPersistTaps="handled"

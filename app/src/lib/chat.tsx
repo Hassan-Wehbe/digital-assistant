@@ -24,6 +24,8 @@
 // an `agenda_request`, the ticked calendars are read for those days (chatCalendar.ts) and the same
 // question goes to Wilma again with them, once; when the calendar is off, not allowed or cannot be
 // read, a card says why. The calendar lines are never kept: not in the thread, not on the phone.
+// For one day ("plan my day"), the events go with the places the phone found for them and the
+// day's choices from My day (dayAgenda.ts); an answer that used a day plan ends with Open my day.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { useAuth } from './auth';
@@ -32,13 +34,15 @@ import { loadChoice } from './calendarSettings';
 import type { SharedPoint } from './chatClient';
 import { MAX_NOTES, routeMessage, type MessageRoute } from './chatRoute';
 import { calendarFollowUp } from './chatCalendar';
+import { agendaForChat, phoneGeocode } from './dayAgenda';
+import { todayAndTomorrow } from './dayView';
 import { shareFromCard } from './chatHere';
 import { runConfirm, runTurn } from './chatRun';
 import { threadsToKeep } from './chatStore';
 import { findCredential } from './credentials';
 import { canLookup, chatReducer, initialChat, monthKey, noticeVisible, type ChatAction, type ChatState } from './chatThread';
-import { deviceChatStore, deviceSettingsStore } from './deviceStorage';
-import { deviceLocation } from './location';
+import { deviceChatStore, deviceDayMemory, deviceSettingsStore } from './deviceStorage';
+import { deviceGeocoder, deviceLocation } from './location';
 import { useVault } from './vault';
 
 /** What happened to a message, so the screen can follow it. */
@@ -182,7 +186,19 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         const question = current.current.entries.findLast((e) => e.kind === 'user');
         const out = await calendarFollowUp(asked, {
           choice: () => loadChoice(deviceSettingsStore, forUser),
-          read: (choice, from, to) => readAgenda(deviceCalendar, choice, from, to, phoneTimeZone()),
+          read: async (choice, from, to) => {
+            const read = await readAgenda(deviceCalendar, choice, from, to, phoneTimeZone());
+            if (!('agenda' in read)) return read;
+            // One day ("plan my day"): with the places found on the phone and the day's choices
+            // (Take both, Not driving), so the chat's plan matches My day.
+            return {
+              agenda: await agendaForChat(read.agenda, {
+                load: () => deviceDayMemory.load(forUser, todayAndTomorrow(new Date()).today),
+                save: (m) => deviceDayMemory.save(forUser, m),
+                geocode: phoneGeocode(deviceGeocoder),
+              }),
+            };
+          },
         }, !!agenda);
         // Signed out, a new message, or another answer started meanwhile: nothing more.
         if (user.current !== forUser || current.current.streaming || current.current.entries.findLast((e) => e.kind === 'user') !== question) return;
