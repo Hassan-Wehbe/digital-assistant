@@ -87,12 +87,14 @@ export function isMapsLink(url: string): boolean {
 }
 
 /**
- * Where Open in Maps goes: the saved link; else the spot from "Save where I am" (exact); else a
- * Google Maps search for the address.
+ * Where Open in Maps goes: the saved location (from "Save where I am" or "Is this it?"), the spot
+ * Wilma measures distances from; else the saved link; else a Google Maps search for the address.
+ * The location comes first so a wrong one shows (owner, versionCode 13: a Google link that opened
+ * the right café hid a saved location in another town).
  */
 export function mapsLink(place: Pick<PlaceMetadata, 'address' | 'maps_url' | 'lat' | 'lng'>): string | null {
-  if (place.maps_url && isMapsLink(place.maps_url)) return place.maps_url;
   if (validCoords(place)) return `https://www.google.com/maps/search/?api=1&query=${place.lat},${place.lng}`;
+  if (place.maps_url && isMapsLink(place.maps_url)) return place.maps_url;
   const address = place.address?.trim();
   if (!address) return null;
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
