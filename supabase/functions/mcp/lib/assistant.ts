@@ -78,7 +78,10 @@ Places: restaurants, cafés, bars, shops, hotels and places to visit are items w
 Save one with save_item: the name as the title, what the user said as the body, and what they told you
 as metadata (address, kind, cuisine, price_level, occasions, dishes_liked, would_return, status "want" for
 not been yet or "been", rating 1-5). Put in only what the user said: never invent an address, a Maps link
-or coordinates. When the user went to a saved place ("we went to Tawlet again on Friday with Sarah"), find
+or coordinates. The user's home (where they live or leave from: "my home is 12 Elm St", "this is my home")
+is a place with kind "home", where day plans start; there is only one, so when a place for it already exists
+(search_items with item_type "place", e.g. one named Home), give that one kind "home" with update_item
+(get_item first, all its metadata back) instead of saving another. When the user went to a saved place ("we went to Tawlet again on Friday with Sarah"), find
 it with search_items and call update_item with add_visit (on as YYYY-MM-DD, with, note, rating); to change
 other fields, get_item first and pass all its metadata back with the change. For questions about places
 ("Italian places we liked for date night", "where haven't we been since the summer?", "which restaurants

@@ -12,6 +12,12 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Wilma sets kind `home` (owner's phone test, 2026-10-08): PR open.** The owner asked Wilma to
+  save a place "Home"; it was saved without kind `home`, so the planner said no Home. Claude set
+  that note's kind to `home` with the owner's OK (one SQL update; the revision trigger kept the old
+  version). Fix: one line in Wilma's place instructions (`mcp/lib/assistant.ts`: home is kind
+  `home`, only one, give an existing one the kind instead of saving another) and 2 evaluation cases
+  (109). **Owner:** OK an evaluation run, review and merge, then OK the `chat` and `mcp` deploys.
 - **Day planner step 2, PR 3 (Mapbox drive times, NWS weather, the planner in "plan my day"):
   merged (#174) and live: `chat` version 19 (2026-10-08, owner's OK).** Deployed by the "deploy
   chat" workflow (run 37834222424) from `main` at b714258: 57/57 deployed files identical to
