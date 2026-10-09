@@ -94,11 +94,12 @@ export async function placeEvents(
   let lookups = 0;
   const out: DayEvent[] = [];
   for (const e of events) {
-    const { point: _p, not_a_trip: _n, ...plain } = e;
+    const { point: _p, not_a_trip: _n, drop_off: _d, ...rest } = e;
     if (e.busy_only || e.all_day) {
-      out.push(plain);
+      out.push(rest);
       continue;
     }
+    const plain: DayEvent = memory.drop_off.includes(textKey(e.title)) ? { ...rest, drop_off: true } : rest;
     const answer = memory.places[textKey(e.title)];
     if (answer) {
       out.push('not_a_trip' in answer ? { ...plain, not_a_trip: true } : { ...plain, point: { lat: answer.lat, lng: answer.lng } });

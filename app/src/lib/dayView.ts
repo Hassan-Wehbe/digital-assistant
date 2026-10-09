@@ -64,7 +64,7 @@ export function rowTime(r: DayRow): string {
 /** A drive row's two lines. */
 export function driveText(r: DayDriveRow, t: Map<string, string>): { title: string; detail?: string; warn?: string } {
   const home = !r.for_keys.length;
-  const title = home ? `🚗 Home from ${r.from}` : `🚗 Leave for ${names(r.for_keys, t)}`;
+  const title = home ? `🚗 Home from ${r.from}` : `🚗 Leave ${r.pick_up ? 'to pick up from' : 'for'} ${names(r.for_keys, t)}`;
   if (r.unavailable === 'no_home') return { title, detail: 'Set your Home place to time this drive.' };
   if (r.unavailable === 'no_drive_times' || r.minutes === undefined) return { title, detail: 'Drive time unavailable right now.' };
   let detail = `${r.minutes} min${home ? '' : ' with traffic'}`;
@@ -108,6 +108,8 @@ export function eventLine(r: DayEventRow, t: Map<string, string>): string {
   if (r.private) return parts[0];
   if (r.place && !r.by_name_only) parts.push(`📍 ${r.place}`);
   if (r.not_a_trip) parts.push('not a trip');
+  if (r.drop_off) parts.push('🚸 drop off & pick up');
+  if (r.free) parts.push('shown as free');
   if (r.together_with?.length) parts.push(`one trip with ${names(r.together_with, t)}`);
   return parts.join(' · ');
 }
@@ -151,6 +153,8 @@ export interface EventDetail {
   drive?: { from: string; minutes: number; typical?: number; buffer: number; leaveAt: string };
   /** Why there is no drive time. */
   noDrive?: string;
+  /** 🚸 The leave-by time to go back for the pick-up. */
+  pickUpLeaveAt?: string;
   /** Hourly chance of rain at its place ("3 pm", 30). */
   rain: { hour: string; pct: number; high: boolean }[];
   notDriving: boolean;
@@ -160,13 +164,14 @@ export interface EventDetail {
 export function eventDetail(plan: DayPlan, key: string, notDriving: boolean): EventDetail | null {
   const event = plan.rows.find((r): r is DayEventRow => r.kind === 'event' && r.key === key);
   if (!event) return null;
-  const d = plan.rows.find((r): r is DayDriveRow => r.kind === 'drive' && r.for_keys.includes(key));
+  const d = plan.rows.find((r): r is DayDriveRow => r.kind === 'drive' && r.for_keys.includes(key) && !r.pick_up);
+  const pickUp = plan.rows.find((r): r is DayDriveRow => r.kind === 'drive' && r.for_keys.includes(key) && !!r.pick_up);
   const w = plan.weather_at.find((x) => x.for_keys.includes(key));
   const rain = (w?.hourly ?? []).map((h) => {
     const c = clock(h.at);
     return { hour: c.replace(':00 ', ' '), pct: h.rain_pct, high: h.rain_pct >= 50 };
   });
-  const out: EventDetail = { event, rain, notDriving };
+  const out: EventDetail = { event, rain, notDriving, ...(pickUp?.leave_at ? { pickUpLeaveAt: pickUp.leave_at } : {}) };
   if (d && d.minutes !== undefined && d.leave_at) {
     out.drive = { from: d.from, minutes: d.minutes, ...(d.typical_minutes !== undefined ? { typical: d.typical_minutes } : {}), buffer: d.buffer_min ?? 0, leaveAt: d.leave_at };
   } else if (d?.unavailable === 'no_home') out.noDrive = 'Set your Home place to time the drive.';

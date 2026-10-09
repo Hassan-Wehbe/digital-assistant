@@ -1,5 +1,5 @@
 // One event in My day (mockups screen 3): the sum behind its leave-by time, the hourly chance of
-// rain at its place, Not driving and Directions. Every number comes from the planner (dayView.ts
+// rain at its place, Not driving, 🚸 Drop off & pick up (remembered for the title) and Directions. Every number comes from the planner (dayView.ts
 // eventDetail); the plan stays in the My day screen's memory.
 import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
@@ -13,12 +13,14 @@ export function DayEventDetail({
   plan,
   eventKey,
   notDriving,
+  dropOff,
   answered,
   canDirections,
   checkedAt,
   picker,
   onBack,
   onToggleDriving,
+  onToggleDropOff,
   onDirections,
   onChangePlace,
   onForget,
@@ -26,6 +28,8 @@ export function DayEventDetail({
   plan: DayPlan;
   eventKey: string;
   notDriving: boolean;
+  /** 🚸 The user drops off and picks up at events with this title. */
+  dropOff: boolean;
   /** The user answered "where is this?" for this title (Forget my answer shows). */
   answered: boolean;
   canDirections: boolean;
@@ -34,6 +38,7 @@ export function DayEventDetail({
   picker: ReactNode;
   onBack: () => void;
   onToggleDriving: () => void;
+  onToggleDropOff: () => void;
   onDirections: () => void;
   onChangePlace: () => void;
   onForget: () => void;
@@ -64,6 +69,7 @@ export function DayEventDetail({
           {d.drive.typical !== undefined ? row('Usually at this time', `${d.drive.typical} min`) : null}
           {d.drive.buffer ? row('Park and walk in', `${d.drive.buffer} min`) : null}
           {row('Leave by', clock(d.drive.leaveAt), false, true)}
+          {d.pickUpLeaveAt ? row('Leave to pick up', clock(d.pickUpLeaveAt), false, true) : null}
         </View>
       ) : d.notDriving ? (
         <Muted>You are not driving to this one today.</Muted>
@@ -83,6 +89,16 @@ export function DayEventDetail({
               </View>
             ))}
           </View>
+        </View>
+      ) : null}
+      {e.place && !d.notDriving ? (
+        <View style={{ gap: space.xs }}>
+          <Button title={dropOff ? '🚸 I stay there' : '🚸 Drop off & pick up'} kind="plain" onPress={onToggleDropOff} />
+          <Muted>
+            {dropOff
+              ? `A drive there at the start and back at the end; you are free between. For every “${e.title}”.`
+              : 'Just dropping someone off? Then the time between is free in your plan.'}
+          </Muted>
         </View>
       ) : null}
       {plan.credits.length ? <Muted>{`${plan.credits.join('. ')}.${checkedAt ? ` Checked at ${checkedAt}.` : ''}`}</Muted> : null}

@@ -19,6 +19,8 @@ export const BUFFER_MIN = 5;
 export const MIN_GAP = 30;
 /** Go home between two events only when at least this long would be spent at home (Q6). */
 export const MIN_TIME_HOME = 30;
+/** Minutes a drop-off or a pick-up takes at the place (the 🚸 choice). */
+export const DROP_OFF_MIN = 5;
 /** Two places this close (km) are the same place: one trip, or no drive between them. */
 export const SAME_PLACE_KM = 0.2;
 /** The planned day, for free gaps: 7:00 to 22:00, widened by anything earlier or later. */
@@ -69,6 +71,10 @@ export interface PlanEvent {
   place?: PlanPlace | null;
   /** The user said this event is not a trip (a call, at home). */
   not_a_trip?: boolean;
+  /** The user drops off and picks up here (My day's 🚸 choice): a short stop at its start and at its end, free between. */
+  drop_off?: boolean;
+  /** The calendar shows this event as Free: shown, but it keeps no time and is no trip. */
+  free?: boolean;
   busy_only?: boolean;
   declined?: boolean;
 }
@@ -124,11 +130,13 @@ export interface PlanInput {
 export type Row =
   | {
     kind: "event"; key: string; title: string; start: string; end: string; place?: string; by_name_only?: true;
-    needs_place?: true; not_a_trip?: true; private?: true; together_with?: string[];
+    needs_place?: true; not_a_trip?: true; private?: true; together_with?: string[]; drop_off?: true; free?: true;
   }
   | {
     kind: "drive"; to: string; from: string; for_keys: string[]; arrive_by?: string; leave_at?: string;
     minutes?: number; typical_minutes?: number; buffer_min?: number; tight?: true; unavailable?: "no_home" | "no_drive_times";
+    /** The drive to pick up after a drop-off event (the other one drops off). */
+    pick_up?: true;
   }
   | { kind: "free"; start: string; end: string; minutes: number }
   | { kind: "task"; id: string; title: string; start: string; end: string; place?: string }
@@ -207,6 +215,8 @@ interface Stop {
   s: number;
   e: number;
   place: PlanPlace;
+  /** The pick-up after a drop-off. */
+  pick_up?: true;
 }
 
 /** Where the user is between stops. */
@@ -235,11 +245,15 @@ export async function planDay(input: PlanInput): Promise<DayPlan> {
     timed.push({ ...e, s, e: Math.max(s, end) });
   }
   timed.sort((a, b) => a.s - b.s || a.e - b.e);
+  // Drop off and pick up (the user's 🚸 choice): a trip at the start and one at the end, free between.
+  const dropOff = (t: Timed) => !!t.drop_off && !!t.place && !t.not_a_trip && !t.busy_only && !notDriving.has(t.key);
+  // Shown as Free in the calendar: keeps no time (a drop-off keeps its two stops).
+  const keepsNoTime = (t: Timed) => !!t.free && !dropOff(t);
 
   // Take both: events the user chose to do as one trip (only real, timed events with a place).
   const groupOf = new Map<string, string[]>();
   for (const keys of input.choices?.together ?? []) {
-    const members = [...new Set(keys)].filter((k) => timed.some((t) => t.key === k && t.place));
+    const members = [...new Set(keys)].filter((k) => timed.some((t) => t.key === k && t.place && !dropOff(t) && !keepsNoTime(t)));
     if (members.length < 2) continue;
     const merged = new Set(members.flatMap((k) => groupOf.get(k) ?? [k]));
     for (const k of merged) groupOf.set(k, [...merged]);
@@ -256,6 +270,8 @@ export async function planDay(input: PlanInput): Promise<DayPlan> {
       row.needs_place = true;
     }
     if (t.not_a_trip) row.not_a_trip = true;
+    if (dropOff(t)) row.drop_off = true;
+    else if (keepsNoTime(t)) row.free = true;
     const group = groupOf.get(t.key);
     if (group) row.together_with = group.filter((k) => k !== t.key);
     rows.push(row);
@@ -267,6 +283,8 @@ export async function planDay(input: PlanInput): Promise<DayPlan> {
       const a = timed[i];
       const b = timed[j];
       if (groupOf.get(a.key)?.includes(b.key)) continue;
+      // Not there all along: no overlap with a drop-off or a Free event.
+      if (dropOff(a) || dropOff(b) || keepsNoTime(a) || keepsNoTime(b)) continue;
       const end = Math.min(a.e, b.e);
       if (end <= b.s) continue;
       const same = samePlace(a.place, b.place);
@@ -281,7 +299,13 @@ export async function planDay(input: PlanInput): Promise<DayPlan> {
   const stops: Stop[] = [];
   const seen = new Set<string>();
   for (const t of timed) {
-    if (seen.has(t.key) || !t.place || t.not_a_trip || t.busy_only || notDriving.has(t.key)) continue;
+    if (seen.has(t.key) || !t.place || t.not_a_trip || t.busy_only || notDriving.has(t.key) || keepsNoTime(t)) continue;
+    if (dropOff(t)) {
+      seen.add(t.key);
+      stops.push({ keys: [t.key], s: t.s, e: t.s + DROP_OFF_MIN, place: t.place });
+      stops.push({ keys: [t.key], s: t.e, e: t.e + DROP_OFF_MIN, place: t.place, pick_up: true });
+      continue;
+    }
     const members = (groupOf.get(t.key) ?? [t.key]).map((k) => timed.find((x) => x.key === k)!).filter(Boolean);
     for (const m of members) seen.add(m.key);
     stops.push({ keys: members.map((m) => m.key), s: Math.min(...members.map((m) => m.s)), e: Math.max(...members.map((m) => m.e)), place: t.place });
@@ -302,7 +326,9 @@ export async function planDay(input: PlanInput): Promise<DayPlan> {
   // for task options; never in the plan the app gets.
   const ends = new Map<DriveRow, { from: PlanPlace; to: PlanPlace; free: number }>();
   let here: Here = { place: home, home: true, from: -Infinity };
+  stops.sort((a, b) => a.s - b.s);
   for (const stop of stops) {
+    const pickUp = stop.pick_up ? { pick_up: true as const } : {};
     let origin = here.place;
     let known: Leg | null = null; // the drive from home, when already asked for below
     // Between two events: go home when there is time to spend there (Q6).
@@ -324,16 +350,16 @@ export async function planDay(input: PlanInput): Promise<DayPlan> {
     if (samePlace(origin, stop.place)) {
       // Already there (the same pool, the same office): no drive.
     } else if (!origin) {
-      driveRows.push({ kind: "drive", from: "Home", to: stop.place.label, for_keys: stop.keys, arrive_by: at(stop.s), unavailable: "no_home" });
+      driveRows.push({ kind: "drive", from: "Home", to: stop.place.label, for_keys: stop.keys, arrive_by: at(stop.s), unavailable: "no_home", ...pickUp });
     } else {
       const l = known ?? await leg(origin, stop.place, stop.s - 30);
       if (!l) {
-        driveRows.push({ kind: "drive", from: origin.label, to: stop.place.label, for_keys: stop.keys, arrive_by: at(stop.s), unavailable: "no_drive_times" });
+        driveRows.push({ kind: "drive", from: origin.label, to: stop.place.label, for_keys: stop.keys, arrive_by: at(stop.s), unavailable: "no_drive_times", ...pickUp });
       } else {
         const leave = stop.s - l.minutes - BUFFER_MIN;
         const row: DriveRow = {
           kind: "drive", from: origin.label, to: stop.place.label, for_keys: stop.keys, leave_at: at(leave), arrive_by: at(stop.s),
-          minutes: l.minutes, ...typical(l), buffer_min: BUFFER_MIN, ...(leave < here.from ? { tight: true as const } : {}),
+          minutes: l.minutes, ...typical(l), buffer_min: BUFFER_MIN, ...(leave < here.from ? { tight: true as const } : {}), ...pickUp,
         };
         driveRows.push(row);
         ends.set(row, { from: origin, to: stop.place, free: here.from });
@@ -377,7 +403,8 @@ export async function planDay(input: PlanInput): Promise<DayPlan> {
 
   // Free gaps: the day minus events, drives and placed tasks.
   const busy: [number, number][] = [
-    ...timed.map((t): [number, number] => [t.s, t.e]),
+    ...timed.filter((t) => !keepsNoTime(t)).flatMap((t): [number, number][] =>
+      dropOff(t) ? [[t.s, t.s + DROP_OFF_MIN], [t.e, t.e + DROP_OFF_MIN]] : [[t.s, t.e]]),
     ...driveRows.filter((d) => d.leave_at && d.arrive_by).map((d): [number, number] => [toMin(date, d.leave_at!)!, toMin(date, d.arrive_by!)!]),
     ...taskBusy,
   ];

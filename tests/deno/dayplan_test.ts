@@ -281,6 +281,35 @@ Deno.test("task options: a meal whose hours are taken is offered only near them,
   assertEquals(tight.options, { task_id: "m", options: [], note: "No time near lunch time that fits it with the drive." });
 });
 
+Deno.test("drop off and pick up (🚸): a drive at the start and at the end, home between, lunch fits", async () => {
+  // The owner's day (versionCode 15): Lexi's 8:00-4:00 event kept them "at school" all day.
+  const drives = { leg: () => Promise.resolve({ minutes: 15 }) };
+  const school = (more: Partial<PlanEvent>) => ev("lexi", "Lexigazer", "08:00", "16:00", CLEANERS, more);
+  const lunch = [{ id: "lunch", title: "Lunch at Craft & Commons", priority: "normal" as const, duration_min: 60, place: SUSHI }];
+  const before = await planDay({ date: DATE, tz: TZ, home: HOME, drives, events: [school({})], tasks: lunch, optionsFor: "lunch" });
+  assertEquals(before.options?.options, [], "all day at school: no lunch");
+
+  const plan = await planDay({ date: DATE, tz: TZ, home: HOME, drives, events: [school({ drop_off: true })], tasks: lunch, optionsFor: "lunch" });
+  const event = of(plan.rows, "event")[0];
+  assertEquals([event.start, event.end, event.drop_off], [`${DATE}T08:00`, `${DATE}T16:00`, true], "the event is shown as it is");
+  const drive = of(plan.rows, "drive").map((d) => `${d.from}>${d.to} ${d.leave_at?.slice(11)}${d.pick_up ? " pick-up" : ""}`);
+  // Drop off at 8 (leave 7:40), home at 8:05-8:20, back for 4 (leave 3:40), home after 4:05.
+  assertEquals(drive, ["Home>Bright Cleaners 07:40", "Bright Cleaners>Home 08:05", "Home>Bright Cleaners 15:40 pick-up", "Bright Cleaners>Home 16:05"]);
+  assert(of(plan.rows, "free").some((f) => f.start === `${DATE}T08:20` && f.end === `${DATE}T15:40`), JSON.stringify(of(plan.rows, "free")));
+  assertEquals(plan.options!.options.map((o) => `${o.kind} ${o.start.slice(11)}`), ["free_time 11:30", "free_time 12:00", "free_time 12:30"]);
+});
+
+Deno.test("an event shown as Free in the calendar keeps no time, makes no trip and no overlap", async () => {
+  const plan = await planDay({
+    date: DATE, tz: TZ, home: HOME, drives: { leg: () => Promise.resolve({ minutes: 15 }) }, tasks: [],
+    events: [ev("hold", "Office hours (optional)", "09:00", "17:00", CLEANERS, { free: true }), ev("sara", "Swim: Sara", "16:30", "17:30", POOL)],
+  });
+  assertEquals(of(plan.rows, "event").find((e) => e.key === "hold")?.free, true);
+  assertEquals(of(plan.rows, "overlap"), []);
+  assert(of(plan.rows, "drive").every((d) => !d.for_keys.includes("hold")));
+  assert(of(plan.rows, "free").some((f) => f.start <= `${DATE}T09:00` && f.end >= `${DATE}T16:00`), JSON.stringify(of(plan.rows, "free")));
+});
+
 Deno.test("task options without a place: any free gap that holds it; none fits: a note", async () => {
   const plan = await planDay({
     date: DATE, tz: TZ, home: HOME, drives: null, now: `${DATE}T21:50`, optionsFor: "t",

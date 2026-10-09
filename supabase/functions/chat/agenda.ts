@@ -85,6 +85,10 @@ export const eventSchema = z.object({
   }).strict().optional(),
   /** The user said this event is not a trip (a call, at home). */
   not_a_trip: z.boolean().optional(),
+  /** The user drops off and picks up here (My day's 🚸 choice, for the planner). */
+  drop_off: z.boolean().optional(),
+  /** The calendar shows this event as Free (for the planner). */
+  free: z.boolean().optional(),
 });
 
 /** Today's choices, kept on the phone (Q7): events done as one trip, events not driven to. Events

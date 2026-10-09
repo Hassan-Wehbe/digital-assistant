@@ -38,6 +38,8 @@ export interface PhoneEvent {
   accessLevel?: string | null;
   /** "canceled" events are left out. */
   status?: string | null;
+  /** "free": the event is shown as Free (it keeps no time in My day). */
+  availability?: string | null;
 }
 
 export interface Permission {
@@ -67,6 +69,10 @@ export interface AgendaEvent {
   point?: { lat: number; lng: number; by_name_only?: true };
   /** The user said this event is not a trip (or it is a video call). */
   not_a_trip?: true;
+  /** The user drops off and picks up here (My day's 🚸 choice, by title). */
+  drop_off?: true;
+  /** Shown as Free in the calendar. */
+  free?: true;
 }
 
 export interface Agenda {
@@ -145,6 +151,7 @@ export function trimEvent(e: PhoneEvent, calendarName: string, allDayInUtc: bool
   const place = busyOnly ? '' : clip(e.location, MAX_TEXT);
   if (place) out.location = place;
   if (busyOnly) out.busy_only = true;
+  if (!allDay && e.availability === 'free') out.free = true;
   return out;
 }
 
@@ -252,6 +259,7 @@ export const deviceCalendar: CalendarDeps = {
       location: e.location,
       accessLevel: e.accessLevel,
       status: e.status,
+      availability: e.availability,
     }));
   },
   allDayInUtc: Platform.OS === 'android',

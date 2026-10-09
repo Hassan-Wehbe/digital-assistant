@@ -21,6 +21,10 @@ export interface DayEventRow {
   not_a_trip?: true;
   private?: true;
   together_with?: string[];
+  /** 🚸 The user drops off and picks up here: free between. */
+  drop_off?: true;
+  /** Shown as Free in the calendar: keeps no time. */
+  free?: true;
 }
 
 export interface DayDriveRow {
@@ -35,6 +39,8 @@ export interface DayDriveRow {
   buffer_min?: number;
   tight?: true;
   unavailable?: 'no_home' | 'no_drive_times';
+  /** The drive back to pick up after a drop-off. */
+  pick_up?: true;
 }
 
 export type DayRow =
@@ -119,6 +125,8 @@ export function toDayRow(raw: unknown): DayRow | null {
         ...opt('not_a_trip', raw.not_a_trip === true, true as const),
         ...opt('private', raw.private === true, true as const),
         ...opt('together_with', Array.isArray(raw.together_with), texts(raw.together_with)),
+        ...opt('drop_off', raw.drop_off === true, true as const),
+        ...opt('free', raw.free === true, true as const),
       };
     case 'drive':
       if (!text(raw.from) || !text(raw.to)) return null;
@@ -131,6 +139,7 @@ export function toDayRow(raw: unknown): DayRow | null {
         ...opt('buffer_min', count(raw.buffer_min, 120), raw.buffer_min as number),
         ...opt('tight', raw.tight === true, true as const),
         ...opt('unavailable', raw.unavailable === 'no_home' || raw.unavailable === 'no_drive_times', raw.unavailable as 'no_home' | 'no_drive_times'),
+        ...opt('pick_up', raw.pick_up === true, true as const),
       };
     case 'free':
       return when(raw.start) && when(raw.end) && count(raw.minutes, 2880)
