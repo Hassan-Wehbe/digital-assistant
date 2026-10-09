@@ -27,6 +27,19 @@ export const DAY_END = 22 * 60;
 /** Task options offered for one task; at most MAX_ON_THE_WAY of them stops on a drive already planned. */
 export const MAX_OPTIONS = 4;
 export const MAX_ON_THE_WAY = 2;
+/** A meal's usual hours (local minutes): a task named for one is offered then when it fits (owner, 2026-10-09). */
+export const MEAL_HOURS: { word: RegExp; from: number; to: number }[] = [
+  { word: /\bbreakfast\b/i, from: 7 * 60, to: 9 * 60 + 30 },
+  { word: /\bbrunch\b/i, from: 10 * 60, to: 12 * 60 + 30 },
+  { word: /\blunch\b/i, from: 11 * 60 + 30, to: 13 * 60 + 30 },
+  { word: /\b(dinner|supper)\b/i, from: 17 * 60 + 30, to: 20 * 60 },
+];
+
+/** The usual hours of the meal a task is named for ("Lunch at Craft & Commons"), or null. */
+export function mealHours(title: string): { from: number; to: number } | null {
+  const m = MEAL_HOURS.find((h) => h.word.test(title));
+  return m ? { from: m.from, to: m.to } : null;
+}
 /** A rain row from this chance of rain (Q2). */
 export const RAIN_MIN_PCT = 50;
 /** Hours of rain looked at around an event: from this long before it starts to its end. */
@@ -495,7 +508,9 @@ interface OptionContext {
  * the gap's start and, when the gap is roomy, in its middle (lunch in the free hours, not only right
  * after the last stop). Free time is always offered when it fits: at most MAX_ON_THE_WAY stops on a
  * drive (least extra driving first), the rest free time (least extra driving, then the middles of
- * the roomiest gaps, then gaps' first minutes), at most MAX_OPTIONS, listed by time. "Not today" is the app's own.
+ * the roomiest gaps, then gaps' first minutes), at most MAX_OPTIONS, listed by time.
+ * A meal ("lunch at …") is offered only in its usual hours (MEAL_HOURS), as near their middle as each
+ * gap allows, when any time then fits; otherwise like any other task. "Not today" is the app's own.
  */
 async function taskOptions(task: PlanTask, ctx: OptionContext): Promise<{ options: TaskOption[]; note?: string }> {
   const { date, driveRows, ends, gaps, leg, now } = ctx;
@@ -505,6 +520,9 @@ async function taskOptions(task: PlanTask, ctx: OptionContext): Promise<{ option
   /** Free time: each gap's best fit (its middle when roomy, else its first minute), and the first minutes of roomy gaps. */
   const best: { option: TaskOption; room: number }[] = [];
   const early: { option: TaskOption; room: number }[] = [];
+  const meal = mealHours(task.title);
+  const atMeal: { option: TaskOption; room: number }[] = [];
+  const mealMore: { option: TaskOption; room: number }[] = [];
 
   if (task.place) {
     for (const d of driveRows) {
@@ -541,6 +559,23 @@ async function taskOptions(task: PlanTask, ctx: OptionContext): Promise<{ option
     const room = e - s - (there + duration + back);
     if (room < 0) continue;
     const first: TaskOption = { kind: "free_time", start: at(s + there), end: at(s + there + duration), extra_drive_min: there + back };
+    if (meal) {
+      // Starting in the meal's hours (and ending in them when it is short enough): as near their
+      // middle as the gap allows, then the earliest and latest times when half an hour or more apart.
+      const lo = Math.max(s + there, meal.from);
+      const hi = Math.min(e - back - duration, Math.max(meal.from, meal.to - duration));
+      const quarter = (m: number) => {
+        const q = Math.round(m / 15) * 15;
+        return q >= lo && q <= hi ? q : m;
+      };
+      const taken: number[] = [];
+      for (const m of lo <= hi ? [(meal.from + Math.max(meal.from, meal.to - duration)) / 2, lo, hi] : []) {
+        const start = quarter(Math.min(Math.max(m, lo), hi));
+        if (taken.some((t) => Math.abs(t - start) < 30)) continue;
+        (taken.length ? mealMore : atMeal).push({ option: { ...first, start: at(start), end: at(start + duration) }, room });
+        taken.push(start);
+      }
+    }
     // The middle of the gap, on a quarter hour, when that is at least half an hour later.
     const mid = Math.floor((s + there + room / 2) / 15) * 15;
     if (mid - (s + there) >= 30 && mid + duration + back <= e) {
@@ -554,10 +589,14 @@ async function taskOptions(task: PlanTask, ctx: OptionContext): Promise<{ option
   onTheWay.sort((a, b) => a.extra_drive_min - b.extra_drive_min || a.start.localeCompare(b.start));
   const byFit = (a: { option: TaskOption; room: number }, b: { option: TaskOption; room: number }) =>
     a.option.extra_drive_min - b.option.extra_drive_min || b.room - a.room || a.option.start.localeCompare(b.option.start);
-  const free = [...best.sort(byFit), ...early.sort(byFit)].map((f) => f.option);
-  const picked = [...onTheWay.slice(0, MAX_ON_THE_WAY), ...free].slice(0, MAX_OPTIONS);
+  // A meal: only times in its hours, when there are any.
+  const inMeal = (o: TaskOption) => !!meal && toMin(date, o.start)! >= meal.from && toMin(date, o.start)! <= meal.to;
+  const mealTime = atMeal.length > 0 || onTheWay.some(inMeal);
+  const ways = mealTime ? onTheWay.filter(inMeal) : onTheWay;
+  const free = (mealTime ? [...atMeal.sort(byFit), ...mealMore.sort(byFit)] : [...best.sort(byFit), ...early.sort(byFit)]).map((f) => f.option);
+  const picked = [...ways.slice(0, MAX_ON_THE_WAY), ...free].slice(0, MAX_OPTIONS);
   // Fewer free times than room left: more stops on the way fill it.
-  picked.push(...onTheWay.slice(MAX_ON_THE_WAY, MAX_ON_THE_WAY + MAX_OPTIONS - picked.length));
+  picked.push(...ways.slice(MAX_ON_THE_WAY, MAX_ON_THE_WAY + MAX_OPTIONS - picked.length));
   const options = picked.sort((a, b) => a.start.localeCompare(b.start));
   if (options.length) return { options };
   if (task.place && !ctx.home) return { options, note: "Set your Home place so Wilma can time the drive." };

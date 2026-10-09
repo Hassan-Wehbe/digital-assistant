@@ -93,7 +93,7 @@ export interface Session {
 export async function openSession(world = new World(), here?: SharedPoint, timeZone?: string): Promise<Session> {
   const ctx: ToolContext = {
     db: world.client(), userId: "eval-user", accessToken: "eval-token", assistantName: world.assistantName,
-    distanceUnit: world.distanceUnit,
+    distanceUnit: world.distanceUnit, timeZone,
     log: () => {}, // the pretend account's tool log lines would only clutter the run's output
   };
   const tools = await connectTools(ctx, "eval");
@@ -120,6 +120,8 @@ export interface RunOptions {
   calendar?: PhoneCalendar;
   /** Fake drive times and weather for the day planner (a Pro case sets world.plan in setup). */
   planner?: { drives?: DriveTimes; weather?: Weather };
+  /** The phone's time zone, as the app's chat sends it (else the calendar's, else none: UTC). */
+  timeZone?: string;
 }
 
 export interface PhoneCalendar {
@@ -145,7 +147,7 @@ export async function runConversation(
 ): Promise<RunRecord> {
   const world = new World();
   opts.setup?.(world);
-  const session = await openSession(world, opts.here, opts.calendar?.time_zone);
+  const session = await openSession(world, opts.here, opts.timeZone ?? opts.calendar?.time_zone);
   const started = performance.now();
   const record: RunRecord = { turns: [], world, costCents: 0, modelCalls: 0, ms: 0 };
   const messages: Message[] = [];

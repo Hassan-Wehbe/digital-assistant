@@ -6,6 +6,7 @@
 // refused before this, by rejectCredentials (every metadata value).
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { loadSpaces, type Space } from "./spaces.ts";
+import { momentOf } from "../../_shared/dayplan/time.ts";
 
 export const TASK_TYPE = "task";
 /** The space a task goes to when the user names none; created on the first task. */
@@ -32,7 +33,7 @@ export interface TaskMetadata {
   repeat?: TaskRepeat;
   /** A repeating task's last day done. */
   last_done_on?: string;
-  /** When the day plan put it (the user picked that option); a time with its UTC offset. */
+  /** When it is done: the user picked a time (the app's form, a day plan option, or told Wilma); a time with its UTC offset. */
   planned_at?: string;
 }
 
@@ -75,6 +76,27 @@ export function taskDate(v: unknown, field: string): string | undefined {
   return d;
 }
 
+/** A local wall-clock time without an offset: "2026-10-09T12:30". */
+const LOCAL = /^(\d{4}-\d{2}-\d{2})T([01]\d|2[0-3]):([0-5]\d)$/;
+
+/**
+ * planned_at as the user said it: a moment with its offset, or (with the phone's time zone) a
+ * local time, given the offset that zone has on that day ("2026-11-02T12:30" in New York:
+ * -05:00, after the clocks go back). The model never works out an offset itself.
+ */
+function plannedMoment(v: unknown, timeZone: string | undefined): string | undefined {
+  const local = typeof v === "string" ? LOCAL.exec(v.trim()) : null;
+  if (!local) return moment(v, "planned_at");
+  if (!timeZone) return fail("planned_at must be a time with its offset, like 2026-10-09T17:05:00-04:00");
+  taskDate(local[1], "planned_at");
+  const wall = v as string;
+  const t = momentOf(wall.trim(), timeZone);
+  if (t === null) return fail("planned_at must be a local time like 2026-10-09T12:30");
+  const off = Math.round((Date.parse(`${wall.trim()}:00Z`) - t) / 60_000);
+  const two = (n: number) => String(n).padStart(2, "0");
+  return `${wall.trim()}:00${off < 0 ? "-" : "+"}${two(Math.floor(Math.abs(off) / 60))}:${two(Math.abs(off) % 60)}`;
+}
+
 function moment(v: unknown, field: string): string | undefined {
   if (v === undefined || v === null || v === "") return undefined;
   if (typeof v !== "string" || !MOMENT.test(v.trim()) || Number.isNaN(Date.parse(v.trim()))) {
@@ -86,9 +108,9 @@ function moment(v: unknown, field: string): string | undefined {
 /**
  * The checked, tidied metadata of a task. Throws TaskError with a short reason when a field is
  * unknown or wrong. A new task is open and normal; marking it done stamps done_at (now) unless
- * given, and reopening it clears done_at.
+ * given, and reopening it clears done_at. `timeZone`: the phone's, for a local planned_at.
  */
-export function normalizeTask(input: Record<string, unknown> | null | undefined, now = new Date()): TaskMetadata {
+export function normalizeTask(input: Record<string, unknown> | null | undefined, now = new Date(), timeZone?: string): TaskMetadata {
   const m = input ?? {};
   if (typeof m !== "object" || Array.isArray(m)) fail("metadata must be an object");
   const unknown = Object.keys(m).find((k) => !FIELDS.includes(k));
@@ -126,7 +148,7 @@ export function normalizeTask(input: Record<string, unknown> | null | undefined,
   }
   if (out.place_id && out.address) fail("give either place_id (a saved place) or address, not both");
 
-  const planned = moment(m.planned_at, "planned_at");
+  const planned = plannedMoment(m.planned_at, timeZone);
   if (planned) out.planned_at = planned;
 
   const repeat = word(m.repeat === "none" ? undefined : m.repeat, "repeat", TASK_REPEATS);

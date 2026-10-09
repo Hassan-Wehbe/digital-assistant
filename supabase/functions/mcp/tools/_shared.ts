@@ -11,6 +11,8 @@ export interface ToolContext {
   accessToken: string; // to schedule background embedding as the same user
   assistantName: string; // what the user calls the assistant (lib/assistant.ts)
   distanceUnit?: DistanceUnit; // miles (the default) or km (app_user.distance_unit)
+  /** The phone's time zone (the app's chat sends it): a task's local planned_at gets its offset from it. */
+  timeZone?: string;
   /** Where tools write their one log line (counts and codes only); console by default. */
   log?: (entry: FindPlacesLog) => void;
 }

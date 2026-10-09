@@ -4,7 +4,7 @@
 // Drive times here are a fake: fixed minutes per pair of places, so every number can be checked.
 import { assert, assertEquals } from "jsr:@std/assert@1";
 import {
-  BUFFER_MIN, type DriveTimes, freeGaps, fromMin, type PlanEvent, type PlanPlace, planDay, type Row, toMin,
+  BUFFER_MIN, type DriveTimes, freeGaps, fromMin, mealHours, type PlanEvent, type PlanPlace, planDay, type Row, toMin,
 } from "../../supabase/functions/_shared/dayplan/plan.ts";
 
 const DATE = "2026-10-09";
@@ -211,21 +211,44 @@ Deno.test("task options: on the way to swim and free time, at most four, listed 
   assert(opts.every((o) => o.start >= `${DATE}T12:00`), "nothing before now");
 });
 
-Deno.test("task options: lunch between two drop-offs is offered in the free hours, not only on the way", async () => {
+const DROP_OFFS = {
+  date: DATE, tz: TZ, home: HOME, drives: fakeDrives({ ...DRIVES, "Hinode Sushi>Bright Cleaners": 20, "Hinode Sushi>Aquatic Center": 16 }),
+  now: `${DATE}T07:00`,
+  events: [ev("car", "Drop the car", "09:00", "09:15", CLEANERS), ev("kids", "Drop the kids", "15:00", "15:15", POOL)],
+};
+const at = (opts: { kind: string; start: string }[]) => opts.map((o) => `${o.kind} ${o.start.slice(11)}`);
+
+Deno.test("task options: an errand between two drop-offs is offered in the free hours, not only on the way", async () => {
   // The owner's phone test (versionCode 15): only "on the way" times and the minute after the
   // morning stop came back; the free hours in between were never offered.
   const plan = await planDay({
-    date: DATE, tz: TZ, home: HOME, drives: fakeDrives({ ...DRIVES, "Hinode Sushi>Bright Cleaners": 20, "Hinode Sushi>Aquatic Center": 16 }),
-    now: `${DATE}T07:00`, optionsFor: "lunch",
-    events: [ev("car", "Drop the car", "09:00", "09:15", CLEANERS), ev("kids", "Drop the kids", "15:00", "15:15", POOL)],
-    tasks: [{ id: "lunch", title: "Lunch", priority: "normal", duration_min: 60, place: SUSHI }],
+    ...DROP_OFFS, optionsFor: "t",
+    tasks: [{ id: "t", title: "Pick up the cake", priority: "normal", duration_min: 60, place: SUSHI }],
+  });
+  // At most two stops on a drive; the free hours' middle (11:30), not the minute after the morning stop (9:47).
+  assertEquals(at(plan.options!.options), ["on_the_way 07:35", "free_time 11:30", "on_the_way 13:39", "free_time 18:00"]);
+});
+
+Deno.test("task options: lunch is offered at lunchtime (11:30-13:30), as near its middle as fits", async () => {
+  const plan = await planDay({
+    ...DROP_OFFS, optionsFor: "lunch",
+    tasks: [{ id: "lunch", title: "Lunch at Craft & Commons", priority: "normal", duration_min: 60, place: SUSHI }],
+  });
+  // Not on the way at 7:35 or 1:39 pm, not dinner time: 12:00 first by fit, the earliest and latest too.
+  assertEquals(at(plan.options!.options), ["free_time 11:30", "free_time 12:00", "free_time 12:30"]);
+});
+
+Deno.test("task options: a meal whose hours are taken or past is offered like any task", async () => {
+  const plan = await planDay({
+    ...DROP_OFFS, now: `${DATE}T10:00`, optionsFor: "b",
+    tasks: [{ id: "b", title: "Breakfast with Sam", priority: "normal", duration_min: 45, place: SUSHI }],
   });
   const opts = plan.options!.options;
-  assert(opts.length <= 4, JSON.stringify(opts));
-  assert(opts.filter((o) => o.kind === "on_the_way").length <= 2, "at most two stops on a drive");
-  assert(opts.some((o) => o.kind === "free_time" && o.start >= `${DATE}T11:00` && o.start <= `${DATE}T13:30`), JSON.stringify(opts));
-  // Listed by time; the free hours' middle (11:30), not the minute after the morning stop (9:47).
-  assertEquals(opts.map((o) => `${o.kind} ${o.start.slice(11)}`), ["on_the_way 07:35", "free_time 11:30", "on_the_way 13:39", "free_time 18:00"]);
+  assert(opts.length > 0, "still offered");
+  assert(opts.every((o) => o.start >= `${DATE}T10:00`), JSON.stringify(opts));
+  assertEquals(mealHours("Dinner at Hinode"), { from: 17 * 60 + 30, to: 20 * 60 });
+  assertEquals(mealHours("Pick up the cake"), null);
+  assertEquals(mealHours("Lunchbox for Sara"), null); // whole words only
 });
 
 Deno.test("task options without a place: any free gap that holds it; none fits: a note", async () => {

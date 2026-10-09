@@ -49,6 +49,21 @@ Deno.test("normalizeTask: done stamps done_at; unknown or wrong fields are refus
   }
 });
 
+Deno.test("normalizeTask: a local planned_at gets the phone's offset for that day; without a zone it is refused", () => {
+  // The owner's "lunch at Craft & Commons tomorrow at 12:30" (versionCode 15 phone test): Wilma
+  // writes the local time; the server knows the offset, daylight saving included.
+  const NY = "America/New_York";
+  assertEquals(normalizeTask({ planned_at: "2026-10-10T12:30" }, NOW, NY).planned_at, "2026-10-10T12:30:00-04:00");
+  assertEquals(normalizeTask({ planned_at: "2026-11-02T12:30" }, NOW, NY).planned_at, "2026-11-02T12:30:00-05:00"); // after clocks go back
+  assertEquals(normalizeTask({ planned_at: "2026-10-10T12:30" }, NOW, "Asia/Kolkata").planned_at, "2026-10-10T12:30:00+05:30");
+  assertEquals(normalizeTask({ planned_at: "2026-10-10T12:30" }, NOW, "UTC").planned_at, "2026-10-10T12:30:00+00:00");
+  // A moment with its offset is kept as given, zone or not.
+  assertEquals(normalizeTask({ planned_at: "2026-10-09T17:05:00-04:00" }, NOW, NY).planned_at, "2026-10-09T17:05:00-04:00");
+  assertThrows(() => normalizeTask({ planned_at: "2026-10-10T12:30" }, NOW), TaskError, "with its offset");
+  assertThrows(() => normalizeTask({ planned_at: "2026-02-30T12:30" }, NOW, NY), TaskError, "not a real date");
+  assertThrows(() => normalizeTask({ planned_at: "2026-10-10T24:30" }, NOW, NY), TaskError, "Task not saved");
+});
+
 Deno.test("setTaskDone: done now or open again, the rest kept", () => {
   const t = { due_on: "2026-10-09", duration_min: 20, priority: "important" as const };
   assertEquals(setTaskDone(t, true, NOW), { ...t, status: "done", done_at: NOW.toISOString() });
@@ -64,9 +79,9 @@ Deno.test("taskText: the fields meaning search reads", () => {
 
 // ---- The tools on the pretend account (tests/eval/world.ts) --------------------------------------
 
-async function call(w: World, name: string, args: Record<string, unknown>) {
+async function call(w: World, name: string, args: Record<string, unknown>, timeZone?: string) {
   const server = new McpServer({ name: "test", version: "0" });
-  for (const r of ALL_TOOLS) r(server, { db: w.client(), userId: "u", accessToken: "t", assistantName: "Wilma", log: () => {} });
+  for (const r of ALL_TOOLS) r(server, { db: w.client(), userId: "u", accessToken: "t", assistantName: "Wilma", timeZone, log: () => {} });
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
   await server.connect(transport);
   const res = await transport.handleRequest(new Request("http://localhost/mcp", {
@@ -104,6 +119,22 @@ Deno.test("save_item: the first task makes the Tasks space; later ones reuse it"
   const note = await call(w, "save_item", { title: "A note", body: "x", item_type: "note" });
   assertEquals(note.isError, true);
   assert(note.text.includes("which space"), note.text);
+});
+
+Deno.test("save_item / update_item: a time said in the app's chat is kept with the phone's offset", async () => {
+  const w = new World();
+  const saved = await call(w, "save_item", task("Lunch at Craft & Commons", { due_on: "2026-10-10", duration_min: 60, planned_at: "2026-10-10T12:30" }), "America/New_York");
+  assertEquals(saved.isError, false, saved.text);
+  assertEquals(saved.json.task.planned_at, "2026-10-10T12:30:00-04:00");
+  const moved = await call(w, "update_item", {
+    item_id: saved.json.id, metadata: { due_on: "2026-10-10", duration_min: 60, planned_at: "2026-10-10T13:00" },
+  }, "America/New_York");
+  assertEquals(moved.isError, false, moved.text);
+  assertEquals(w.items.find((i) => i.id === saved.json.id)!.metadata.planned_at, "2026-10-10T13:00:00-04:00");
+  // The Claude app's connector sends no zone: the model is told to give the offset.
+  const bare = await call(w, "save_item", task("Call the bank", { planned_at: "2026-10-10T15:00" }));
+  assertEquals(bare.isError, true);
+  assert(bare.text.includes("with its offset"), bare.text);
 });
 
 Deno.test("save_item: a task never takes a password (rule 9) and is never put in a restricted Tasks space", async () => {

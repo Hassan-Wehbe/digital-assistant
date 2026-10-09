@@ -368,7 +368,7 @@ async function runChat({ deps, token, userId, messages, here, tz, canCalendar, a
   try {
     const llm = deps.llm();
     const { assistantName, distanceUnit } = await loadUserSettings(db, userId);
-    tools = await connectTools({ db, userId, accessToken: token, assistantName, distanceUnit });
+    tools = await connectTools({ db, userId, accessToken: token, assistantName, distanceUnit, timeZone: tz });
     const system = systemPrompt(assistantName, tools.instructions, new Date(), here, tz);
     // The MCP tools plus the chat-only actions (never offered to the Claude connector).
     const specs = [...tools.specs, ...ACTION_SPECS];
