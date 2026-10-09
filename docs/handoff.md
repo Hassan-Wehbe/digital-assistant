@@ -12,6 +12,17 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **F, spaces on Home (owner, 2026-10-09): on branch, not merged; app only, ships in versionCode 17
+  with E.** Home lists the 5 spaces opened most recently on this phone (filled alphabetically),
+  then "See all spaces (N) ›" to the new **All spaces** screen (`app/spaces.tsx`: every space,
+  restricted ones dimmed and not opened, + New space). The Tasks space is left out of Home (the ✅
+  Tasks tile is the way in) and opens the Tasks screen from All spaces or the one box
+  (`lib/openSpace.ts`). Restricted spaces are never remembered or shown on Home (rule 3). Kept on
+  the phone: space ids only, per account, forgotten on sign-out (`homeSpaces.ts`,
+  `deviceRecentSpaces`). 668 app tests (6 new). Tasks are notes (`item`, item_type "task") in the
+  Tasks space, made on the first task; the Tasks screen works with no Tasks space (find_tasks reads
+  every searchable space). **Owner, open question:** a default Tasks space for every account
+  (owner leans yes; a migration, see the next step).
 - **E, 🚸 drop off & pick up (owner, 2026-10-09): merged (#184, 8224fde); planner live as `chat` version 25** (run 37871456379); the app part waits for versionCode 17. The owner's "no lunch"
   was a calendar event "Lexigazer" 8:00-4:00: every timed event with a place keeps the user there
   for its whole time, so no free gap was left. (Fix B's follow-up, #183, merged and live: `chat`
