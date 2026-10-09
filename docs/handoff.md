@@ -21,8 +21,16 @@ tokens or keys in chat.
   the phone: space ids only, per account, forgotten on sign-out (`homeSpaces.ts`,
   `deviceRecentSpaces`). 668 app tests (6 new). Tasks are notes (`item`, item_type "task") in the
   Tasks space, made on the first task; the Tasks screen works with no Tasks space (find_tasks reads
-  every searchable space). **Owner, open question:** a default Tasks space for every account
-  (owner leans yes; a migration, see the next step).
+  every searchable space). **Default Tasks space (owner: yes, 2026-10-09):** migration
+  `20261010120000_default_tasks_space.sql` makes sign-up (`handle_new_auth_user`) create a
+  top-level, not restricted "Tasks" space ("Things to do, with due dates", as `tasksSpace`), and
+  gives one to every existing account without a top-level Tasks space (any case); safe to run twice;
+  the function stays revoked from public, anon, authenticated. `tasksSpace` stays the fallback
+  (renamed or deleted). SQL test 14; checked by Claude on a local Postgres stand-in (auth.users,
+  app_user, space with RLS): backfill, no duplicates on a second run, own "TASKS" kept, new sign-up
+  gets one, only the owner sees it, the function not callable. **Owner:** run
+  `tests/sql/dry_runs/14_default_tasks_space_dry_run.sql` in the SQL editor (every item ok), then
+  apply the migration there. No deploy, no build.
 - **E, 🚸 drop off & pick up (owner, 2026-10-09): merged (#184, 8224fde); planner live as `chat` version 25** (run 37871456379); the app part waits for versionCode 17. The owner's "no lunch"
   was a calendar event "Lexigazer" 8:00-4:00: every timed event with a place keeps the user there
   for its whole time, so no free gap was left. (Fix B's follow-up, #183, merged and live: `chat`
