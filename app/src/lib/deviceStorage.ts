@@ -10,6 +10,7 @@ import { chatStore, EMPTY_CHAT, type ChatStore } from './chatStore';
 import { dayMemoryStore, EMPTY_MEMORY, type DayMemoryStore } from './dayChoices';
 import { recentSpacesStore, type RecentSpacesStore } from './homeSpaces';
 import { base64Bytes, encryptedStorage, utf8Bytes, utf8Text, type Cipher, type KeyStore } from './sessionStorage';
+import { welcomeKey } from './signup';
 
 // Kept on this device only: not synced to other devices or copied into backups.
 const KEYCHAIN = { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY };
@@ -82,4 +83,10 @@ export const deviceRecentSpaces: RecentSpacesStore = recentSpacesStore({
 export const deviceSettingsStore: SettingsStore = {
   get: (name) => kv.getItemAsync(name),
   set: (name, value) => kv.setItemAsync(name, value),
+};
+
+/** The Welcome card on Home was closed for this account on this phone (signup.ts welcomeKey). */
+export const deviceWelcome = {
+  seen: async (userId: string) => (await kv.getItemAsync(welcomeKey(userId))) === '1',
+  markSeen: (userId: string) => kv.setItemAsync(welcomeKey(userId), '1'),
 };

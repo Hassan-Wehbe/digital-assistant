@@ -67,6 +67,7 @@ function Screens() {
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="sign-in" options={{ title: 'Sign in' }} />
+        <Stack.Screen name="create-account" options={{ title: 'Create account' }} />
       </Stack.Protected>
     </Stack>
   );

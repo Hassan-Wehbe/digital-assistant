@@ -1,8 +1,10 @@
-// Sign in with the same email and password as the vault pages and the Claude connector.
+// Sign in with the same email and password as the vault pages and the Claude connector; or
+// create an account with an invite code (create-account.tsx, which comes back here with the email).
+import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { ScrollView, Text, TextInput } from 'react-native';
 
-import { Button, Card, KeyboardScreen, Muted, styles, useColors } from '@/components/ui';
+import { Button, Card, KeyboardScreen, Muted, styles, TextLink, useColors } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { useShare } from '@/lib/shareIntake';
 
@@ -11,7 +13,8 @@ export default function SignIn() {
   const { signIn } = useAuth();
   const { pending } = useShare();
   const passwordRef = useRef<TextInput>(null);
-  const [email, setEmail] = useState('');
+  const params = useLocalSearchParams<{ email?: string }>();
+  const [email, setEmail] = useState(params.email ?? '');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,6 +74,10 @@ export default function SignIn() {
           />
           {error && <Text style={{ color: c.danger, fontSize: 15 }}>{error}</Text>}
           <Button title={busy ? 'Signing in…' : 'Sign in'} onPress={submit} disabled={busy} />
+        </Card>
+        <Card style={{ gap: 8 }}>
+          <Muted>New to Wilma?</Muted>
+          <TextLink title="Have an invite? Create account ›" onPress={() => router.push('/create-account')} />
         </Card>
       </ScrollView>
     </KeyboardScreen>

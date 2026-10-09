@@ -105,6 +105,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async signIn(email, password) {
         const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (!error) return null;
+        // A new account until its email is confirmed (create-account.tsx).
+        if (error.code === 'email_not_confirmed') return 'Confirm your email first: tap the link in the email Wilma sent you.';
         // Supabase's messages are plain ("Invalid login credentials"); never echo the password.
         return error.message || 'Sign-in failed.';
       },
