@@ -12,6 +12,27 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Find a time fix (owner's phone test after C/D went live, 2026-10-09): on branch, not merged.**
+  "Lunch at Craft & Commons", tomorrow, 60 min still showed stops on the way (to drop Lexi, to swim,
+  to drive). Found while rebuilding a day like the owner's: an "on the way" stop could be offered
+  by leaving earlier than the event before that drive ends (lunch at 12:00 "on the way home" during a
+  12:00-13:00 swim), and it counted as lunchtime, pushing out real choices. Fix (`plan.ts`
+  `taskOptions`): a stop on the way starts only once the user is free (`ends[].free`, the end of
+  the event before the drive). And a meal whose hours are taken is offered only within 2 hours of
+  them (`MEAL_SLACK_MIN`; no 6:25 am lunch), else the note "No time near lunch time that fits it
+  with the drive." 400 Deno tests (2 new; the first fails without the fix). Planner only: no prompt
+  change, no evaluation needed; live after a `chat` deploy (not `mcp`). The owner's own day was not
+  seen (plans are not kept): if it still looks wrong after the deploy, ask for the events' times.
+- **C and D live (2026-10-09, owner's OK): #182 merged (squash, 80913c5); `mcp` version 29 and
+  `chat` version 23**, deployed by the "deploy chat" workflow (runs 37865462021 and 37865464015) from
+  `main`. Wilma now sets a task's time when told one, and Find a time offers meals at mealtimes, on
+  the versionCode 15 build already on the phone. **versionCode 16 building (owner: "build for Play",
+  2026-10-09):** fix A (the task form's time and date pickers, #181). "app build" workflow run
+  37865729484 from `main` at 80913c5: `npm run check` passed; Expo build
+  6047761e-e78a-4939-b6de-b7de5443b5ff, submission to Play internal testing scheduled
+  (b00aad08-426e-4689-9bd3-7cb74605b870). **Owner:** update from Play when it arrives and test the
+  task form (🕒 Pick a time, Pick a date); still to do in Play Console: Data safety → add
+  *Calendar → Calendar events*.
 - **Fixes C and D (server only, no app build; 2026-10-09): on branch `claude/serene-galileo-dhbmes`.**
   Fix B is live: #181 merged (squash, a9a9e3a) and **`chat` version 22** deployed by the "deploy
   chat" workflow (run 37862877317, owner's OK); `mcp` still 28. **C, Wilma sets a task's time:**

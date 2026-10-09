@@ -251,6 +251,36 @@ Deno.test("task options: a meal whose hours are taken or past is offered like an
   assertEquals(mealHours("Lunchbox for Sara"), null); // whole words only
 });
 
+Deno.test("task options: a stop on the way never starts during the event before that drive", async () => {
+  // Owner's phone test (versionCode 15): lunch "on the way home from swim" was offered at 12:00,
+  // during swim (12:00-13:00), by leaving earlier than swim ends.
+  const plan = await planDay({
+    date: DATE, tz: TZ, home: HOME, drives: { leg: () => Promise.resolve({ minutes: 15 }) }, now: "2026-10-08T20:48", optionsFor: "lunch",
+    events: [ev("a", "Drop Lexi", "07:45", "08:00", CLEANERS), ev("b", "Swim", "12:00", "13:00", POOL)],
+    tasks: [{ id: "lunch", title: "Lunch at Craft & Commons", priority: "normal", duration_min: 60, place: SUSHI }],
+  });
+  const opts = plan.options!.options;
+  assert(opts.every((o) => o.end <= `${DATE}T12:00` || o.start >= `${DATE}T13:00`), JSON.stringify(opts));
+});
+
+Deno.test("task options: a meal whose hours are taken is offered only near them, else a note", async () => {
+  const swimAllDay = (title: string) => planDay({
+    date: DATE, tz: TZ, home: HOME, drives: { leg: () => Promise.resolve({ minutes: 15 }) }, optionsFor: "m",
+    events: [ev("b", "Swim meet", "08:00", "18:00", POOL)],
+    tasks: [{ id: "m", title, priority: "normal", duration_min: 60, place: SUSHI }],
+  });
+  const lunch = await swimAllDay("Lunch at Craft & Commons");
+  assertEquals(lunch.options?.options.filter((o) => o.start < `${DATE}T09:30`), [], "no early-morning lunch");
+  const dinner = await swimAllDay("Dinner at Hinode");
+  assert(dinner.options!.options.every((o) => o.start >= `${DATE}T15:30`), JSON.stringify(dinner.options));
+  const tight = await planDay({
+    date: DATE, tz: TZ, home: HOME, drives: { leg: () => Promise.resolve({ minutes: 15 }) }, optionsFor: "m",
+    events: [ev("b", "Swim meet", "06:00", "22:30", POOL)],
+    tasks: [{ id: "m", title: "Lunch at Craft & Commons", priority: "normal", duration_min: 60, place: SUSHI }],
+  });
+  assertEquals(tight.options, { task_id: "m", options: [], note: "No time near lunch time that fits it with the drive." });
+});
+
 Deno.test("task options without a place: any free gap that holds it; none fits: a note", async () => {
   const plan = await planDay({
     date: DATE, tz: TZ, home: HOME, drives: null, now: `${DATE}T21:50`, optionsFor: "t",
