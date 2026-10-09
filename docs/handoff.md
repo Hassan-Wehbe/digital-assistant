@@ -26,7 +26,7 @@ tokens or keys in chat.
   middle, plus the earliest and latest when 30+ minutes apart (the owner's lunch: 11:30, 12:00,
   12:30); when nothing fits then, as any task. 398 Deno tests; 112 evaluation cases (new
   `task-save-at-time`, `task-move-time`; `task-save-due-and-duration` also checks no time is made
-  up; the harness passes a time zone like the chat). **Owner:** OK the evaluation (C changes
+  up; the harness passes a time zone like the chat). **Evaluation (owner's OK, $1 cap): run 37864037790 at f36881f, Luna 111/112, 0 leaks, 0 unsafe, $0.06**; `task-save-at-time` passes; the miss, `task-move-time`, asked for "5pm today" at 8:27 pm New York time and Wilma rightly asked "did you mean tomorrow?": the case now says tomorrow (re-run alone below). **Owner:** OK the evaluation (C changes
   Wilma's instructions: CLAUDE.md rule 9 / D21), then the PR, then deploy **both** `mcp` and `chat`
   (the chat imports the mcp tools).
 - **versionCode 15 phone test, fixes A and B (2026-10-08): on branch `claude/serene-galileo-dhbmes`,

@@ -1187,16 +1187,17 @@ export const CASES: EvalCase[] = [
       "a task tomorrow at 12:30 local time (with New York's offset), 60 minutes",
     )],
   },
+  // Tomorrow, not today: "5pm today" asked after 5 pm is rightly questioned (run 37864037790, 8:27 pm).
   {
     id: "task-move-time",
     category: "edit",
     timeZone: CAL_TZ,
     setup: seedTasks,
-    turns: ["Put the dry cleaning at 5pm today."],
+    turns: ["Put the dry cleaning at 5pm tomorrow."],
     checks: [
       itemWhere((i) => i.id === "00000000-0000-4000-8000-0000000000e1" &&
-        String(i.metadata.planned_at ?? "").startsWith(`${localDay(0)}T17:00:00-0`) && i.metadata.duration_min === 20,
-        "the dry cleaning task at 5 pm today, its other fields kept"),
+        String(i.metadata.planned_at ?? "").startsWith(`${localDay(1)}T17:00:00-0`) && i.metadata.duration_min === 20,
+        "the dry cleaning task at 5 pm tomorrow, its other fields kept"),
       noItemWhere((i) => isTaskItem(i) && /dry clean/i.test(i.title) && i.id !== "00000000-0000-4000-8000-0000000000e1",
         "a second dry cleaning task"),
     ],
