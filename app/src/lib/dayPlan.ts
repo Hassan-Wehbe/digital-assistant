@@ -211,7 +211,7 @@ export function toDayPlan(raw: unknown): DayPlan | null {
       ? {
           options: {
             task_id: raw.options.task_id,
-            options: (Array.isArray(raw.options.options) ? raw.options.options : []).map(toOption).filter((o): o is TaskOption => o !== null).slice(0, 3),
+            options: (Array.isArray(raw.options.options) ? raw.options.options : []).map(toOption).filter((o): o is TaskOption => o !== null).slice(0, 4),
             ...opt('note', text(raw.options.note), raw.options.note as string),
           },
         }

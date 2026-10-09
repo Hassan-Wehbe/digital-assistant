@@ -24,8 +24,9 @@ export const SAME_PLACE_KM = 0.2;
 /** The planned day, for free gaps: 7:00 to 22:00, widened by anything earlier or later. */
 export const DAY_START = 7 * 60;
 export const DAY_END = 22 * 60;
-/** Task options offered for one task. */
-export const MAX_OPTIONS = 3;
+/** Task options offered for one task; at most MAX_ON_THE_WAY of them stops on a drive already planned. */
+export const MAX_OPTIONS = 4;
+export const MAX_ON_THE_WAY = 2;
 /** A rain row from this chance of rain (Q2). */
 export const RAIN_MIN_PCT = 50;
 /** Hours of rain looked at around an event: from this long before it starts to its end. */
@@ -490,14 +491,20 @@ interface OptionContext {
 
 /**
  * Where a task fits (the ＋ Add sheet): a stop on a drive already planned (from → task → to instead of
- * from → to, leaving earlier), or a free gap that holds the task and the drives to and from it.
- * Ranked by least extra driving, then earliest; at most MAX_OPTIONS. "Not today" is the app's own.
+ * from → to, leaving earlier), or a free gap that holds the task and the drives to and from it, at
+ * the gap's start and, when the gap is roomy, in its middle (lunch in the free hours, not only right
+ * after the last stop). Free time is always offered when it fits: at most MAX_ON_THE_WAY stops on a
+ * drive (least extra driving first), the rest free time (least extra driving, then the middles of
+ * the roomiest gaps, then gaps' first minutes), at most MAX_OPTIONS, listed by time. "Not today" is the app's own.
  */
 async function taskOptions(task: PlanTask, ctx: OptionContext): Promise<{ options: TaskOption[]; note?: string }> {
   const { date, driveRows, ends, gaps, leg, now } = ctx;
   const at = (m: number) => fromMin(date, m);
   const duration = task.duration_min ?? 15;
-  const out: TaskOption[] = [];
+  const onTheWay: TaskOption[] = [];
+  /** Free time: each gap's best fit (its middle when roomy, else its first minute), and the first minutes of roomy gaps. */
+  const best: { option: TaskOption; room: number }[] = [];
+  const early: { option: TaskOption; room: number }[] = [];
 
   if (task.place) {
     for (const d of driveRows) {
@@ -510,7 +517,7 @@ async function taskOptions(task: PlanTask, ctx: OptionContext): Promise<{ option
       const extraDrive = Math.max(0, a.minutes + b.minutes - d.minutes);
       const newLeave = leave - extraDrive - duration;
       if (newLeave < now) continue;
-      out.push({
+      onTheWay.push({
         kind: "on_the_way", start: at(newLeave + a.minutes), end: at(newLeave + a.minutes + duration),
         extra_drive_min: extraDrive, for_keys: d.for_keys, leave_at: at(newLeave), was_leave_at: d.leave_at,
       });
@@ -531,13 +538,27 @@ async function taskOptions(task: PlanTask, ctx: OptionContext): Promise<{ option
       there = a.minutes;
       back = b.minutes;
     }
-    if (s + there + duration + back <= e) {
-      out.push({ kind: "free_time", start: at(s + there), end: at(s + there + duration), extra_drive_min: there + back });
+    const room = e - s - (there + duration + back);
+    if (room < 0) continue;
+    const first: TaskOption = { kind: "free_time", start: at(s + there), end: at(s + there + duration), extra_drive_min: there + back };
+    // The middle of the gap, on a quarter hour, when that is at least half an hour later.
+    const mid = Math.floor((s + there + room / 2) / 15) * 15;
+    if (mid - (s + there) >= 30 && mid + duration + back <= e) {
+      best.push({ option: { ...first, start: at(mid), end: at(mid + duration) }, room });
+      early.push({ option: first, room });
+    } else {
+      best.push({ option: first, room });
     }
   }
 
-  out.sort((a, b) => a.extra_drive_min - b.extra_drive_min || a.start.localeCompare(b.start));
-  const options = out.slice(0, MAX_OPTIONS);
+  onTheWay.sort((a, b) => a.extra_drive_min - b.extra_drive_min || a.start.localeCompare(b.start));
+  const byFit = (a: { option: TaskOption; room: number }, b: { option: TaskOption; room: number }) =>
+    a.option.extra_drive_min - b.option.extra_drive_min || b.room - a.room || a.option.start.localeCompare(b.option.start);
+  const free = [...best.sort(byFit), ...early.sort(byFit)].map((f) => f.option);
+  const picked = [...onTheWay.slice(0, MAX_ON_THE_WAY), ...free].slice(0, MAX_OPTIONS);
+  // Fewer free times than room left: more stops on the way fill it.
+  picked.push(...onTheWay.slice(MAX_ON_THE_WAY, MAX_ON_THE_WAY + MAX_OPTIONS - picked.length));
+  const options = picked.sort((a, b) => a.start.localeCompare(b.start));
   if (options.length) return { options };
   if (task.place && !ctx.home) return { options, note: "Set your Home place so Wilma can time the drive." };
   if (task.place && !driveRows.length && !gaps.length) return { options, note: "No free time today that fits it." };

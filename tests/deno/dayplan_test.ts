@@ -193,21 +193,39 @@ Deno.test("tasks: one planned at its time, others not placed (overdue marked)", 
   ]);
 });
 
-Deno.test("task options: on the way to swim first (least extra driving), then free time, at most three", async () => {
+Deno.test("task options: on the way to swim and free time, at most four, listed by time", async () => {
   const plan = await planDay({
     date: DATE, tz: TZ, home: HOME, drives: fakeDrives(DRIVES), now: `${DATE}T12:00`, optionsFor: "t1",
     events: [ev("sara", "Swim: Sara", "16:30", "18:30", POOL)],
     tasks: [{ id: "t1", title: "Pick up dry cleaning", priority: "normal", duration_min: 20, place: CLEANERS }],
   });
   const opts = plan.options!.options;
-  assert(opts.length > 0 && opts.length <= 3);
+  assert(opts.length > 0 && opts.length <= 4);
   // Home → cleaners (14) → pool (3) instead of home → pool (15): 2 extra minutes of driving, 20 at the cleaners.
-  assertEquals(opts[0], {
+  assert(opts.some((o) => JSON.stringify(o) === JSON.stringify({
     kind: "on_the_way", start: `${DATE}T16:02`, end: `${DATE}T16:22`, extra_drive_min: 2,
     for_keys: ["sara"], leave_at: `${DATE}T15:48`, was_leave_at: `${DATE}T16:10`,
-  });
-  assert(opts.slice(1).every((o) => o.extra_drive_min >= opts[0].extra_drive_min), "ranked by extra driving");
+  })), JSON.stringify(opts));
+  assert(opts.some((o) => o.kind === "free_time"), "free time offered too");
+  assertEquals(opts.map((o) => o.start), opts.map((o) => o.start).toSorted(), "listed by time");
   assert(opts.every((o) => o.start >= `${DATE}T12:00`), "nothing before now");
+});
+
+Deno.test("task options: lunch between two drop-offs is offered in the free hours, not only on the way", async () => {
+  // The owner's phone test (versionCode 15): only "on the way" times and the minute after the
+  // morning stop came back; the free hours in between were never offered.
+  const plan = await planDay({
+    date: DATE, tz: TZ, home: HOME, drives: fakeDrives({ ...DRIVES, "Hinode Sushi>Bright Cleaners": 20, "Hinode Sushi>Aquatic Center": 16 }),
+    now: `${DATE}T07:00`, optionsFor: "lunch",
+    events: [ev("car", "Drop the car", "09:00", "09:15", CLEANERS), ev("kids", "Drop the kids", "15:00", "15:15", POOL)],
+    tasks: [{ id: "lunch", title: "Lunch", priority: "normal", duration_min: 60, place: SUSHI }],
+  });
+  const opts = plan.options!.options;
+  assert(opts.length <= 4, JSON.stringify(opts));
+  assert(opts.filter((o) => o.kind === "on_the_way").length <= 2, "at most two stops on a drive");
+  assert(opts.some((o) => o.kind === "free_time" && o.start >= `${DATE}T11:00` && o.start <= `${DATE}T13:30`), JSON.stringify(opts));
+  // Listed by time; the free hours' middle (11:30), not the minute after the morning stop (9:47).
+  assertEquals(opts.map((o) => `${o.kind} ${o.start.slice(11)}`), ["on_the_way 07:35", "free_time 11:30", "on_the_way 13:39", "free_time 18:00"]);
 });
 
 Deno.test("task options without a place: any free gap that holds it; none fits: a note", async () => {
