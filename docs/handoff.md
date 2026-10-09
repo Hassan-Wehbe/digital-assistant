@@ -28,9 +28,10 @@ tokens or keys in chat.
   the function stays revoked from public, anon, authenticated. `tasksSpace` stays the fallback
   (renamed or deleted). SQL test 14; checked by Claude on a local Postgres stand-in (auth.users,
   app_user, space with RLS): backfill, no duplicates on a second run, own "TASKS" kept, new sign-up
-  gets one, only the owner sees it, the function not callable. **Owner:** run
-  `tests/sql/dry_runs/14_default_tasks_space_dry_run.sql` in the SQL editor (every item ok), then
-  apply the migration there. No deploy, no build.
+  gets one, only the owner sees it, the function not callable. **Applied (2026-10-09, owner):** dry run 9/9 ok,
+  migration run in the SQL editor; checked by Claude (read-only): 2 accounts, both with exactly one
+  top-level Tasks space, none restricted, the sign-up function is the new one and not callable by
+  `authenticated`. No deploy, no build.
 - **E, 🚸 drop off & pick up (owner, 2026-10-09): merged (#184, 8224fde); planner live as `chat` version 25** (run 37871456379); the app part waits for versionCode 17. The owner's "no lunch"
   was a calendar event "Lexigazer" 8:00-4:00: every timed event with a place keeps the user there
   for its whole time, so no free gap was left. (Fix B's follow-up, #183, merged and live: `chat`
