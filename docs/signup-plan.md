@@ -80,10 +80,35 @@ accounts); a smaller one (Sonnet) for step 4's copy, step 5 and docs.
 ## Steps (each a small PR; the owner approves merges, migrations and deploys)
 
 1. Migration (codes, hook, terms fields) with a rolled-back dry run and SQL tests.
+   **As built (2026-10-09, PR open):** `20261011120000_invite_signup.sql`. The Before User Created
+   hook is available on the Free plan, so no `signup` Edge Function. `hook_before_user_created`
+   refuses a sign-up without a valid code (wrong, expired, used up) or without `age_confirmed`
+   true and the current `terms_version` (`signup_setting`, `2026-10-09`); the app sends
+   `invite_code`, `age_confirmed`, `terms_version` as sign-up metadata. The sign-up trigger counts
+   the use under a row lock (two sign-ups at once cannot both take the last use), sets the plan,
+   records the terms and drops the code from the account's metadata. Codes read
+   `WILMA-XXXX-XXXX` (8 characters, no 0/O/1/I/L), made in the SQL editor with
+   `select create_invite_code('for Sarah', 1, 14, 'pro');` (note, uses, days, plan), shown once.
+   `signup_mode()` is the one function anon can call. SQL test 15 (33 checks) and its dry run.
+   **Owner, in this order:** dry run, apply the migration, then Authentication > Hooks > Before
+   User Created > Postgres > `public.hook_before_user_created`. Sign-ups stay switched off until
+   step 5 (switching them on before the hook is on would open sign-up to anyone).
 2. App: Create account screen, confirmation deep link, welcome flow. Preview build.
+   **As built (2026-10-09, PR #186):** no deep link: the email's link opens
+   `docs/legal/email-confirmed.html`, which says to sign in in the app (the Check your email card
+   sends the person to sign in with the email filled in). Welcome is a card on Home, once per
+   account on this phone, for accounts whose sign-up carried the terms: what Wilma does, the vault
+   (Set up your vault), and "say call yourself … in the chat" for her name. No preview build: it
+   rides versionCode 17.
 3. In-app account deletion: `delete-account` function, Account screen button, web page updated.
+   **As built (2026-10-09, PR #186):** Settings → Delete account. The function checks the
+   sign-in, the password again and DELETE, removes the caller's Storage folder, then deletes the
+   auth user (cascades remove everything else); logs carry no email, password or file name.
 4. Testing terms (short, plain; drafted for the owner, reviewed by the lawyer later, D27) and the
    privacy page's sign-up section; Play Data safety ("account creation").
+   **As built (2026-10-09, PR #186):** `docs/legal/testing-terms.html` (version 2026-10-09, the
+   owner to read and change), privacy page (account section, 18+), deletion page (in-app path).
+   Owner: Play Data safety.
 5. Owner switches it on (below), makes the first codes, phone checklist
    (`docs/signup-phone-checklist.md`), "build for Play".
 

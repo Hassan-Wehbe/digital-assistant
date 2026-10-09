@@ -12,3 +12,7 @@ verify_jwt = false
 # Like mcp: the function verifies the caller's Supabase access token itself (401 otherwise)
 # and then runs every query as that user.
 verify_jwt = false
+
+[functions.delete-account]
+# Like chat: the function checks the caller's sign-in itself (401 otherwise), then the password.
+verify_jwt = false

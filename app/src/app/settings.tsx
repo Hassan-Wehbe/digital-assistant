@@ -1,7 +1,7 @@
 // Settings (docs/ui-review.md, plan step 2): what used to fill the bottom of the home screen.
 // This month's AI allowance in full (D28), distances in miles or km (places Q14), the phone's
 // calendars Wilma may read (day planner step 1, app/calendars.tsx), the account,
-// the recycle bin, sign out, the version. Later: deleting the account (D29).
+// the recycle bin, deleting the account (D29, app/delete-account.tsx), sign out, the version.
 import * as Application from 'expo-application';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -99,6 +99,7 @@ export default function Settings() {
         <GroupRow first title="Signed in as" subtitle={session?.user.email ?? 'you'} />
         <GroupRow title="Change sign-in password" onPress={() => router.push('/account')} />
         <GroupRow title="Recycle bin" subtitle="Deleted notes" onPress={() => router.push('/bin')} />
+        <GroupRow title="Delete account" subtitle="Everything in it, for good" onPress={() => router.push('/delete-account')} />
       </GroupList>
 
       <Button title="Sign out" kind="danger" onPress={signOut} />

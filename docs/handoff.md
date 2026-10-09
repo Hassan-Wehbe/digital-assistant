@@ -1,6 +1,6 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-10-08 22:25 UTC (newest: day planner step 2 done; versionCode 15 in internal testing, owner testing it; live `mcp` v28, `chat` v21; see the first entry under "Where things stand"). Earlier: 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
+Last updated 2026-10-09 04:00 UTC (newest: invite-only sign-up steps 1-4 in PR #186, not merged; live `mcp` v29, `chat` v25; see the first entry under "Where things stand"). Earlier: 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
 #102), with Expo patch updates (#98). Step 2, server, is live. Places step 5b ("places near me",
 server) **merged and live** (#104, `mcp` v13, `chat` v6; first entry below). Then step 6, the places build, which also carries the mic fix #91. Play Console:
 Data safety and other forms saved, **not yet sent for review**; see the first entry below).
@@ -12,6 +12,29 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Invite-only sign-up, steps 1-4 (owner: "do the invite sign up first", 2026-10-09): PR #186,
+  branch `claude/invite-signup`, not merged.** One PR, a commit per step. (1) Migration
+  `20261011120000_invite_signup.sql`: `invite_code` (hashed), `invite_use`, `signup_setting`
+  (`signup_mode`, `terms_version` 2026-10-09), `hook_before_user_created` (Supabase's Before User
+  Created hook, Free plan), the sign-up trigger counts the use under a lock and sets the plan,
+  `create_invite_code(note, uses, days, plan)` for the owner in the SQL editor, `signup_mode()` the
+  one anon function. SQL test 15 (33 checks, passed locally with stubs) and its dry run. (2) App:
+  Sign in → "Have an invite? Create account", `app/create-account.tsx`, `lib/signup.ts`; the
+  confirmation email lands on `docs/legal/email-confirmed.html` ("sign in in the app"; no deep
+  link, deliberately); a one-time Welcome card on Home for accounts made in the app. (3)
+  `delete-account` Edge Function (sign-in + password + DELETE, then Storage files, then the auth
+  user; cascades remove the rest; service-role key only there), Settings → Delete account
+  (`app/delete-account.tsx`); the deploy workflow gained `delete-account`. (4) Testing terms
+  (`docs/legal/testing-terms.html`, a plain draft for the owner and later the lawyer, D27), the
+  privacy page's account and children sections, the deletion page's in-app path. 686 app tests,
+  410 Deno tests. **Owner, in order:** dry run 15, apply the migration, switch on the hook
+  (Authentication > Hooks > Before User Created > Postgres > `public.hook_before_user_created`),
+  merge #186, run "deploy chat" with `delete-account`, then Authentication > Sign In / Providers:
+  "Allow new users to sign up" on and "Confirm email" on, URL Configuration: add
+  `https://hassan-wehbe.github.io/digital-assistant/legal/email-confirmed.html` to the redirect
+  URLs; Play Console Data safety: the app now lets people create an account and delete it in the
+  app (deletion link unchanged); then make codes and "build for Play" (versionCode 17: E, F and
+  sign-up).
 - **F, spaces on Home (owner, 2026-10-09): on branch, not merged; app only, ships in versionCode 17
   with E.** Home lists the 5 spaces opened most recently on this phone (filled alphabetically),
   then "See all spaces (N) ›" to the new **All spaces** screen (`app/spaces.tsx`: every space,

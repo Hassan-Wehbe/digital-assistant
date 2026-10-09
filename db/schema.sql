@@ -28,6 +28,8 @@ create table app_user (
   --   writable by users)
   -- Added by 20261008120000_distance_unit.sql: distance_unit text not null default 'mi'
   --   ('mi' or 'km'; places step 8 Q14, set on the app's Settings screen)
+  -- Added by 20261011120000_invite_signup.sql: terms_version text, terms_accepted_at timestamptz,
+  --   age_confirmed boolean (from the sign-up; readable by the user, never writable)
   created_at           timestamptz not null default now()
 );
 
@@ -304,3 +306,17 @@ create policy secret_log_insert on secret_access_log
 -- my_ai_allowance(): the caller's used_cents, requests, limit_cents, used_fraction this month.
 -- Admin only (is_admin): admin_ai_overview() (email and numbers per person, nothing else),
 --   admin_set_ai_limit(user, cents | null), admin_set_default_limit(cents).
+
+-- =========================================================
+-- Invite-only sign-up (20261011120000_invite_signup.sql; design.md D29, docs/signup-plan.md)
+-- =========================================================
+-- signup_setting: one row; signup_mode ('invite' | 'open'), terms_version (what a new account
+--   must accept). invite_code: code_hash (SHA-256, never the code), note, max_uses, uses,
+--   expires_at, grants_plan ('free' | 'pro'). invite_use: invite_code_id, user_id, used_at.
+--   No user access to any of them.
+-- hook_before_user_created(event): Supabase Auth's Before User Created hook; refuses a sign-up
+--   without a valid code (invite mode) or without 18+ and the current terms. The sign-up trigger
+--   (handle_new_auth_user) counts the use, sets app_user.plan from the code and drops the code
+--   from the account's metadata.
+-- create_invite_code(note, max_uses, days, plan): owner only (SQL editor); returns the code once.
+-- signup_mode(): 'invite' or 'open', the one thing anon can call (the Create account screen).

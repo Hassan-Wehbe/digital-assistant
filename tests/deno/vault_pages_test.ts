@@ -10,7 +10,8 @@ const DOCS = resolve(dirname(fromFileUrl(import.meta.url)), "../../docs");
 const DIR = join(DOCS, "vault");
 const PAGES = ["vault/setup.html", "vault/enter.html", "vault/reveal.html", "vault/recover.html",
                "vault/index.html", "oauth/consent.html", "files/upload.html",
-               "legal/privacy.html", "legal/delete-account.html"];
+               "legal/privacy.html", "legal/delete-account.html", "legal/email-confirmed.html",
+               "legal/testing-terms.html"];
 const SCRIPTS = ["vault/app.js", "vault/crypto.js", "vault/setup.js", "vault/enter.js", "vault/reveal.js",
                  "vault/recover.js", "oauth/consent.js", "files/upload.js", "files/filetypes.js"];
 

@@ -28,6 +28,7 @@ import {
   useLoad,
   useReloadOnReturn,
 } from '@/components/ui';
+import { WelcomeCard } from '@/components/WelcomeCard';
 import { BoxCounter, WilmaBox } from '@/components/WilmaBox';
 import { deviceRecentSpaces } from '@/lib/deviceStorage';
 import { homeSpaces } from '@/lib/homeSpaces';
@@ -205,6 +206,7 @@ export default function Home() {
 
   const header = (
     <View style={{ gap: space.m }}>
+      {query ? null : <WelcomeCard />}
       {query ? (
         <Text style={[styles.title, { color: c.text }]}>{`Results for “${query}”`}</Text>
       ) : (
