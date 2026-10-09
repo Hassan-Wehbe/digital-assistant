@@ -15,10 +15,13 @@ tokens or keys in chat.
 - **C and D live (2026-10-09, owner's OK): #182 merged (squash, 80913c5); `mcp` version 29 and
   `chat` version 23**, deployed by the "deploy chat" workflow (runs 37865462021 and 37865464015) from
   `main`. Wilma now sets a task's time when told one, and Find a time offers meals at mealtimes, on
-  the versionCode 15 build already on the phone. **Waiting for versionCode 16:** fix A (the task
-  form's time and date pickers, #181). **Owner:** finish `docs/versioncode15-phone-checklist.md`
-  (more feedback is sorted the same way: small fixes first), then say "build for Play"; still to do
-  in Play Console: Data safety → add *Calendar → Calendar events*.
+  the versionCode 15 build already on the phone. **versionCode 16 building (owner: "build for Play",
+  2026-10-09):** fix A (the task form's time and date pickers, #181). "app build" workflow run
+  37865729484 from `main` at 80913c5: `npm run check` passed; Expo build
+  6047761e-e78a-4939-b6de-b7de5443b5ff, submission to Play internal testing scheduled
+  (b00aad08-426e-4689-9bd3-7cb74605b870). **Owner:** update from Play when it arrives and test the
+  task form (🕒 Pick a time, Pick a date); still to do in Play Console: Data safety → add
+  *Calendar → Calendar events*.
 - **Fixes C and D (server only, no app build; 2026-10-09): on branch `claude/serene-galileo-dhbmes`.**
   Fix B is live: #181 merged (squash, a9a9e3a) and **`chat` version 22** deployed by the "deploy
   chat" workflow (run 37862877317, owner's OK); `mcp` still 28. **C, Wilma sets a task's time:**
