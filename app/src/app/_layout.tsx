@@ -52,6 +52,7 @@ function Screens() {
         <Stack.Screen name="attach" options={{ title: 'Add photos or files' }} />
         <Stack.Screen name="bin" options={{ title: 'Recycle bin' }} />
         <Stack.Screen name="account" options={{ title: 'Sign-in password' }} />
+        <Stack.Screen name="delete-account" options={{ title: 'Delete account' }} />
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
         <Stack.Screen name="calendars" options={{ title: 'Calendars' }} />
         <Stack.Screen name="day" options={{ title: 'My day' }} />

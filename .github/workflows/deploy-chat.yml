@@ -1,4 +1,4 @@
-# Deploy the `chat` or `mcp` Edge Function with the Supabase CLI. The Supabase connector's
+# Deploy the `chat`, `mcp` or `delete-account` Edge Function with the Supabase CLI. The Supabase connector's
 # deploy_edge_function takes every file's text in one call and is cut off well below what these
 # functions weigh (`chat` about 210 KB, `mcp` about 140 KB), so they go through the CLI here (it
 # bundles the sibling `_shared/` and `mcp/` imports itself). docs/handoff.md, "Job 5".
@@ -16,7 +16,7 @@ on:
       function:
         description: "Which function to deploy"
         type: choice
-        options: [chat, mcp]
+        options: [chat, mcp, delete-account]
         default: chat
 permissions:
   contents: read

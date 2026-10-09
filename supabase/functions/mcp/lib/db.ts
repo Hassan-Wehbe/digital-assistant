@@ -24,6 +24,13 @@ export function userClient(accessToken: string): SupabaseClient {
   });
 }
 
+/** A client with no sign-in (the publishable key only), e.g. to check a password. */
+export function anonClient(): SupabaseClient {
+  return createClient(supabaseUrl(), publishableKey(), {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+}
+
 /** Returns the user id if the token is a valid, unexpired session for this project. */
 export async function verifyAccessToken(accessToken: string): Promise<string | null> {
   const { data, error } = await userClient(accessToken).auth.getUser(accessToken);
