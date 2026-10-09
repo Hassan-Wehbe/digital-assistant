@@ -12,7 +12,7 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **E, 🚸 drop off & pick up (owner, 2026-10-09): on branch, not merged.** The owner's "no lunch"
+- **E, 🚸 drop off & pick up (owner, 2026-10-09): merged (#184, 8224fde); planner live as `chat` version 25** (run 37871456379); the app part waits for versionCode 17. The owner's "no lunch"
   was a calendar event "Lexigazer" 8:00-4:00: every timed event with a place keeps the user there
   for its whole time, so no free gap was left. (Fix B's follow-up, #183, merged and live: `chat`
   version 24.) **Planner (server):** an event with `drop_off` becomes two 5-minute stops
