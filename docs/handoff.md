@@ -12,6 +12,23 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Fixes C and D (server only, no app build; 2026-10-09): on branch `claude/serene-galileo-dhbmes`.**
+  Fix B is live: #181 merged (squash, a9a9e3a) and **`chat` version 22** deployed by the "deploy
+  chat" workflow (run 37862877317, owner's OK); `mcp` still 28. **C, Wilma sets a task's time:**
+  when the user says one ("lunch at Craft & Commons tomorrow at 12:30"), save_item / update_item
+  take `planned_at` as the local time ("2026-10-10T12:30") and the server adds the phone's offset
+  for that day (`mcp/lib/tasks.ts` `plannedMoment`, daylight saving included; the chat passes the
+  phone's zone as `ToolContext.timeZone`). Without a zone (the Claude app's connector) a local time
+  is refused with "must be a time with its offset". Wilma's task instructions and the two tools'
+  descriptions say so; never a made-up time. **D, meals at mealtimes:** Find a time offers a task
+  named breakfast, brunch, lunch or dinner/supper only in its usual hours (`MEAL_HOURS` in
+  `_shared/dayplan/plan.ts`: 7:00-9:30, 10:00-12:30, 11:30-13:30, 17:30-20:00), nearest their
+  middle, plus the earliest and latest when 30+ minutes apart (the owner's lunch: 11:30, 12:00,
+  12:30); when nothing fits then, as any task. 398 Deno tests; 112 evaluation cases (new
+  `task-save-at-time`, `task-move-time`; `task-save-due-and-duration` also checks no time is made
+  up; the harness passes a time zone like the chat). **Evaluation (owner's OK, $1 cap): run 37864037790 at f36881f, Luna 111/112, 0 leaks, 0 unsafe, $0.06**; `task-save-at-time` passes; the miss, `task-move-time`, asked for "5pm today" at 8:27 pm New York time and Wilma rightly asked "did you mean tomorrow?": the case now says tomorrow; **re-run of `task-move-time` and `task-save-at-time`, 3 each, run 37865310926 at 404e048: 6/6, 0 leaks, $0.00**. **Owner:** OK the evaluation (C changes
+  Wilma's instructions: CLAUDE.md rule 9 / D21), then the PR, then deploy **both** `mcp` and `chat`
+  (the chat imports the mcp tools).
 - **versionCode 15 phone test, fixes A and B (2026-10-08): on branch `claude/serene-galileo-dhbmes`,
   no PR yet.** Owner's feedback: (1) the task form has no way to set a time; (2) ＋ Add → Find a time
   for "lunch at Craft & Commons" offered only stops on the way (before dropping the car or the

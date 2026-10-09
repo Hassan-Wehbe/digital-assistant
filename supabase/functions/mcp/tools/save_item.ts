@@ -8,7 +8,7 @@ import { isTask, normalizeTask, type TaskMetadata, TASKS_SPACE, tasksSpace, with
 import { withLinkLocation } from "../lib/maps_link.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
-export const registerSaveItem: RegisterTool = (server, { db, accessToken, assistantName }) => {
+export const registerSaveItem: RegisterTool = (server, { db, accessToken, assistantName, timeZone }) => {
   server.registerTool(
     "save_item",
     {
@@ -25,7 +25,8 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
         `For something the user has to do use item_type "task" (space optional, default ${TASKS_SPACE}) with ` +
         'metadata: due_on (YYYY-MM-DD), duration_min (5-480), duration_estimated (true when you guessed it), ' +
         'priority ("normal" or "important"), place_id (a saved place\'s id) or address, status ("open" or "done"), ' +
-        'repeat ("daily", "weekdays", "weekly", "biweekly", "monthly"; leave out for one time).' +
+        'repeat ("daily", "weekdays", "weekly", "biweekly", "monthly"; leave out for one time), ' +
+        'planned_at (only when the user says a time to do it: the local time, "2026-10-09T12:30").' +
         addressedAs(assistantName, "save this recipe"),
       inputSchema: {
         space: z.string().optional().describe(`Space name, path (Work/Gartner) or id; for a task, default ${TASKS_SPACE}`),
@@ -46,7 +47,7 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
         let place = isPlace(item_type) ? normalizePlace(metadata) : null;
         if (place?.kind === HOME_KIND) await assertOnlyHome(db);
         // A task's fields too; its place must be one of the user's own visible saved places.
-        const task: TaskMetadata | null = isTask(item_type) ? normalizeTask(metadata) : null;
+        const task: TaskMetadata | null = isTask(item_type) ? normalizeTask(metadata, new Date(), timeZone) : null;
         const placeTitle = task?.place_id ? await taskPlaceTitle(db, task.place_id) : undefined;
         const spaces = await loadSpaces(db);
         let target: Space | undefined;

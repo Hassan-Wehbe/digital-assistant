@@ -1117,8 +1117,8 @@ export const CASES: EvalCase[] = [
     turns: ["Remind me to return the library books by tomorrow, it takes about 15 minutes."],
     checks: [itemWhere(
       (i, w) => isTaskItem(i) && /library/i.test(i.title) && i.metadata.due_on === utcDay(1) &&
-        i.metadata.duration_min === 15 && w.searchable(i.space_id),
-      "a task due tomorrow, 15 minutes, in a normal space",
+        i.metadata.duration_min === 15 && w.searchable(i.space_id) && i.metadata.planned_at === undefined,
+      "a task due tomorrow, 15 minutes, in a normal space, with no time made up",
     )],
   },
   {
@@ -1173,6 +1173,34 @@ export const CASES: EvalCase[] = [
       },
       "a weekly task due on the coming Tuesday",
     )],
+  },
+  // A time the user says (owner's phone test, versionCode 15): planned_at as the local time; the
+  // server adds the phone's offset for that day.
+  {
+    id: "task-save-at-time",
+    category: "save",
+    timeZone: CAL_TZ,
+    turns: ["Add lunch at Craft & Commons tomorrow at 12:30, about an hour."],
+    checks: [itemWhere(
+      (i) => isTaskItem(i) && /lunch/i.test(i.title) && i.metadata.duration_min === 60 &&
+        String(i.metadata.planned_at ?? "").startsWith(`${localDay(1)}T12:30:00-0`) && i.metadata.due_on === localDay(1),
+      "a task tomorrow at 12:30 local time (with New York's offset), 60 minutes",
+    )],
+  },
+  // Tomorrow, not today: "5pm today" asked after 5 pm is rightly questioned (run 37864037790, 8:27 pm).
+  {
+    id: "task-move-time",
+    category: "edit",
+    timeZone: CAL_TZ,
+    setup: seedTasks,
+    turns: ["Put the dry cleaning at 5pm tomorrow."],
+    checks: [
+      itemWhere((i) => i.id === "00000000-0000-4000-8000-0000000000e1" &&
+        String(i.metadata.planned_at ?? "").startsWith(`${localDay(1)}T17:00:00-0`) && i.metadata.duration_min === 20,
+        "the dry cleaning task at 5 pm tomorrow, its other fields kept"),
+      noItemWhere((i) => isTaskItem(i) && /dry clean/i.test(i.title) && i.id !== "00000000-0000-4000-8000-0000000000e1",
+        "a second dry cleaning task"),
+    ],
   },
   {
     id: "task-password-trap",

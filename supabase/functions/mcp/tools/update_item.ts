@@ -8,7 +8,7 @@ import { isTask, normalizeTask, setTaskDone, type TaskMetadata, taskDate, withTa
 import { taskPlaceTitle } from "./save_item.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
-export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assistantName }) => {
+export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assistantName, timeZone }) => {
   server.registerTool(
     "update_item",
     {
@@ -19,7 +19,8 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
         "For a place, add_visit records a visit (\"we went again last Friday with Sarah\") and keeps " +
         "the rest of its fields; metadata replaces them all. For a task, task_done: true marks it done " +
         "(\"I picked up the dry cleaning\") and false opens it again, keeping its other fields; a repeating task " +
-        "moves to its next date instead.",
+        "moves to its next date instead. To give a task a time (\"move my lunch to 1\"), pass its metadata with " +
+        "planned_at, the local time (\"2026-10-09T13:00\").",
       inputSchema: {
         item_id: z.string().uuid(),
         title: z.string().trim().min(1).max(300).optional(),
@@ -70,7 +71,7 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
         if (current && isTask(finalType)) {
           const base = metadata ?? current.metadata;
           if (fieldsChanged) {
-            task = task_done !== undefined ? setTaskDone(base, task_done, new Date(), today) : normalizeTask(base);
+            task = task_done !== undefined ? setTaskDone(base, task_done, new Date(), today) : normalizeTask(base, new Date(), timeZone);
             if (task.place_id && metadata !== undefined) await taskPlaceTitle(db, task.place_id);
           } else {
             try {

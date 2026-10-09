@@ -33,6 +33,8 @@ export interface EvalCase {
   calendar?: PhoneCalendar;
   /** Fake drive times and weather for the day planner (Pro cases make the user Pro in setup). */
   planner?: RunOptions["planner"];
+  /** The phone's time zone sent with the messages (the app's chat always sends one). */
+  timeZone?: string;
   checks: Check[];
 }
 
