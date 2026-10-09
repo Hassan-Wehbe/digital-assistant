@@ -27,6 +27,8 @@ export const DAY_END = 22 * 60;
 /** Task options offered for one task; at most MAX_ON_THE_WAY of them stops on a drive already planned. */
 export const MAX_OPTIONS = 4;
 export const MAX_ON_THE_WAY = 2;
+/** When nothing fits in a meal's hours, only times this close to them are offered (no 6:30 am lunch). */
+export const MEAL_SLACK_MIN = 120;
 /** A meal's usual hours (local minutes): a task named for one is offered then when it fits (owner, 2026-10-09). */
 export const MEAL_HOURS: { word: RegExp; from: number; to: number }[] = [
   { word: /\bbreakfast\b/i, from: 7 * 60, to: 9 * 60 + 30 },
@@ -34,6 +36,11 @@ export const MEAL_HOURS: { word: RegExp; from: number; to: number }[] = [
   { word: /\blunch\b/i, from: 11 * 60 + 30, to: 13 * 60 + 30 },
   { word: /\b(dinner|supper)\b/i, from: 17 * 60 + 30, to: 20 * 60 },
 ];
+
+/** "lunch" for "Lunch at Craft & Commons" (a meal task's word, for its note). */
+function mealName(title: string): string {
+  return (/\b(breakfast|brunch|lunch|dinner|supper)\b/i.exec(title)?.[1] ?? "meal").toLowerCase();
+}
 
 /** The usual hours of the meal a task is named for ("Lunch at Craft & Commons"), or null. */
 export function mealHours(title: string): { from: number; to: number } | null {
@@ -291,8 +298,9 @@ export async function planDay(input: PlanInput): Promise<DayPlan> {
   };
 
   const driveRows: DriveRow[] = [];
-  // Each drive's end points, for task options; never in the plan the app gets.
-  const ends = new Map<DriveRow, { from: PlanPlace; to: PlanPlace }>();
+  // Each drive's end points and the minute the user is free to leave (the event before it ends),
+  // for task options; never in the plan the app gets.
+  const ends = new Map<DriveRow, { from: PlanPlace; to: PlanPlace; free: number }>();
   let here: Here = { place: home, home: true, from: -Infinity };
   for (const stop of stops) {
     let origin = here.place;
@@ -307,7 +315,7 @@ export async function planDay(input: PlanInput): Promise<DayPlan> {
           arrive_by: at(here.from + back.minutes), minutes: back.minutes, ...typical(back),
         };
         driveRows.push(row);
-        ends.set(row, { from: origin, to: home });
+        ends.set(row, { from: origin, to: home, free: here.from });
         here = { place: home, home: true, from: here.from + back.minutes };
         origin = home;
         known = out;
@@ -328,7 +336,7 @@ export async function planDay(input: PlanInput): Promise<DayPlan> {
           minutes: l.minutes, ...typical(l), buffer_min: BUFFER_MIN, ...(leave < here.from ? { tight: true as const } : {}),
         };
         driveRows.push(row);
-        ends.set(row, { from: origin, to: stop.place });
+        ends.set(row, { from: origin, to: stop.place, free: here.from });
       }
     }
     here = { place: stop.place, home: false, from: stop.e };
@@ -340,7 +348,7 @@ export async function planDay(input: PlanInput): Promise<DayPlan> {
       ? { kind: "drive", from: here.place.label, to: home.label, for_keys: [], leave_at: at(here.from), arrive_by: at(here.from + back.minutes), minutes: back.minutes, ...typical(back) }
       : { kind: "drive", from: here.place.label, to: home.label, for_keys: [], leave_at: at(here.from), unavailable: "no_drive_times" };
     driveRows.push(row);
-    if (back) ends.set(row, { from: here.place, to: home });
+    if (back) ends.set(row, { from: here.place, to: home, free: here.from });
   }
   rows.push(...driveRows);
 
@@ -496,7 +504,7 @@ interface OptionContext {
   date: string;
   home: PlanPlace | null;
   driveRows: DriveRow[];
-  ends: Map<DriveRow, { from: PlanPlace; to: PlanPlace }>;
+  ends: Map<DriveRow, { from: PlanPlace; to: PlanPlace; free: number }>;
   gaps: [number, number][];
   leg: (from: Point, to: Point, departMin: number) => Promise<Leg | null>;
   now: number;
@@ -534,7 +542,8 @@ async function taskOptions(task: PlanTask, ctx: OptionContext): Promise<{ option
       if (!a || !b) continue;
       const extraDrive = Math.max(0, a.minutes + b.minutes - d.minutes);
       const newLeave = leave - extraDrive - duration;
-      if (newLeave < now) continue;
+      // Leaving earlier only while free: never during the event before this drive (owner's test).
+      if (newLeave < now || newLeave < end.free) continue;
       onTheWay.push({
         kind: "on_the_way", start: at(newLeave + a.minutes), end: at(newLeave + a.minutes + duration),
         extra_drive_min: extraDrive, for_keys: d.for_keys, leave_at: at(newLeave), was_leave_at: d.leave_at,
@@ -592,13 +601,17 @@ async function taskOptions(task: PlanTask, ctx: OptionContext): Promise<{ option
   // A meal: only times in its hours, when there are any.
   const inMeal = (o: TaskOption) => !!meal && toMin(date, o.start)! >= meal.from && toMin(date, o.start)! <= meal.to;
   const mealTime = atMeal.length > 0 || onTheWay.some(inMeal);
-  const ways = mealTime ? onTheWay.filter(inMeal) : onTheWay;
-  const free = (mealTime ? [...atMeal.sort(byFit), ...mealMore.sort(byFit)] : [...best.sort(byFit), ...early.sort(byFit)]).map((f) => f.option);
+  // Nothing in the meal's hours: only times near them.
+  const nearMeal = (o: TaskOption) => !meal || (toMin(date, o.start)! >= meal.from - MEAL_SLACK_MIN && toMin(date, o.start)! <= meal.to + MEAL_SLACK_MIN);
+  const ways = (mealTime ? onTheWay.filter(inMeal) : onTheWay).filter(nearMeal);
+  const free = (mealTime ? [...atMeal.sort(byFit), ...mealMore.sort(byFit)] : [...best.sort(byFit), ...early.sort(byFit)])
+    .map((f) => f.option).filter(nearMeal);
   const picked = [...ways.slice(0, MAX_ON_THE_WAY), ...free].slice(0, MAX_OPTIONS);
   // Fewer free times than room left: more stops on the way fill it.
   picked.push(...ways.slice(MAX_ON_THE_WAY, MAX_ON_THE_WAY + MAX_OPTIONS - picked.length));
   const options = picked.sort((a, b) => a.start.localeCompare(b.start));
   if (options.length) return { options };
+  if (meal) return { options, note: `No time near ${mealName(task.title)} time that fits it${task.place ? " with the drive" : ""}.` };
   if (task.place && !ctx.home) return { options, note: "Set your Home place so Wilma can time the drive." };
   if (task.place && !driveRows.length && !gaps.length) return { options, note: "No free time today that fits it." };
   return { options, note: task.place ? "No time today that fits it with the drive." : "No free time today that fits it." };
