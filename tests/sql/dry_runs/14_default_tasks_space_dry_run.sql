@@ -109,6 +109,12 @@ select pg_temp.check('the owner can rename it',
 
 reset role;
 set local role anon;
-select pg_temp.check('anon sees no space', (select count(*) = 0 from space));
+do $$
+begin
+  perform count(*) from space;
+  perform pg_temp.check('anon cannot read spaces', false, 'read allowed');
+exception when insufficient_privilege then
+  perform pg_temp.check('anon cannot read spaces', true, sqlerrm);
+end $$;
 reset role;
 do $$ begin raise exception 'DRY RUN RESULTS (rolled back): %', (select json_agg(json_build_object('t', test, 'ok', passed, 'd', detail) order by n) from _results); end $$;
