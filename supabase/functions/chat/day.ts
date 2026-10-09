@@ -4,7 +4,7 @@
 // Request:  POST, Authorization: Bearer <the user's access token>,
 //           {"mode":"day", "date":"2026-10-09", "tz":"America/New_York", "now":"2026-10-09T13:05",
 //            "events":[{"key", "title", "start", "end", "all_day", "location", "calendar",
-//                       "point":{"lat","lng","by_name_only"}, "not_a_trip", "busy_only", "declined"}],
+//                       "point":{"lat","lng","by_name_only"}, "not_a_trip", "drop_off", "free", "busy_only", "declined"}],
 //            "choices":{"together":[["key1","key2"]], "not_driving":["key3"]},
 //            "options_for":"<task id>"}
 //           The app reads the ticked calendars for that day and finds event places on the phone
@@ -132,6 +132,8 @@ interface SentEvent {
   location?: string | null;
   point?: { lat: number; lng: number; by_name_only?: boolean };
   not_a_trip?: boolean;
+  drop_off?: boolean;
+  free?: boolean;
   busy_only?: boolean;
   declined?: boolean;
 }
@@ -180,7 +182,7 @@ async function makePlan(deps: DayDeps, db: SupabaseClient, req: PlanRequest, log
       (e.point ? { lat: e.point.lat, lng: e.point.lng, label: text || e.title, ...(e.point.by_name_only ? { by_name_only: true } : {}) } : null);
     return {
       key: e.key, title: e.title, start: e.start, end: e.end, all_day: e.all_day, location: e.location ?? null, place,
-      not_a_trip: e.not_a_trip, busy_only: e.busy_only, declined: e.declined,
+      not_a_trip: e.not_a_trip, drop_off: e.drop_off, free: e.free, busy_only: e.busy_only, declined: e.declined,
     };
   });
 

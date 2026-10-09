@@ -5,6 +5,8 @@
 //     events not driven to (Not driving). A day's choices are dropped once it has passed.
 //   * places: the user's answers per event title ("Dentist" is Dr. Lee's office; "Standup" is not
 //     a trip), so they are asked once.
+//   * drop_off: the event titles the user only drops off and picks up at (🚸; "Lexi school"), so
+//     the plan has a drive at the start and one at the end, and free time between.
 //   * found: where the phone's own geocoder found an event's location text (the same lookup as "Is
 //     this it?"), so it is not looked up again each time My day opens.
 //
@@ -39,9 +41,11 @@ export interface DayMemory {
   choices: DayChoice[];
   places: Record<string, EventPlace>;
   found: Record<string, FoundPlace>;
+  /** Titles (textKey) the user drops off and picks up at. */
+  drop_off: string[];
 }
 
-export const EMPTY_MEMORY: DayMemory = { choices: [], places: {}, found: {} };
+export const EMPTY_MEMORY: DayMemory = { choices: [], places: {}, found: {}, drop_off: [] };
 
 /** "Dentist  " and "dentist" are the same title (and the same location text). */
 export const textKey = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ').slice(0, MAX_KEY);
@@ -98,7 +102,8 @@ export function parseMemory(raw: unknown, today: string): DayMemory {
     .map(toChoice)
     .filter((c): c is DayChoice => c !== null && c.date >= today)
     .slice(0, 4);
-  return { choices, places: checkedMap(raw.places, toPlace), found: checkedMap(raw.found, toFound) };
+  const dropOff = [...new Set((Array.isArray(raw.drop_off) ? raw.drop_off : []).filter((k): k is string => typeof k === 'string' && k.length > 0 && k.length <= MAX_KEY))];
+  return { choices, places: checkedMap(raw.places, toPlace), found: checkedMap(raw.found, toFound), drop_off: dropOff.slice(-MAX_REMEMBERED) };
 }
 
 // ---- Changes (pure) ----------------------------------------------------------------------------
@@ -159,6 +164,16 @@ export function answerPlace(m: DayMemory, title: string, answer: EventPlace): Da
   const { [k]: _, ...rest } = m.places;
   return { ...m, places: newest([...Object.entries(rest), [k, checked]]) };
 }
+
+/** 🚸 Drop off & pick up for an event title, or back to staying there. */
+export function toggleDropOff(m: DayMemory, title: string): DayMemory {
+  const k = textKey(title);
+  if (!k) return m;
+  const on = m.drop_off.includes(k);
+  return { ...m, drop_off: on ? m.drop_off.filter((x) => x !== k) : [...m.drop_off, k].slice(-MAX_REMEMBERED) };
+}
+
+export const isDropOff = (m: DayMemory, title: string) => m.drop_off.includes(textKey(title));
 
 /** Forget the answer for a title (ask again). */
 export function forgetPlace(m: DayMemory, title: string): DayMemory {

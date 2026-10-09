@@ -26,7 +26,7 @@ import { loadChoice } from '@/lib/calendarSettings';
 import { CALENDAR_TEXT } from '@/lib/chatThread';
 import { dayBody, phoneGeocode, placeEvents, withKeys, type DayEvent } from '@/lib/dayAgenda';
 import {
-  answerPlace, choicesFor, EMPTY_MEMORY, forgetPlace, rememberFound, resetChoices, separate, takeBoth, textKey, toggleNotDriving,
+  answerPlace, choicesFor, EMPTY_MEMORY, forgetPlace, isDropOff, rememberFound, resetChoices, separate, takeBoth, textKey, toggleDropOff, toggleNotDriving,
   type DayMemory, type EventPlace,
 } from '@/lib/dayChoices';
 import type { DayEventRow, DayPlan, DayRow, TaskOption } from '@/lib/dayPlan';
@@ -479,12 +479,14 @@ export default function MyDay() {
         plan={plan}
         eventKey={detail}
         notDriving={notDriving.has(detail)}
+        dropOff={!!ev && isDropOff(memory, ev.title)}
         answered={!!ev && !!memory.places[textKey(ev.title)]}
         canDirections={!!(ev?.place || placedBy(detail)?.location)}
         checkedAt={updatedAt}
         picker={ev ? placeAsk(ev) : null}
         onBack={() => setDetail(null)}
         onToggleDriving={() => change(toggleNotDriving(memory, date, detail))}
+        onToggleDropOff={() => ev && change(toggleDropOff(memory, ev.title))}
         onDirections={() => ev && openDirections(ev)}
         onChangePlace={() => ev && ask(ev)}
         onForget={() => ev && change(forgetPlace(memory, ev.title))}

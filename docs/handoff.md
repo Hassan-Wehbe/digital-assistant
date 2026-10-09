@@ -12,6 +12,22 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **E, 🚸 drop off & pick up (owner, 2026-10-09): on branch, not merged.** The owner's "no lunch"
+  was a calendar event "Lexigazer" 8:00-4:00: every timed event with a place keeps the user there
+  for its whole time, so no free gap was left. (Fix B's follow-up, #183, merged and live: `chat`
+  version 24.) **Planner (server):** an event with `drop_off` becomes two 5-minute stops
+  (`DROP_OFF_MIN`), at its start and its end; the second drive is `pick_up`; the time between is free
+  (home between when there is time, lunch fits); no overlap or Take both with it. An event with
+  `free` (the calendar's "Show as: Free") keeps no time and makes no trip. `chat/agenda.ts`
+  `eventSchema` takes both; the model's agenda text does not show them (no prompt change, no
+  evaluation). **App:** the event detail has **🚸 Drop off & pick up** / **🚸 I stay there**,
+  remembered per title on the phone (`dayChoices.ts` `drop_off`, old memories read fine); the
+  calendar's availability "free" is sent as `free` (timed events); the pick-up drive reads "🚗 Leave
+  to pick up from …" and the detail shows "Leave to pick up". 402 Deno tests (2 new: the owner's
+  day gives lunch 11:30/12:00/12:30 with the choice and none without), 662 app tests (5 new).
+  **Ships:** server part with a `chat` deploy (harmless for older apps: they send neither field);
+  app part in **versionCode 17**. Meanwhile the owner changes the calendar (drop off and pick up as
+  two short events).
 - **Find a time fix (owner's phone test after C/D went live, 2026-10-09): on branch, not merged.**
   "Lunch at Craft & Commons", tomorrow, 60 min still showed stops on the way (to drop Lexi, to swim,
   to drive). Found while rebuilding a day like the owner's: an "on the way" stop could be offered
