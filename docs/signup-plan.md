@@ -80,6 +80,19 @@ accounts); a smaller one (Sonnet) for step 4's copy, step 5 and docs.
 ## Steps (each a small PR; the owner approves merges, migrations and deploys)
 
 1. Migration (codes, hook, terms fields) with a rolled-back dry run and SQL tests.
+   **As built (2026-10-09, PR open):** `20261011120000_invite_signup.sql`. The Before User Created
+   hook is available on the Free plan, so no `signup` Edge Function. `hook_before_user_created`
+   refuses a sign-up without a valid code (wrong, expired, used up) or without `age_confirmed`
+   true and the current `terms_version` (`signup_setting`, `2026-10-09`); the app sends
+   `invite_code`, `age_confirmed`, `terms_version` as sign-up metadata. The sign-up trigger counts
+   the use under a row lock (two sign-ups at once cannot both take the last use), sets the plan,
+   records the terms and drops the code from the account's metadata. Codes read
+   `WILMA-XXXX-XXXX` (8 characters, no 0/O/1/I/L), made in the SQL editor with
+   `select create_invite_code('for Sarah', 1, 14, 'pro');` (note, uses, days, plan), shown once.
+   `signup_mode()` is the one function anon can call. SQL test 15 (33 checks) and its dry run.
+   **Owner, in this order:** dry run, apply the migration, then Authentication > Hooks > Before
+   User Created > Postgres > `public.hook_before_user_created`. Sign-ups stay switched off until
+   step 5 (switching them on before the hook is on would open sign-up to anyone).
 2. App: Create account screen, confirmation deep link, welcome flow. Preview build.
 3. In-app account deletion: `delete-account` function, Account screen button, web page updated.
 4. Testing terms (short, plain; drafted for the owner, reviewed by the lawyer later, D27) and the
