@@ -1,7 +1,8 @@
 // Home: the one box (docs/phase5-a5d-one-box-plan.md): a space's or a secret's name is answered
 // here with no model call, anything else goes to Wilma. When Wilma can't answer (allowance used
 // up, or the chat's Search button), the old note search runs on the text instead, never the model
-// (restricted spaces are never searched); spaces to browse below.
+// (restricted spaces are never searched); below, the spaces opened most recently on this phone and
+// "See all spaces" (homeSpaces.ts; the Tasks space is reached by the ✅ Tasks tile).
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, RefreshControl, Text, TextInput, View } from 'react-native';
@@ -28,6 +29,9 @@ import {
   useReloadOnReturn,
 } from '@/components/ui';
 import { BoxCounter, WilmaBox } from '@/components/WilmaBox';
+import { deviceRecentSpaces } from '@/lib/deviceStorage';
+import { homeSpaces } from '@/lib/homeSpaces';
+import { useOpenSpace } from '@/lib/openSpace';
 import { useAuth } from '@/lib/auth';
 import { useChat } from '@/lib/chat';
 import { lastUserText } from '@/lib/chatThread';
@@ -78,6 +82,11 @@ export default function Home() {
       : (await wilma.listSpaces()).map((space) => ({ kind: 'space', space })),
   );
 
+  // The spaces opened most recently on this phone (ids only), read again on return.
+  const openSpace = useOpenSpace();
+  const recent = useLoad(`recent:${session?.user.id ?? ''}`, async () => (session ? deviceRecentSpaces.load(session.user.id) : []));
+  useReloadOnReturn(recent.reload);
+
   // This month's allowance (D28), read again whenever the home screen comes back into view.
   const usage = useLoad(`usage:${session?.user.id ?? ''}`, async () => {
     const a = await loadAllowance((fn) => supabase.rpc(fn));
@@ -110,7 +119,7 @@ export default function Home() {
     setText('');
     setQuery('');
     setHeld(null);
-    if (out.to === 'space') router.push({ pathname: '/space/[id]', params: { id: out.id, path: out.path } });
+    if (out.to === 'space') openSpace({ id: out.id, path: out.path });
     else router.push('/chat');
   };
 
@@ -191,6 +200,7 @@ export default function Home() {
   );
 
   const spaces = data?.flatMap((r) => (r.kind === 'space' ? [r.space] : [])) ?? [];
+  const home = homeSpaces(spaces, recent.data ?? []);
   const items = data?.flatMap((r) => (r.kind === 'item' ? [r.item] : [])) ?? [];
 
   const header = (
@@ -204,24 +214,14 @@ export default function Home() {
         </View>
       )}
       {error ? <ErrorBox message={error} onRetry={reload} /> : null}
-      {!query && spaces.length ? (
+      {!query && home.shown.length ? (
         <GroupList>
-          {spaces.map((sp, i) =>
-            sp.restricted ? (
-              // Listed, never opened or searched here (CLAUDE.md rule 3).
-              <GroupRow key={sp.id} first={i === 0} dimmed title={`🔒 ${sp.path}`} subtitle="Restricted" />
-            ) : (
-              <GroupRow
-                key={sp.id}
-                first={i === 0}
-                title={sp.path}
-                subtitle={sp.description ?? undefined}
-                onPress={() => router.push({ pathname: '/space/[id]', params: { id: sp.id, path: sp.path } })}
-              />
-            ),
-          )}
+          {home.shown.map((sp, i) => (
+            <GroupRow key={sp.id} first={i === 0} title={sp.path} subtitle={sp.description ?? undefined} onPress={() => openSpace(sp)} />
+          ))}
         </GroupList>
       ) : null}
+      {!query && home.more > 0 ? <TextLink title={`See all spaces (${home.total}) ›`} onPress={() => router.push('/spaces')} /> : null}
     </View>
   );
 

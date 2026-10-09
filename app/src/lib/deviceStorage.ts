@@ -8,6 +8,7 @@ import { Platform } from 'react-native';
 import type { SettingsStore } from './calendarSettings';
 import { chatStore, EMPTY_CHAT, type ChatStore } from './chatStore';
 import { dayMemoryStore, EMPTY_MEMORY, type DayMemoryStore } from './dayChoices';
+import { recentSpacesStore, type RecentSpacesStore } from './homeSpaces';
 import { base64Bytes, encryptedStorage, utf8Bytes, utf8Text, type Cipher, type KeyStore } from './sessionStorage';
 
 // Kept on this device only: not synced to other devices or copied into backups.
@@ -66,6 +67,16 @@ export const deviceDayMemory: DayMemoryStore =
   Platform.OS !== 'web'
     ? dayMemoryStore(encryptedStorage(secureKeys, localData, deviceCipher), () => kv.getAllKeysAsync())
     : { load: async () => EMPTY_MEMORY, save: async () => {}, forgetOthers: async () => {} };
+
+/** The spaces opened most recently on this phone (ids only; homeSpaces.ts). */
+export const deviceRecentSpaces: RecentSpacesStore = recentSpacesStore({
+  get: (name) => kv.getItemAsync(name),
+  set: (name, value) => kv.setItemAsync(name, value),
+  remove: async (name) => {
+    await kv.removeItemAsync(name);
+  },
+  keys: () => kv.getAllKeysAsync(),
+});
 
 /** Plain settings kept on this phone (Settings → Calendars' choice; calendarSettings.ts). */
 export const deviceSettingsStore: SettingsStore = {

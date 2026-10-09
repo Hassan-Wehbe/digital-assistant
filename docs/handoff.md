@@ -12,7 +12,27 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **E, 🚸 drop off & pick up (owner, 2026-10-09): on branch, not merged.** The owner's "no lunch"
+- **F, spaces on Home (owner, 2026-10-09): on branch, not merged; app only, ships in versionCode 17
+  with E.** Home lists the 5 spaces opened most recently on this phone (filled alphabetically),
+  then "See all spaces (N) ›" to the new **All spaces** screen (`app/spaces.tsx`: every space,
+  restricted ones dimmed and not opened, + New space). The Tasks space is left out of Home (the ✅
+  Tasks tile is the way in) and opens the Tasks screen from All spaces or the one box
+  (`lib/openSpace.ts`). Restricted spaces are never remembered or shown on Home (rule 3). Kept on
+  the phone: space ids only, per account, forgotten on sign-out (`homeSpaces.ts`,
+  `deviceRecentSpaces`). 668 app tests (6 new). Tasks are notes (`item`, item_type "task") in the
+  Tasks space, made on the first task; the Tasks screen works with no Tasks space (find_tasks reads
+  every searchable space). **Default Tasks space (owner: yes, 2026-10-09):** migration
+  `20261010120000_default_tasks_space.sql` makes sign-up (`handle_new_auth_user`) create a
+  top-level, not restricted "Tasks" space ("Things to do, with due dates", as `tasksSpace`), and
+  gives one to every existing account without a top-level Tasks space (any case); safe to run twice;
+  the function stays revoked from public, anon, authenticated. `tasksSpace` stays the fallback
+  (renamed or deleted). SQL test 14; checked by Claude on a local Postgres stand-in (auth.users,
+  app_user, space with RLS): backfill, no duplicates on a second run, own "TASKS" kept, new sign-up
+  gets one, only the owner sees it, the function not callable. **Applied (2026-10-09, owner):** dry run 9/9 ok,
+  migration run in the SQL editor; checked by Claude (read-only): 2 accounts, both with exactly one
+  top-level Tasks space, none restricted, the sign-up function is the new one and not callable by
+  `authenticated`. No deploy, no build.
+- **E, 🚸 drop off & pick up (owner, 2026-10-09): merged (#184, 8224fde); planner live as `chat` version 25** (run 37871456379); the app part waits for versionCode 17. The owner's "no lunch"
   was a calendar event "Lexigazer" 8:00-4:00: every timed event with a place keeps the user there
   for its whole time, so no free gap was left. (Fix B's follow-up, #183, merged and live: `chat`
   version 24.) **Planner (server):** an event with `drop_off` becomes two 5-minute stops

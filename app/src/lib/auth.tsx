@@ -6,7 +6,7 @@ import { chatClient, type ChatClient } from './chatClient';
 import { threadsToKeep } from './chatStore';
 import { CHAT_URL, MCP_URL } from './config';
 import { dayClient, type DayClient } from './dayPlan';
-import { deviceChatStore, deviceDayMemory } from './deviceStorage';
+import { deviceChatStore, deviceDayMemory, deviceRecentSpaces } from './deviceStorage';
 import { changePassword as changePasswordFlow } from './password';
 import { sessionToken } from './sessionToken';
 import { supabase } from './supabase';
@@ -90,6 +90,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     deviceChatStore.forgetOthers(keep);
     // My day's choices and event places go the same way.
     deviceDayMemory.forgetOthers(keep);
+    // And the spaces opened most recently.
+    void deviceRecentSpaces.forgetOthers(keep);
   }, [loading, signedIn, userId]);
 
   const value = useMemo<AuthState>(
