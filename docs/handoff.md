@@ -12,6 +12,14 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Tasks left open, step 1 merged (#204, squash, 7066ef2), NOT yet deployed; step 2 (app) written,
+  branch `claude/task-day-end-app`, not merged (2026-10-10).** The owner said "go ahead with mcp and
+  chat"; the deploy was not run from this session (the permission check blocked it), so **owner:
+  run "deploy chat" for `mcp` and for `chat` from main** (Actions → deploy chat → Run workflow).
+  Step 2: the end-of-day choice on the task screen and in My day's suggestions sheet; My day's
+  "Left open yesterday" with Add to today · Done · Remove. 746 app tests (7 new). Ships with the
+  next build, which needs step 1 deployed first. Details and phone checks:
+  `docs/task-day-end-plan.md` "As built: step 2".
 - **Tasks left open at the end of their day, step 1, server (2026-10-10): branch
   `claude/task-day-end`, not merged, not deployed.** `day_end` task field ("done" | "next_day"),
   `mcp/lib/day_end.ts` (`atDayEnd`, `saveDayEnd`), My day settles ended days (at most 3 per plan,

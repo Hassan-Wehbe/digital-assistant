@@ -10,7 +10,7 @@ import { toDayPlan } from './dayPlan';
 import { PLAN } from './dayPlan.fixture';
 import { optionText, titles } from './dayView';
 import {
-  addDays, duePicks, EMPTY_TASK, groupTasks, localParts, plannedAt, plannedParts, shortDay, taskForm, taskLine, taskMetadata, timeText, toTaskRows, type TaskRow,
+  addDays, duePicks, EMPTY_TASK, groupTasks, localParts, plannedAt, plannedParts, shortDay, taskForm, taskLine, taskMetadata, timeText, toTaskRows, type TaskRow, withTime,
 } from './tasks';
 
 const TODAY = '2026-10-09'; // a Friday
@@ -160,8 +160,10 @@ describe('the screens', () => {
     expect(read('app/tasks.tsx')).toContain("await wilma.taskDone(t.id, t.status !== 'done', today);");
   });
 
-  it('picking a suggestion only sets the task’s planned_at (the user’s choice, not a Mapbox result)', () => {
-    expect(read('app/day.tsx')).toContain('await wilma.updateItem(sheetTask.id, { metadata: { ...sheetTask.metadata, planned_at: at } });');
+  it('picking a suggestion only sets the task’s planned_at (the user’s choice, not a Mapbox result), with its end-of-day choice', () => {
+    expect(read('app/day.tsx')).toContain('await wilma.updateItem(sheetTask.id, { metadata: withTime(sheetTask.metadata, at, dayEnd) });');
+    const m = { status: 'open' as const, priority: 'normal' as const, due_on: TODAY, duration_min: 20 };
+    expect(withTime(m, '2026-10-09T12:30:00-04:00', null)).toEqual({ ...m, planned_at: '2026-10-09T12:30:00-04:00' });
   });
 
   it('reading tasks or the calendar is not a change (no "part of this may be done")', () => {

@@ -5,8 +5,9 @@ Design: D35 (new), part of the day planner (D25). Built **before** alarms and ca
 (D31, `docs/alarms-calendar-plan.md`). Model: the strongest for both steps (it changes how tasks
 are closed automatically, on the server and in the app).
 
-**Step 1 written (2026-10-10, branch `claude/task-day-end`), not merged or deployed:** see "As
-built: step 1" at the end.
+**Step 1 merged (#204, squash, 7066ef2); not yet deployed** (deploy `mcp` and `chat`, owner's
+OK given): see "As built: step 1". **Step 2 written (branch `claude/task-day-end-app`), not
+merged:** see "As built: step 2". Both at the end.
 
 ## Why
 
@@ -53,6 +54,7 @@ today's plan as "Not placed yet".
 - Q3 Wilma does not ask in the chat (no change to her instructions or tool descriptions, so no
   evaluation run; rule 9 / D21).
 - Q4 Built before alarms and calendar entries.
+- Q5 (owner, 2026-10-10, after step 2): Wilma does not set or ask about the choice in the chat, not later either; it is set on the task screen and in My day, and My day asks the next day. Do not propose it again.
 
 ## How it works
 
@@ -144,3 +146,33 @@ build ("build for Play") carries step 2.
   and an earlier day, a restricted space's task never touched, the model's plan without the new
   fields, `find_tasks` writing nothing). The later-day tests fail without the fix. 460 Deno tests.
 - **Deploy (owner's OK):** `mcp` and `chat` from main after merging (`chat` bundles the task code).
+
+## As built: step 2 (app)
+
+- **The choice** "If it’s not done by the end of that day": *Ask me the next day* (the default,
+  nothing saved) · *Mark it done* · *Move to the next day*. On the task screen, under "At a set
+  time", once a time is picked (not for a repeating task); and in My day's "Where it fits" sheet
+  with the suggestions (the task's saved choice is shown until another is tapped). `TaskForm.dayEnd`,
+  saved only with a time (`lib/tasks.ts`), so an edit in the app now keeps it (before, the form
+  dropped fields it did not show).
+- **My day, "Left open yesterday"** (or "Left open" when older), above the calendar: "☐ Call the
+  bank · planned yesterday at 3:00 pm" with **Add to today** (due that day, old time and choice
+  removed: `addToDay`; then it is in "Not placed yet" with Find a time), **Done** (`task_done`
+  with the phone's date) and **Remove** (to the Recycle bin; not offered for a repeating task,
+  where it would end every later time). Then the plan is made again. Viewing tomorrow, the button
+  says "Add to tomorrow". `splitNotPlaced`, `leftOpenHeading`, `leftOpenWhen` in `lib/dayView.ts`;
+  `left_from` and `planned_time` read and checked in `lib/dayPlan.ts`.
+- **Tests:** `app/src/lib/dayEnd.test.ts` (7); the "picking a suggestion only sets planned_at"
+  check in `tasks.test.ts` now names the new line and checks `withTime` sets nothing else. 746 app
+  tests; `expo export --platform android` bundles.
+- **Server needed:** step 1 deployed (`left_from` comes from it); without it the app shows no
+  Left open section and saving `day_end` is refused by the old server ("unknown task field").
+  **So deploy step 1 before this ships.** No privacy page or Data safety change.
+
+**Phone checks for the next build's checklist:**
+1. Give a task a time today with *Mark it done*; the next morning it is not in My day and Tasks
+   shows it done.
+2. The same with *Move to the next day*: the next day it is in "Not placed yet", without its time.
+3. A task with a time and *Ask me*: the next day "Left open yesterday" shows it; try Add to today
+   (then Find a time), Done, and Remove (then find it in the Recycle bin).
+4. A task with a time on a later day does not show in today's plan.

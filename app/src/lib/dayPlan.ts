@@ -64,6 +64,19 @@ export interface TaskOption {
   was_leave_at?: string;
 }
 
+/** A task in the day without a time. left_from: left open on that earlier day, at planned_time (D35). */
+export interface NotPlacedTask {
+  id: string;
+  title: string;
+  priority: string;
+  duration_min?: number;
+  due_on?: string;
+  overdue?: true;
+  repeat?: string;
+  left_from?: string;
+  planned_time?: string;
+}
+
 export interface DayPlan {
   date: string;
   time_zone: string;
@@ -74,7 +87,7 @@ export interface DayPlan {
   credits: string[];
   rows: DayRow[];
   all_day: { key: string; title: string }[];
-  tasks_not_placed: { id: string; title: string; priority: string; duration_min?: number; due_on?: string; overdue?: true; repeat?: string }[];
+  tasks_not_placed: NotPlacedTask[];
   /** Only when asked for one task (options_for): at most three, and a note when none fits. */
   options?: { task_id: string; options: TaskOption[]; note?: string };
 }
@@ -215,6 +228,8 @@ export function toDayPlan(raw: unknown): DayPlan | null {
         ...opt('due_on', when(t.due_on), t.due_on as string),
         ...opt('overdue', t.overdue === true, true as const),
         ...opt('repeat', text(t.repeat), t.repeat as string),
+        ...opt('left_from', typeof t.left_from === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(t.left_from), t.left_from as string),
+        ...opt('planned_time', typeof t.planned_time === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(t.planned_time), t.planned_time as string),
       })),
     ...(isObject(raw.options) && text(raw.options.task_id)
       ? {
