@@ -7,6 +7,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useColors } from '@/components/ui';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { loadBriefing } from '@/lib/briefingSettings';
+import { deviceNotifier, onNotificationTap } from '@/lib/deviceNotifier';
+import { deviceSettingsStore } from '@/lib/deviceStorage';
+import { applyBriefing, tapTarget } from '@/lib/notifications';
 import { ChatProvider } from '@/lib/chat';
 import { ShareProvider, useShare } from '@/lib/shareIntake';
 import { VaultProvider } from '@/lib/vault';
@@ -16,7 +20,8 @@ import { VaultProvider } from '@/lib/vault';
 SplashScreen.preventAutoHideAsync();
 
 function Screens() {
-  const { signedIn, loading } = useAuth();
+  const { signedIn, loading, session } = useAuth();
+  const userId = session?.user.id ?? null;
   const c = useColors();
   // Android draws the app under its three-button bar (and iOS under the home indicator): pad every
   // screen's bottom by that bar, so the last button or text box is never hidden behind it.
@@ -35,6 +40,22 @@ function Screens() {
     opened.current = seq;
     router.navigate('/share');
   }, [loading, signedIn, navReady, seq]);
+  // Morning briefing (day planner step 4): on each start, keep the next mornings scheduled (they
+  // stop after a week without opening Wilma) and drop leave-by alerts that were turned off.
+  useEffect(() => {
+    if (loading || !userId) return;
+    void loadBriefing(deviceSettingsStore, userId).then((s) => applyBriefing(deviceNotifier, userId, s, new Date()));
+  }, [loading, userId]);
+
+  // A tapped Wilma notification opens My day (only for the account it was made for).
+  useEffect(() => {
+    if (loading || !signedIn || !navReady) return;
+    return onNotificationTap((data) => {
+      const to = tapTarget(data, userId);
+      if (to !== '/') router.push(to as '/day');
+    });
+  }, [loading, signedIn, navReady, userId]);
+
   // Signed out, only the sign-in screen exists; signed in, it does not.
   return (
     <Stack screenOptions={{ contentStyle: { backgroundColor: c.background, paddingBottom: insets.bottom } }}>
@@ -55,6 +76,7 @@ function Screens() {
         <Stack.Screen name="delete-account" options={{ title: 'Delete account' }} />
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
         <Stack.Screen name="calendars" options={{ title: 'Calendars' }} />
+        <Stack.Screen name="briefing" options={{ title: 'Morning briefing' }} />
         <Stack.Screen name="day" options={{ title: 'My day' }} />
         <Stack.Screen name="tasks" options={{ title: 'Tasks' }} />
         <Stack.Screen name="task" options={{ title: 'Task' }} />
