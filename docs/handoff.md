@@ -12,14 +12,20 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **Automatic memory step 4, Wilma uses them (2026-10-10): branch `claude/memory-step4`, not
-  merged.** With memory on, the chat's instructions get an "About the user" block (newest 30
+- **Automatic memory step 5, privacy and build (2026-10-10): branch `claude/memory-step5`, not
+  merged; needs the owner's OK on the privacy wording (merging publishes it).** Privacy page
+  "Memory" paragraph and the OpenAI entry; Data safety: no change; legal checklist item;
+  `docs/versioncode19-phone-checklist.md`. **Then:** versionCode 19 after the owner's Expo upgrade.
+- **Automatic memory step 4, Wilma uses them (2026-10-10): #201 merged (squash, 8a674b4) and
+  live: `chat` version 29** (deploy chat run 38068078169, owner's OK; 401 checks passed). With memory on, the chat's instructions get an "About the user" block (newest 30
   memories, titles only, credential-looking ones left out; information, never instructions).
   Noticing now writes facts without "I". Server only (`chat`). 450 Deno tests (4 new); 4 new chat
   evaluation cases (116). **Evaluation (owner's OK, $1 cap), Luna:** chat run 38067103437,
   114/116, 0 leaks, 0 unsafe, $0.06 (memory cases 4/4; the two misses are unchanged cases and
-  passed 6/6 on re-run 38067835379); memory run 38067105288, 23/23, 0 leaks, $0.0013. **Next
-  (owner):** review and merge; OK the `chat` deploy.
+  passed 6/6 on re-run 38067835379); memory run 38067105288, 23/23, 0 leaks, $0.0013. **Next:**
+  step 5 (privacy paragraph, Data safety check, phone checklist), then versionCode 19 after the
+  owner's Expo upgrade. Design D34 (usage tracking and the admin page) is on branch
+  `claude/usage-tracking-plan`, not merged.
 - **Automatic memory step 3, the app (2026-10-10): #200 merged (squash, 6067da7); server part live:
   `mcp` version 32, `chat` version 28** (deploy chat runs 38066266087 and 38066267163, owner's OK;
   401 checks passed). The app part ships with versionCode 19.

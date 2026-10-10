@@ -6,8 +6,9 @@ secrets, restricted spaces); a smaller one for step 5's wording and the build.
 
 **Step 2 merged (#198) and live** (`chat` v27, `mcp` v31). **Step 3 merged (#200; server
 part live, `mcp` v32, `chat` v28; the app ships with versionCode 19):** see "As built: step 3" at
-the end. **Step 4 built (2026-10-10, branch `claude/memory-step4`), not merged:**
-see "As built: step 4" at the end.
+the end. **Step 4 merged (#201) and live (`chat` v29):**
+see "As built: step 4" at the end. **Step 5 written (2026-10-10, branch `claude/memory-step5`), not merged:**
+see "As built: step 5" at the end.
 
 ## What the owner will see
 
@@ -195,3 +196,19 @@ deletes it if they want).
   `find-with-injection-in-note` and `place-not-since-summer`, have instructions unchanged by this
   step and passed 6/6 on re-run 38067835379); memory 38067105288, 23/23, 0 leaks, $0.0013, facts
   now without "I".
+
+## As built: step 5 (privacy and build)
+
+- **Privacy page** (`docs/legal/privacy.html`): a "Memory (optional, off unless you turn it on)"
+  paragraph (what is checked, at most three per answer, kept as notes in the Memories space, shown
+  with Undo, never passwords or vault or restricted-space chats, sensitive topics only when asked,
+  newest memories sent with chat messages, how to see, change and delete them, what Off does); the
+  OpenAI entry now names memories and the messages checked. Needs the owner's OK: merging publishes it.
+- **Data safety:** no change (memories are "Other user-generated content"; noted in
+  `docs/phase4-play-release.md`).
+- **Legal review:** an "Automatic memory" item in `docs/legal-review-checklist.md` (consent wording,
+  health data laws, facts about other people, whether "Health info" is needed).
+- **Phone checklist:** `docs/versioncode19-phone-checklist.md` (theme, built-in spaces, memory on,
+  remembering and Undo, never-remembered traps, Wilma using them; the briefing part refers to the
+  versionCode 18 checklist).
+- **Then:** "build for Play" (versionCode 19) once the owner has upgraded Expo.
