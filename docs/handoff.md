@@ -13,7 +13,7 @@ tokens or keys in chat.
 
 **Newest first (2026-10-07):**
 - **Day planner step 4, morning briefing (owner, 2026-10-10): plan merged (#189,
-  `docs/phase6-day-planner-step4-plan.md`); step 1 merged (#190); step 2 on a branch.**
+  `docs/phase6-day-planner-step4-plan.md`); step 1 merged (#190, #191); step 3 on a branch.**
   Owner's answers: the phone schedules local notifications (no server push, no Firebase, no
   background task), a short morning summary from the evening's plan, event title and time on the
   lock screen, and every part a setting (briefing Off / In Wilma only / In Wilma and as a
@@ -30,7 +30,15 @@ tokens or keys in chat.
   `claude/briefing-step2`):** each new plan in My day replaces that day's leave-by alerts
   (`scheduleForPlan`) and, with the briefing sent as a notification, that morning's greeting by the
   day's summary ("From yesterday’s plan: …", or "From your plan at 6:05 am: …" the same morning);
-  the start-up top-up keeps it. 714 app tests (7 new). **Next:** step 3 (Your morning card on Home), step 4 (calendar permission
+  the start-up top-up keeps it. 714 app tests (7 new). **Merged (#191).** **Step 3 (branch
+  `claude/briefing-step3`): 🌅 Your morning on Home** (`components/MorningCard.tsx`,
+  `lib/morningBrief.ts`): with the briefing on (In Wilma only, or with a notification), the first
+  open of Wilma after the briefing time makes today's plan as My day does and shows its summary,
+  with Open My day › and Hide for today; its plan also schedules the day's leave-by alerts. Made
+  once a day (the phone keeps only the dates made and hidden, per account; the summary stays in
+  memory); pull to refresh makes it again; made earlier and Wilma restarted: "Show it again".
+  Briefing off: the calendar is never read and no plan is asked for. Calendar off: a line pointing
+  to Settings → Calendars, no plan asked for. 720 app tests (6 new). **Next:** step 4 (Your morning card on Home), step 4 (calendar permission
   text, privacy wording for the owner's OK, `docs/versioncode18-phone-checklist.md`, versionCode 18).
   Nothing ships until the build.
 - **Places: a cuisine filter matches the name or dishes (2026-10-10): #188 merged (squash, 219ed24)

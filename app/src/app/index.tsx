@@ -2,12 +2,14 @@
 // here with no model call, anything else goes to Wilma. When Wilma can't answer (allowance used
 // up, or the chat's Search button), the old note search runs on the text instead, never the model
 // (restricted spaces are never searched); below, the spaces opened most recently on this phone and
-// "See all spaces" (homeSpaces.ts; the Tasks space is reached by the ✅ Tasks tile).
+// "See all spaces" (homeSpaces.ts; the Tasks space is reached by the ✅ Tasks tile). With the
+// morning briefing on, 🌅 Your morning above them (MorningCard.tsx, day planner step 4).
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, RefreshControl, Text, TextInput, View } from 'react-native';
 
 import { MicButton } from '@/components/MicButton';
+import { MorningCard } from '@/components/MorningCard';
 import { PasswordHold } from '@/components/PasswordHold';
 import { useProPlan } from '@/components/ProCard';
 import { ItemRow } from '@/components/rows';
@@ -96,9 +98,12 @@ export default function Home() {
   // Two stable reload functions: useReloadOnReturn re-runs whenever its function changes.
   useReloadOnReturn(reload);
   useReloadOnReturn(usage.reload);
+  // Pull to refresh also makes Your morning again, when it is showing.
+  const [pulls, setPulls] = useState(0);
   const reloadAll = () => {
     reload();
     usage.reload();
+    setPulls((n) => n + 1);
   };
 
   // Dictated words are added to the box; only Send sends them (A5e Q1).
@@ -207,6 +212,7 @@ export default function Home() {
   const header = (
     <View style={{ gap: space.m }}>
       {query ? null : <WelcomeCard />}
+      {query ? null : <MorningCard refresh={pulls} />}
       {query ? (
         <Text style={[styles.title, { color: c.text }]}>{`Results for “${query}”`}</Text>
       ) : (
