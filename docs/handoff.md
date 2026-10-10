@@ -12,6 +12,22 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Tasks left open at the end of their day, step 1, server (2026-10-10): branch
+  `claude/task-day-end`, not merged, not deployed.** `day_end` task field ("done" | "next_day"),
+  `mcp/lib/day_end.ts` (`atDayEnd`, `saveDayEnd`), My day settles ended days (at most 3 per plan,
+  revision kept) and lists left-open tasks with `left_from`; the later-day bug fixed; `find_tasks`
+  shows the state read-only. No instruction or tool description change, no evaluation. 460 Deno
+  tests (10 new). Details: `docs/task-day-end-plan.md` "As built: step 1". **Owner:** review/merge,
+  then OK to deploy `mcp` and `chat`. **Next:** step 2, the app (strongest model).
+- **Tasks left open at the end of their day (D35): plan written (2026-10-10), branch
+  `claude/task-day-end`, `docs/task-day-end-plan.md`; owner: "go with your recommendations"; built
+  before alarms (D31).** Found when "Lunch" (planned Oct 9 12:03, left open) showed on Oct 10 as
+  "find a time". The owner deleted it, then asked for it back: restored by Claude through the
+  Supabase connector (deleted_at cleared, as `restore_item` does; it is marked done). Also a bug: a
+  task with a time on a later day shows today as not placed. Steps: (1) server (`day_end` field,
+  settling ended days, `left_from` in the plan, the bug; deploy with the owner's OK); (2) app (the
+  choice, My day's Left open with Add to today · Done · Remove). Strongest model for both. The D31
+  plan is on branch `claude/alarms-calendar` (questions answered? not yet).
 - **Automatic memory step 5, privacy and build (2026-10-10): branch `claude/memory-step5`, not
   merged; needs the owner's OK on the privacy wording (merging publishes it).** Privacy page
   "Memory" paragraph and the OpenAI entry; Data safety: no change; legal checklist item;

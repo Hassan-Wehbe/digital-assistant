@@ -3,6 +3,7 @@ import { resolveSpace, type Space } from "../lib/spaces.ts";
 import { addressedAs } from "../lib/assistant.ts";
 import { placeScope, visiblePlaces } from "../lib/places.ts";
 import { normalizeTask, type TaskMetadata, TASK_TYPE, taskDate } from "../lib/tasks.ts";
+import { atDayEnd } from "../lib/day_end.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
 /** At most this many tasks are read per call; plenty for one person's list. */
@@ -46,7 +47,7 @@ function fieldsOf(metadata: Record<string, unknown> | null): TaskMetadata {
  * then by due date (important first on the same day), tasks without a date last. Only the user's
  * own tasks in searchable spaces are read: restricted spaces (and spaces under them) never (rule 3).
  */
-export const registerFindTasks: RegisterTool = (server, { db, assistantName }) => {
+export const registerFindTasks: RegisterTool = (server, { db, assistantName, timeZone }) => {
   server.registerTool(
     "find_tasks",
     {
@@ -99,8 +100,11 @@ export const registerFindTasks: RegisterTool = (server, { db, assistantName }) =
         // Checked again here, whatever the database returned (rule 3).
         const rows = ((data ?? []) as (TaskRow & { item_type: string; deleted_at: string | null })[])
           .filter((r) => r.item_type === TASK_TYPE && !r.deleted_at && scope.has(r.space_id));
+        // A task whose day ended is shown done or moved, as the user chose (D35); read-only here,
+        // My day writes it.
+        const now = Date.now();
         const matching = rows
-          .map((r) => ({ row: r, t: fieldsOf(r.metadata) }))
+          .map((r) => ({ row: r, t: atDayEnd(fieldsOf(r.metadata), { now, tz: timeZone, today }).task }))
           .filter(({ t }) => status === "all" || t.status === status)
           .filter(({ t }) => !dueBy || (t.due_on ? t.due_on <= dueBy : includeUndated));
 

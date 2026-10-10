@@ -108,6 +108,8 @@ export interface ChatDeps {
   log(entry: LogEntry | ClassifyLog | DayLog | MemoryLog): void;
   /** Keeps the instance alive for work after the answer (EdgeRuntime.waitUntil): noticing memories. */
   background?(work: Promise<unknown>): void;
+  /** The clock for day plans (tests set it; DayDeps["now"]). */
+  now?: DayDeps["now"];
 }
 
 const CORS = {

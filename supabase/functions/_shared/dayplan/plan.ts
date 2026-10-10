@@ -90,6 +90,9 @@ export interface PlanTask {
   repeat?: string;
   /** When the user put it in the day, local time. */
   planned_at?: string;
+  /** Left open on an earlier day it had a time on (D35): that day, and the time, "HH:MM". */
+  left_from?: string;
+  planned_time?: string;
   place?: PlanPlace | null;
 }
 
@@ -176,6 +179,8 @@ export interface DayPlan {
   all_day: { key: string; title: string }[];
   tasks_not_placed: {
     id: string; title: string; priority: string; duration_min?: number; due_on?: string; overdue?: true; repeat?: string;
+    /** Left open on an earlier day (D35): the app asks Add to today · Done · Remove. Not sent to the model. */
+    left_from?: string; planned_time?: string;
   }[];
   options?: { task_id: string; options: TaskOption[]; note?: string };
 }
@@ -397,6 +402,8 @@ export async function planDay(input: PlanInput): Promise<DayPlan> {
         ...(t.due_on ? { due_on: t.due_on } : {}),
         ...(t.due_on && t.due_on < date ? { overdue: true as const } : {}),
         ...(t.repeat ? { repeat: t.repeat } : {}),
+        ...(t.left_from ? { left_from: t.left_from } : {}),
+        ...(t.left_from && t.planned_time ? { planned_time: t.planned_time } : {}),
       });
     }
   }

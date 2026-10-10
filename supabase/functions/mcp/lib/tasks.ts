@@ -15,6 +15,9 @@ export const TASK_PRIORITIES = ["normal", "important"] as const;
 /** How a task comes back (owner, 2026-10-08): none means one time, on its due date. */
 export const TASK_REPEATS = ["daily", "weekdays", "weekly", "biweekly", "monthly"] as const;
 export type TaskRepeat = (typeof TASK_REPEATS)[number];
+/** What happens to a task with a time when its day ends and it is still open (D35): none means ask. */
+export const TASK_DAY_ENDS = ["done", "next_day"] as const;
+export type TaskDayEnd = (typeof TASK_DAY_ENDS)[number];
 export const MIN_DURATION = 5;
 export const MAX_DURATION = 480;
 
@@ -35,11 +38,13 @@ export interface TaskMetadata {
   last_done_on?: string;
   /** When it is done: the user picked a time (the app's form, a day plan option, or told Wilma); a time with its UTC offset. */
   planned_at?: string;
+  /** Not done by the end of planned_at's day: marked done, or moved to the next day (D35). */
+  day_end?: TaskDayEnd;
 }
 
 const FIELDS = [
   "status", "priority", "due_on", "duration_min", "duration_estimated", "place_id", "address", "done_at", "planned_at",
-  "repeat", "last_done_on",
+  "repeat", "last_done_on", "day_end",
 ];
 
 export class TaskError extends Error {}
@@ -163,6 +168,11 @@ export function normalizeTask(input: Record<string, unknown> | null | undefined,
     fail("last_done_on is only for a repeating task");
   }
 
+  // Only for a task with a time, and not a repeating one (it moves to its next date by itself).
+  // Otherwise dropped, not refused, so taking a task's time away never makes the edit fail.
+  const dayEnd = word(m.day_end, "day_end", TASK_DAY_ENDS);
+  if (dayEnd && out.planned_at && !out.repeat) out.day_end = dayEnd;
+
   if (status === "done") out.done_at = moment(m.done_at, "done_at") ?? now.toISOString();
   return out;
 }
@@ -193,6 +203,8 @@ export function setTaskDone(
   }
   m.status = done ? "done" : "open";
   delete m.done_at;
+  // Opened again: the user wants it open, so an end-of-day "done" must not close it again (D35).
+  if (!done) delete m.day_end;
   return normalizeTask(m, now);
 }
 
