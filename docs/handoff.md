@@ -1,6 +1,6 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-10-09 04:00 UTC (newest: invite-only sign-up steps 1-4 in PR #186, not merged; live `mcp` v29, `chat` v25; see the first entry under "Where things stand"). Earlier: 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
+Last updated 2026-10-10 (newest: invite-only sign-up merged (#186) and live, versionCode 17 built and submitted, testers getting "Item not found" on the Play link; live `mcp` v30, `chat` v26 (places cuisine fix #188), `delete-account` deployed; see the first entry under "Where things stand"). Earlier: 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
 #102), with Expo patch updates (#98). Step 2, server, is live. Places step 5b ("places near me",
 server) **merged and live** (#104, `mcp` v13, `chat` v6; first entry below). Then step 6, the places build, which also carries the mic fix #91. Play Console:
 Data safety and other forms saved, **not yet sent for review**; see the first entry below).
@@ -12,6 +12,34 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Places: a cuisine filter matches the name or dishes (2026-10-10): #188 merged (squash, 219ed24)
+  and live: `mcp` version 30, `chat` version 26** (deploy chat runs 38050063856 and 38050065246,
+  owner's OK). The rest of the parked "pizza got Hinode and Lemongrass": a place shared from Google
+  Maps has neither kind nor cuisine, and #180 covered only the kind. `find_places` now lets a place
+  whose name or a dish liked contains the cuisine as whole words pass a cuisine filter, flagged
+  `cuisine_not_saved` (like `kind_not_saved`). No tool description change, so no evaluation run.
+  411 Deno tests (1 new; fails without the fix). Server only, live on versionCode 17. **Owner:** ask
+  Wilma "pizza near me" in the app. Note: `chat` bundles the `mcp` tools, so a `find_places` change
+  needs both deploys.
+- **Sign-up live, versionCode 17 out (2026-10-09/10).** #186 squash-merged (7cc3192). Owner applied
+  `20261011120000_invite_signup.sql` after a 33/33 dry run in the SQL editor (a first attempt failed
+  with "relation public.signup_setting does not exist" because only part of the file ran; pasting
+  the whole file into a new query fixed it; the Supabase connector times out on the full dry run,
+  so the owner runs it), verified read-only. **Before User Created hook switched on** (Postgres,
+  `public.hook_before_user_created`). `delete-account` deployed (deploy chat run 37990729026, 401
+  checks passed). **versionCode 17** built from main at 7cc3192: GitHub run 37991401204, Expo build
+  `b37ce013-5dd0-44aa-8fe5-fa8f6d44092b`, submission b556ded8-0a22-4551-b168-53b022e9ad44 to
+  internal testing; carries E (🚸, calendar Free), F (spaces on Home) and sign-up. Email
+  confirmation: owner chose to keep Supabase's built-in email (3-4 testers) and confirm stuck
+  testers by hand (Authentication > Users). Codes: owner makes them in the SQL editor
+  (`select create_invite_code('tester 1', 1, 14, 'pro');`), never in chat. **Open (owner):**
+  confirm sign-ups are on and the redirect URL
+  `https://hassan-wehbe.github.io/digital-assistant/legal/email-confirmed.html` is added; Play
+  Data safety (account creation and in-app deletion); testers see Play's **"Item not found"** on
+  the link: usual causes are opening the store link before the opt-in link, the tester's Gmail not
+  on a ticked Internal testing list, a different Google account in the Play Store, or a few
+  minutes' delay. Then the owner's own test sign-up on 17, then codes to testers. Not written yet:
+  `docs/signup-phone-checklist.md` (plan step 5).
 - **Invite-only sign-up, steps 1-4 (owner: "do the invite sign up first", 2026-10-09): PR #186,
   branch `claude/invite-signup`, not merged.** One PR, a commit per step. (1) Migration
   `20261011120000_invite_signup.sql`: `invite_code` (hashed), `invite_use`, `signup_setting`
