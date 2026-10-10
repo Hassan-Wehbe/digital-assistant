@@ -8,7 +8,16 @@ export interface Space {
   description: string | null;
   parent_id: string | null;
   is_restricted: boolean;
+  /** "tasks" or "memories" on the account's built-in spaces (they cannot be deleted, renamed,
+   * moved or restricted; 20261012120000_memory_builtin_spaces.sql); null on the user's own. */
+  built_in?: string | null;
   path: string;
+}
+
+/** The refusal Wilma passes on for a built-in space ("Tasks", "Memories"). */
+export function builtInRefusal(s: Space, what: "deleted" | "renamed"): string {
+  return `"${s.name}" is a built-in space, so it can't be ${what}.` +
+    (what === "renamed" ? " Its description can change." : " The notes in it can be deleted one by one.");
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -16,7 +25,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export async function loadSpaces(db: SupabaseClient): Promise<Space[]> {
   const { data, error } = await db
     .from("space")
-    .select("id, name, description, parent_id, is_restricted");
+    .select("id, name, description, parent_id, is_restricted, built_in");
   if (error) throw new Error(`could not load spaces: ${error.message}`);
   const byId = new Map(data.map((s) => [s.id as string, s]));
   const pathOf = (id: string, seen = new Set<string>()): string => {

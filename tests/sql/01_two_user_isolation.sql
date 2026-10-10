@@ -23,8 +23,10 @@ select save_item((select id from space where name = 'B kitchen'), 'recipe', 'Bet
                  'Onion, spices, coconut milk.', null, '{}', array['weeknight'],
                  pg_temp.chunks('Beta curry: onion, spices, coconut milk.', 1));
 
+-- Built-in spaces (Tasks, Memories) are made for every account; the user's own are counted here.
 select pg_temp.check('B sees only own spaces',
-  (select count(*) = 1 and bool_and(name = 'B kitchen') from space));
+  (select count(*) = 1 and bool_and(name = 'B kitchen') from space where built_in is null)
+  and (select bool_and(owner_user_id = '00000000-0000-4000-a000-00000000000b') from space));
 select pg_temp.check('B sees only own items',
   (select count(*) = 1 and bool_and(title = 'Beta curry') from item));
 select pg_temp.check('B sees only own tags',

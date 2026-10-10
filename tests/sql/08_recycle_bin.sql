@@ -135,7 +135,7 @@ select pg_temp.check('an empty space is deleted',
   (select (delete_space((select empty from _ids)) ->> 'deleted')::boolean));
 select pg_temp.check('and it is gone', (select not exists (select 1 from space where name = 'Empty')));
 select pg_temp.check('nothing else was deleted along the way',
-  (select count(*) = 5 from space) and (select count(*) = 1 from secret));
+  (select count(*) = 5 from space where built_in is null) and (select count(*) = 1 from secret));
 
 reset role;
 do $$
