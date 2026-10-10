@@ -12,6 +12,11 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Alarms and calendar entries (D31): plan answered (2026-10-10), branch `claude/alarms-calendar`.**
+  Owner: a card to confirm on everything; cancelling added (alarms via Open Clock, since Android
+  cannot delete Clock alarms; reminders from the chat or Settings → Reminders, matched on the phone);
+  every other question as recommended. **Next:** step 1, the server's chat actions and a paid
+  evaluation run (owner's OK and cap first); strongest model, fresh session.
 - **Alarms and calendar entries (D31): plan written (2026-10-10), branch `claude/alarms-calendar`,
   `docs/alarms-calendar-plan.md`. Waiting for the owner's answers (Q1-Q8; small ones Q9-Q13 have
   defaults); nothing built.** Alarms open the phone's Clock filled in, reminders are Wilma

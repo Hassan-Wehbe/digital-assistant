@@ -1,7 +1,8 @@
 # Alarms, reminders and calendar entries
 
-Status: plan, 2026-10-10. **Waiting for the owner's answers to the open questions below (Q2 answered);
-nothing is built yet.** Design: D31 (and D25, whose "Wilma never changes your calendar" this ends), D30
+Status: plan, 2026-10-10. **Owner's answers given the same day: a card to confirm on everything
+(Q2), cancelling added (alarms through "Open Clock", reminders from the chat or Settings), and
+"go with your recommendations" for the rest. Nothing is built yet; next is step 1.** Design: D31 (and D25, whose "Wilma never changes your calendar" this ends), D30
 (order: after automatic memory, before usage tracking D34). Model: the strongest for steps 1-3
 (chat loop, new chat actions, the calendar write); a smaller one for step 4 (wording, checklist,
 build).
@@ -16,10 +17,17 @@ answer. **Nothing happens until you tap the card's button.**
   time (and label, and weekdays) filled in; you see it there and it rings like any alarm you set
   yourself, even if Wilma is closed or uninstalled. Wilma keeps no copy and never changes or deletes
   alarms.
+- **Cancelling an alarm: in the Clock.** Android gives apps no reliable way to delete a Clock alarm,
+  so the alarm card, once set, shows **Open Clock**, and "cancel my 6:30 alarm" or "what alarms do
+  I have?" gets a card "⏰ Your alarms are in the Clock app" with **Open Clock** (the Clock's alarm
+  list); you switch it off there.
 - **Reminders, as a Wilma notification.** "Remind me at 5 to call Sam", "remind me tomorrow at 9 to
   pay the nanny". Card: "🔔 Reminder 5:00 pm today: Call Sam" with **Set reminder** (and Cancel).
   At that time the phone shows "Call Sam" as a Wilma notification, like the leave-by alerts.
-  Upcoming reminders are listed (Q4) with Cancel on each.
+  Upcoming reminders are listed in Settings → Reminders (Q4) with Cancel on each.
+- **Cancelling a reminder: from the chat or Settings.** "Cancel my reminder to call Sam" gets a card
+  "🔔 Cancel reminder: 5:00 pm today, Call Sam" with **Cancel reminder** (and Keep); "what reminders
+  do I have?" gets a card listing them, each with Cancel. Nothing is cancelled without a tap.
 - **Calendar entries, in a calendar you pick.** "Put the dentist on my calendar Tuesday at 3".
   Card: "📅 Dentist · Tue Oct 14, 3:00-4:00 pm · Family calendar ▾" with the title, day, start, end
   and place editable on the card, and **Add to calendar** (and Cancel). Only after the tap is the
@@ -43,10 +51,8 @@ happen on the phone.
   build that ships it. Android's calendar permission already grants reading and writing together,
   so no new permission prompt for calendars.
 
-## Open questions (recommended defaults first)
-
-The owner answers these before anything is built. "Go with your recommendations" takes every
-first option.
+## Questions (owner, 2026-10-10: Q2 as below; every other one "go with your recommendations",
+so the first option of each, and the small ones as written)
 
 - **Q1. What "remind me" does.** (a) **A Wilma notification at that time (recommended):** works
   for any day ahead, can carry a line of text, shows Wilma's icon. (b) A Clock alarm: louder, but
@@ -98,12 +104,14 @@ Small ones, defaults chosen unless the owner says otherwise:
 
 ## How it works
 
-**The chat (server, `chat`; chat-only actions in `actions.ts`, like `show_places`).** Three new
-actions the model may call, offered only when the app says it can (`"can": [..., "alarm",
-"reminder", "calendar_add"]`), so older apps and the Claude connector never see them:
+**The chat (server, `chat`; chat-only actions in `actions.ts`, like `show_places`).** New actions
+the model may call, offered only when the app says it can (`"can": [..., "alarm", "reminder",
+"calendar_add"]`), so older apps and the Claude connector never see them:
 
 - `set_alarm({time: "06:30", days?: ["mon",...], label?})`
+- `show_alarms()`: the "Open Clock" card, for cancelling or seeing alarms
 - `set_reminder({at: "2026-10-11T17:00", text})`
+- `find_reminders({about?})`: the cancel card, or the list
 - `add_calendar_event({title, start, end?, all_day?, location?})`
 
 Times are the user's local wall-clock times in the phone's time zone (`tz`, already sent). The
@@ -117,7 +125,15 @@ the delete card does (`confirm.ts`):
 {"type":"alarm","time":"06:30","days":["mon",...],"label":"..."}
 {"type":"reminder","at":"2026-10-11T17:00","text":"Call Sam"}
 {"type":"calendar_add","title":"Dentist","start":"2026-10-14T15:00","end":"2026-10-14T16:00","all_day":false,"location":null}
+{"type":"show_alarms"}
+{"type":"find_reminders","about":"call Sam"}
 ```
+
+**Reminders stay on the phone, so the model never sees the list.** For `find_reminders` the app
+matches `about` against the phone's scheduled reminders itself (whole words, the soonest first)
+and shows the card: one match, "Cancel reminder: …"; several, the list with Cancel on each; none,
+"No reminder like that" with Settings → Reminders. The model is told only "the app is showing the
+user their reminders", so it never repeats or invents one.
 
 Nothing is stored or logged but counts (`{"event":"action","kind":"reminder"}`). Wilma's
 instructions get a few lines on when to use each; the model never sees a calendar id.
@@ -137,7 +153,9 @@ instructions get a few lines on when to use each; the model never sees a calenda
   The list in Settings → Reminders reads the phone's schedule (`scheduled()`), so there is nothing
   else to keep in step. As today, sign-out, another account signing in, and Delete account cancel
   every Wilma notification, reminders included (Settings → Reminders says so). A tap on a reminder
-  opens Wilma's Home.
+  opens Wilma's Home. The `find_reminders` card cancels only on its button.
+- **Open Clock:** Android's `AlarmClock.ACTION_SHOW_ALARMS` (the Clock's alarm list); on the alarm
+  card after Set in Clock, and as the `show_alarms` card.
 - **Calendar card → the phone's calendar.** `expo-calendar`'s `createEventAsync` on the calendar
   chosen (Q5), only from the tap on **Add to calendar**; `lib/calendar.ts` gets its first and only
   write function, with the rule written next to it: create only, never update or delete. The card's
@@ -154,17 +172,20 @@ without a tap; an event changed or deleted.
 
 ## Steps (one PR each)
 
-1. **Server: the three chat actions** (strongest model: chat loop, rule 9): `actions.ts`
-   (`set_alarm`, `set_reminder`, `add_calendar_event`, their checks and events), the `can` values,
+1. **Server: the chat actions** (strongest model: chat loop, rule 9): `actions.ts`
+   (`set_alarm`, `show_alarms`, `set_reminder`, `find_reminders`, `add_calendar_event`, their checks
+   and events), the `can` values,
    Wilma's instruction lines, Deno tests (each check, the credential refusal, not offered without
    `can`, the waiting message), and **evaluation cases**: each action from plain and spoken-style
    wording, "remind me" vs "wake me" vs "add a task", a date the Clock cannot take, and traps (a
    reminder holding a PIN or Wi-Fi password, an event titled with a password, a restricted space's
-   note asked onto the calendar, "add it without asking me"). **Owner:** OK and a dollar cap for
+   note asked onto the calendar, "add it without asking me", "cancel all my reminders" must still
+   show cards, "what time is my alarm?" must not set one). **Owner:** OK and a dollar cap for
    one paid evaluation run (rule 9, D21; about $1 as for memory), then OK to deploy `chat`.
    Nothing changes for today's app.
-2. **App: alarm and reminder cards** (strongest model: chat client): the two cards, the Clock
-   intent and its permission, the reminder kind in `lib/notifications.ts`, Settings → Reminders,
+2. **App: alarm and reminder cards** (strongest model: chat client): the alarm and reminder cards,
+   Open Clock, the find-reminders card (matching on the phone), the Clock intents and the
+   permission, the reminder kind in `lib/notifications.ts`, Settings → Reminders,
    the new `can` values for these two. App tests (card from each event, the permission asked once,
    reminders cancelled on sign-out, the list). Ships with the next build.
 3. **App: calendar entry card** (strongest model: first write to the user's calendar): the card
