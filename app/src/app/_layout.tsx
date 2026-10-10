@@ -91,6 +91,7 @@ function Screens() {
         <Stack.Screen name="tasks" options={{ title: 'Tasks' }} />
         <Stack.Screen name="task" options={{ title: 'Task' }} />
         <Stack.Screen name="pro" options={{ title: 'Wilma Pro', presentation: 'modal' }} />
+        <Stack.Screen name="help" options={{ title: 'Help', presentation: 'modal' }} />
         <Stack.Screen name="share" options={{ title: 'Share to Wilma' }} />
         <Stack.Screen name="vault/index" options={{ title: 'Vault' }} />
         <Stack.Screen name="vault/[id]" options={{ title: 'Secret' }} />

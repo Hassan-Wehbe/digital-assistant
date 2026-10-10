@@ -32,6 +32,7 @@ export function WelcomeCard() {
       <Muted>Tell me anything worth keeping (notes, recipes, designs, places) and ask for it later, in your own words.</Muted>
       <Muted>Passwords and PINs go in the 🔒 Vault, locked with a passphrase only you know. I never see them.</Muted>
       <Muted>{'Want another name for me? Say “call yourself …” in the chat.'}</Muted>
+      <Muted>Tap ? any time for help.</Muted>
       <View style={{ gap: space.s }}>
         <Button
           title="Set up your vault"

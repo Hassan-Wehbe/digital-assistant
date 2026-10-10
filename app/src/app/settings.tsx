@@ -180,6 +180,11 @@ export default function Settings() {
         />
       </GroupList>
 
+      {heading('Help')}
+      <GroupList>
+        <GroupRow first title="? Help" subtitle="Short topics, with examples to try" onPress={() => router.push('/help')} />
+      </GroupList>
+
       {heading('Account')}
       <GroupList>
         <GroupRow first title="Signed in as" subtitle={session?.user.email ?? 'you'} />

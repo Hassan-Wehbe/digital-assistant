@@ -12,6 +12,12 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Help step 1, the "?" and the Help screen (2026-10-10): branch `claude/help-screen` (from
+  `claude/help-plan`, #211), not merged; app only, ships with the next build.** Eight short topics
+  (`lib/help.ts`), "Try it" fills the chat box (never sends), the "?" on Home and Ask Wilma,
+  Settings → Help, one welcome line. 754 app tests (8 new). **Owner:** OK on the topic wording.
+  Details and phone checks: `docs/help-plan.md` "As built: step 1". **Next:** step 2 (server
+  `show_help` + evaluation; strongest model, OK and cap).
 - **Help (D37): plan written (2026-10-10), branch `claude/help-plan`, `docs/help-plan.md`; owner:
   "agree with the recommendations" (Q1-Q6); nothing built. Next: step 1, the Help screen.** (A) a "?" in the Home and Ask Wilma headers
   opening short topics with "Try it" examples; (C) "what can you do?" gives a short answer and a 🛟
