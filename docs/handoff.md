@@ -13,7 +13,7 @@ tokens or keys in chat.
 
 **Newest first (2026-10-07):**
 - **Day planner step 4, morning briefing (owner, 2026-10-10): plan merged (#189,
-  `docs/phase6-day-planner-step4-plan.md`); step 1 merged (#190, #191); step 3 on a branch.**
+  `docs/phase6-day-planner-step4-plan.md`); step 1 merged (#190, #191, #192); step 4 (wording) waits for the owner.**
   Owner's answers: the phone schedules local notifications (no server push, no Firebase, no
   background task), a short morning summary from the evening's plan, event title and time on the
   lock screen, and every part a setting (briefing Off / In Wilma only / In Wilma and as a
