@@ -4,8 +4,9 @@ Status: plan, 2026-10-10. Owner's answers given the same day ("go with your reco
 default Memories space like Tasks). Design: D24, D30. Model: the strongest for steps 1-4 (chat loop,
 secrets, restricted spaces); a smaller one for step 5's wording and the build.
 
-**Step 2 merged (#198) and live** (`chat` v27, `mcp` v31). **Step 3 built (2026-10-10, branch
-`claude/memory-step3`), not merged:** the app; see "As built: step 3" at the end.
+**Step 2 merged (#198) and live** (`chat` v27, `mcp` v31). **Step 3 merged (#200; server
+part live, `mcp` v32, `chat` v28; the app ships with versionCode 19):** see "As built: step 3" at
+the end.
 
 ## What the owner will see
 

@@ -12,13 +12,14 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **Automatic memory step 3, the app (2026-10-10): branch `claude/memory-step3`, not merged.**
+- **Automatic memory step 3, the app (2026-10-10): #200 merged (squash, 6067da7); server part live:
+  `mcp` version 32, `chat` version 28** (deploy chat runs 38066266087 and 38066267163, owner's OK;
+  401 checks passed). The app part ships with versionCode 19.
   Settings → Memory (On/Off, "See what I remembered"), the one-time Home card, "🧠 Remembered: … ·
   Undo" under the reply (read past `done`, kept with the thread), 🧠 / ✅ and BUILT-IN on Tasks and
   Memories, no Delete or rename for them. Small server changes: `list_spaces` gives `built_in`,
   the `remembered` event gives `was` (for Undo). 739 app tests (15 new), 446 Deno tests (1 new).
-  Details: `docs/memory-plan.md` "As built: step 3". **Next (owner):** review and merge; OK the
-  `mcp` and `chat` deploys. **Before versionCode 19:** step 5's privacy paragraph (users can turn
+  Details: `docs/memory-plan.md` "As built: step 3". **Before versionCode 19:** step 5's privacy paragraph (users can turn
   memory on in this build); step 4 (Wilma uses the memories) can come before or after.
 - **Settings → Theme (owner, 2026-10-10): branch `claude/theme-setting`, not merged; app only.**
   Same as the phone (default) / Light / Dark, kept on the phone (`wilma.theme.v1`, not per
