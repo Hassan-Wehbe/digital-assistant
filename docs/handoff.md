@@ -12,6 +12,18 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Automatic memory step 2, noticing in the chat (2026-10-10): branch `claude/memory-step2`, not
+  merged, not deployed.** Server only (`chat`). `chat/memory.ts`: after `done`, with memory on, one
+  small call on the new optional `memory` route (falls back to `router`, so `LLM_ROUTES` needs no
+  change) reads the newest message plus up to two before it and names at most 3 facts as JSON; the
+  server drops anything credential- or value-like, with vault words, not the user's own words, or
+  sensitive without "remember"; no call at all for a vault turn, vault words, or a restricted space
+  named anywhere in the turn; `saveMemory` stores them; `{"type":"remembered",...}` follows `done`
+  (today's app stops at `done` and ignores it); cost via `record_ai_cost`; `EdgeRuntime.waitUntil`.
+  Evaluation suite `--suite memory` (23 cases, 11 traps). 445 Deno tests (25 new). Details:
+  `docs/memory-plan.md` "As built: step 2". **Next (owner):** OK and a dollar cap for one paid
+  memory evaluation run (rule 9, D21), then review and merge; the `chat` deploy waits for both.
+  Then step 3 (app).
 - **Automatic memory step 1 (2026-10-10): migration applied (owner's dry run 29/29 ok; applied by
   Claude through the Supabase connector at the owner's request, in one transaction; checked
   read-only: 2 accounts, each with one built-in Tasks (the existing one, with its tasks) and one

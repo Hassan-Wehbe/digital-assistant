@@ -10,13 +10,13 @@ on:
   workflow_dispatch:
     inputs:
       suite:
-        description: "chat (Wilma's conversations) or router (the one box's classifier)"
+        description: "chat (Wilma's conversations), router (the one box's classifier) or memory (noticing what to remember)"
         default: "chat"
       models:
         description: "Models to compare (ids from tests/eval/models.json, comma-separated); a model whose API key is not set is skipped"
         default: "luna"
       cases:
-        description: "Cases: all, or ids / categories (chat: save, lookup, secret, edit, calendar, other; router: search, wilma, trap)"
+        description: "Cases: all, or ids / categories (chat: save, lookup, secret, edit, calendar, other; router: search, wilma, trap; memory: keep, skip, trap)"
         default: "all"
       repeat:
         description: "Runs per case"
@@ -36,7 +36,7 @@ jobs:
         with:
           deno-version: v2.x
       - name: Check the evaluation code
-        run: deno test -A --config supabase/functions/mcp/deno.json tests/deno/eval_test.ts tests/deno/router_eval_test.ts tests/deno/llm_test.ts
+        run: deno test -A --config supabase/functions/mcp/deno.json tests/deno/eval_test.ts tests/deno/router_eval_test.ts tests/deno/memory_eval_test.ts tests/deno/llm_test.ts
       - name: Run the evaluation
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

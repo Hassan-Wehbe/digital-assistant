@@ -25,7 +25,11 @@
 //             {"type":"agenda_request","from":...,"to":...}            read the calendar, send again
 //             {"type":"day_plan","date":...}                            the answer used a day plan: Open my day
 //             {"type":"error","code":"allowance_used"|"service_paused"|"connection","message":...}
-//             {"type":"done","counted":true|false}                    always last
+//             {"type":"done","counted":true|false}                    the answer is complete
+//             {"type":"remembered","memories":[{"id","fact","updated"}]} after done, only with
+//                                                                     memory on (memory.ts)
+//           `done` ends the answer; "remembered" is the only event that may follow it, while the
+//           app still reads (an app that stops at `done` simply never sees it).
 //
 // Passwords never reach the model (CLAUDE.md rules 1 and 9; docs/ui-review.md, plan step 7):
 // when the new message looks like a credential (the server's findCredential, the same check
@@ -53,6 +57,7 @@ import {
 } from "./messages.ts";
 import { connectTools, type ToolSession } from "./tools.ts";
 import { type ChatPlan, dayPlan, type DayDeps, type DayLog, planForChat } from "./day.ts";
+import { type MemoryLog, noticeMemories, type RememberedEvent, todayIn } from "./memory.ts";
 
 /** Model calls per message, as in the evaluation (tests/eval/harness.ts). */
 export const MAX_ROUNDS = 8;
@@ -99,7 +104,9 @@ export interface ChatDeps {
   drives?: DayDeps["drives"];
   /** Weather for one day plan (US National Weather Service; none without NWS_CONTACT). */
   weather?: DayDeps["weather"];
-  log(entry: LogEntry | ClassifyLog | DayLog): void;
+  log(entry: LogEntry | ClassifyLog | DayLog | MemoryLog): void;
+  /** Keeps the instance alive for work after the answer (EdgeRuntime.waitUntil): noticing memories. */
+  background?(work: Promise<unknown>): void;
 }
 
 const CORS = {
@@ -222,10 +229,16 @@ export function createHandler(deps: ChatDeps): (req: Request) => Promise<Respons
         };
         try {
           const data = parsed.data!;
-          await runChat({
+          const { memory } = await runChat({
             deps, token, userId, messages, here: data.here, emit, signal: abort.signal,
             tz: data.tz ?? data.agenda?.time_zone, canCalendar: !!data.can?.includes(CAN_CALENDAR), agenda: data.agenda,
           });
+          if (memory) {
+            // After `done`: the instance stays up for it even when the app has stopped reading.
+            deps.background?.(memory);
+            const remembered = await memory;
+            if (remembered) emit(remembered as unknown as Record<string, unknown>);
+          }
         } catch (e) {
           // Last resort (e.g. the database client threw): the app still gets an answer and an end.
           if (!finished) {
@@ -301,7 +314,14 @@ export function vaultEvents(tool: string, resultText: string): Record<string, un
   }];
 }
 
-async function runChat({ deps, token, userId, messages, here, tz, canCalendar, agenda, emit, signal }: RunArgs): Promise<void> {
+/**
+ * One answered message. Returns the memory job (memory.ts) when this turn may be remembered: it is
+ * started only after `done`, and resolves to the "remembered" event or null; never rejects. (In an
+ * object, so the async function hands the job back instead of waiting for it.)
+ */
+async function runChat(
+  { deps, token, userId, messages, here, tz, canCalendar, agenda, emit, signal }: RunArgs,
+): Promise<{ memory: Promise<RememberedEvent | null> | null }> {
   const log: LogEntry = {
     event: "chat", request: crypto.randomUUID(), user: userId, outcome: "ok",
     model_calls: 0, tools: [], cost_cents: 0, counted: false,
@@ -321,9 +341,11 @@ async function runChat({ deps, token, userId, messages, here, tz, canCalendar, a
     emit({ type: "text", text: heldText(screened.held) });
     emit({ type: "done", counted: false });
     deps.log(log);
-    return;
+    return { memory: null };
   }
   messages = screened.messages;
+  // What the user said, before the answer adds to it (the memory job reads only this and the answer).
+  const said = messages.slice();
 
   const db = deps.clientFor(token);
 
@@ -333,7 +355,7 @@ async function runChat({ deps, token, userId, messages, here, tz, canCalendar, a
     fail("connection", `db:${allowanceError?.code ?? "no_allowance"}`);
     emit({ type: "done", counted: false });
     deps.log(log);
-    return;
+    return { memory: null };
   }
   const before = allowance as Allowance;
   if (Number(before.used_fraction) >= 1) {
@@ -341,7 +363,7 @@ async function runChat({ deps, token, userId, messages, here, tz, canCalendar, a
     emit({ type: "error", code: "allowance_used", message: allowanceUsed(String(before.month)) });
     emit({ type: "done", counted: false });
     deps.log(log);
-    return;
+    return { memory: null };
   }
   if (Number(before.used_fraction) >= ALLOWANCE_WARN) {
     emit({ type: "notice", code: "allowance_low", message: ALLOWANCE_LOW, used_fraction: before.used_fraction });
@@ -365,9 +387,13 @@ async function runChat({ deps, token, userId, messages, here, tz, canCalendar, a
 
   // 2. The conversation loop: model, tool calls, results, model (as tests/eval/harness.ts).
   let tools: ToolSession | null = null;
+  let assistantName: string | undefined;
+  const answerFrom = said.length; // messages from here on are the answer (withAgenda's calendar included)
   try {
     const llm = deps.llm();
-    const { assistantName, distanceUnit } = await loadUserSettings(db, userId);
+    const settings = await loadUserSettings(db, userId);
+    assistantName = settings.assistantName;
+    const distanceUnit = settings.distanceUnit;
     tools = await connectTools({ db, userId, accessToken: token, assistantName, distanceUnit, timeZone: tz });
     const system = systemPrompt(assistantName, tools.instructions, new Date(), here, tz);
     // The MCP tools plus the chat-only actions (never offered to the Claude connector).
@@ -481,4 +507,14 @@ async function runChat({ deps, token, userId, messages, here, tz, canCalendar, a
   log.cost_cents = Math.round(log.cost_cents * 10_000) / 10_000;
   emit({ type: "done", counted: log.counted });
   deps.log(log);
+
+  // 4. Memory (memory.ts): only after a whole answer. Not for a message the app sends again with
+  // the calendar (it is noticed then), nor after an error or Stop.
+  if (log.outcome !== "ok" || log.model_calls === 0 || log.agenda === "requested") return { memory: null };
+  return {
+    memory: noticeMemories(deps, {
+      db, userId, assistantName, said, answer: messages.slice(answerFrom),
+      usedFraction: Number(before.used_fraction), today: todayIn(tz),
+    }),
+  };
 }

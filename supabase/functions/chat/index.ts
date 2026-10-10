@@ -27,4 +27,5 @@ Deno.serve(createHandler({
     return contact ? nwsWeather({ contact }) : null;
   },
   log: (entry) => console.log(JSON.stringify(entry)),
+  background: (work) => EdgeRuntime.waitUntil(work),
 }));

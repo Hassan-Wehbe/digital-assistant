@@ -427,6 +427,28 @@ Deno.test("createLlm: each route goes to its configured provider", async () => {
   assertEquals(a.calls[0].output_config, { effort: "medium" });
 });
 
+Deno.test("the memory route: optional; without it, the router model answers (no LLM_ROUTES change needed)", async () => {
+  const a = fakeAnthropic({ content: [{ type: "text", text: "{}", citations: null }] as Anthropic.ContentBlock[] });
+  const o = fakeOpenAI([{ type: "response.completed", response: response({}) }, { type: "response.completed", response: response({}) }]);
+  const clients = { anthropic: a.client, openai: o.client };
+  const without = createLlm({ env: () => undefined, routes: parseRoutes(ROUTES_JSON), clients });
+  await collect(without.stream("memory", REQ));
+  assertEquals([a.calls.length, o.calls.length], [0, 1], "router (GPT) answered");
+
+  const routes = parseRoutes(JSON.stringify({ ...JSON.parse(ROUTES_JSON), memory: CLAUDE }));
+  assertEquals(routes.memory?.provider, "anthropic");
+  await collect(createLlm({ env: () => undefined, routes, clients }).stream("memory", REQ));
+  assertEquals(a.calls.length, 1, "its own model when set");
+  assertEquals(missingKeys(routes, (n) => (n === "OPENAI_API_KEY" ? "set" : undefined)), ["anthropic"]);
+  // An unknown route name is still a mistake.
+  try {
+    parseRoutes(JSON.stringify({ ...JSON.parse(ROUTES_JSON), memroy: GPT }));
+    throw new Error("expected RoutesConfigError");
+  } catch (e) {
+    assert(e instanceof RoutesConfigError);
+  }
+});
+
 Deno.test("createLlm: reads LLM_ROUTES, and a route without its API key fails clearly", () => {
   const llm = createLlm({ env: (n) => (n === "LLM_ROUTES" ? ROUTES_JSON : undefined) });
   assertEquals(llm.routes.default.model, "gpt-test");
