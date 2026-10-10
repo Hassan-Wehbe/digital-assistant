@@ -12,6 +12,10 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Tasks left open (D35): both steps merged (#204 server, #205 app, squash) and the server live:
+  `mcp` version 33, `chat` version 30** (deploy chat runs 38079300466 and 38079301868, owner's
+  OK, 2026-10-10; both passed the sign-in checks). The app part ships with the next build
+  (versionCode 20); phone checks in `docs/task-day-end-plan.md` "As built: step 2".
 - **Alarms and calendar entries (D31): plan answered (2026-10-10), branch `claude/alarms-calendar`.**
   Owner: a card to confirm on everything; cancelling added (alarms via Open Clock, since Android
   cannot delete Clock alarms; reminders from the chat or Settings → Reminders, matched on the phone);
