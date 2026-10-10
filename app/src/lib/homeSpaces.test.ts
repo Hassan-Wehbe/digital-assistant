@@ -32,6 +32,12 @@ describe('Home spaces', () => {
     expect(isTasksSpace(sp('t', 'Tasks', true))).toBe(false);
   });
 
+  it('the built-in Tasks space is Tasks; a space only named Tasks is not, once one is built-in', () => {
+    expect(isTasksSpace({ ...sp('t', 'Tasks'), built_in: 'tasks' })).toBe(true);
+    expect(isTasksSpace({ ...sp('m', 'Memories'), built_in: 'memories' })).toBe(false);
+    expect(isTasksSpace({ ...sp('t', 'Tasks'), built_in: 'memories' })).toBe(false);
+  });
+
   it('remembers the newest first, once, at most MAX_RECENT', () => {
     expect(rememberOpened(['a', 'b', 'c'], 'b')).toEqual(['b', 'a', 'c']);
     expect(rememberOpened(Array.from({ length: MAX_RECENT }, (_, i) => `s${i}`), 'new')).toHaveLength(MAX_RECENT);

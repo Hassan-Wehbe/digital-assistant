@@ -43,6 +43,8 @@ import { findCredential } from './credentials';
 import { canLookup, chatReducer, initialChat, monthKey, noticeVisible, type ChatAction, type ChatState } from './chatThread';
 import { deviceChatStore, deviceDayMemory, deviceSettingsStore } from './deviceStorage';
 import { deviceGeocoder, deviceLocation } from './location';
+import { undoMemory } from './memory';
+import { WilmaError } from './wilma';
 import { useVault } from './vault';
 
 /** What happened to a message, so the screen can follow it. */
@@ -89,6 +91,9 @@ interface ChatContextValue {
   shareLocation(id: string): void;
   /** "Not now" tapped on that card. */
   dismissLocation(id: string): void;
+  /** Undo on a "🧠 Remembered" line: that memory is deleted (or gets its old text back). False
+   * when it did not work. */
+  undoMemory(entryId: string, memoryId: string): Promise<boolean>;
 }
 
 const ChatContext = createContext<ChatContextValue | null>(null);
@@ -336,6 +341,20 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       },
       dismissLocation(id) {
         act({ type: 'location_dismiss', id });
+      },
+      async undoMemory(entryId, memoryId) {
+        const card = current.current.entries.find((e) => e.id === entryId);
+        const memory = card?.kind === 'memory' ? card.memories.find((m) => m.id === memoryId && !m.undone) : undefined;
+        if (!memory) return false;
+        const forUser = user.current;
+        try {
+          await undoMemory(wilma, memory);
+        } catch (e) {
+          if (e instanceof WilmaError && e.signedOut) signOut();
+          return false;
+        }
+        if (user.current === forUser) act({ type: 'memory_undone', id: entryId, memoryId });
+        return true;
       },
     }),
     [state, routingNow, loadedFor, userId, act, start, abort, wilma, chat, removeSecret, signOut],

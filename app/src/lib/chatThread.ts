@@ -11,6 +11,7 @@
 
 import { cancelledMessage, checkDelete, deletedMessage } from './chatDeletes';
 import type { ChatEvent, PlaceCardData } from './chatStream';
+import type { RememberedMemory } from './memory';
 import type { Route } from './router';
 
 /** At most this many entries are kept (oldest dropped). */
@@ -132,7 +133,9 @@ export type Entry =
   /** Wilma asked for the calendar but it could not be read: why, and Settings → Calendars. */
   | { kind: 'calendar'; id: string; problem: CalendarProblem }
   /** Wilma's answer used a day plan: Open my day for that date. Only the date: never the plan. */
-  | { kind: 'day'; id: string; date: string };
+  | { kind: 'day'; id: string; date: string }
+  /** What Wilma kept from the message before (memory on): "🧠 Remembered: … · Undo" for each. */
+  | { kind: 'memory'; id: string; memories: (RememberedMemory & { undone?: true })[] };
 
 /** Why the calendar was not read: turned off (or nothing ticked), not allowed, or a failure. */
 export type CalendarProblem = 'off' | 'permission' | 'failed';
@@ -169,6 +172,8 @@ export interface ChatState {
    * this is the message to show.
    */
   blocked: string | null;
+  /** The last entry of the newest finished answer: its "Remembered" line goes right under it. */
+  answerEnd: string | null;
 }
 
 /** What the router found: a space or a secret (never Wilma). */
@@ -209,7 +214,11 @@ export type ChatAction =
   /** The calendar Wilma asked for was read: the same question goes to Wilma again (no new message). */
   | { type: 'resend' }
   /** The calendar Wilma asked for could not be read: the card says why. */
-  | { type: 'calendar_card'; problem: CalendarProblem };
+  | { type: 'calendar_card'; problem: CalendarProblem }
+  /** After an answer: what Wilma remembered from its message (automatic memory). */
+  | { type: 'remembered'; memories: RememberedMemory[] }
+  /** Undo worked for one of those memories. */
+  | { type: 'memory_undone'; id: string; memoryId: string };
 
 /** A thread as loaded from the phone (or empty). Status, banner and limits start fresh. */
 export function initialChat(entries: Entry[] = [], noticeDismissed: string | null = null): ChatState {
@@ -225,6 +234,7 @@ export function initialChat(entries: Entry[] = [], noticeDismissed: string | nul
     notice: null,
     noticeDismissed,
     blocked: null,
+    answerEnd: null,
   };
 }
 
@@ -443,8 +453,12 @@ function onEvent(state: ChatState, event: ChatEvent): ChatState {
     case 'done': {
       const last = state.entries[state.entries.length - 1];
       const date = last?.kind !== 'error' ? state.dayPlan : null;
-      return endAnswer(date ? add(state, { kind: 'day', id, date }) : state);
+      const ended = endAnswer(date ? add(state, { kind: 'day', id, date }) : state);
+      return { ...ended, answerEnd: ended.entries[ended.entries.length - 1]?.id ?? null };
     }
+    case 'remembered':
+      // Only after the answer (chatStream.ts never passes one before `done`).
+      return state;
   }
 }
 
@@ -479,6 +493,21 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case 'event':
       // Anything arriving after Stop belongs to an abandoned answer.
       return state.streaming ? onEvent(state, action.event) : state;
+    case 'remembered': {
+      if (!action.memories.length) return state;
+      // Right under the answer it came from, even when a new message was sent meanwhile.
+      const entry: Entry = { kind: 'memory', id: String(state.seq), memories: action.memories };
+      const at = state.answerEnd ? state.entries.findIndex((e) => e.id === state.answerEnd) : -1;
+      const entries = at < 0 ? [...state.entries, entry] : [...state.entries.slice(0, at + 1), entry, ...state.entries.slice(at + 1)];
+      return { ...state, entries: cap(entries), seq: state.seq + 1, answerEnd: entry.id };
+    }
+    case 'memory_undone': {
+      const at = state.entries.findIndex((e) => e.id === action.id);
+      const card = state.entries[at];
+      if (!card || card.kind !== 'memory' || !card.memories.some((m) => m.id === action.memoryId && !m.undone)) return state;
+      const next: Entry = { ...card, memories: card.memories.map((m) => (m.id === action.memoryId ? { ...m, undone: true as const } : m)) };
+      return { ...state, entries: state.entries.map((e, i) => (i === at ? next : e)) };
+    }
     case 'stop':
       return state.streaming ? endAnswer(state) : state;
     case 'retry': {

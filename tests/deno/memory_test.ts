@@ -129,3 +129,13 @@ Deno.test("cleanFact: one short fact", () => {
     assert(threw, bad);
   }
 });
+
+Deno.test("list_spaces marks the built-in spaces (the app shows BUILT-IN), and only those", async () => {
+  const s = await openSession(world());
+  const out = await s.call("list_spaces", {});
+  const spaces = JSON.parse(out.text).spaces as { path: string; built_in?: string }[];
+  assertEquals(spaces.find((x) => x.path === "Tasks")?.built_in, "tasks");
+  assertEquals(spaces.find((x) => x.path === "Memories")?.built_in, "memories");
+  assertEquals(spaces.filter((x) => "built_in" in x).length, 2);
+  await s.close();
+});

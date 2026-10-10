@@ -6,6 +6,7 @@ import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 
 import { ItemRow } from '@/components/rows';
 import {
+  Badge,
   Button,
   confirm,
   ErrorBox,
@@ -19,11 +20,14 @@ import {
   useReloadOnReturn,
 } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { BUILT_IN_LINE } from '@/lib/memory';
 import { secretRoute, spaceSecretRow } from '@/lib/secretRows';
 
 export default function SpaceScreen() {
   const c = useColors();
-  const { id, path } = useLocalSearchParams<{ id: string; path?: string }>();
+  const { id, path, builtIn } = useLocalSearchParams<{ id: string; path?: string; builtIn?: string }>();
+  // Tasks and Memories (memory step 3, Q8): marked BUILT-IN, with no Delete (the server refuses it too).
+  const builtInSpace = builtIn === 'tasks' || builtIn === 'memories';
   const { wilma } = useAuth();
   const { data, error, loading, reload } = useLoad(`space:${id}`, () => wilma.search({ space: id, limit: 50 }));
   useReloadOnReturn(reload);
@@ -79,6 +83,14 @@ export default function SpaceScreen() {
         renderItem={({ item }) => <ItemRow item={item} showSpace={item.space !== path} />}
         ListHeaderComponent={
           <>
+            {builtInSpace ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Badge text="BUILT-IN" />
+                <View style={{ flex: 1 }}>
+                  <Muted>{builtIn === 'memories' ? 'What Wilma remembered about you. Edit or delete any of it.' : BUILT_IN_LINE}</Muted>
+                </View>
+              </View>
+            ) : null}
             <Button title="New note here" onPress={() => router.push({ pathname: '/new-item', params: { space: id } })} />
             {problem ? <Text style={{ color: c.danger, fontSize: 15 }}>{problem}</Text> : null}
             {error ? <ErrorBox message={error} onRetry={reload} /> : null}
@@ -96,7 +108,9 @@ export default function SpaceScreen() {
               </GroupList>
             ) : null}
             <Button title="New space inside this one" kind="plain" onPress={() => router.push({ pathname: '/new-space', params: { parent: id } })} />
-            <Button title={deleting ? 'Deleting…' : 'Delete space'} kind="danger" onPress={deleteSpace} disabled={deleting} />
+            {builtInSpace ? null : (
+              <Button title={deleting ? 'Deleting…' : 'Delete space'} kind="danger" onPress={deleteSpace} disabled={deleting} />
+            )}
           </View>
         }
         refreshControl={<RefreshControl refreshing={(loading && !!data) || (secrets.loading && !!secrets.data)} onRefresh={reloadAll} />}

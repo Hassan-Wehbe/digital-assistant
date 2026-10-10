@@ -3,7 +3,7 @@
 import { Text, View } from 'react-native';
 
 import { ChatCard, ChatCardText } from '@/components/ChatCard';
-import { CalendarCard, DayCard, DeleteCard, LocationCard, NotesCard, PlacesCard, VaultCard } from '@/components/ChatCards';
+import { CalendarCard, DayCard, DeleteCard, LocationCard, MemoryLine, NotesCard, PlacesCard, VaultCard } from '@/components/ChatCards';
 import { Button, Muted, useColors } from '@/components/ui';
 import type { Entry, ErrorButton } from '@/lib/chatThread';
 
@@ -21,6 +21,7 @@ export function ChatBubble({
   locationActive = false,
   onShareLocation,
   onNotNow,
+  onUndoMemory,
 }: {
   entry: Entry;
   onButton: (button: ErrorButton) => void;
@@ -37,6 +38,8 @@ export function ChatBubble({
   locationActive?: boolean;
   onShareLocation?: (id: string) => void;
   onNotNow?: (id: string) => void;
+  /** Undo on a "🧠 Remembered" line. */
+  onUndoMemory?: (entryId: string, memoryId: string) => Promise<boolean>;
 }) {
   const c = useColors();
   switch (entry.kind) {
@@ -102,5 +105,7 @@ export function ChatBubble({
       return <CalendarCard entry={entry} />;
     case 'day':
       return <DayCard entry={entry} />;
+    case 'memory':
+      return <MemoryLine entry={entry} onUndo={(memoryId) => onUndoMemory?.(entry.id, memoryId) ?? Promise.resolve(false)} />;
   }
 }

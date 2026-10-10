@@ -184,4 +184,25 @@ describe('the calendar request (day planner step 1)', () => {
     )));
     expect(events.filter((e) => e.type === 'agenda_request')).toEqual([{ type: 'agenda_request', from: '2026-10-08', to: '2026-10-09' }]);
   });
+
+  it('after done, reads on only for "remembered"; the end of the stream there is quiet', async () => {
+    const remembered = { type: 'remembered', memories: [{ id: 'm1', fact: 'Lexi swims on Tuesdays', updated: false }] };
+    const events = await all(readChatEvents(chunks(
+      line({ type: 'remembered', memories: [{ id: 'early', fact: 'Never before done', updated: false }] }),
+      line({ type: 'text', text: 'Nice!' }),
+      DONE,
+      line({ type: 'text', text: 'ignored after done' }),
+      line(remembered),
+      line({ type: 'remembered', memories: [] }),
+    )));
+    expect(events).toEqual([{ type: 'text', text: 'Nice!' }, { type: 'done', counted: true }, remembered]);
+  });
+
+  it('a broken connection after done adds no error', async () => {
+    async function* breaks(): AsyncGenerator<Uint8Array> {
+      yield bytes(line({ type: 'text', text: 'Hi' }) + DONE);
+      throw new Error('reset');
+    }
+    expect(await all(readChatEvents(breaks()))).toEqual([{ type: 'text', text: 'Hi' }, { type: 'done', counted: true }]);
+  });
 });

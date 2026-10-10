@@ -13,6 +13,7 @@ import {
   CALENDAR_PROBLEMS, errorButtons, MAX_ENTRIES, MAX_TEXT, noteRef, PARTIAL_NOTE, type CalendarProblem, type ConfirmState, type Entry,
   type LocationState, type NoteRef, type PlaceRef,
 } from './chatThread';
+import { toRemembered } from './memory';
 import type { AuthStorage } from './sessionStorage';
 
 const PREFIX = 'wilma.chat.';
@@ -143,6 +144,12 @@ export function toEntry(raw: unknown): Entry | null {
     case 'day':
       // The date only: the plan itself is never kept (Mapbox's terms; day planner step 3).
       return str(raw.date) && /^\d{4}-\d{2}-\d{2}$/.test(raw.date) ? { kind: 'day', id, date: raw.date } : null;
+    case 'memory': {
+      if (!Array.isArray(raw.memories)) return null;
+      const undone = new Set(raw.memories.filter((m) => isObject(m) && m.undone === true).map((m) => (m as { id: unknown }).id));
+      const memories = toRemembered(raw.memories).map((m) => (undone.has(m.id) ? { ...m, undone: true as const } : m));
+      return memories.length ? { kind: 'memory', id, memories } : null;
+    }
     default:
       return null;
   }

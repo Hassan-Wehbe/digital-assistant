@@ -259,3 +259,47 @@ export function DayCard({ entry }: { entry: Extract<Entry, { kind: 'day' }> }) {
     </ChatCard>
   );
 }
+
+/**
+ * What Wilma kept from the message before (automatic memory, memory step 3): one small line per
+ * memory under her reply, "🧠 Remembered: Lexi swims on Tuesdays · Undo". Undo deletes a new
+ * memory (Recycle bin) or gives a changed one its old text back; the line then says so.
+ */
+export function MemoryLine({ entry, onUndo }: { entry: Extract<Entry, { kind: 'memory' }>; onUndo: (memoryId: string) => Promise<boolean> }) {
+  const c = useColors();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+  const undo = async (id: string) => {
+    if (busy) return;
+    setBusy(id);
+    setFailed(null);
+    const ok = await onUndo(id);
+    setBusy(null);
+    if (!ok) setFailed(id);
+  };
+  return (
+    <View style={{ alignSelf: 'flex-start', maxWidth: '85%', gap: 4, paddingHorizontal: 4 }}>
+      {entry.memories.map((m) => (
+        <View key={m.id} style={{ gap: 2 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+            <Text style={{ color: c.muted, fontSize: 14, flexShrink: 1 }}>
+              {m.undone ? (m.updated ? `🧠 Back to: ${m.was}` : `🧠 Forgotten: ${m.fact}`) : `🧠 ${m.updated ? 'Updated' : 'Remembered'}: ${m.fact}`}
+            </Text>
+            {m.undone ? null : busy === m.id ? (
+              <Text style={{ color: c.muted, fontSize: 14 }}>Undoing…</Text>
+            ) : (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Undo: ${m.fact}`}
+                onPress={() => void undo(m.id)}
+                hitSlop={8}>
+                <Text style={{ color: c.accent, fontSize: 14, fontWeight: '600' }}>· Undo</Text>
+              </Pressable>
+            )}
+          </View>
+          {failed === m.id ? <Text style={{ color: c.danger, fontSize: 13 }}>That didn’t work. Check your connection and try again.</Text> : null}
+        </View>
+      ))}
+    </View>
+  );
+}

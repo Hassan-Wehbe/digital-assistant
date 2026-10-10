@@ -273,7 +273,7 @@ Deno.test("memory: a changed fact replaces the known one (its old text kept as a
   const events = await chat(s, "Lexi swims on Wednesdays now");
   const m = s.account.memories();
   assertEquals(m.map((i) => [i.title, i.revisions]), [["Lexi swims on Wednesdays", 1]]);
-  assertEquals(events.at(-1), { type: "remembered", memories: [{ id: m[0].id, fact: "Lexi swims on Wednesdays", updated: true }] });
+  assertEquals(events.at(-1), { type: "remembered", memories: [{ id: m[0].id, fact: "Lexi swims on Wednesdays", updated: true, was: "Lexi swims on Tuesdays" }] });
 });
 
 Deno.test("memory: a vault turn gets no memory call at all", async () => {

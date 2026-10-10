@@ -60,7 +60,8 @@ export interface MemoryLog {
 /** What the app gets: one line under the reply, "🧠 Remembered: … · Undo" (step 3). */
 export interface RememberedEvent {
   type: "remembered";
-  memories: { id: string; fact: string; updated: boolean }[];
+  /** `was`: a changed memory's text before, so Undo can put it back. */
+  memories: { id: string; fact: string; updated: boolean; was?: string }[];
 }
 
 export interface MemoryDeps {
@@ -387,7 +388,8 @@ export async function noticeMemories(deps: MemoryDeps, turn: MemoryTurn): Promis
       try {
         const out = await saveMemory(turn.db, { fact: f.fact, replaces, on: turn.today }, turn.assistantName);
         if (out.saved === "duplicate") log.duplicates += 1;
-        else saved.push({ id: out.id, fact: out.fact, updated: out.saved === "updated" });
+        else if (out.saved === "updated") saved.push({ id: out.id, fact: out.fact, updated: true, was: out.was });
+        else saved.push({ id: out.id, fact: out.fact, updated: false });
       } catch (e) {
         // A credential refusal or a database error: the message is never logged (it can quote).
         drop(/credential|vault/i.test((e as Error).message) ? "credential" : "save_failed");

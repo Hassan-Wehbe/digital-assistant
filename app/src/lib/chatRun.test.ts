@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { runTurn } from './chatRun';
+import { afterDone, runTurn } from './chatRun';
 import { CONNECTION_MESSAGE, type ChatEvent } from './chatStream';
 import { chatReducer, initialChat, type ChatAction, type ChatState } from './chatThread';
 import { WilmaError } from './wilma';
@@ -102,5 +102,51 @@ describe('thread load and clear', () => {
     expect(s.streaming).toBe(false);
     expect(s.noticeDismissed).toBe('2026-10');
     expect(s.blocked).toBe('Used up.');
+  });
+
+  it('answers done at once, then puts what was remembered under the reply', async () => {
+    let release!: () => void;
+    const later = new Promise<void>((r) => (release = r));
+    const controller = new AbortController();
+    let state: ChatState = chatReducer(initialChat(), { type: 'send', text: 'Lexi swims on Tuesdays' });
+    const act = (a: ChatAction) => void (state = chatReducer(state, a));
+    let closed = false;
+    async function* send(): AsyncGenerator<ChatEvent> {
+      try {
+        yield { type: 'text', text: 'Nice!' };
+        yield { type: 'done', counted: true };
+        await later;
+        yield { type: 'remembered', memories: [{ id: 'm1', fact: 'Lexi swims on Tuesdays', updated: false }] };
+      } finally {
+        closed = true;
+      }
+    }
+    expect(await runTurn(send, state.entries, controller.signal, act)).toBe('done');
+    expect(state.streaming).toBe(false);
+    expect(state.entries.map((e) => e.kind)).toEqual(['user', 'assistant']);
+    release();
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(state.entries.map((e) => e.kind)).toEqual(['user', 'assistant', 'memory']);
+    expect(closed).toBe(true);
+  });
+
+  it('stops listening after the wait, or when the answer is abandoned', async () => {
+    const seen: ChatAction[] = [];
+    let returned = 0;
+    const never: AsyncIterator<ChatEvent> = {
+      next: () => new Promise(() => {}),
+      return: async () => {
+        returned += 1;
+        return { done: true, value: undefined };
+      },
+    };
+    await afterDone(never, new AbortController().signal, (a) => seen.push(a), 10);
+    expect(seen).toEqual([]);
+    expect(returned).toBe(1);
+    const gone = new AbortController();
+    gone.abort();
+    await afterDone(never, gone.signal, (a) => seen.push(a), 10_000);
+    expect(returned).toBe(2);
   });
 });

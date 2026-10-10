@@ -6,6 +6,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { ErrorBox, GroupList, GroupRow, Loading, Muted, space, styles, TextLink, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { isTasksSpace } from '@/lib/homeSpaces';
+import { isBuiltIn, spaceTitle } from '@/lib/memory';
 import { useOpenSpace } from '@/lib/openSpace';
 
 export default function SpacesScreen() {
@@ -33,8 +34,9 @@ export default function SpacesScreen() {
               <GroupRow
                 key={sp.id}
                 first={i === 0}
-                title={isTasksSpace(sp) ? `✅ ${sp.path}` : sp.path}
+                title={isTasksSpace(sp) ? `✅ ${sp.path}` : spaceTitle(sp)}
                 subtitle={isTasksSpace(sp) ? 'Opens your tasks' : sp.description ?? undefined}
+                badge={isBuiltIn(sp) ? 'BUILT-IN' : undefined}
                 onPress={() => open(sp)}
               />
             ),
