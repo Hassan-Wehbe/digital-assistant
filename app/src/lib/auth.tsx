@@ -6,7 +6,9 @@ import { chatClient, type ChatClient } from './chatClient';
 import { threadsToKeep } from './chatStore';
 import { CHAT_URL, MCP_URL } from './config';
 import { dayClient, type DayClient } from './dayPlan';
+import { deviceNotifier } from './deviceNotifier';
 import { deviceChatStore, deviceDayMemory, deviceRecentSpaces } from './deviceStorage';
+import { forgetOtherAccounts } from './notifications';
 import { changePassword as changePasswordFlow } from './password';
 import { sessionToken } from './sessionToken';
 import { supabase } from './supabase';
@@ -92,6 +94,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     deviceDayMemory.forgetOthers(keep);
     // And the spaces opened most recently.
     void deviceRecentSpaces.forgetOthers(keep);
+    // And the morning briefing's and leave-by notifications made for any other account.
+    void forgetOtherAccounts(deviceNotifier, keep);
   }, [loading, signedIn, userId]);
 
   const value = useMemo<AuthState>(

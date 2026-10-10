@@ -104,6 +104,13 @@
           "calendarPermission": "Wilma reads the calendars you choose, only when you ask about your day, to answer and plan. Nothing is stored.",
           "remindersPermission": false
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/android-icon-monochrome.png",
+          "color": "#4F4CD6"
+        }
       ]
     ],
     "experiments": {

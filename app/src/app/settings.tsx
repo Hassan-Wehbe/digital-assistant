@@ -1,6 +1,7 @@
 // Settings (docs/ui-review.md, plan step 2): what used to fill the bottom of the home screen.
 // This month's AI allowance in full (D28), distances in miles or km (places Q14), the phone's
-// calendars Wilma may read (day planner step 1, app/calendars.tsx), the account,
+// calendars Wilma may read (day planner step 1, app/calendars.tsx), the morning briefing and
+// leave-by alerts (day planner step 4, app/briefing.tsx), the account,
 // the recycle bin, deleting the account (D29, app/delete-account.tsx), sign out, the version.
 import * as Application from 'expo-application';
 import { router } from 'expo-router';
@@ -10,6 +11,7 @@ import { ScrollView, Text } from 'react-native';
 import { UsageMeter } from '@/components/UsageMeter';
 import { Button, Card, GroupList, GroupRow, Muted, space, styles, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { briefingSummary, loadBriefing } from '@/lib/briefingSettings';
 import { loadChoice } from '@/lib/calendarSettings';
 import { versionLabel } from '@/lib/config';
 import { deviceSettingsStore } from '@/lib/deviceStorage';
@@ -34,6 +36,8 @@ export default function Settings() {
   const unit = picked ?? stored.data;
   const calendar = useLoad(`calendars:${userId}`, () => loadChoice(deviceSettingsStore, userId));
   useReloadOnReturn(calendar.reload);
+  const briefing = useLoad(`briefing:${userId}`, () => loadBriefing(deviceSettingsStore, userId));
+  useReloadOnReturn(briefing.reload);
 
   const pickUnit = async (u: DistanceUnit) => {
     if (u === unit || !userId) return;
@@ -91,6 +95,11 @@ export default function Settings() {
                 : 'Off'
           }
           onPress={() => router.push('/calendars')}
+        />
+        <GroupRow
+          title="Morning briefing"
+          subtitle={briefing.data ? briefingSummary(briefing.data) : undefined}
+          onPress={() => router.push('/briefing')}
         />
       </GroupList>
 

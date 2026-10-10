@@ -12,6 +12,24 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Day planner step 4, morning briefing (owner, 2026-10-10): plan merged (#189,
+  `docs/phase6-day-planner-step4-plan.md`); step 1 on branch `claude/briefing-step1`, not merged.**
+  Owner's answers: the phone schedules local notifications (no server push, no Firebase, no
+  background task), a short morning summary from the evening's plan, event title and time on the
+  lock screen, and every part a setting (briefing Off / In Wilma only / In Wilma and as a
+  notification, its time; leave-by alerts on/off and 5/10/15/20 minutes before; all off by
+  default). **Step 1 (app only):** `expo-notifications` 57.0.22 (local only, no push token; its
+  plugin with the monochrome icon; adds POST_NOTIFICATIONS and RECEIVE_BOOT_COMPLETED, no exact-alarm
+  permission), Settings → Morning briefing (`app/briefing.tsx`, Pro card for Free),
+  `lib/briefingSettings.ts` (per account on the phone, `wilma.briefing.v1.<id>`),
+  `lib/dayAlerts.ts` (leave-by alerts, the day's summary, the next 7 mornings; pure),
+  `lib/notifications.ts` (keeps mornings in step, cancels leave-by alerts when off, cancels every
+  other account's on sign-in and all on sign-out or delete; a tap opens only My day, only for its
+  account), `lib/deviceNotifier.ts`. The mornings are topped up on each app start. 707 app tests
+  (21 new); `expo export --platform android` bundles. **Next:** step 2 (My day schedules the leave-by
+  alerts and the morning summary), step 3 (Your morning card on Home), step 4 (calendar permission
+  text, privacy wording for the owner's OK, `docs/versioncode18-phone-checklist.md`, versionCode 18).
+  Nothing ships until the build.
 - **Places: a cuisine filter matches the name or dishes (2026-10-10): #188 merged (squash, 219ed24)
   and live: `mcp` version 30, `chat` version 26** (deploy chat runs 38050063856 and 38050065246,
   owner's OK). The rest of the parked "pizza got Hinode and Lemongrass": a place shared from Google
