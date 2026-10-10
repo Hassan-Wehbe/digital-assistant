@@ -104,3 +104,25 @@ export function mornings(s: BriefingSettings, now: Date): DayNote[] {
   }
   return out;
 }
+
+/**
+ * The morning notification carrying a day's summary, from a plan made before that morning: the
+ * evening before ("From yesterday's plan: …") or earlier the same morning ("From your plan at 6:05
+ * am: …"). Null unless the briefing sends a notification and that morning is still ahead. Same id
+ * as the day's greeting, which it replaces.
+ */
+export function morningSummary(plan: DayPlan, s: BriefingSettings, now: Date): DayNote | null {
+  if (s.briefing !== 'notify') return null;
+  const day = localTime(`${plan.date}T${s.time}`);
+  if (!day || day.getTime() <= now.getTime()) return null;
+  const today = todayAndTomorrow(now).today;
+  const two = (n: number) => String(n).padStart(2, '0');
+  const from =
+    plan.date === today
+      ? `From your plan at ${clock(`${plan.date}T${two(now.getHours())}:${two(now.getMinutes())}`)}`
+      : plan.date === todayAndTomorrow(now).tomorrow
+        ? 'From yesterday’s plan'
+        : null;
+  if (!from) return null;
+  return { id: `wilma.${plan.date}.morning`, at: day, title: 'Your day', body: `${from}: ${summaryOf(plan)}`, url: `/day?date=${plan.date}` };
+}

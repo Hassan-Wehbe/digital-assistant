@@ -2,7 +2,9 @@ import { describe, expect, it } from '@jest/globals';
 
 import { BRIEFING_OFF, type BriefingSettings } from './briefingSettings';
 import type { DayNote } from './dayAlerts';
-import { applyBriefing, forgetOtherAccounts, syncMornings, tapTarget, type Notifier, type Permission, type Scheduled } from './notifications';
+import type { DayPlan } from './dayPlan';
+import { PLAN } from './dayPlan.fixture';
+import { applyBriefing, forgetOtherAccounts, scheduleForPlan, syncMornings, tapTarget, type Notifier, type Permission, type Scheduled } from './notifications';
 
 /** The phone's schedule, in memory. */
 function phone(permission: Permission = 'granted') {
@@ -92,5 +94,43 @@ describe('another account never sees them', () => {
     expect(tapTarget({ url: '/vault/abc', userId: 'alice' }, 'alice')).toBe('/');
     expect(tapTarget({ url: 'https://evil.example', userId: 'alice' }, 'alice')).toBe('/');
     expect(tapTarget(null, 'alice')).toBe('/');
+  });
+});
+
+describe('a new plan schedules its day', () => {
+  const ALL: BriefingSettings = { briefing: 'notify', time: '07:30', leaveAlerts: true, lead: 10 };
+  const EVENING = new Date(2026, 9, 8, 21, 0);
+  const plan = () => structuredClone(PLAN) as unknown as DayPlan;
+
+  it('the day’s leave-by alerts, and that morning’s summary in place of its greeting', async () => {
+    const p = phone();
+    await syncMornings(p.n, 'alice', ALL, EVENING);
+    expect(await scheduleForPlan(p.n, 'alice', plan(), ALL, EVENING)).toBe(true);
+    expect(p.list.get('wilma.2026-10-09.leave.0')).toMatchObject({ userId: 'alice', at: new Date(2026, 9, 9, 16, 0).getTime() });
+    expect(p.list.get('wilma.2026-10-09.morning')).toMatchObject({ title: 'Your day', at: new Date(2026, 9, 9, 7, 30).getTime() });
+    // The next start keeps the summary (same time, same account).
+    await syncMornings(p.n, 'alice', ALL, new Date(2026, 9, 8, 22, 0));
+    expect(p.list.get('wilma.2026-10-09.morning')?.title).toBe('Your day');
+  });
+
+  it('planning again replaces that day’s alerts (and leaves other days’ alone)', async () => {
+    const p = phone();
+    p.list.set('wilma.2026-10-09.leave.5', { id: 'wilma.2026-10-09.leave.5', userId: 'alice' });
+    p.list.set('wilma.2026-10-10.leave.0', { id: 'wilma.2026-10-10.leave.0', userId: 'alice' });
+    await scheduleForPlan(p.n, 'alice', plan(), ALL, EVENING);
+    expect([...p.list.keys()].filter((k) => k.includes('leave')).sort()).toEqual(['wilma.2026-10-09.leave.0', 'wilma.2026-10-10.leave.0']);
+  });
+
+  it('leave-by alerts off: none, and the old ones of that day go; In Wilma only: no morning notification', async () => {
+    const p = phone();
+    p.list.set('wilma.2026-10-09.leave.0', { id: 'wilma.2026-10-09.leave.0', userId: 'alice' });
+    await scheduleForPlan(p.n, 'alice', plan(), { ...ALL, briefing: 'app', leaveAlerts: false }, EVENING);
+    expect(p.list.size).toBe(0);
+  });
+
+  it('nothing without Android’s permission', async () => {
+    const p = phone('denied');
+    expect(await scheduleForPlan(p.n, 'alice', plan(), ALL, EVENING)).toBe(false);
+    expect(p.list.size).toBe(0);
   });
 });

@@ -7,6 +7,8 @@
 // results, so it is never saved on the phone, and leaving the screen drops it. Above the fair-use
 // limit, "the last plan" is the one still on screen. What is kept on the phone (dayChoices.ts) is
 // the user's own: Take both and Not driving per day, and their answers for event places.
+// With Settings → Morning briefing on, each new plan also schedules that day's leave-by alerts and
+// the morning's summary as notifications on the phone (notifications.ts, day planner step 4).
 //
 // Event places are found on the phone (dayAgenda.ts): the user's answer for that title, else the
 // phone's geocoder on the location text, only when the location permission is already given.
@@ -22,6 +24,7 @@ import { ProCard, useProPlan } from '@/components/ProCard';
 import { Badge, Button, Card, Loading, Muted, space, styles, TextLink, useColors } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { deviceCalendar, phoneTimeZone, readAgenda, timeText } from '@/lib/calendar';
+import { loadBriefing } from '@/lib/briefingSettings';
 import { loadChoice } from '@/lib/calendarSettings';
 import { CALENDAR_TEXT } from '@/lib/chatThread';
 import { dayBody, phoneGeocode, placeEvents, withKeys, type DayEvent } from '@/lib/dayAgenda';
@@ -34,11 +37,13 @@ import {
   alertText, clock, dayChips, dayNotes, dayTitle, directionsLink, driveText, eventLine, freeText, minutesText, overlapText,
   rainText, rowTime, titles, todayAndTomorrow,
 } from '@/lib/dayView';
+import { deviceNotifier } from '@/lib/deviceNotifier';
 import { deviceDayMemory, deviceSettingsStore } from '@/lib/deviceStorage';
 import { saveHome, type PickedSpot } from '@/lib/homePlace';
 import { findCredential } from '@/lib/credentials';
 import { deviceGeocoder } from '@/lib/location';
 import { LOOKS_LIKE_SECRET, editError } from '@/lib/noteEdit';
+import { scheduleForPlan } from '@/lib/notifications';
 import { needsPro } from '@/lib/pro';
 import { addDays, EMPTY_TASK, plannedAt, taskMetadata, type TaskMetadata } from '@/lib/tasks';
 import { WilmaError } from '@/lib/wilma';
@@ -142,6 +147,8 @@ export default function MyDay() {
         if (!current()) return null;
         if ('plan' in got) {
           setPlan(got.plan);
+          // Leave-by alerts and the morning's summary from this plan (Settings → Morning briefing).
+          void loadBriefing(deviceSettingsStore, userId).then((b) => scheduleForPlan(deviceNotifier, userId, got.plan, b, new Date()));
           shown.current = true;
           setUpdatedAt(clock(timeText(new Date())));
           setScreen({ step: 'plan' });
