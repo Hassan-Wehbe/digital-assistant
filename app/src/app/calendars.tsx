@@ -67,7 +67,7 @@ export default function Calendars() {
           Ask Wilma “what’s on my day?” or “am I free Friday at 3?”, and she answers from your phone’s calendar.
         </Text>
         <Muted>
-          Wilma reads the calendars you choose, only when you ask about your day, and sends the titles, times and places
+          Wilma reads the calendars you choose, only when you ask about your day (or, with the morning briefing on, when it is made), and sends the titles, times and places
           needed for that answer to her AI provider. Never descriptions, attendees or meeting links; private events only
           as “Busy”. Nothing is stored, and your calendar is never changed.
         </Muted>

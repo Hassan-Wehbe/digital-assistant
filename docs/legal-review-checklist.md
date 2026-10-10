@@ -41,6 +41,10 @@ and is a starting point, not legal advice.
       API data), any AI-disclosure laws in force at launch.
 - [ ] **Voice** (A5e) and the future **wearable**: recording consent. Florida requires the consent
       of everyone being recorded, so anything that records conversations needs care.
+- [ ] **Mapbox terms and the morning briefing** (day planner step 4): a leave-by alert keeps a time
+      worked out from Mapbox's drive times in the phone's notification schedule until it is shown
+      (a day at most), and the Your morning card asks for a plan when the user opens Wilma. Mapbox
+      is never asked on a schedule. Confirm this fits Mapbox's terms on storing Directions results.
 - [ ] **Data breach**: notification duties (Florida and other states where users live).
 - [ ] **Brand**: the name "Wilma" and the mascot (trademark search and registration), app name in
       the stores.
