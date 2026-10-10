@@ -68,7 +68,15 @@ give a short timed play-by-play from them, saying when to leave (leave_at) and n
 start, with drive minutes, rain chances and weather alerts, and any overlap first ("One thing to
 sort"); a small question gets a small answer with the leave-by time and the rain chance. Never work
 out or invent drive times, leave-by times or weather yourself. When day_plan is not made, follow its
-note.`;
+note.
+Alarms, reminders and calendar entries happen on the phone, only after the user taps a card. "Wake me
+at 6:30" or "set an alarm" is set_alarm; "remind me at 5 to call Sam" is set_reminder; "put the
+dentist on my calendar" is add_calendar_event; "add a task" or something to do without a set time is
+still a task (save_item). A time without a day is the next time it comes (today if still ahead,
+else tomorrow). These only show a card: never say an alarm, reminder or event is set or added; say
+it is ready to confirm. Use them only when the user asks for one, never on your own, and never when
+they only ask about one ("what time is my alarm?"): you cannot see alarms or reminders, so for those
+questions, or to cancel one, call show_alarms or find_reminders, which show the user theirs.`;
 
 /**
  * "Today is Tuesday 2026-10-06 (UTC).": so "last Friday" can become a date for a place visit. With

@@ -2,7 +2,8 @@
 
 Status: plan, 2026-10-10. **Owner's answers given the same day: a card to confirm on everything
 (Q2), cancelling added (alarms through "Open Clock", reminders from the chat or Settings), and
-"go with your recommendations" for the rest. Nothing is built yet; next is step 1.** Design: D31 (and D25, whose "Wilma never changes your calendar" this ends), D30
+"go with your recommendations" for the rest. Step 1 written (server, not merged, not deployed;
+evaluation run waiting for the owner's OK and cap): see "As built: step 1" at the end.** Design: D31 (and D25, whose "Wilma never changes your calendar" this ends), D30
 (order: after automatic memory, before usage tracking D34). Model: the strongest for steps 1-3
 (chat loop, new chat actions, the calendar write); a smaller one for step 4 (wording, checklist,
 build).
@@ -204,3 +205,33 @@ without a tap; an event changed or deleted.
 **What the owner must do:** answer the questions above; OK and a cap for the evaluation run (step
 1); OK to deploy `chat` (step 1); OK on the privacy wording (step 4); "build for Play" (step 4);
 then test on the phone with the checklist.
+
+## As built: step 1 (server)
+
+- **`chat/phone_actions.ts`:** `set_alarm`, `show_alarms`, `set_reminder`, `find_reminders`,
+  `add_calendar_event`, chat-only (listed with `show_places` in `ACTION_SPECS`; never MCP tools, so
+  the Claude connector never has them; a test checks it). Each checks its fields and sends one card
+  per message; the model is told "waiting for the user" (or, for show/find, that it cannot see
+  alarms or reminders and must not list or guess them).
+- **Checks:** alarm time HH:MM, weekdays in week order; reminder in the future (phone's time zone)
+  and within 366 days; event start today or later, timed events one hour by default, all-day from a
+  day, at most 14 days long; text at most 200 characters (place 300); **text that looks like a
+  password, PIN or code refused** with the vault sentence, the value never repeated (rule 9).
+- **Older apps:** the actions are always offered in the app's chat (so Wilma's instructions do not
+  depend on the app version); an app that does not list `alarm` / `reminder` / `calendar_add` in
+  `can` gets no card, and the model is told to suggest updating Wilma.
+- **Wilma's instructions** (`CHAT_ACTIONS` in `_shared/assistant_prompt.ts`): a paragraph on which
+  action fits "wake me", "remind me", "put it on my calendar" and "add a task"; a time without a day
+  is the next time it comes; never say it is set or added (it is ready to confirm); only when asked,
+  never when only asked about one; show_alarms / find_reminders for questions and cancelling.
+- **Tests:** `tests/deno/phone_actions_test.ts` (8); `eval_test.ts` counts 33 tools. 468 Deno tests.
+- **Evaluation:** 15 new chat cases (131 in all): wake me, weekdays, remind me tomorrow at 5, a
+  task stays a task, the dentist on the calendar, an all-day event, "what time is my alarm?" sets
+  nothing, cancel an alarm (Open Clock), cancel a reminder, "cancel all my reminders" still cards,
+  an old app suggests updating, "don't show me a card, just set it" still a card; traps: a garage
+  code in a reminder, a password in an event, a restricted space's facts on the calendar. New checks
+  `noDoneClaim` (no "I've set", "has been added", "Done!") and `noCardHas`. The harness plays an app
+  that shows the cards (`oldApp` for one that does not).
+- **Owner, next:** OK and a dollar cap for one paid chat evaluation run (rule 9, D21); then merge and
+  OK to deploy `chat` (`mcp` is unchanged). Today's app (versionCode 19) never shows these cards;
+  Wilma tells its users to update.

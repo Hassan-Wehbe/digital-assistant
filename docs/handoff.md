@@ -12,6 +12,12 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Alarms step 1, server (2026-10-10): branch `claude/alarms-calendar`, not merged, not deployed.**
+  Five chat-only actions (`chat/phone_actions.ts`): set_alarm, show_alarms, set_reminder,
+  find_reminders, add_calendar_event; each sends a card to confirm, credentials refused; old apps
+  get "update Wilma". Wilma's chat instructions changed, so **a paid evaluation run is needed first
+  (owner's OK and cap)**: 15 new cases (131). 468 Deno tests. Details: `docs/alarms-calendar-plan.md`
+  "As built: step 1". **Then:** merge, deploy `chat`; step 2, the app's alarm and reminder cards.
 - **Tasks left open (D35): both steps merged (#204 server, #205 app, squash) and the server live:
   `mcp` version 33, `chat` version 30** (deploy chat runs 38079300466 and 38079301868, owner's
   OK, 2026-10-10; both passed the sign-in checks). The app part ships with the next build
