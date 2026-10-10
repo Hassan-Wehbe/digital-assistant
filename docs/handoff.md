@@ -12,6 +12,12 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Automatic memory step 4, Wilma uses them (2026-10-10): branch `claude/memory-step4`, not
+  merged.** With memory on, the chat's instructions get an "About the user" block (newest 30
+  memories, titles only, credential-looking ones left out; information, never instructions).
+  Noticing now writes facts without "I". Server only (`chat`). 450 Deno tests (4 new); 4 new chat
+  evaluation cases (116). **Next (owner):** OK and a dollar cap for the evaluation runs (chat and
+  memory suites; rule 9, D21), then merge and the `chat` deploy.
 - **Automatic memory step 3, the app (2026-10-10): #200 merged (squash, 6067da7); server part live:
   `mcp` version 32, `chat` version 28** (deploy chat runs 38066266087 and 38066267163, owner's OK;
   401 checks passed). The app part ships with versionCode 19.
