@@ -374,3 +374,17 @@ Deno.test("memory: saved even when the app stops reading at done", async () => {
   await Promise.all(s.background);
   assertEquals(s.account.memories().map((i) => i.title), ["Our plumber is Mike"]);
 });
+
+Deno.test("memory: what was remembered is in Wilma's instructions from the next message on (step 4), never with memory off", async () => {
+  const s = setup([{ text: "Nice!" }, { text: "At 5." }, { text: "Hm." }], '{"facts":[{"fact":"Lexi swims on Tuesdays"}]}');
+  await chat(s, "Lexi swims on Tuesdays");
+  assert(!s.model.of("default")[0].req.system!.includes("About the user"), "nothing remembered yet");
+  await chat(s, "what time does she swim?");
+  const system = s.model.of("default")[1].req.system!;
+  assert(system.includes("About the user"), system.slice(-400));
+  assert(system.includes("- Lexi swims on Tuesdays"));
+  // The noticing call never gets them as instructions, only as known memories to compare with.
+  s.account.world.memoryOn = false;
+  await chat(s, "and on Fridays?");
+  assert(!s.model.of("default")[2].req.system!.includes("About the user"));
+});

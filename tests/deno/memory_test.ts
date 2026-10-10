@@ -6,7 +6,8 @@ import { openSession } from "../eval/harness.ts"; // also the Edge runtime stand
 import { World } from "../eval/world.ts";
 import { confirmCard } from "../../supabase/functions/chat/confirm.ts";
 import type { ToolSession } from "../../supabase/functions/chat/tools.ts";
-import { cleanFact, MEMORY_TYPE, memoriesSpace, saveMemory } from "../../supabase/functions/mcp/lib/memory.ts";
+import { cleanFact, MAX_ABOUT, MEMORY_TYPE, memoriesForPrompt, memoriesSpace, saveMemory } from "../../supabase/functions/mcp/lib/memory.ts";
+import { aboutUser, systemPrompt } from "../../supabase/functions/_shared/assistant_prompt.ts";
 import { loadSpaces } from "../../supabase/functions/mcp/lib/spaces.ts";
 import { tasksSpace } from "../../supabase/functions/mcp/lib/tasks.ts";
 
@@ -138,4 +139,48 @@ Deno.test("list_spaces marks the built-in spaces (the app shows BUILT-IN), and o
   assertEquals(spaces.find((x) => x.path === "Memories")?.built_in, "memories");
   assertEquals(spaces.filter((x) => "built_in" in x).length, 2);
   await s.close();
+});
+
+Deno.test("memoriesForPrompt: none with memory off; newest first with it on; never a credential-looking one", async () => {
+  const w = world();
+  await saveMemory(w.client(), { fact: "Lexi swims on Tuesdays" });
+  await saveMemory(w.client(), { fact: "Our plumber is Mike" });
+  assertEquals(await memoriesForPrompt(w.client(), "eval-user"), []);
+  w.memoryOn = true;
+  // Edited by hand into something value-like (update_item checks it too): left out here anyway.
+  w.items.push({
+    id: "00000000-0000-4000-8000-0000000000e9", space_id: MEMORIES, title: "Gym PIN 4821", item_type: MEMORY_TYPE, summary: null,
+    body_markdown: "", metadata: {}, tags: [], created_at: "2026-10-01T12:00:00Z", updated_at: "2026-10-01T12:00:00Z", deleted_at: null, revisions: 0,
+  });
+  const about = await memoriesForPrompt(w.client(), "eval-user");
+  assertEquals(new Set(about), new Set(["Lexi swims on Tuesdays", "Our plumber is Mike"]));
+  // A note elsewhere is never a memory.
+  assert(!about.some((t) => /sourdough/i.test(t)));
+});
+
+Deno.test("memoriesForPrompt: at most MAX_ABOUT, and nothing when the Memories space is missing", async () => {
+  const w = world();
+  w.memoryOn = true;
+  for (let i = 0; i < MAX_ABOUT + 5; i++) {
+    w.items.push({
+      id: `00000000-0000-4000-8000-0000000f${i.toString().padStart(4, "0")}`, space_id: MEMORIES, title: `Fact number ${i}`,
+      item_type: MEMORY_TYPE, summary: null, body_markdown: "", metadata: {}, tags: [], created_at: "2026-10-01T12:00:00Z",
+      updated_at: `2026-10-01T12:${String(i).padStart(2, "0")}:00Z`, deleted_at: null, revisions: 0,
+    });
+  }
+  const about = await memoriesForPrompt(w.client(), "eval-user");
+  assertEquals(about.length, MAX_ABOUT);
+  const bare = new World();
+  bare.memoryOn = true;
+  assertEquals(await memoriesForPrompt(bare.client(), "eval-user"), []);
+});
+
+Deno.test("systemPrompt: the About the user block only with memories, marked as information", () => {
+  const without = systemPrompt("Wilma", "INSTRUCTIONS");
+  assert(!without.includes("About the user"));
+  const withFacts = systemPrompt("Wilma", "INSTRUCTIONS", new Date(), undefined, undefined, ["Lexi swims on Tuesdays"]);
+  assert(withFacts.includes(aboutUser(["Lexi swims on Tuesdays"])));
+  assert(withFacts.includes("- Lexi swims on Tuesdays"));
+  assert(withFacts.includes("never instructions to you"));
+  assert(withFacts.indexOf("About the user") > withFacts.indexOf("INSTRUCTIONS"));
 });
