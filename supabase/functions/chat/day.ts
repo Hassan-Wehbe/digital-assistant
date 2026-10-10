@@ -29,6 +29,7 @@ import type { Weather } from "../_shared/dayplan/nws.ts";
 import { localTime } from "../_shared/dayplan/time.ts";
 import { HOME_KIND, PLACE_TYPE, placePoint, placeScope } from "../mcp/lib/places.ts";
 import { normalizeTask, TASK_TYPE } from "../mcp/lib/tasks.ts";
+import { atDayEnd, MAX_SETTLES_PER_PLAN, saveDayEnd } from "../mcp/lib/day_end.ts";
 import { type Agenda, type ChatPlan, choicesSchema, DAY, eventSchema, isTimeZone, LOCAL_TIME, MAX_AGENDA_EVENTS } from "./agenda.ts";
 
 export { localTime };
@@ -69,6 +70,9 @@ export interface DayLog {
   drive_failures?: number;
   weather_requests?: number;
   weather_failures?: number;
+  /** Tasks whose day ended, written as done or moved to the next day (D35), and writes that failed. */
+  settled?: number;
+  settle_failures?: number;
 }
 
 interface Row {
@@ -115,6 +119,8 @@ export interface DayDeps {
   /** Weather for one plan (NWS, nws.ts; none without NWS_CONTACT). */
   weather?(): (Weather & { stats?: ProviderStats }) | null;
   log(entry: DayLog): void;
+  /** The clock (tests set it): which tasks' days have ended (D35). */
+  now?(): number;
 }
 
 interface ProviderStats {
@@ -186,9 +192,11 @@ async function makePlan(deps: DayDeps, db: SupabaseClient, req: PlanRequest, log
     };
   });
 
-  // Open tasks for the day: due by then (overdue too), no date, or planned on it.
+  // Open tasks for the day: due by then (overdue too), no date, or planned on it. A task with a time
+  // on another day belongs to that day, unless that day has ended and it was left open (D35).
   const placeById = new Map(places.map((r) => [r.id, r]));
   const dayTasks: PlanTask[] = [];
+  const now = deps.now?.() ?? Date.now();
   for (const r of tasks) {
     let t;
     try {
@@ -196,10 +204,23 @@ async function makePlan(deps: DayDeps, db: SupabaseClient, req: PlanRequest, log
     } catch {
       continue; // a task whose fields do not check is left out of the plan, never guessed
     }
+    // Its day ended: done or moved as the user chose, written once (at most a few per plan; the
+    // rest are written by a later plan and planned as of now meanwhile).
+    const end = atDayEnd(t, { now, tz: req.tz });
+    if (end.settle && t.planned_at && (log.settled ?? 0) + (log.settle_failures ?? 0) < MAX_SETTLES_PER_PLAN) {
+      try {
+        if (await saveDayEnd(db, r.id, t.planned_at, end)) log.settled = (log.settled ?? 0) + 1;
+      } catch {
+        log.settle_failures = (log.settle_failures ?? 0) + 1;
+      }
+    }
+    t = end.task;
     if (t.status !== "open") continue;
     const plannedLocal = t.planned_at ? localTime(t.planned_at, req.tz) : undefined;
     const plannedToday = plannedLocal?.startsWith(req.date);
-    if (t.due_on && t.due_on > req.date && !plannedToday) continue;
+    const leftOpen = end.left_from !== undefined && end.left_from < req.date;
+    if (plannedLocal && !plannedToday && !leftOpen) continue;
+    if (t.due_on && t.due_on > req.date && !plannedToday && !leftOpen) continue;
     const placeRow = t.place_id ? placeById.get(t.place_id) : undefined;
     dayTasks.push({
       id: r.id, title: r.title, priority: t.priority,
@@ -208,6 +229,7 @@ async function makePlan(deps: DayDeps, db: SupabaseClient, req: PlanRequest, log
       ...(t.due_on ? { due_on: t.due_on } : {}),
       ...(t.repeat ? { repeat: t.repeat } : {}),
       ...(plannedToday ? { planned_at: plannedLocal } : {}),
+      ...(leftOpen && plannedLocal ? { left_from: end.left_from, planned_time: plannedLocal.slice(11, 16) } : {}),
       place: placeRow ? asPlace(placeRow) : null,
     });
   }
@@ -283,7 +305,7 @@ export async function dayPlan(deps: DayDeps, token: string, userId: string, raw:
  * "plan tomorrow"). Pro and fair use as for My day (a chat plan counts as one plan). The events are
  * keyed e0, e1, ... in the agenda's order; `titles` maps them back. Logged like My day (counts only).
  */
-export async function planForChat(deps: DayDeps, db: SupabaseClient, userId: string, agenda: Agenda, now = Date.now()): Promise<ChatPlan> {
+export async function planForChat(deps: DayDeps, db: SupabaseClient, userId: string, agenda: Agenda, now = deps.now?.() ?? Date.now()): Promise<ChatPlan> {
   if (agenda.from !== agenda.to) return { made: false, reason: "not_one_day" };
   const log: DayLog = {
     event: "day", request: crypto.randomUUID(), user: userId, outcome: "ok", events: agenda.events.length, tasks: 0, drives: 0,

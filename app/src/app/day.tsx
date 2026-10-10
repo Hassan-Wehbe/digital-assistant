@@ -32,10 +32,10 @@ import {
   answerPlace, choicesFor, EMPTY_MEMORY, forgetPlace, isDropOff, rememberFound, resetChoices, separate, takeBoth, textKey, toggleDropOff, toggleNotDriving,
   type DayMemory, type EventPlace,
 } from '@/lib/dayChoices';
-import type { DayEventRow, DayPlan, DayRow, TaskOption } from '@/lib/dayPlan';
+import type { DayEventRow, DayPlan, DayRow, NotPlacedTask, TaskOption } from '@/lib/dayPlan';
 import {
   alertText, clock, dayChips, dayNotes, dayTitle, directionsLink, driveText, eventLine, freeText, minutesText, overlapText,
-  rainText, rowTime, titles, todayAndTomorrow,
+  leftOpenHeading, leftOpenWhen, rainText, rowTime, splitNotPlaced, titles, todayAndTomorrow,
 } from '@/lib/dayView';
 import { deviceNotifier } from '@/lib/deviceNotifier';
 import { deviceDayMemory, deviceSettingsStore } from '@/lib/deviceStorage';
@@ -45,7 +45,7 @@ import { deviceGeocoder } from '@/lib/location';
 import { LOOKS_LIKE_SECRET, editError } from '@/lib/noteEdit';
 import { scheduleForPlan } from '@/lib/notifications';
 import { needsPro } from '@/lib/pro';
-import { addDays, EMPTY_TASK, plannedAt, taskMetadata, type TaskMetadata } from '@/lib/tasks';
+import { addDays, addToDay, EMPTY_TASK, plannedAt, shortDay, taskMetadata, type TaskDayEnd, type TaskMetadata, withTime } from '@/lib/tasks';
 import { WilmaError } from '@/lib/wilma';
 
 type Screen =
@@ -85,6 +85,9 @@ export default function MyDay() {
   const [sheetBusy, setSheetBusy] = useState(false);
   const [sheetError, setSheetError] = useState<string | null>(null);
   const [added, setAdded] = useState<string | null>(null);
+  // Left open (D35): the task a button is working on, and what went wrong.
+  const [leftBusy, setLeftBusy] = useState<string | null>(null);
+  const [leftError, setLeftError] = useState<string | null>(null);
 
   // The day's events as read (with keys), their places, and the zone: reused when only a choice changes.
   const raw = useRef<DayEvent[] | null>(null);
@@ -282,12 +285,12 @@ export default function MyDay() {
   };
 
   /** A suggestion picked: the task is put at that time (planned_at, the user's choice), then the plan again. */
-  const pickOption = async (o: TaskOption) => {
+  const pickOption = async (o: TaskOption, dayEnd: TaskDayEnd | null) => {
     const at = plannedAt(o.start);
     if (!sheetTask || !at) return;
     setSheetBusy(true);
     try {
-      await wilma.updateItem(sheetTask.id, { metadata: { ...sheetTask.metadata, planned_at: at } });
+      await wilma.updateItem(sheetTask.id, { metadata: withTime(sheetTask.metadata, at, dayEnd) });
       const moved = o.leave_at && o.was_leave_at ? ` Leave at ${clock(o.leave_at)} instead of ${clock(o.was_leave_at)}.` : '';
       setAdded(`✓ ${sheetTask.title} at ${clock(o.start)}.${moved}`);
       closeSheet();
@@ -296,6 +299,34 @@ export default function MyDay() {
       setSheetError(editError(e instanceof Error ? e.message : String(e)));
     } finally {
       setSheetBusy(false);
+    }
+  };
+
+  /**
+   * Left open on an earlier day, with no end-of-day choice (D35): answered here, without opening the
+   * task. Add to today: due this day without its old time, to find a time for. Done. Remove: to the
+   * Recycle bin (it can be restored). Then the plan again.
+   */
+  const answerLeftOpen = async (task: NotPlacedTask, answer: 'add' | 'done' | 'remove') => {
+    setLeftBusy(task.id);
+    setLeftError(null);
+    try {
+      if (answer === 'add') {
+        const item = await wilma.getItem(task.id);
+        await wilma.updateItem(task.id, { metadata: addToDay((item.metadata ?? {}) as Partial<TaskMetadata>, date) });
+        setAdded(`✓ ${task.title} is in ${date === days.today ? 'today' : shortDay(date, days.today)}’s list. Find a time below.`);
+      } else if (answer === 'done') {
+        await wilma.taskDone(task.id, true, days.today);
+        setAdded(`✓ ${task.title}: done.`);
+      } else {
+        await wilma.deleteItem(task.id);
+        setAdded(`${task.title}: removed. It’s in the Recycle bin if you need it back.`);
+      }
+      void load(false);
+    } catch (e) {
+      setLeftError(editError(e instanceof Error ? e.message : String(e)));
+    } finally {
+      setLeftBusy(null);
     }
   };
 
@@ -502,6 +533,7 @@ export default function MyDay() {
   }
   else if (plan) {
     const chips = dayChips(plan);
+    const { leftOpen, notPlaced } = splitNotPlaced(plan);
     content = (
       <View style={{ gap: space.m }}>
         {homeCard}
@@ -512,14 +544,36 @@ export default function MyDay() {
             busy={sheetBusy}
             error={sheetError}
             onFind={(task) => void addAndFind(task)}
-            onPick={(o) => void pickOption(o)}
+            onPick={(o, dayEnd) => void pickOption(o, dayEnd)}
             onNotToday={() => void notToday()}
             onClose={closeSheet}
+            dayEnd={sheetTask?.metadata.repeat ? undefined : sheetTask?.metadata.day_end ?? null}
           />
         ) : (
           <Button title="＋ Add" kind="plain" onPress={() => setSheet({ step: 'form' })} />
         )}
         {added ? <Text style={[box(c.goodBg, c.good), { color: c.good, fontSize: 14 }]}>{added}</Text> : null}
+        {leftOpen.length ? (
+          <View style={[box(c.card, c.line, true), { gap: space.s }]}>
+            <Text style={{ color: c.text, fontSize: 14, fontWeight: '600' }}>{leftOpenHeading(leftOpen, date)}</Text>
+            {leftOpen.map((task) => (
+              <View key={task.id} style={{ gap: 2 }}>
+                <Text style={{ color: c.text, fontSize: 14 }}>{`☐ ${task.title} · ${leftOpenWhen(task, date)}`}</Text>
+                {leftBusy === task.id ? (
+                  <Muted>Saving…</Muted>
+                ) : (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.m }}>
+                    <TextLink title={date === days.today ? 'Add to today' : `Add to ${shortDay(date, days.today)}`} onPress={() => void answerLeftOpen(task, 'add')} />
+                    <TextLink title="Done" onPress={() => void answerLeftOpen(task, 'done')} />
+                    {/* A repeating task is never removed from here: that would end every later time too. */}
+                    {!task.repeat ? <TextLink title="Remove" onPress={() => void answerLeftOpen(task, 'remove')} /> : null}
+                  </View>
+                )}
+              </View>
+            ))}
+            {leftError ? <Text style={{ color: c.danger, fontSize: 14 }}>{leftError}</Text> : null}
+          </View>
+        ) : null}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.xs }}>
           {chips.map((ch) => (
             <Text key={ch.text} style={chipStyle(c, ch.tone)}>{ch.text}</Text>
@@ -530,10 +584,10 @@ export default function MyDay() {
         </View>
         {note ? <Text style={{ color: c.warn, fontSize: 14 }}>{note}</Text> : null}
         {plan.rows.length ? plan.rows.map(row) : <Muted>Nothing on your calendar this day.</Muted>}
-        {plan.tasks_not_placed.length ? (
+        {notPlaced.length ? (
           <View style={[box(c.card, c.line, true), { gap: space.xs }]}>
             <Text style={{ color: c.text, fontSize: 14, fontWeight: '600' }}>Not placed yet</Text>
-            {plan.tasks_not_placed.map((task) => (
+            {notPlaced.map((task) => (
               <View key={task.id} style={{ flexDirection: 'row', alignItems: 'center', gap: space.s }}>
                 <Text style={{ color: c.text, fontSize: 14, flex: 1 }}>
                   {`☐ ${task.title}${task.duration_min ? ` · ${minutesText(task.duration_min)}` : ''}${task.overdue ? ' · overdue' : ''}`}

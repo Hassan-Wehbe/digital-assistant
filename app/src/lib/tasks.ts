@@ -16,6 +16,16 @@ export const REPEAT_LABELS: Record<TaskRepeat, string> = {
   biweekly: 'Every 2 weeks',
   monthly: 'Monthly',
 };
+/** Not done by the end of its day (D35, docs/task-day-end-plan.md): none means My day asks the next day. */
+export const TASK_DAY_ENDS = ['done', 'next_day'] as const;
+export type TaskDayEnd = (typeof TASK_DAY_ENDS)[number];
+/** The choice where a time is set: "Ask me" (none) first, as nothing is closed unless chosen. */
+export const DAY_END_CHOICES: { value: TaskDayEnd | 'ask'; label: string }[] = [
+  { value: 'ask', label: 'Ask me the next day' },
+  { value: 'done', label: 'Mark it done' },
+  { value: 'next_day', label: 'Move to the next day' },
+];
+export const DAY_END_LABEL = 'If it’s not done by the end of that day';
 
 /** A task's fields as the server keeps them. */
 export interface TaskMetadata {
@@ -30,7 +40,11 @@ export interface TaskMetadata {
   repeat?: TaskRepeat;
   last_done_on?: string;
   planned_at?: string;
+  /** Only with planned_at, never on a repeating task (the server drops it otherwise). */
+  day_end?: TaskDayEnd;
 }
+
+const isDayEnd = (v: unknown): v is TaskDayEnd => (TASK_DAY_ENDS as readonly unknown[]).includes(v);
 
 /** One task as find_tasks lists it. */
 export interface TaskRow {
@@ -99,9 +113,13 @@ export interface TaskForm {
   plannedTime: string;
   repeat: TaskRepeat | null;
   important: boolean;
+  /** With a set time: what happens if it is still open when that day ends; null: ask the next day. */
+  dayEnd: TaskDayEnd | null;
 }
 
-export const EMPTY_TASK: TaskForm = { title: '', duration: '', place: null, address: '', dueOn: '', plannedDay: '', plannedTime: '', repeat: null, important: false };
+export const EMPTY_TASK: TaskForm = {
+  title: '', duration: '', place: null, address: '', dueOn: '', plannedDay: '', plannedTime: '', repeat: null, important: false, dayEnd: null,
+};
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -134,6 +152,7 @@ export function taskForm(title: string, m: Partial<TaskMetadata> | null, placeTi
     plannedTime: plannedParts(m?.planned_at)?.time ?? '',
     repeat: m?.repeat && (TASK_REPEATS as readonly string[]).includes(m.repeat) ? m.repeat : null,
     important: m?.priority === 'important',
+    dayEnd: isDayEnd(m?.day_end) ? m.day_end : null,
   };
 }
 
@@ -179,8 +198,24 @@ export function taskMetadata(form: TaskForm, base: Partial<TaskMetadata> | null 
     const at = saved && saved.day === day && saved.time === time ? base!.planned_at! : plannedAt(`${day}T${time}`);
     if (!at) return { error: 'At a set time: pick both a day and a time, or remove it.' };
     out.planned_at = at;
+    if (form.dayEnd && !out.repeat) out.day_end = form.dayEnd;
   }
   return { metadata: out };
+}
+
+/**
+ * Left open (D35) → Add to today: its old time and end-of-day choice go, and it is due `day`, so it
+ * is in that day's "Not placed yet" to find a time for. Every other field is kept.
+ */
+export function addToDay(m: Partial<TaskMetadata> | null, day: string): TaskMetadata {
+  const { planned_at: _at, day_end: _end, ...rest } = m ?? {};
+  return { ...rest, status: 'open', priority: rest.priority === 'important' ? 'important' : 'normal', due_on: day };
+}
+
+/** A set time picked for a task (My day's suggestions): its end-of-day choice set, or removed for "ask". */
+export function withTime(m: TaskMetadata, plannedAtValue: string, dayEnd: TaskDayEnd | null): TaskMetadata {
+  const { day_end: _end, ...rest } = m;
+  return { ...rest, planned_at: plannedAtValue, ...(dayEnd && !rest.repeat ? { day_end: dayEnd } : {}) };
 }
 
 /** Quick picks for By when: today, tomorrow, the coming Saturday, next Monday (each day once). */

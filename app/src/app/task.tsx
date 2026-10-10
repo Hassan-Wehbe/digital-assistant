@@ -18,7 +18,8 @@ import { findCredential } from '@/lib/credentials';
 import { todayAndTomorrow } from '@/lib/dayView';
 import { editError, LOOKS_LIKE_SECRET } from '@/lib/noteEdit';
 import {
-  duePicks, EMPTY_TASK, isDay, isTask, localParts, REPEAT_LABELS, shortDay, TASK_REPEATS, taskForm, taskMetadata, timeText, type TaskForm, type TaskMetadata, type TaskRepeat,
+  DAY_END_CHOICES, DAY_END_LABEL, duePicks, EMPTY_TASK, isDay, isTask, localParts, REPEAT_LABELS, shortDay, TASK_REPEATS, taskForm, taskMetadata, timeText, type TaskForm,
+  type TaskMetadata, type TaskRepeat,
 } from '@/lib/tasks';
 import type { Item } from '@/lib/wilma';
 
@@ -173,6 +174,13 @@ function TaskEditor({ item, placeTitle }: { item: Item | null; placeTitle?: stri
           <Button title="🕒 Pick a time" kind="plain" onPress={pickTime} disabled={busy} />
         )}
         <Muted>My day shows it at this time. Leave it empty and Wilma suggests where it fits.</Muted>
+        {form.plannedTime && !form.repeat ? (
+          <>
+            {label(DAY_END_LABEL.toUpperCase())}
+            <Chips options={DAY_END_CHOICES} selected={(v) => v === (form.dayEnd ?? 'ask')} onPress={(v) => set({ dayEnd: v === 'ask' ? null : v })} disabled={busy} />
+            <Muted>Ask me: the next day’s My day asks whether to add it, mark it done or remove it.</Muted>
+          </>
+        ) : null}
 
         {label('REPEATS')}
         <Chips options={REPEATS} selected={(v) => v === (form.repeat ?? 'none')} onPress={(v) => set({ repeat: v === 'none' ? null : v })} disabled={busy} />

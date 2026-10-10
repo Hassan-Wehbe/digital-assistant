@@ -21,6 +21,30 @@ tokens or keys in chat.
   cannot delete Clock alarms; reminders from the chat or Settings → Reminders, matched on the phone);
   every other question as recommended. **Next:** step 1, the server's chat actions and a paid
   evaluation run (owner's OK and cap first); strongest model, fresh session.
+- **Tasks left open, step 1 merged (#204, squash, 7066ef2), deployed later (see the entry above); step 2 (app) written,
+  branch `claude/task-day-end-app`, not merged (2026-10-10).** The owner said "go ahead with mcp and
+  chat"; the deploy was not run from this session (the permission check blocked it), so **owner:
+  run "deploy chat" for `mcp` and for `chat` from main** (Actions → deploy chat → Run workflow).
+  Step 2: the end-of-day choice on the task screen and in My day's suggestions sheet; My day's
+  "Left open yesterday" with Add to today · Done · Remove. 746 app tests (7 new). Ships with the
+  next build, which needs step 1 deployed first. Details and phone checks:
+  `docs/task-day-end-plan.md` "As built: step 2".
+- **Tasks left open at the end of their day, step 1, server (2026-10-10): branch
+  `claude/task-day-end`, not merged, not deployed.** `day_end` task field ("done" | "next_day"),
+  `mcp/lib/day_end.ts` (`atDayEnd`, `saveDayEnd`), My day settles ended days (at most 3 per plan,
+  revision kept) and lists left-open tasks with `left_from`; the later-day bug fixed; `find_tasks`
+  shows the state read-only. No instruction or tool description change, no evaluation. 460 Deno
+  tests (10 new). Details: `docs/task-day-end-plan.md` "As built: step 1". **Owner:** review/merge,
+  then OK to deploy `mcp` and `chat`. **Next:** step 2, the app (strongest model).
+- **Tasks left open at the end of their day (D35): plan written (2026-10-10), branch
+  `claude/task-day-end`, `docs/task-day-end-plan.md`; owner: "go with your recommendations"; built
+  before alarms (D31).** Found when "Lunch" (planned Oct 9 12:03, left open) showed on Oct 10 as
+  "find a time". The owner deleted it, then asked for it back: restored by Claude through the
+  Supabase connector (deleted_at cleared, as `restore_item` does; it is marked done). Also a bug: a
+  task with a time on a later day shows today as not placed. Steps: (1) server (`day_end` field,
+  settling ended days, `left_from` in the plan, the bug; deploy with the owner's OK); (2) app (the
+  choice, My day's Left open with Add to today · Done · Remove). Strongest model for both. The D31
+  plan is on branch `claude/alarms-calendar` (questions answered? not yet).
 - **Alarms and calendar entries (D31): plan written (2026-10-10), branch `claude/alarms-calendar`,
   `docs/alarms-calendar-plan.md`. Waiting for the owner's answers (Q1-Q8; small ones Q9-Q13 have
   defaults); nothing built.** Alarms open the phone's Clock filled in, reminders are Wilma
