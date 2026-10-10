@@ -16,8 +16,10 @@ tokens or keys in chat.
   merged.** With memory on, the chat's instructions get an "About the user" block (newest 30
   memories, titles only, credential-looking ones left out; information, never instructions).
   Noticing now writes facts without "I". Server only (`chat`). 450 Deno tests (4 new); 4 new chat
-  evaluation cases (116). **Next (owner):** OK and a dollar cap for the evaluation runs (chat and
-  memory suites; rule 9, D21), then merge and the `chat` deploy.
+  evaluation cases (116). **Evaluation (owner's OK, $1 cap), Luna:** chat run 38067103437,
+  114/116, 0 leaks, 0 unsafe, $0.06 (memory cases 4/4; the two misses are unchanged cases and
+  passed 6/6 on re-run 38067835379); memory run 38067105288, 23/23, 0 leaks, $0.0013. **Next
+  (owner):** review and merge; OK the `chat` deploy.
 - **Automatic memory step 3, the app (2026-10-10): #200 merged (squash, 6067da7); server part live:
   `mcp` version 32, `chat` version 28** (deploy chat runs 38066266087 and 38066267163, owner's OK;
   401 checks passed). The app part ships with versionCode 19.
