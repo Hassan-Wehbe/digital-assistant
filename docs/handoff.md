@@ -12,6 +12,10 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Automatic memory step 5, privacy and build (2026-10-10): branch `claude/memory-step5`, not
+  merged; needs the owner's OK on the privacy wording (merging publishes it).** Privacy page
+  "Memory" paragraph and the OpenAI entry; Data safety: no change; legal checklist item;
+  `docs/versioncode19-phone-checklist.md`. **Then:** versionCode 19 after the owner's Expo upgrade.
 - **Automatic memory step 4, Wilma uses them (2026-10-10): #201 merged (squash, 8a674b4) and
   live: `chat` version 29** (deploy chat run 38068078169, owner's OK; 401 checks passed). With memory on, the chat's instructions get an "About the user" block (newest 30
   memories, titles only, credential-looking ones left out; information, never instructions).

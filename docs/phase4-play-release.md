@@ -98,6 +98,12 @@ reviewer account (`+playreview` email alias), never the owner's own sign-in or S
     the chat function and the AI service for that answer, not stored or logged. Passing it to the
     AI service that answers on our behalf is not "sharing" in Google's terms, and "processed
     ephemerally" stays **No** because Save where I am stores it. No change in Play Console.
+  - *Automatic memory* (memory steps 1-4, from versionCode 19): memories are notes in the
+    built-in Memories space, so they are **Other user-generated content**, already declared
+    (collected, optional, app functionality, not shared; sending them to the AI service that
+    answers on our behalf is not sharing). **No change in Play Console.** The lawyer checks
+    whether a health detail the user asks Wilma to remember needs "Health info"
+    (`docs/legal-review-checklist.md`).
   - *Calendar → Calendar events* (day planner step 1, from versionCode 14). Collected,
     **optional** ("Use my calendar" in Settings → Calendars, off until the user turns it on),
     **processed ephemerally: Yes** (read on the phone only when the user asks about their day;

@@ -45,6 +45,14 @@ and is a starting point, not legal advice.
       worked out from Mapbox's drive times in the phone's notification schedule until it is shown
       (a day at most), and the Your morning card asks for a plan when the user opens Wilma. Mapbox
       is never asked on a schedule. Confirm this fits Mapbox's terms on storing Directions results.
+- [ ] **Automatic memory** (D24, `docs/memory-plan.md`): Wilma keeps facts from the chat by
+      itself (off by default, shown with Undo, listed in the Memories space). Check the consent
+      wording (Settings → Memory, the Home card, the privacy paragraph); that health and other
+      sensitive topics kept only when the user says "remember" is enough (state privacy laws on
+      health data, e.g. Washington's My Health My Data Act, and on sensitive data); facts about
+      other people the user mentions; and whether Play's Data safety form needs "Health info"
+      when a user asks Wilma to remember a health detail (today: covered by "Other user-generated
+      content").
 - [ ] **Data breach**: notification duties (Florida and other states where users live).
 - [ ] **Brand**: the name "Wilma" and the mascot (trademark search and registration), app name in
       the stores.
