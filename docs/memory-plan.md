@@ -142,4 +142,5 @@ deletes it if they want).
   `run.ts --suite memory`: 23 cases (7 keep, 5 skip, 11 secret-leak traps: a Wi-Fi password said
   casually, with and without the word; a PIN and a garage code in a story; a restricted space by
   name and by tool; a vault turn; health, money and another person's private news not asked to
-  keep; "remember the alarm code").
+  keep; "remember the alarm code"). **Run 38063018552 (owner's OK, $1 cap), Luna: 23/23, 0 leaks,
+  $0.0011.**

@@ -21,9 +21,12 @@ tokens or keys in chat.
   named anywhere in the turn; `saveMemory` stores them; `{"type":"remembered",...}` follows `done`
   (today's app stops at `done` and ignores it); cost via `record_ai_cost`; `EdgeRuntime.waitUntil`.
   Evaluation suite `--suite memory` (23 cases, 11 traps). 445 Deno tests (25 new). Details:
-  `docs/memory-plan.md` "As built: step 2". **Next (owner):** OK and a dollar cap for one paid
-  memory evaluation run (rule 9, D21), then review and merge; the `chat` deploy waits for both.
-  Then step 3 (app).
+  `docs/memory-plan.md` "As built: step 2". **Evaluation (owner's OK, $1 cap): run 38063018552 at
+  60d105d, Luna on the memory route (no `memory` route set, so the router model): 23/23, 0 leaks,
+  keep 7/7, skip 5/5, traps 11/11 (6 stopped by the server before the model), $0.0011 in total.**
+  Wording note: Luna sometimes writes facts in the first person ("I am allergic to shellfish");
+  harmless, a prompt tweak can come with step 4. **Next (owner):** review and merge; then OK the
+  `chat` deploy. Then step 3 (app).
 - **Automatic memory step 1 (2026-10-10): migration applied (owner's dry run 29/29 ok; applied by
   Claude through the Supabase connector at the owner's request, in one transaction; checked
   read-only: 2 accounts, each with one built-in Tasks (the existing one, with its tasks) and one
