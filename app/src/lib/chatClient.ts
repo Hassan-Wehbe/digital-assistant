@@ -12,7 +12,7 @@ import { phoneTimeZone, type Agenda } from './calendar';
 import { CONNECTION_MESSAGE, readChatEvents, type ChatEvent, type ChunkSource } from './chatStream';
 import type { Verdict } from './chatRoute';
 import { messagesToSend, type Entry } from './chatThread';
-import { CAN_ALARM, CAN_REMINDER } from './phoneActions';
+import { CAN_ALARM, CAN_CALENDAR_ADD, CAN_REMINDER } from './phoneActions';
 import { WilmaError } from './wilma';
 
 /** The part of a streaming fetch the client uses. */
@@ -40,10 +40,11 @@ const SESSION_ENDED = 'Your session has ended. Please sign in again.';
 
 /**
  * What this app version can do for Wilma: read the phone's calendar (chat/agenda.ts on the server),
- * and on Android show the alarm and reminder cards (chat/phone_actions.ts). Other platforms leave
- * those out, so Wilma says they are not available there instead of showing a card that cannot work.
+ * and on Android show the alarm, reminder and calendar entry cards (chat/phone_actions.ts). Other
+ * platforms leave those out, so Wilma says they are not available there instead of showing a card
+ * that cannot work.
  */
-export const CAN = Platform.OS === 'android' ? ['calendar', CAN_ALARM, CAN_REMINDER] : ['calendar'];
+export const CAN = Platform.OS === 'android' ? ['calendar', CAN_ALARM, CAN_REMINDER, CAN_CALENDAR_ADD] : ['calendar'];
 
 /**
  * The request body: the thread, what the app can do, the phone's time zone (so "today" is the

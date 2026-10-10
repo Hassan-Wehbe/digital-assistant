@@ -12,7 +12,7 @@
 import { cancelledMessage, checkDelete, deletedMessage } from './chatDeletes';
 import type { ChatEvent, PlaceCardData } from './chatStream';
 import type { RememberedMemory } from './memory';
-import type { AlarmCardData, ReminderCardData } from './phoneActions';
+import type { AlarmCardData, EventCardData, ReminderCardData } from './phoneActions';
 import type { Route } from './router';
 
 /** At most this many entries are kept (oldest dropped). */
@@ -140,8 +140,20 @@ export type Entry =
   | { kind: 'alarms'; id: string }
   | ({ kind: 'reminder'; id: string } & ReminderCardData)
   | { kind: 'reminders'; id: string; about?: string }
+  /**
+   * A calendar entry (D31 step 3): added only when the user taps Add to calendar. Once added, the
+   * event's id on this phone and the calendar's name, so a reopened chat says "Added" and never
+   * offers to add it twice.
+   */
+  | ({ kind: 'event'; id: string; added?: EventAdded } & EventCardData)
   /** What Wilma kept from the message before (memory on): "🧠 Remembered: … · Undo" for each. */
   | { kind: 'memory'; id: string; memories: (RememberedMemory & { undone?: true })[] };
+
+/** A calendar entry the user added: the phone's event id (for Open in Calendar) and where it went. */
+export interface EventAdded {
+  eventId: string;
+  calendar: string;
+}
 
 /** Why the calendar was not read: turned off (or nothing ticked), not allowed, or a failure. */
 export type CalendarProblem = 'off' | 'permission' | 'failed';
@@ -224,7 +236,9 @@ export type ChatAction =
   /** After an answer: what Wilma remembered from its message (automatic memory). */
   | { type: 'remembered'; memories: RememberedMemory[] }
   /** Undo worked for one of those memories. */
-  | { type: 'memory_undone'; id: string; memoryId: string };
+  | { type: 'memory_undone'; id: string; memoryId: string }
+  /** Add to calendar worked: the card (and the saved chat) says Added, with Open in Calendar. */
+  | { type: 'event_added'; id: string; added: EventAdded; event: EventCardData };
 
 /** A thread as loaded from the phone (or empty). Status, banner and limits start fresh. */
 export function initialChat(entries: Entry[] = [], noticeDismissed: string | null = null): ChatState {
@@ -443,6 +457,10 @@ function onEvent(state: ChatState, event: ChatEvent): ChatState {
       return add(state, { kind: 'reminder', id, at: event.at, text: event.text });
     case 'find_reminders':
       return add(state, { kind: 'reminders', id, ...(event.about ? { about: event.about } : {}) });
+    case 'calendar_add': {
+      const { type: _t, ...e } = event;
+      return add(state, { kind: 'event', id, ...e });
+    }
     case 'day_plan':
       // Shown under the answer, once it has ended (the card follows Wilma's words).
       return { ...state, dayPlan: event.date };
@@ -522,6 +540,15 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       const card = state.entries[at];
       if (!card || card.kind !== 'memory' || !card.memories.some((m) => m.id === action.memoryId && !m.undone)) return state;
       const next: Entry = { ...card, memories: card.memories.map((m) => (m.id === action.memoryId ? { ...m, undone: true as const } : m)) };
+      return { ...state, entries: state.entries.map((e, i) => (i === at ? next : e)) };
+    }
+    case 'event_added': {
+      const at = state.entries.findIndex((e) => e.id === action.id);
+      const card = state.entries[at];
+      if (!card || card.kind !== 'event' || card.added) return state;
+      // What was added, as edited on the card.
+      const { title, start, end, allDay, location } = action.event;
+      const next: Entry = { kind: 'event', id: card.id, title, start, end, allDay, ...(location?.trim() ? { location: location.trim() } : {}), added: action.added };
       return { ...state, entries: state.entries.map((e, i) => (i === at ? next : e)) };
     }
     case 'stop':

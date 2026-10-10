@@ -4,9 +4,10 @@ import { Text, View } from 'react-native';
 
 import { ChatCard, ChatCardText } from '@/components/ChatCard';
 import { CalendarCard, DayCard, DeleteCard, LocationCard, MemoryLine, NotesCard, PlacesCard, VaultCard } from '@/components/ChatCards';
-import { AlarmCard, AlarmsCard, ReminderCard, RemindersCard } from '@/components/PhoneCards';
+import { AlarmCard, AlarmsCard, EventCard, ReminderCard, RemindersCard } from '@/components/PhoneCards';
 import { Button, Muted, useColors } from '@/components/ui';
-import type { Entry, ErrorButton } from '@/lib/chatThread';
+import type { Entry, ErrorButton, EventAdded } from '@/lib/chatThread';
+import type { EventCardData } from '@/lib/phoneActions';
 
 const BUTTON_TITLES: Record<ErrorButton, string> = { search: 'Search', vault: 'Vault', try_again: 'Try again' };
 
@@ -23,6 +24,7 @@ export function ChatBubble({
   onShareLocation,
   onNotNow,
   onUndoMemory,
+  onEventAdded,
 }: {
   entry: Entry;
   onButton: (button: ErrorButton) => void;
@@ -41,6 +43,8 @@ export function ChatBubble({
   onNotNow?: (id: string) => void;
   /** Undo on a "🧠 Remembered" line. */
   onUndoMemory?: (entryId: string, memoryId: string) => Promise<boolean>;
+  /** Add to calendar worked on a 📅 card: kept in the thread. */
+  onEventAdded?: (entryId: string, added: EventAdded, event: EventCardData) => void;
 }) {
   const c = useColors();
   switch (entry.kind) {
@@ -114,6 +118,8 @@ export function ChatBubble({
       return <ReminderCard entry={entry} />;
     case 'reminders':
       return <RemindersCard entry={entry} />;
+    case 'event':
+      return <EventCard entry={entry} onAdded={(added, event) => onEventAdded?.(entry.id, added, event)} />;
     case 'memory':
       return <MemoryLine entry={entry} onUndo={(memoryId) => onUndoMemory?.(entry.id, memoryId) ?? Promise.resolve(false)} />;
   }

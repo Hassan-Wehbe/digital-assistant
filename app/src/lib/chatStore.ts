@@ -14,7 +14,7 @@ import {
   type LocationState, type NoteRef, type PlaceRef,
 } from './chatThread';
 import { toRemembered } from './memory';
-import { toAbout, toAlarmData, toReminderData } from './phoneActions';
+import { toAbout, toAlarmData, toEventData, toReminderData } from './phoneActions';
 import type { AuthStorage } from './sessionStorage';
 
 const PREFIX = 'wilma.chat.';
@@ -158,6 +158,15 @@ export function toEntry(raw: unknown): Entry | null {
     case 'reminders': {
       const about = toAbout(raw.about);
       return { kind: 'reminders', id, ...(about ? { about } : {}) };
+    }
+    case 'event': {
+      const e = toEventData(raw);
+      if (!e) return null;
+      const a = isObject(raw.added) ? raw.added : null;
+      const added = a && str(a.eventId) && a.eventId && a.eventId.length <= 100 && str(a.calendar) && a.calendar.length <= 100
+        ? { eventId: a.eventId, calendar: a.calendar }
+        : undefined;
+      return { kind: 'event', id, ...e, ...(added ? { added } : {}) };
     }
     case 'memory': {
       if (!Array.isArray(raw.memories)) return null;

@@ -40,7 +40,8 @@ import { shareFromCard } from './chatHere';
 import { runConfirm, runTurn } from './chatRun';
 import { threadsToKeep } from './chatStore';
 import { findCredential } from './credentials';
-import { canLookup, chatReducer, initialChat, monthKey, noticeVisible, type ChatAction, type ChatState } from './chatThread';
+import { canLookup, chatReducer, initialChat, monthKey, noticeVisible, type ChatAction, type ChatState, type EventAdded } from './chatThread';
+import type { EventCardData } from './phoneActions';
 import { deviceChatStore, deviceDayMemory, deviceSettingsStore } from './deviceStorage';
 import { deviceGeocoder, deviceLocation } from './location';
 import { undoMemory } from './memory';
@@ -94,6 +95,8 @@ interface ChatContextValue {
   /** Undo on a "🧠 Remembered" line: that memory is deleted (or gets its old text back). False
    * when it did not work. */
   undoMemory(entryId: string, memoryId: string): Promise<boolean>;
+  /** Add to calendar worked on a 📅 card: the card and the saved chat say Added. */
+  eventAdded(entryId: string, added: EventAdded, event: EventCardData): void;
 }
 
 const ChatContext = createContext<ChatContextValue | null>(null);
@@ -355,6 +358,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         }
         if (user.current === forUser) act({ type: 'memory_undone', id: entryId, memoryId });
         return true;
+      },
+      eventAdded(entryId, added, event) {
+        act({ type: 'event_added', id: entryId, added, event });
       },
     }),
     [state, routingNow, loadedFor, userId, act, start, abort, wilma, chat, removeSecret, signOut],

@@ -1,6 +1,6 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-10-10 (newest: invite-only sign-up merged (#186) and live, versionCode 17 built and submitted, testers getting "Item not found" on the Play link; live `mcp` v30, `chat` v26 (places cuisine fix #188), `delete-account` deployed; see the first entry under "Where things stand"). Earlier: 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
+Last updated 2026-10-10 (newest: alarms step 3, the calendar card, on branch `claude/alarms-calendar-card`; before that: invite-only sign-up merged (#186) and live, versionCode 17 built and submitted, testers getting "Item not found" on the Play link; live `mcp` v30, `chat` v26 (places cuisine fix #188), `delete-account` deployed; see the first entry under "Where things stand"). Earlier: 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
 #102), with Expo patch updates (#98). Step 2, server, is live. Places step 5b ("places near me",
 server) **merged and live** (#104, `mcp` v13, `chat` v6; first entry below). Then step 6, the places build, which also carries the mic fix #91. Play Console:
 Data safety and other forms saved, **not yet sent for review**; see the first entry below).
@@ -12,6 +12,17 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Alarms step 3, the app's calendar entry card (2026-10-10): branch `claude/alarms-calendar-card`
+  (from `claude/alarms-app`, #207), not merged; app only, ships with versionCode 20.** The 📅 card
+  (title, day, start, end and place editable; the calendar shown and changeable), **Add to
+  calendar** as the only write (`lib/calendar.ts addEvent`: create only, everything checked again at
+  the tap, password-looking text refused), "Added · Open in Calendar", "New events go to" in
+  Settings → Calendars (ticked, writable calendars only), the overlap line, `calendar_add` in `can`
+  on Android. Uses expo-calendar's newer `createEvent` (the old `createEventAsync` throws in this
+  version). No server change, no evaluation. 775 app tests (19 new). Details and phone checks:
+  `docs/alarms-calendar-plan.md` "As built: step 3". **Next:** step 4 (smaller model): permission
+  text, Settings → Calendars paragraph, privacy page, D25 (owner's OK on wording), the versionCode 20
+  checklist, then "build for Play".
 - **Alarms step 1 merged (#206, squash, 040222c) and live: `chat` version 31** (deploy chat run
   38084528151, owner's OK; 401 checks passed). Evaluation: 131/131, 0 leaks (run 38083418773).
 - **Alarms step 2, the app's alarm and reminder cards (2026-10-10): branch `claude/alarms-app`, not
