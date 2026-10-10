@@ -9,12 +9,12 @@
 // API keys are read here on the server only; they never reach the app or the model.
 import { AnthropicAdapter, anthropicClient, type AnthropicLike } from "./anthropic.ts";
 import { OpenAIAdapter, openaiClient, type OpenAILike } from "./openai.ts";
-import { KEY_ENV, parseRoutes, type RouteName, type Routes } from "./routes.ts";
+import { KEY_ENV, parseRoutes, type RouteName, routeModel, type Routes } from "./routes.ts";
 import { type ChatRequest, type LlmAdapter, LlmError, type ProviderId, type StreamEvent } from "./types.ts";
 
 export * from "./types.ts";
 export { costCents } from "./cost.ts";
-export { missingKeys, parseRoutes, ROUTE_NAMES, type RouteName, type Routes, RoutesConfigError } from "./routes.ts";
+export { missingKeys, OPTIONAL_ROUTES, parseRoutes, ROUTE_NAMES, routeModel, type RouteName, type Routes, RoutesConfigError } from "./routes.ts";
 
 export interface Llm {
   readonly routes: Routes;
@@ -49,7 +49,7 @@ export function createLlm(opts: LlmOptions): Llm {
   return {
     routes,
     stream(route, req) {
-      const model = routes[route];
+      const model = routeModel(routes, route);
       return adapter(model.provider).stream(model, req);
     },
   };

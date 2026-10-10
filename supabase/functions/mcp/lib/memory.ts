@@ -6,7 +6,7 @@
 //   * only into the built-in Memories space, never a restricted one;
 //   * the same fact is not saved twice;
 //   * a changed fact updates the older memory, whose old text goes to item_revision (rule 7).
-// Step 2 (noticing in the chat) calls saveMemory; nothing calls it yet.
+// Step 2 (noticing in the chat, chat/memory.ts) calls saveMemory when the user has memory on.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { rejectCredentials } from "./credentials.ts";
 import { chunkAndEmbed } from "./embed.ts";
@@ -40,6 +40,12 @@ export function cleanFact(fact: string): string {
 }
 
 const sameFact = (a: string, b: string) => a.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim() === b.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+
+/** app_user.memory_on: off by default (Q3), and off when it cannot be read. */
+export async function memoryOn(db: SupabaseClient, userId: string): Promise<boolean> {
+  const { data, error } = await db.from("app_user").select("memory_on").eq("id", userId).maybeSingle();
+  return !error && (data as { memory_on?: unknown } | null)?.memory_on === true;
+}
 
 /**
  * The built-in Memories space (made for every account, 20261012120000_memory_builtin_spaces.sql).

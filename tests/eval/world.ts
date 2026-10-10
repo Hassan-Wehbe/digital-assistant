@@ -84,6 +84,8 @@ export class World {
   distanceUnit: "mi" | "km" = "mi";
   /** app_user.plan (migration day_plan): free unless a case makes the user Pro; and plans made today. */
   plan: "free" | "pro" = "free";
+  /** app_user.memory_on (memory step 1): off unless a test turns it on. */
+  memoryOn = false;
   dayPlansUsed = 0;
   /** What the tools handed out: vault entry links, reveal links, upload links. */
   secretEntries: { secret_id: string; name: string; space_id: string; secret_type: string }[] = [];
@@ -379,7 +381,7 @@ class Query implements PromiseLike<Result> {
         if (this.op === "update" && typeof this.payload.assistant_name === "string") {
           w.assistantName = this.payload.assistant_name;
         }
-        return this.shape([{ assistant_name: w.assistantName, distance_unit: w.distanceUnit }]);
+        return this.shape([{ assistant_name: w.assistantName, distance_unit: w.distanceUnit, memory_on: w.memoryOn }]);
       case "item":
         // Read only (find_places). One pretend user, so every item is theirs, the restricted
         // ones included: keeping those out is the tool's job (searchable_space_ids).

@@ -6,8 +6,11 @@ import { z } from "npm:zod@4.1.13";
 import type { ModelConfig, ProviderId } from "./types.ts";
 
 export const ROUTE_NAMES = ["router", "default", "escalation"] as const;
-export type RouteName = typeof ROUTE_NAMES[number];
-export type Routes = Record<RouteName, ModelConfig>;
+/** Routes that may be left out of LLM_ROUTES: each then uses the one named here. `memory` notices
+ * facts to remember after a chat turn (docs/memory-plan.md step 2); without it, the `router` model. */
+export const OPTIONAL_ROUTES = { memory: "router" } as const;
+export type RouteName = typeof ROUTE_NAMES[number] | keyof typeof OPTIONAL_ROUTES;
+export type Routes = Record<typeof ROUTE_NAMES[number], ModelConfig> & { memory?: ModelConfig };
 
 /** Where each provider's API key lives (Supabase -> Edge Functions -> Secrets). */
 export const KEY_ENV: Record<ProviderId, string> = {
@@ -23,7 +26,12 @@ const modelConfig = z.object({
   maxOutputTokens: z.number().int().min(256).max(128_000),
   effort: z.enum(["low", "medium", "high", "xhigh", "max"]).optional(),
 }).strict();
-const routesSchema = z.object({ router: modelConfig, default: modelConfig, escalation: modelConfig }).strict();
+const routesSchema = z.object({
+  router: modelConfig,
+  default: modelConfig,
+  escalation: modelConfig,
+  memory: modelConfig.optional(),
+}).strict();
 
 export class RoutesConfigError extends Error {
   constructor(detail: string) {
@@ -49,8 +57,14 @@ export function parseRoutes(json: string | undefined): Routes {
   return parsed.data;
 }
 
+/** The model a route uses: its own, or for an optional route left out, the one it falls back to. */
+export function routeModel(routes: Routes, route: RouteName): ModelConfig {
+  if (route === "memory") return routes.memory ?? routes[OPTIONAL_ROUTES.memory];
+  return routes[route];
+}
+
 /** Providers the routes use whose API key is not set: those routes cannot answer. */
 export function missingKeys(routes: Routes, env: (name: string) => string | undefined): ProviderId[] {
-  const used = new Set(ROUTE_NAMES.map((r) => routes[r].provider));
+  const used = new Set([...ROUTE_NAMES, "memory" as const].map((r) => routeModel(routes, r).provider));
   return [...used].filter((p) => !env(KEY_ENV[p]));
 }

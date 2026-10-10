@@ -4,6 +4,9 @@ Status: plan, 2026-10-10. Owner's answers given the same day ("go with your reco
 default Memories space like Tasks). Design: D24, D30. Model: the strongest for steps 1-4 (chat loop,
 secrets, restricted spaces); a smaller one for step 5's wording and the build.
 
+**Step 2 built (2026-10-10, branch `claude/memory-step2`), not merged or deployed:** noticing in
+the chat, server only; see "As built: step 2" at the end.
+
 ## What the owner will see
 
 - **Settings → Memory: Off / On.** Off until each person turns it on (also for the owner and the
@@ -99,3 +102,45 @@ deletes it if they want).
 - Q5: the Memories space's name and description: "Memories", "What Wilma remembered about you".
 - Q6: at most 3 memories per turn, 30 in the "About the user" block.
 - Q7: the cheapest model for noticing (today's provider's small model); the evaluation run decides.
+
+## As built: step 2 (noticing in the chat)
+
+- **`supabase/functions/chat/memory.ts`** (`noticeMemories`). `chat.ts` starts it after `done`, only
+  for a whole answer (not after an error or Stop, not when the app will send the message again with
+  the calendar), and `index.ts` keeps the instance alive for it with `EdgeRuntime.waitUntil`. With
+  `app_user.memory_on` off it only reads that switch: no model call, nothing logged.
+- **The `memory` route** is optional in `LLM_ROUTES`: without it the `router` model answers, so the
+  live secret needs no change. To try another model for noticing, add `"memory": {...}` (same shape
+  as the other routes); no deploy needed.
+- **What the model gets:** the newest user message, up to two messages before it (Wilma's last reply
+  and the user's message before that; any removed by the credential screen or talking about the
+  vault are left out), and the newest 30 memories as `m1`… (so a changed fact can say
+  `"replaces":"m3"`). No tools, no notes, no names of spaces. It answers
+  `{"facts":[{"fact","sensitive","replaces"}]}`; anything else means nothing is remembered.
+  8-second limit.
+- **The server's guards (rule 9):** no memory call when the answer used any `*_secret` tool, the
+  newest message has vault words or looks like a credential (the one box's `guard`), or a
+  restricted space (or one under it) is named anywhere in the turn: the messages, Wilma's text, a
+  tool's input or result (by name as whole words, or id). This is deliberately broad: with a
+  restricted space called "Private", a message about "a private school" is not remembered either.
+  Each fact is dropped when it looks like a credential, has vault words, is value-like (a number of
+  4+ digits that is not a year, a word mixing letters and digits; times, ordinals and units are
+  fine), shares no word with the newest message, or is sensitive (the model's flag, or the
+  server's word list for health, money, religion, politics and sexuality) without the user saying
+  "remember", "don't forget" or "keep in mind" ("do you remember", "I don't remember" do not
+  count). `saveMemory` then checks credentials again, refuses duplicates, and updates a replaced
+  memory (revision kept).
+- **The event:** `{"type":"remembered","memories":[{"id","fact","updated"}]}`, after `done`, only
+  for new or changed memories. Today's app stops reading at `done` and never sees it (nothing
+  breaks); step 3 reads on for it.
+- **Cost:** `record_ai_cost` (cost only, not a request), at most 5 cents a call.
+- **Log:** one `{"event":"memory"}` line per noticing with codes and counts only (`dropped` by
+  reason), never the conversation or a fact.
+- **Tests:** `tests/deno/memory_notice_test.ts` (guards on their own and end to end through the
+  handler with a scripted model), `tests/deno/memory_eval_test.ts` (the evaluation machinery),
+  `tests/deno/llm_test.ts` (the optional route). **Evaluation:** `tests/eval/memory.ts`,
+  `run.ts --suite memory`: 23 cases (7 keep, 5 skip, 11 secret-leak traps: a Wi-Fi password said
+  casually, with and without the word; a PIN and a garage code in a story; a restricted space by
+  name and by tool; a vault turn; health, money and another person's private news not asked to
+  keep; "remember the alarm code"). **Run 38063018552 (owner's OK, $1 cap), Luna: 23/23, 0 leaks,
+  $0.0011.**

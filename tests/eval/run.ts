@@ -3,9 +3,10 @@
 //
 //   deno run -A --config supabase/functions/mcp/deno.json tests/eval/run.ts \
 //     --models haiku-4-5,sonnet-5-5-low [--cases all|<ids or categories>] [--repeat 1] \
-//     [--max-dollars 10] [--concurrency 1] [--out tests/eval/results] [--dry-run] [--suite chat|router]
+//     [--max-dollars 10] [--concurrency 1] [--out tests/eval/results] [--dry-run] [--suite chat|router|memory]
 //
-// --suite router evaluates the one box's classifier (router.ts) instead of Wilma's conversations.
+// --suite router evaluates the one box's classifier (router.ts) instead of Wilma's conversations;
+// --suite memory evaluates noticing what to remember after a chat answer (memory.ts).
 //
 // --dry-run prints the plan and a cost estimate and calls nothing (no keys needed).
 // Keys come from ANTHROPIC_API_KEY / OPENAI_API_KEY in the environment and are never printed.
@@ -18,6 +19,7 @@ import { runConversation } from "./harness.ts";
 import { CASES } from "./cases.ts";
 import { type CaseResult, type EvalCase, grade } from "./grade.ts";
 import { markdown, summarize } from "./report.ts";
+import { estimateMemoryCents, MEMORY_CASES, type MemoryCase, memoryMarkdown, type MemoryResult, runMemoryCase } from "./memory.ts";
 import { estimateRouterCents, ROUTER_CASES, type RouterCase, routerMarkdown, type RouterResult, runRouterCase } from "./router.ts";
 
 export interface Candidate extends ModelConfig {
@@ -148,8 +150,12 @@ async function main() {
   }).models;
   const selected = selectModels(args.models ?? "", all);
   const suite = args.suite ?? "chat";
-  if (suite !== "chat" && suite !== "router") throw new Error(`unknown suite "${suite}": chat or router`);
-  const cases = suite === "router" ? selectCases<RouterCase>(args.cases ?? "all", ROUTER_CASES) : selectCases<EvalCase>(args.cases ?? "all");
+  if (suite !== "chat" && suite !== "router" && suite !== "memory") throw new Error(`unknown suite "${suite}": chat, router or memory`);
+  const cases = suite === "router"
+    ? selectCases<RouterCase>(args.cases ?? "all", ROUTER_CASES)
+    : suite === "memory"
+    ? selectCases<MemoryCase>(args.cases ?? "all", MEMORY_CASES)
+    : selectCases<EvalCase>(args.cases ?? "all");
   const repeat = Math.max(1, Number(args.repeat ?? 1));
   const maxDollars = Number(args["max-dollars"] ?? 10);
   // One case at a time by default: new provider accounts have low per-minute limits.
@@ -167,6 +173,8 @@ async function main() {
   for (const [id, m] of models) {
     const cents = suite === "router"
       ? estimateRouterCents(m, cases as RouterCase[], repeat)
+      : suite === "memory"
+      ? estimateMemoryCents(m, cases as MemoryCase[], repeat)
       : estimateCents(m, cases as EvalCase[], repeat);
     console.log(`  ${id} (${m.provider} ${m.model}): at most about $${(cents / 100).toFixed(2)}`);
   }
@@ -179,6 +187,10 @@ async function main() {
   const capCents = maxDollars * 100;
   if (suite === "router") {
     await runRouterSuite(models, adapters, cases as RouterCase[], repeat, capCents, maxDollars, missing, args.out);
+    return;
+  }
+  if (suite === "memory") {
+    await runMemorySuite(models, adapters, cases as MemoryCase[], repeat, capCents, maxDollars, missing, args.out);
     return;
   }
   let spentCents = 0;
@@ -267,6 +279,44 @@ async function runRouterSuite(
   const summaryFile = Deno.env.get("GITHUB_STEP_SUMMARY");
   if (summaryFile) await Deno.writeTextFile(summaryFile, report, { append: true });
   console.log(`\n${report}\nSaved ${outDir}/router-${stamp}.md and .json.`);
+}
+
+/** The memory suite: at most one model call per case, graded in memory.ts. */
+async function runMemorySuite(
+  models: [string, Candidate][],
+  adapters: Map<ProviderId, LlmAdapter>,
+  cases: MemoryCase[],
+  repeat: number,
+  capCents: number,
+  maxDollars: number,
+  notes: string[],
+  out: string | undefined,
+) {
+  let spentCents = 0;
+  const results: Record<string, MemoryResult[]> = {};
+  for (const [id, m] of models) {
+    results[id] = [];
+    for (const c of cases.flatMap((c) => Array.from({ length: repeat }, () => c))) {
+      if (spentCents >= capCents) break;
+      const r = await runMemoryCase(adapters.get(m.provider)!, m, c);
+      spentCents += r.costCents;
+      results[id].push(r);
+      const mark = r.pass ? "pass" : r.leak ? "LEAK" : "fail";
+      const got = r.saved.length ? `saved ${r.saved.map((t) => `"${t}"`).join(", ")}` : `nothing${r.code ? ` (${r.code})` : ""}`;
+      console.log(`${mark.padEnd(5)} ${id} ${c.id}: ${got} (${(r.ms / 1000).toFixed(1)} s)`);
+      if (!r.pass) console.log(`    ${r.failures.join("; ")}`);
+    }
+  }
+  const date = new Date().toISOString().slice(0, 16).replace("T", " ");
+  const report = memoryMarkdown(results, { date, repeat, maxDollars, notes });
+  const outDir = out ?? "tests/eval/results";
+  await Deno.mkdir(outDir, { recursive: true });
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  await Deno.writeTextFile(`${outDir}/memory-${stamp}.md`, report);
+  await Deno.writeTextFile(`${outDir}/memory-${stamp}.json`, JSON.stringify(results, null, 2));
+  const summaryFile = Deno.env.get("GITHUB_STEP_SUMMARY");
+  if (summaryFile) await Deno.writeTextFile(summaryFile, report, { append: true });
+  console.log(`\n${report}\nSaved ${outDir}/memory-${stamp}.md and .json.`);
 }
 
 if (import.meta.main) {

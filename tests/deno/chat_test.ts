@@ -238,7 +238,7 @@ Deno.test("chat: the reply streams to the app as it is written", async () => {
   const reader = res.body!.pipeThrough(new TextDecoderStream()).getReader();
   let got = "";
   // The first word arrives while the model is still "writing" (the gate holds the rest back).
-  let timer: number | undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => timer = setTimeout(() => reject(new Error("not streamed")), 2000));
   while (!got.includes('"Hello"')) {
     const { value, done } = await Promise.race([reader.read(), timeout]);
