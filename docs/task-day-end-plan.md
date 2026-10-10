@@ -5,6 +5,9 @@ Design: D35 (new), part of the day planner (D25). Built **before** alarms and ca
 (D31, `docs/alarms-calendar-plan.md`). Model: the strongest for both steps (it changes how tasks
 are closed automatically, on the server and in the app).
 
+**Step 1 written (2026-10-10, branch `claude/task-day-end`), not merged or deployed:** see "As
+built: step 1" at the end.
+
 ## Why
 
 The owner noticed (2026-10-10) that "Lunch", put in My day on Oct 9 at 12:03 and not marked done,
@@ -106,3 +109,38 @@ is then "not chosen" and asked about the next day. Nothing breaks.
 
 **What the owner must do:** OK the `chat` / `mcp` deploy after step 1 is reviewed; then the next
 build ("build for Play") carries step 2.
+
+## As built: step 1 (server)
+
+- **`day_end`** in `mcp/lib/tasks.ts`: `"done"` or `"next_day"`; a wrong value is refused. **Changed
+  from the plan:** without `planned_at`, or on a repeating task, it is dropped rather than refused,
+  so taking a task's time away (an older app's edit, Add to today) never makes the save fail.
+  Opening a task again (`task_done: false`) removes it, so a reopened task is not closed again.
+- **`mcp/lib/day_end.ts`:** `atDayEnd` (pure) works out a task as of now: an open task whose
+  `planned_at` day has ended becomes done (`done_at` 11:59 pm that day, in the time's own offset),
+  or loses its time and is due the next day (an earlier due date is kept), or, with no choice, is
+  marked `left_from` that day. The day and "today" are read in the phone's time zone when known,
+  else in `planned_at`'s own offset (the Claude connector). `saveDayEnd` writes it through
+  `update_item` (revision kept, change note "Marked done at the end of its day" / "Moved to the
+  next day", search text rebuilt), only if the task still has the `planned_at` that was read and is
+  still open (an edit or another plan in between wins).
+- **My day (`chat/day.ts`):** settles ended days as it reads the tasks, **at most 3 per plan**
+  (each rebuilds search text, which costs CPU time; the rest are planned as of now and written by
+  a later plan). A task with a time on another day is left out of the plan (**the later-day bug**),
+  unless its day ended and it was left open: then it is in `tasks_not_placed` with `left_from`
+  and `planned_time` ("15:00"). A left-open task is listed whatever its due date. The log line
+  counts `settled` and `settle_failures` (counts only). Free accounts get no plan, so nothing is
+  written for them; `find_tasks` still shows their tasks as of now.
+- **`find_tasks`:** shows each task as of now (done, or moved) and **writes nothing**: it is marked
+  read-only, which lets the Claude app run it without asking, so it stays that way. My day writes.
+- **The chat:** `planForModel` already lists only chosen fields, so `left_from` and `planned_time`
+  never reach the model; Wilma's instructions and tool descriptions are unchanged, so no
+  evaluation run. One small visible difference: a task-field error now lists `day_end` among the
+  known fields.
+- **Not done:** search chunks past the first 4 of a long task stay pending until the next
+  background embedding (task notes are short; the deploy step needs nothing for it).
+- **Tests:** `tests/deno/day_end_test.ts` (10: the field's rules, reopening, `atDayEnd` each way and
+  without a time zone, My day writing once with a revision, the limit of 3, yesterday's own plan
+  and an earlier day, a restricted space's task never touched, the model's plan without the new
+  fields, `find_tasks` writing nothing). The later-day tests fail without the fix. 460 Deno tests.
+- **Deploy (owner's OK):** `mcp` and `chat` from main after merging (`chat` bundles the task code).
