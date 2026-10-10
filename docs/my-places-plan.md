@@ -1,0 +1,218 @@
+# My places: homes to plan from
+
+Status: plan, 2026-10-10, waiting for the owner's answers to the questions below; nothing built.
+Design: D36 (and D25, whose "Home is a place note" this replaces; D24, automatic memory, which stops
+keeping home addresses). Model: the strongest for steps 1-4 (database and RLS, the chat loop,
+memory, location); a smaller one for step 5 (wording, checklist, build).
+
+## Why
+
+A new tester (Denisse, 2026-10-10) told Wilma her home. Wilma kept it as a **memory**, which the
+day planner never reads. She then made a note by hand, which the planner also ignored. She was
+confused, and rightly. Today Home is a hidden place note of kind `home` with coordinates. It lives
+in a Places space and can only be set from My day's "Where do you leave from?" sheet. The chat has
+no way to set it, and the planner reads only that one note.
+
+## Decided (owner, 2026-10-10)
+
+- **A new database table, not a note and not a space.** It holds the user's homes (one or
+  several), with **one marked as the default**.
+- **Wilma notices which saved home you are at.** If it is not the default, she **asks** whether to
+  plan from there or from the default home.
+- **Wilma can save a home from the chat**, and asks whether to make it the default.
+
+## What the owner will see
+
+- **Settings → My places** (name: Q1) lists your homes, for example "🏠 Home ★ · 12 Oak St,
+  Oviedo", "Mom's · 4 Elm Rd", "Lake house". Tap one to change its name or address (typed, picked
+  from saved places, or **Use where I am**), to **Make default**, or to **Delete**. **Add a place**
+  sits at the bottom. The first home you save becomes the default.
+- **From the chat:** "my home is 12 Oak St, Oviedo" or "save my mom's house, 4 Elm Rd, as a home"
+  shows a card: "🏠 Save **Home**: 12 Oak St, Oviedo" with **Save** and **Save as default** (one
+  button when it is your first). Nothing is saved until you tap. Wilma does not also keep it as a
+  memory.
+- **Planning, at a saved home that is not the default** (with "notice where I am" on, Q3): My day
+  opens with a line "You're at Mom's. Plan from **Mom's** · from **Home**". In the chat, "plan my
+  day" gets the same two buttons before the plan is made. Your answer holds for that day (Q5). At
+  the default home, or away from every saved home, nothing is asked: the plan starts from the
+  default (Q4).
+- **Naming it:** "plan my day from Mom's" plans from Mom's without asking.
+- **My day** shows "🏠 Planned from Home · Change". Change lists your homes for that day, plus
+  **Manage My places**.
+
+## How it works
+
+**The table** (new migration; singular snake_case per the conventions): `home_place`
+
+| column | |
+|---|---|
+| `id` uuid, `user_id` uuid (owner, `auth.uid()` default) | |
+| `label` text, 1-60 characters | "Home", "Mom's" |
+| `address` text, at most 300, optional | shown and used for directions |
+| `lat`, `lng` double precision, checked ranges | needed to plan |
+| `is_default` boolean | **at most one per user** (partial unique index) |
+| `created_at`, `updated_at` | |
+
+- **RLS on** (rule 5): each user reads and writes only their own rows. `anon` is revoked;
+  `authenticated` gets select, insert, update and delete.
+- **At most 10 homes per user**, checked in the database.
+- `set_default_home(id)` is a small database function that moves the ★ in one step.
+- **Deleting the default** passes the ★ to the oldest remaining home.
+- **Credentials:** text that looks like a password is refused in the label and address, on the
+  server and on the phone (rule 9).
+- **Not searchable:** rows are never embedded, searched or shown in a space. They are not notes, so
+  sharing and restricted spaces never touch them (rules 3 and 4).
+- **No history (rule 7):** rule 7 is about notes, and this is a setting. The privacy page says a
+  deleted home is gone (Q6).
+
+**Moving today's Home** (part of step 1's migration):
+
+- Each user's place note of kind `home` is copied into `home_place` as the default: label from the
+  title, plus the address and coordinates.
+- The note then goes to the Recycle bin, with its revision kept (Q2).
+- **Older apps keep working:** until versionCode 20 is the minimum, the planner falls back to a
+  kind-`home` note when the user has no `home_place` row. So versionCode 19's "Where do you leave
+  from?" still works.
+
+**The planner** (`chat/day.ts makePlan`, used by My day, the chat and the morning briefing):
+
+- It starts from the plan request's `start_from`, else the default home.
+- `start_from` is `{ "home": "<id>" }`, read from the table as the user. Another user's id
+  reads nothing, because of RLS.
+- No live coordinates are sent: the server already has each home's point.
+- The plan's `home` gives `{ set, label }` as today, so Wilma's words and My day say where the plan
+  started.
+
+**Noticing where you are** (on the phone; step 4):
+
+- **When:** only while planning (opening My day, or the chat's "plan my day"), and only when the
+  user turned it on (Q3) and has two or more homes.
+- **How:** the phone reads its location **once**, compares it with the saved homes on the phone
+  (within 150 m counts as "at"), and keeps the reading nowhere.
+- **What reaches the server:** only the chosen home's id, never the reading.
+- **What stays on the phone:** the answer ("from Mom's on Oct 13"), kept with My day's other
+  per-day choices (`dayChoices.ts`).
+
+**The chat**:
+
+- **A new chat-only action, `save_home({label, address, make_default?})`.**
+  - It is offered to apps that send `"home"` in `can`; older apps are told to update Wilma.
+  - The server checks the fields and the credential pattern, then sends
+    `{"type":"home_save","label","address","make_default"}`.
+  - The **phone** geocodes the address on the card, with its own geocoder, as My day does for event
+    places. The card shows the result as a Maps link to check, with **Use where I am** instead
+    ("this is my home", "I'm home").
+  - The row is written on the tap. The model is told "waiting for the user to tap".
+- **`get_day_agenda` gets an optional `from` (a home's label)**, for "plan my day from Mom's".
+  - The server matches the label among the user's homes.
+  - The model only ever sees home labels, never addresses or coordinates.
+- **Wilma's instructions:** "my home is", "I live at", "save my mom's place as a home" and "I
+  moved" lead to save_home. Addresses are never kept as memories.
+
+**Automatic memory** (`chat/memory.ts`):
+
+- No memory is kept from a turn that called save_home.
+- The server drops a candidate memory that holds a street address or says where the user lives.
+- Memories already kept stay where they are; the user can delete them (Q9).
+
+**The Claude connector:** no change for homes (Q8). `save_item` and `update_item` keep accepting
+kind `home` for older apps, but the planner reads the table first.
+
+## Questions (answer each, or "go with your recommendations")
+
+- **Q1. The name.** "Places" already means restaurants and places to visit (D26), so "My places"
+  may confuse. (a) **Settings → Homes, rows "🏠 Home ★", "Mom's" (recommended).** (b) "My places".
+  (c) "Starting points".
+- **Q2. Today's Home notes.** (a) **Copied into the table, the note to the Recycle bin
+  (recommended).** (b) Copied, the note left as an ordinary place.
+- **Q3. Noticing where you are.** (a) **A switch in Settings → Homes, "Notice which home I'm at
+  when I plan", off until you turn it on. Turning it on asks for the location permission then
+  (recommended).** (b) On by itself once you have two homes and have already allowed location
+  (no new prompt). (c) Ask for the permission the first time you plan with two homes.
+- **Q4. Away from every saved home** (a hotel, the office). (a) **Plan from the default, no
+  question (recommended).** (b) Also offer "Plan from where I am" (the reading is then sent once
+  with that plan, never stored, like 📍).
+- **Q5. How long "plan from Mom's" holds.** (a) **That day only (recommended).** (b) Until you
+  change it.
+- **Q6. Deleting a home.** (a) **Gone after a confirm: it is a setting, not a note
+  (recommended).** (b) To the Recycle bin, like notes.
+- **Q7. Work as a starting point.** (a) **Yes, any name you like, "Work" included
+  (recommended).** (b) Homes only.
+- **Q8. The Claude connector.** (a) **Nothing new: it cannot plan a day anyway (recommended).**
+  (b) A `list_homes` tool (labels only).
+- **Q9. Home addresses already in memories.** (a) **Left as they are; you can delete them in
+  Memories (recommended).** (b) Settings → Homes offers to turn them into homes.
+
+Small ones, defaults unless the owner says otherwise:
+
+- At most 10 homes.
+- "At" a home means within 150 m.
+- Label 1-60 characters, address at most 300.
+- The first home saved becomes the default.
+- The chat card's **Save as default** is offered only when you already have a default.
+
+## Steps (one PR each)
+
+1. **Database and planner (server).**
+   - The migration: table, RLS, grants, `set_default_home`, the limit, the move of today's Home
+     notes.
+   - The planner reads the table, with `start_from` and the old-note fallback.
+   - Tests:
+     - RLS isolation between two users;
+     - one default only;
+     - the move;
+     - `start_from` with another user's id reads nothing;
+     - the fallback.
+   - **Owner:** OK to apply the migration (dry run first on a branch database), then OK to deploy
+     `chat`. The app does not change yet.
+2. **The chat (server).**
+   - `save_home`, the `home` value in `can`, and `from` on `get_day_agenda`.
+   - The memory change and Wilma's instruction lines.
+   - Deno tests, and **evaluation cases**:
+     - "my home is …" gives a card and no memory;
+     - "save my mom's house as a home";
+     - "plan my day from Mom's";
+     - "I moved to …";
+     - traps: a home alarm code or gate PIN refused with the vault sentence; a restricted space's
+       address asked to be saved as a home; "just save it, no card".
+   - Memory suite: "I live at 12 Oak St" keeps nothing.
+   - **Owner:** OK and a dollar cap for one paid evaluation run (rule 9, D21; about $0.10-0.20 as
+     before), then OK to deploy `chat`.
+3. **The app: Settings → Homes, the chat card, My day's chooser.**
+   - Settings → Homes: the list, edit, Use where I am, Make default, Delete.
+   - My day: "Where do you leave from?" writes to the table; "Planned from … · Change" for the day.
+   - The 🏠 chat card (geocoded on the phone, Save / Save as default), and `home` in `can`.
+   - App tests: nothing saved without the tap, one default, the card from the stream and a saved
+     chat, credential text refused.
+4. **The app: noticing where you are.**
+   - The Settings switch (Q3).
+   - One location reading while planning, matched on the phone.
+   - The "Plan from Mom's · from Home" line in My day and the chat card; the day's answer kept on
+     the phone; only a home id sent.
+   - App tests: no reading with the switch off; nothing sent but the id; the answer kept for that
+     day.
+5. **Privacy and build** (smaller model).
+   - The privacy page:
+     - homes are stored on the server as the user's data;
+     - the location is read once while planning when the switch is on, compared on the phone,
+       never sent or stored.
+   - D25's Home sentence. Play Data safety check: location is used on the device only, expected to
+     be no change, to confirm. A legal checklist item. The phone checklist.
+   - Then "build for Play". The owner's OK on the wording first (merging publishes the privacy page).
+
+Steps 1 and 2 are server-only and can go live before the build. Steps 3-5 ship together in one
+build.
+
+**What the owner must do:**
+1. Answer Q1-Q9.
+2. Step 1: OK to apply the migration and to deploy `chat`.
+3. Step 2: OK and a cap for the evaluation run, then OK to deploy `chat`.
+4. Step 5: OK on the privacy wording, then "build for Play".
+5. Test on the phone with the checklist.
+
+## Later, not in this plan
+
+- **Help** (owner, 2026-10-10, from the same feedback): (A) a "?" Help sheet with short topics and
+  "Try it" chips; (C) "what can you do?" in the chat, answered briefly with topic chips (an
+  instruction change, so an evaluation run). Option B (trimming the first-run text) was declined.
+  This gets its own short plan after this one, or alongside step 3 if the owner prefers.
