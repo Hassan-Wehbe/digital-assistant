@@ -54,6 +54,7 @@ today's plan as "Not placed yet".
 - Q3 Wilma does not ask in the chat (no change to her instructions or tool descriptions, so no
   evaluation run; rule 9 / D21).
 - Q4 Built before alarms and calendar entries.
+- Q5 (owner, 2026-10-10, after step 2): Wilma does not set or ask about the choice in the chat, not later either; it is set on the task screen and in My day, and My day asks the next day. Do not propose it again.
 
 ## How it works
 
