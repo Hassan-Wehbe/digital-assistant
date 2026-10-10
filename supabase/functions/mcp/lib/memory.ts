@@ -8,7 +8,7 @@
 //   * a changed fact updates the older memory, whose old text goes to item_revision (rule 7).
 // Step 2 (noticing in the chat, chat/memory.ts) calls saveMemory when the user has memory on.
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { rejectCredentials } from "./credentials.ts";
+import { findCredential, rejectCredentials } from "./credentials.ts";
 import { chunkAndEmbed } from "./embed.ts";
 import { loadSpaces, type Space } from "./spaces.ts";
 
@@ -126,4 +126,33 @@ export async function saveMemory(db: SupabaseClient, input: MemoryInput, assista
   });
   if (error) throw new Error(`Could not save the memory: ${error.message}`);
   return { saved: "new", id: String(data), fact };
+}
+
+/** Memories in each chat turn's "About the user" block (Q6), and at most this many characters. */
+export const MAX_ABOUT = 30;
+export const MAX_ABOUT_CHARS = 3_000;
+
+/**
+ * The newest memories for the chat's "About the user" block (step 4): titles only, newest first,
+ * none when memory is off or anything cannot be read. Only the built-in Memories space (never a
+ * restricted one, rule 3); anything that looks like a credential is left out, whoever wrote it
+ * (rule 1: a memory edited by hand went through update_item's check, this is the second one).
+ */
+export async function memoriesForPrompt(db: SupabaseClient, userId: string): Promise<string[]> {
+  try {
+    if (!(await memoryOn(db, userId))) return [];
+    const memories = await listMemories(db, memoriesSpace(await loadSpaces(db)));
+    const out: string[] = [];
+    let chars = 0;
+    for (const m of memories) {
+      const title = m.title.replace(/\s+/g, " ").trim().slice(0, MAX_MEMORY_CHARS);
+      if (!title || findCredential(title)) continue;
+      if (out.length >= MAX_ABOUT || chars + title.length > MAX_ABOUT_CHARS) break;
+      out.push(title);
+      chars += title.length;
+    }
+    return out;
+  } catch {
+    return [];
+  }
 }

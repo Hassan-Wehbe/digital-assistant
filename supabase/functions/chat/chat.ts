@@ -46,6 +46,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { type SharedPoint, systemPrompt } from "../_shared/assistant_prompt.ts";
 import { type Llm, LlmError, type Message, QUOTA_EXCEEDED, RoutesConfigError, type ToolResult } from "../_shared/llm/index.ts";
 import { loadUserSettings } from "../mcp/lib/assistant.ts";
+import { memoriesForPrompt } from "../mcp/lib/memory.ts";
 import { type CredentialKind, findCredential } from "../mcp/lib/credentials.ts";
 import { classify, classifyBody, type ClassifyLog } from "./classify.ts";
 import { ACTION_NAMES, ACTION_SPECS, ChatActions } from "./actions.ts";
@@ -394,8 +395,13 @@ async function runChat(
     const settings = await loadUserSettings(db, userId);
     assistantName = settings.assistantName;
     const distanceUnit = settings.distanceUnit;
-    tools = await connectTools({ db, userId, accessToken: token, assistantName, distanceUnit, timeZone: tz });
-    const system = systemPrompt(assistantName, tools.instructions, new Date(), here, tz);
+    // What Wilma remembered (memory on), read while the tools connect.
+    const [connected, about] = await Promise.all([
+      connectTools({ db, userId, accessToken: token, assistantName, distanceUnit, timeZone: tz }),
+      memoriesForPrompt(db, userId),
+    ]);
+    tools = connected;
+    const system = systemPrompt(assistantName, tools.instructions, new Date(), here, tz, about);
     // The MCP tools plus the chat-only actions (never offered to the Claude connector).
     const specs = [...tools.specs, ...ACTION_SPECS];
     const actions = new ChatActions({ db, distanceUnit, here });

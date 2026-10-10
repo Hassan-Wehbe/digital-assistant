@@ -23,6 +23,7 @@ import {
 } from "../../supabase/functions/_shared/llm/index.ts";
 import { World } from "./world.ts";
 import { type SharedPoint, systemPrompt } from "../../supabase/functions/_shared/assistant_prompt.ts";
+import { memoriesForPrompt } from "../../supabase/functions/mcp/lib/memory.ts";
 
 export { ALL_TOOLS };
 
@@ -96,13 +97,14 @@ export async function openSession(world = new World(), here?: SharedPoint, timeZ
     distanceUnit: world.distanceUnit, timeZone,
     log: () => {}, // the pretend account's tool log lines would only clutter the run's output
   };
-  const tools = await connectTools(ctx, "eval");
+  const [tools, about] = await Promise.all([connectTools(ctx, "eval"), memoriesForPrompt(ctx.db, ctx.userId)]);
   return {
     world,
     // As the chat function: the MCP tools plus the chat-only actions.
     tools: [...tools.specs, ...ACTION_SPECS],
     // `here`: the 📍 location the chat function adds to a message's instructions (places step 7).
-    system: systemPrompt(ctx.assistantName, tools.instructions, new Date(), here, timeZone),
+    // With memory on (a case's setup), the "About the user" block, as the chat function adds it.
+    system: systemPrompt(ctx.assistantName, tools.instructions, new Date(), here, timeZone, about),
     call: tools.call,
     actions: () => new ChatActions({ db: ctx.db, distanceUnit: ctx.distanceUnit ?? "mi", here }),
     close: tools.close,
