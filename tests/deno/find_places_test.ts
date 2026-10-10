@@ -376,3 +376,36 @@ Deno.test("find_places: a place saved without a kind is not ruled out by a kind 
   const cafes = await call(w.client(), { ...TAWLET, kind: "cafe" });
   assert(!titles(cafes.json.results).includes("Tawlet"));
 });
+
+// Owner, versionCode 13, the other half: shared from Google Maps, the pizza place had neither a kind
+// nor a cuisine, so "pizza near me" still offered Hinode and Lemongrass. Its name says pizza.
+Deno.test("find_places: a cuisine filter finds a place whose name or dishes say it, and says so", async () => {
+  const w = new World();
+  const tawlet = w.items.find((i) => i.title === "Tawlet")!;
+  w.items.push(
+    {
+      ...structuredClone(tawlet), id: "00000000-0000-4000-8000-0000000000da", title: "Pizza Napoli",
+      metadata: { status: "want", lat: 33.8962, lng: 35.5252 },
+    },
+    {
+      ...structuredClone(tawlet), id: "00000000-0000-4000-8000-0000000000db", title: "Chez Sami",
+      metadata: { status: "been", dishes_liked: ["margherita pizza"], lat: 33.8963, lng: 35.5253 },
+    },
+    // "Pizzazz" is not pizza: whole words only.
+    {
+      ...structuredClone(tawlet), id: "00000000-0000-4000-8000-0000000000dc", title: "Pizzazz Bar",
+      metadata: { status: "want", lat: 33.8964, lng: 35.5254 },
+    },
+  );
+  const out = await call(w.client(), { ...TAWLET, kind: "restaurant", cuisine: "Pizza" });
+  assertEquals(out.isError, false, out.text);
+  assertEquals(titles(out.json.results).sort(), ["Chez Sami", "Pizza Napoli"]);
+  for (const r of out.json.results) assertEquals(r.cuisine_not_saved, true, r.title);
+  assertEquals(out.json.other_nearby, undefined);
+  // A place whose saved cuisine says it carries no flag.
+  const italian = await call(w.client(), { ...TAWLET, cuisine: "italian" });
+  assertEquals(italian.json.results[0].cuisine_not_saved, undefined);
+  // A name that does not say it is still left out.
+  const sushi = await call(w.client(), { ...TAWLET, cuisine: "sushi" });
+  assert(!titles(sushi.json.results).includes("Pizza Napoli"));
+});

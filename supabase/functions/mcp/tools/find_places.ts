@@ -218,19 +218,33 @@ export const registerFindPlaces: RegisterTool = (server, { db, assistantName, di
 
         const pathOf = new Map(spaces.map((s) => [s.id, s.path]));
         const list = (v: unknown) => (Array.isArray(v) ? v.map((x) => String(x).toLowerCase()) : []);
+        /** The words of a text, lower case, separated by single spaces and padded: " pizza napoli ". */
+        const words = (t: string) => ` ${t.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim()} `;
+        /**
+         * The cuisine is not saved, but the place's name or a dish liked says it: "Pizza Napoli" for
+         * cuisine pizza (shared from Google Maps, places often have neither kind nor cuisine).
+         */
+        const cuisineByName = (r: PlaceRow): boolean => {
+          if (!wanted.cuisine) return false;
+          const c = words(wanted.cuisine[0]);
+          return [r.title, ...list(r.metadata?.dishes_liked)].some((t) => words(t).includes(c));
+        };
         /** The filters a place does not meet, as the user would read them ("cuisine sushi"). */
-        const misses = (m: Record<string, unknown>): string[] => {
+        const misses = (r: PlaceRow): string[] => {
+          const m = r.metadata ?? {};
           const out: string[] = [];
           // A place saved without a kind (shared from Google Maps, often) is not ruled out by a kind
           // filter: it may well be one ("pizza restaurants" must find the pizza place); it says so.
           if (wanted.kind && m.kind && m.kind !== wanted.kind) out.push(`kind ${wanted.kind}`);
           if (status && (m.status ?? "want") !== status) out.push(`status ${status}`);
-          if (wanted.cuisine && !list(m.cuisine).includes(wanted.cuisine[0])) out.push(`cuisine ${wanted.cuisine[0]}`);
+          if (wanted.cuisine && !list(m.cuisine).includes(wanted.cuisine[0]) && !cuisineByName(r)) {
+            out.push(`cuisine ${wanted.cuisine[0]}`);
+          }
           if (wanted.occasions && !list(m.occasions).includes(wanted.occasions[0])) out.push(`occasion ${wanted.occasions[0]}`);
           return out;
         };
         const inScope = rows.filter((r) => r.id !== anchorId && (!scope || scope.has(r.space_id)));
-        const matching = inScope.filter((r) => !misses(r.metadata ?? {}).length);
+        const matching = inScope.filter((r) => !misses(r).length);
 
         const located: { row: PlaceRow; km: number }[] = [];
         const unlocated: PlaceRow[] = [];
@@ -249,6 +263,9 @@ export const registerFindPlaces: RegisterTool = (server, { db, assistantName, di
           unit,
           place: row.metadata,
           ...(wanted.kind && !row.metadata?.kind ? { kind_not_saved: true } : {}),
+          ...(wanted.cuisine && !list(row.metadata?.cuisine).includes(wanted.cuisine[0]) && cuisineByName(row)
+            ? { cuisine_not_saved: true }
+            : {}),
         });
 
         // Forgiving filters: when they leave nothing nearby, the nearby places they ruled out still
@@ -257,7 +274,7 @@ export const registerFindPlaces: RegisterTool = (server, { db, assistantName, di
         const otherNearby: { row: PlaceRow; km: number; not: string[] }[] = [];
         if (!inside.length) {
           for (const row of inScope) {
-            const not = misses(row.metadata ?? {});
+            const not = misses(row);
             const p = placePoint(row.metadata);
             if (!not.length || !p) continue;
             const km = distanceKm(origin, p);
