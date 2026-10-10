@@ -13,7 +13,7 @@ tokens or keys in chat.
 
 **Newest first (2026-10-07):**
 - **Day planner step 4, morning briefing (owner, 2026-10-10): plan merged (#189,
-  `docs/phase6-day-planner-step4-plan.md`); step 1 on branch `claude/briefing-step1`, not merged.**
+  `docs/phase6-day-planner-step4-plan.md`); step 1 merged (#190); step 2 on a branch.**
   Owner's answers: the phone schedules local notifications (no server push, no Firebase, no
   background task), a short morning summary from the evening's plan, event title and time on the
   lock screen, and every part a setting (briefing Off / In Wilma only / In Wilma and as a
@@ -26,8 +26,11 @@ tokens or keys in chat.
   `lib/notifications.ts` (keeps mornings in step, cancels leave-by alerts when off, cancels every
   other account's on sign-in and all on sign-out or delete; a tap opens only My day, only for its
   account), `lib/deviceNotifier.ts`. The mornings are topped up on each app start. 707 app tests
-  (21 new); `expo export --platform android` bundles. **Next:** step 2 (My day schedules the leave-by
-  alerts and the morning summary), step 3 (Your morning card on Home), step 4 (calendar permission
+  (21 new); `expo export --platform android` bundles. **Merged (#190).** **Step 2 (branch
+  `claude/briefing-step2`):** each new plan in My day replaces that day's leave-by alerts
+  (`scheduleForPlan`) and, with the briefing sent as a notification, that morning's greeting by the
+  day's summary ("From yesterday’s plan: …", or "From your plan at 6:05 am: …" the same morning);
+  the start-up top-up keeps it. 714 app tests (7 new). **Next:** step 3 (Your morning card on Home), step 4 (calendar permission
   text, privacy wording for the owner's OK, `docs/versioncode18-phone-checklist.md`, versionCode 18).
   Nothing ships until the build.
 - **Places: a cuisine filter matches the name or dishes (2026-10-10): #188 merged (squash, 219ed24)

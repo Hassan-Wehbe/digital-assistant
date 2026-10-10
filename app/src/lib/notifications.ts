@@ -5,7 +5,8 @@
 // Every Wilma notification has an id "wilma.<date>.<kind>[.<n>]" and carries the account it was
 // made for: on sign-out (and when another account signs in) every other account's are cancelled.
 import type { BriefingSettings } from './briefingSettings';
-import { mornings, type DayNote } from './dayAlerts';
+import { leaveAlerts, morningSummary, mornings, type DayNote } from './dayAlerts';
+import type { DayPlan } from './dayPlan';
 
 export type Permission = 'granted' | 'denied' | 'undetermined';
 
@@ -52,6 +53,27 @@ export async function syncMornings(n: Notifier, userId: string, s: BriefingSetti
     await cancelAll(n, existing.filter((x) => !keep.has(x.id)).map((x) => x.id));
     if (wanted.size && (await n.permission()) !== 'granted') return false;
     for (const [id, note] of wanted) if (!keep.has(id)) await n.schedule(note, userId);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * A new plan (My day, today or tomorrow): that day's leave-by alerts are replaced by the plan's,
+ * and, with the briefing sent as a notification, that morning's greeting by the day's summary while
+ * the morning is still ahead. Nothing without Android's permission. False when it failed.
+ */
+export async function scheduleForPlan(n: Notifier, userId: string, plan: DayPlan, s: BriefingSettings, now: Date): Promise<boolean> {
+  try {
+    const leave = leaveAlerts(plan, s, now);
+    const morning = morningSummary(plan, s, now);
+    const day = `${PREFIX}${plan.date}.`;
+    const old = (await n.scheduled()).filter((x) => x.id.startsWith(day) && kindOf(x.id) === 'leave').map((x) => x.id);
+    await cancelAll(n, morning ? [...old, morning.id] : old);
+    if (!leave.length && !morning) return true;
+    if ((await n.permission()) !== 'granted') return false;
+    for (const note of morning ? [...leave, morning] : leave) await n.schedule(note, userId);
     return true;
   } catch {
     return false;

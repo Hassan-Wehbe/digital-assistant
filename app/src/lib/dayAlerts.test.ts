@@ -1,7 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 
 import { BRIEFING_OFF, type BriefingSettings } from './briefingSettings';
-import { leaveAlerts, localTime, MORNING_BODY, mornings, MORNINGS_AHEAD, summaryOf } from './dayAlerts';
+import { leaveAlerts, localTime, MORNING_BODY, morningSummary, mornings, MORNINGS_AHEAD, summaryOf } from './dayAlerts';
 import type { DayPlan } from './dayPlan';
 import { PLAN } from './dayPlan.fixture';
 
@@ -97,5 +97,32 @@ describe('the morning greetings', () => {
     expect(localTime('2026-10-09T16:10')).toEqual(new Date(2026, 9, 9, 16, 10));
     expect(localTime('2026-10-09')).toBeNull();
     expect(localTime('soon')).toBeNull();
+  });
+});
+
+describe('the morning’s summary from a plan made before it', () => {
+  const NOTIFY: BriefingSettings = { ...BRIEFING_OFF, briefing: 'notify', time: '07:30' };
+  const EVENING = new Date(2026, 9, 8, 21, 15); // the evening before Oct 9
+
+  it('planned the evening before: replaces that morning’s greeting', () => {
+    expect(morningSummary(plan(), NOTIFY, EVENING)).toEqual({
+      id: 'wilma.2026-10-09.morning',
+      at: new Date(2026, 9, 9, 7, 30),
+      title: 'Your day',
+      body: 'From yesterday’s plan: 3 things today. First: leave by 4:10 pm for Swim: Sara (15 min). Rain likely at 4:00 pm at Aquatic Center.',
+      url: '/day?date=2026-10-09',
+    });
+  });
+
+  it('planned the same morning before the briefing time says when', () => {
+    expect(morningSummary(plan(), NOTIFY, new Date(2026, 9, 9, 6, 5))?.body).toMatch(/^From your plan at 6:05 am: 3 things today\./);
+  });
+
+  it('none after the briefing time, for a day further ahead, or unless sent as a notification', () => {
+    expect(morningSummary(plan(), NOTIFY, MORNING)).toEqual(expect.objectContaining({ id: 'wilma.2026-10-09.morning' }));
+    expect(morningSummary(plan(), NOTIFY, new Date(2026, 9, 9, 7, 30))).toBeNull();
+    expect(morningSummary(plan(), NOTIFY, new Date(2026, 9, 7, 21, 0))).toBeNull();
+    expect(morningSummary(plan(), { ...NOTIFY, briefing: 'app' }, EVENING)).toBeNull();
+    expect(morningSummary(plan(), BRIEFING_OFF, EVENING)).toBeNull();
   });
 });
