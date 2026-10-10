@@ -5,7 +5,7 @@ import { toDayPlan, type DayDriveRow } from './dayPlan';
 import { PLAN } from './dayPlan.fixture';
 import {
   alertText, clock, dayChips, dayNotes, dayTitle, directionsLink, driveText, eventDetail, eventLine, freeText, minutesText, overlapText,
-  range, rainText, titles, todayAndTomorrow,
+  range, rainText, titles, todayAndTomorrow, MAX_DAYS_AHEAD, openingDay,
 } from './dayView';
 
 const plan = toDayPlan(PLAN)!;
@@ -80,5 +80,24 @@ describe('one event', () => {
   it('opens directions in the maps app, to a point or to the place’s words', () => {
     expect(directionsLink({ lat: 28.6, lng: -81.2 })).toBe('https://www.google.com/maps/dir/?api=1&destination=28.6,-81.2&travelmode=driving');
     expect(directionsLink('Aquatic Center, Oviedo')).toBe('https://www.google.com/maps/dir/?api=1&destination=Aquatic%20Center%2C%20Oviedo&travelmode=driving');
+  });
+});
+
+describe('the day My day opens on', () => {
+  // 2026-10-10, a Saturday, 9:00 am on this phone.
+  const NOW = new Date(2026, 9, 10, 9, 0);
+
+  it('any day from today on, as "Open my day" from the chat asks (not only today or tomorrow)', () => {
+    expect(openingDay('2026-10-13', NOW)).toBe('2026-10-13');
+    expect(openingDay('2026-10-11', NOW)).toBe('2026-10-11');
+    expect(openingDay('2026-10-10', NOW)).toBe('2026-10-10');
+    expect(openingDay('2027-10-11', NOW)).toBe('2027-10-11');
+  });
+
+  it('today for no day, a past day, one too far ahead, or one that is not a day', () => {
+    for (const bad of [undefined, '', '2026-10-09', '2027-10-12', '2026-02-30', 'tuesday', '2026-10-13T09:00']) {
+      expect(openingDay(bad, NOW)).toBe('2026-10-10');
+    }
+    expect(MAX_DAYS_AHEAD).toBe(366);
   });
 });

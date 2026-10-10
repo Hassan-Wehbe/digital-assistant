@@ -13,9 +13,10 @@
 // Event places are found on the phone (dayAgenda.ts): the user's answer for that title, else the
 // phone's geocoder on the location text, only when the location permission is already given.
 // Titles never go to Mapbox or the Weather Service (the server sends them only points and times).
+import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Linking, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 
 import { AddTaskSheet, type NewDayTask, type SheetStep } from '@/components/AddTaskSheet';
 import { DayEventDetail } from '@/components/DayEventDetail';
@@ -35,7 +36,7 @@ import {
 import type { DayEventRow, DayPlan, DayRow, NotPlacedTask, TaskOption } from '@/lib/dayPlan';
 import {
   alertText, clock, dayChips, dayNotes, dayTitle, directionsLink, driveText, eventLine, freeText, minutesText, overlapText,
-  leftOpenHeading, leftOpenWhen, rainText, rowTime, splitNotPlaced, titles, todayAndTomorrow,
+  leftOpenHeading, leftOpenWhen, rainText, rowTime, splitNotPlaced, MAX_DAYS_AHEAD, openingDay, titles, todayAndTomorrow,
 } from '@/lib/dayView';
 import { deviceNotifier } from '@/lib/deviceNotifier';
 import { deviceDayMemory, deviceSettingsStore } from '@/lib/deviceStorage';
@@ -45,7 +46,7 @@ import { deviceGeocoder } from '@/lib/location';
 import { LOOKS_LIKE_SECRET, editError } from '@/lib/noteEdit';
 import { scheduleForPlan } from '@/lib/notifications';
 import { needsPro } from '@/lib/pro';
-import { addDays, addToDay, EMPTY_TASK, plannedAt, shortDay, taskMetadata, type TaskDayEnd, type TaskMetadata, withTime } from '@/lib/tasks';
+import { addDays, addToDay, EMPTY_TASK, localParts, plannedAt, shortDay, taskMetadata, type TaskDayEnd, type TaskMetadata, withTime } from '@/lib/tasks';
 import { WilmaError } from '@/lib/wilma';
 
 type Screen =
@@ -65,7 +66,8 @@ export default function MyDay() {
   const pro = useProPlan();
   const params = useLocalSearchParams<{ date?: string }>();
   const [days] = useState(() => todayAndTomorrow(new Date()));
-  const [date, setDate] = useState(params.date === days.tomorrow ? days.tomorrow : days.today);
+  // Any day from today on ("Open my day" for Tuesday the 13th opens Tuesday, not today).
+  const [date, setDate] = useState(() => openingDay(params.date, new Date()));
 
   const [screen, setScreen] = useState<Screen>({ step: 'loading' });
   // In memory only (see the top of the file).
@@ -638,6 +640,20 @@ export default function MyDay() {
               <Text style={{ color: d === date ? '#ffffff' : c.accent, fontSize: 14, fontWeight: '600' }}>{label}</Text>
             </Pressable>
           ))}
+          {Platform.OS === 'android' ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Pick a day"
+              onPress={() => pickDay(date, days.today, switchDay)}
+              style={{
+                borderRadius: 999, paddingVertical: space.xs, paddingHorizontal: space.m,
+                backgroundColor: date !== days.today && date !== days.tomorrow ? c.accent : c.tint,
+              }}>
+              <Text style={{ color: date !== days.today && date !== days.tomorrow ? '#ffffff' : c.accent, fontSize: 14, fontWeight: '600' }}>
+                {date !== days.today && date !== days.tomorrow ? `📅 ${shortDay(date, days.today)}` : '📅 Pick a day'}
+              </Text>
+            </Pressable>
+          ) : null}
           <View style={{ flex: 1 }} />
           {busy && screen.step === 'plan' ? <Muted>Updating…</Muted> : null}
           {pro === 'pro' ? <Badge text="PRO" /> : null}
@@ -651,6 +667,21 @@ export default function MyDay() {
       </ScrollView>
     </View>
   );
+}
+
+/** The phone's own calendar picker, from today up to MAX_DAYS_AHEAD; `onPick` gets the day chosen (not on Cancel). */
+function pickDay(current: string, today: string, onPick: (day: string) => void) {
+  const [y, m, d] = current.split('-').map(Number);
+  const [ty, tm, td] = today.split('-').map(Number);
+  DateTimePickerAndroid.open({
+    mode: 'date',
+    value: new Date(y, m - 1, d),
+    minimumDate: new Date(ty, tm - 1, td),
+    maximumDate: new Date(ty, tm - 1, td + MAX_DAYS_AHEAD),
+    onValueChange: (_event, picked) => {
+      if (picked) onPick(localParts(picked).day);
+    },
+  });
 }
 
 /** Above the fair-use limit (30 plans a day, Q11). */
