@@ -12,8 +12,11 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **Automatic memory step 2, noticing in the chat (2026-10-10): branch `claude/memory-step2`, not
-  merged, not deployed.** Server only (`chat`). `chat/memory.ts`: after `done`, with memory on, one
+- **Automatic memory step 2, noticing in the chat (2026-10-10): #198 merged (squash, 62ce384) and
+  live: `chat` version 27** (deploy chat run 38063457900, owner's OK; 401 checks passed). Memory is
+  off for every account until step 3's switch. `mcp` stays at version 30: the Claude connector
+  still gets the database's own refusal for a built-in space, not step 1's friendlier wording,
+  until the next `mcp` deploy. Server only (`chat`). `chat/memory.ts`: after `done`, with memory on, one
   small call on the new optional `memory` route (falls back to `router`, so `LLM_ROUTES` needs no
   change) reads the newest message plus up to two before it and names at most 3 facts as JSON; the
   server drops anything credential- or value-like, with vault words, not the user's own words, or
@@ -25,8 +28,7 @@ tokens or keys in chat.
   60d105d, Luna on the memory route (no `memory` route set, so the router model): 23/23, 0 leaks,
   keep 7/7, skip 5/5, traps 11/11 (6 stopped by the server before the model), $0.0011 in total.**
   Wording note: Luna sometimes writes facts in the first person ("I am allergic to shellfish");
-  harmless, a prompt tweak can come with step 4. **Next (owner):** review and merge; then OK the
-  `chat` deploy. Then step 3 (app).
+  harmless, a prompt tweak can come with step 4. **Next:** step 3 (app; strongest model).
 - **Automatic memory step 1 (2026-10-10): migration applied (owner's dry run 29/29 ok; applied by
   Claude through the Supabase connector at the owner's request, in one transaction; checked
   read-only: 2 accounts, each with one built-in Tasks (the existing one, with its tasks) and one
