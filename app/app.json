@@ -101,7 +101,7 @@
       [
         "expo-calendar",
         {
-          "calendarPermission": "Wilma reads the calendars you choose, only when you ask about your day, to answer and plan. Nothing is stored.",
+          "calendarPermission": "Wilma reads the calendars you choose, only when you ask about your day or open your morning briefing, to answer and plan. Nothing is stored on Wilma's servers.",
           "remindersPermission": false
         }
       ],

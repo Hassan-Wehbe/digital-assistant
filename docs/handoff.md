@@ -13,7 +13,7 @@ tokens or keys in chat.
 
 **Newest first (2026-10-07):**
 - **Day planner step 4, morning briefing (owner, 2026-10-10): plan merged (#189,
-  `docs/phase6-day-planner-step4-plan.md`); step 1 merged (#190, #191); step 3 on a branch.**
+  `docs/phase6-day-planner-step4-plan.md`); step 1 merged (#190, #191, #192); step 4 (wording) waits for the owner.**
   Owner's answers: the phone schedules local notifications (no server push, no Firebase, no
   background task), a short morning summary from the evening's plan, event title and time on the
   lock screen, and every part a setting (briefing Off / In Wilma only / In Wilma and as a
@@ -38,7 +38,15 @@ tokens or keys in chat.
   once a day (the phone keeps only the dates made and hidden, per account; the summary stays in
   memory); pull to refresh makes it again; made earlier and Wilma restarted: "Show it again".
   Briefing off: the calendar is never read and no plan is asked for. Calendar off: a line pointing
-  to Settings → Calendars, no plan asked for. 720 app tests (6 new). **Next:** step 4 (Your morning card on Home), step 4 (calendar permission
+  to Settings → Calendars, no plan asked for. 720 app tests (6 new). **Step 4 (branch
+  `claude/briefing-step4`, needs the owner's OK on the wording before merging, since merging
+  publishes the privacy page):** privacy page "Morning briefing and leave-by alerts" paragraph and
+  the calendar paragraph's "or, with the briefing on, when you open Wilma after your briefing time";
+  the Android calendar permission text ("…when you ask about your day or open your morning
+  briefing… Nothing is stored on Wilma's servers.") and the same line in Settings → Calendars;
+  `docs/versioncode18-phone-checklist.md`; a legal-review item on Mapbox's terms (a leave-by time
+  waits in the phone's notification schedule up to a day). Play Data safety: no change. **Then:**
+  "build for Play" (versionCode 18). Earlier note, superseded: step 4 (Your morning card on Home), step 4 (calendar permission
   text, privacy wording for the owner's OK, `docs/versioncode18-phone-checklist.md`, versionCode 18).
   Nothing ships until the build.
 - **Places: a cuisine filter matches the name or dishes (2026-10-10): #188 merged (squash, 219ed24)
