@@ -15,8 +15,9 @@ tokens or keys in chat.
 - **Alarms step 1, server (2026-10-10): branch `claude/alarms-calendar`, not merged, not deployed.**
   Five chat-only actions (`chat/phone_actions.ts`): set_alarm, show_alarms, set_reminder,
   find_reminders, add_calendar_event; each sends a card to confirm, credentials refused; old apps
-  get "update Wilma". Wilma's chat instructions changed, so **a paid evaluation run is needed first
-  (owner's OK and cap)**: 15 new cases (131). 468 Deno tests. Details: `docs/alarms-calendar-plan.md`
+  get "update Wilma". **Evaluation (owner's OK, $1 cap): final run 38083418773, 131/131, 0 leaks,
+  0 unsafe, $0.07** (the paragraph was moved before the day-planning one after a first run showed
+  plan-when-to-leave slipping; about $0.17 in all). 15 new cases (131). 468 Deno tests. Details: `docs/alarms-calendar-plan.md`
   "As built: step 1". **Then:** merge, deploy `chat`; step 2, the app's alarm and reminder cards.
 - **Tasks left open (D35): both steps merged (#204 server, #205 app, squash) and the server live:
   `mcp` version 33, `chat` version 30** (deploy chat runs 38079300466 and 38079301868, owner's
