@@ -1,12 +1,13 @@
 // Settings (docs/ui-review.md, plan step 2): what used to fill the bottom of the home screen.
 // This month's AI allowance in full (D28), distances in miles or km (places Q14), the phone's
+// Theme (light, dark or the phone's), the
 // calendars Wilma may read (day planner step 1, app/calendars.tsx), the morning briefing and
 // leave-by alerts (day planner step 4, app/briefing.tsx), the account,
 // the recycle bin, deleting the account (D29, app/delete-account.tsx), sign out, the version.
 import * as Application from 'expo-application';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Text } from 'react-native';
+import { Appearance, Platform, ScrollView, Text } from 'react-native';
 
 import { UsageMeter } from '@/components/UsageMeter';
 import { Button, Card, GroupList, GroupRow, Muted, space, styles, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
@@ -16,6 +17,7 @@ import { loadChoice } from '@/lib/calendarSettings';
 import { versionLabel } from '@/lib/config';
 import { deviceSettingsStore } from '@/lib/deviceStorage';
 import { supabase } from '@/lib/supabase';
+import { applyTheme, loadTheme, saveTheme, THEME_CHOICES, type ThemeChoice } from '@/lib/themeSetting';
 import { type DistanceUnit, loadDistanceUnit, saveDistanceUnit, UNIT_CHOICES, type UnitsDb } from '@/lib/units';
 import { loadAllowance, usageSummary } from '@/lib/usage';
 
@@ -38,6 +40,17 @@ export default function Settings() {
   useReloadOnReturn(calendar.reload);
   const briefing = useLoad(`briefing:${userId}`, () => loadBriefing(deviceSettingsStore, userId));
   useReloadOnReturn(briefing.reload);
+
+  const savedTheme = useLoad('theme', () => loadTheme(deviceSettingsStore));
+  const [theme, setTheme] = useState<ThemeChoice | null>(null);
+  const [themeNote, setThemeNote] = useState<string | null>(null);
+  const shownTheme = theme ?? savedTheme.data;
+  const pickTheme = async (t: ThemeChoice) => {
+    if (t === shownTheme) return;
+    setTheme(t);
+    applyTheme(Appearance, t);
+    setThemeNote((await saveTheme(deviceSettingsStore, t)) ? null : "That wasn't saved on this phone, so it lasts until Wilma restarts.");
+  };
 
   const pickUnit = async (u: DistanceUnit) => {
     if (u === unit || !userId) return;
@@ -81,6 +94,24 @@ export default function Settings() {
             ? 'Reading your setting…'
             : 'Your setting cannot be read right now.'}
       </Muted>
+
+      {Platform.OS !== 'web' && (
+        <>
+          {heading('Theme')}
+          <GroupList>
+            {THEME_CHOICES.map((choice, i) => (
+              <GroupRow
+                key={choice.theme}
+                first={i === 0}
+                title={choice.title}
+                checked={shownTheme === choice.theme}
+                onPress={shownTheme ? () => void pickTheme(choice.theme) : undefined}
+              />
+            ))}
+          </GroupList>
+          <Muted>{themeNote ?? 'Kept on this phone. "Same as the phone" follows its dark mode.'}</Muted>
+        </>
+      )}
 
       {heading('Calendar')}
       <GroupList>
