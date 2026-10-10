@@ -12,6 +12,15 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Next feature: automatic memory, plan written (owner, 2026-10-10): `docs/memory-plan.md`, branch
+  `claude/memory-plan`.** Order after the briefing (D30, #194): memory, then alarms and calendar
+  entries (D31), then sharing spaces and notes (D32); sharing a secret is open (D33). Owner's
+  answers: memories saved automatically with Undo, sensitive topics only when the user says
+  "remember", off by default, a default **Memories** space like Tasks, and Tasks and Memories
+  marked 📌 Built-in and refused delete, rename, move or restrict by the server (Q8). **versionCode 18 build
+  failed** (run 38055209286): Expo's free plan used its Android builds for the month (resets Nov 1;
+  EAS already moved the versionCode to 18, so the next build is 19). The owner is upgrading Expo
+  and wants the next build after memory is in (versionCode 19 carries the briefing and memory).
 - **Day planner step 4, morning briefing (owner, 2026-10-10): plan merged (#189,
   `docs/phase6-day-planner-step4-plan.md`); step 1 merged (#190, #191, #192); step 4 (wording) waits for the owner.**
   Owner's answers: the phone schedules local notifications (no server push, no Firebase, no
