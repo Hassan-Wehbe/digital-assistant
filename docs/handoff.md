@@ -12,7 +12,23 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **Tasks left open, step 1 merged (#204, squash, 7066ef2), NOT yet deployed; step 2 (app) written,
+- **Alarms step 1, server (2026-10-10): branch `claude/alarms-calendar`, not merged, not deployed.**
+  Five chat-only actions (`chat/phone_actions.ts`): set_alarm, show_alarms, set_reminder,
+  find_reminders, add_calendar_event; each sends a card to confirm, credentials refused; old apps
+  get "update Wilma". **Evaluation (owner's OK, $1 cap): final run 38083418773, 131/131, 0 leaks,
+  0 unsafe, $0.07** (the paragraph was moved before the day-planning one after a first run showed
+  plan-when-to-leave slipping; about $0.17 in all). 15 new cases (131). 468 Deno tests. Details: `docs/alarms-calendar-plan.md`
+  "As built: step 1". **Then:** merge, deploy `chat`; step 2, the app's alarm and reminder cards.
+- **Tasks left open (D35): both steps merged (#204 server, #205 app, squash) and the server live:
+  `mcp` version 33, `chat` version 30** (deploy chat runs 38079300466 and 38079301868, owner's
+  OK, 2026-10-10; both passed the sign-in checks). The app part ships with the next build
+  (versionCode 20); phone checks in `docs/task-day-end-plan.md` "As built: step 2".
+- **Alarms and calendar entries (D31): plan answered (2026-10-10), branch `claude/alarms-calendar`.**
+  Owner: a card to confirm on everything; cancelling added (alarms via Open Clock, since Android
+  cannot delete Clock alarms; reminders from the chat or Settings → Reminders, matched on the phone);
+  every other question as recommended. **Next:** step 1, the server's chat actions and a paid
+  evaluation run (owner's OK and cap first); strongest model, fresh session.
+- **Tasks left open, step 1 merged (#204, squash, 7066ef2), deployed later (see the entry above); step 2 (app) written,
   branch `claude/task-day-end-app`, not merged (2026-10-10).** The owner said "go ahead with mcp and
   chat"; the deploy was not run from this session (the permission check blocked it), so **owner:
   run "deploy chat" for `mcp` and for `chat` from main** (Actions → deploy chat → Run workflow).
@@ -36,6 +52,21 @@ tokens or keys in chat.
   settling ended days, `left_from` in the plan, the bug; deploy with the owner's OK); (2) app (the
   choice, My day's Left open with Add to today · Done · Remove). Strongest model for both. The D31
   plan is on branch `claude/alarms-calendar` (questions answered? not yet).
+- **Alarms and calendar entries (D31): plan written (2026-10-10), branch `claude/alarms-calendar`,
+  `docs/alarms-calendar-plan.md`. Waiting for the owner's answers (Q1-Q8; small ones Q9-Q13 have
+  defaults); nothing built.** Alarms open the phone's Clock filled in, reminders are Wilma
+  notifications, calendar entries are written only after a tap on the card; three chat-only actions
+  offered only to apps that say they can. Steps: (1) server actions + paid evaluation (owner's OK and
+  cap) + `chat` deploy; (2) app alarm and reminder cards; (3) app calendar card; (4) privacy wording,
+  checklist, versionCode 20. Strongest model for 1-3, smaller for 4.
+- **versionCode 19 building (owner: "build for Play", 2026-10-10).** Production build from main at
+  07bf26b: GitHub run 38069088918 (checks passed), Expo build `6ac3ba0d-99d3-4d9f-a492-d48130618dcc`,
+  submission 4db69841-2ad9-4dc5-9044-1d58a0466ace to internal testing (scheduled after the build).
+  Carries the morning briefing and leave-by alerts, Settings → Theme (#199) and automatic memory
+  (#197, #198, #200, #201, #202). **Owner:** when it reaches Play, update and follow
+  `docs/versioncode19-phone-checklist.md` (and the briefing part of the versionCode 18 one).
+  **Next feature:** alarms and calendar entries (D31; plan to write; strongest model, fresh session),
+  then usage tracking and the admin page (D34, #203).
 - **Automatic memory step 5, privacy and build (2026-10-10): branch `claude/memory-step5`, not
   merged; needs the owner's OK on the privacy wording (merging publishes it).** Privacy page
   "Memory" paragraph and the OpenAI entry; Data safety: no change; legal checklist item;

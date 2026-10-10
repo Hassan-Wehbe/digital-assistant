@@ -8,6 +8,7 @@
 // chat function receives it, with the day planner's numbers for one day (chat/day.ts planForChat;
 // Pro cases only, with fake drive times and weather: no Mapbox or NWS request is made).
 import { ACTION_NAMES, ACTION_SPECS, ChatActions } from "../../supabase/functions/chat/actions.ts";
+import { CAN_ALARM, CAN_CALENDAR_ADD, CAN_REMINDER } from "../../supabase/functions/chat/phone_actions.ts";
 import {
   type Agenda, type AgendaEvent, AGENDA_TOOL, agendaCall, agendaSchema, withAgenda,
 } from "../../supabase/functions/chat/agenda.ts";
@@ -91,7 +92,9 @@ export interface Session {
 }
 
 /** A fresh pretend account with Wilma's tools connected to it, exactly as the chat function connects them. */
-export async function openSession(world = new World(), here?: SharedPoint, timeZone?: string): Promise<Session> {
+export async function openSession(
+  world = new World(), here?: SharedPoint, timeZone?: string, can: ReadonlySet<string> = PHONE_CAN,
+): Promise<Session> {
   const ctx: ToolContext = {
     db: world.client(), userId: "eval-user", accessToken: "eval-token", assistantName: world.assistantName,
     distanceUnit: world.distanceUnit, timeZone,
@@ -106,7 +109,7 @@ export async function openSession(world = new World(), here?: SharedPoint, timeZ
     // With memory on (a case's setup), the "About the user" block, as the chat function adds it.
     system: systemPrompt(ctx.assistantName, tools.instructions, new Date(), here, timeZone, about),
     call: tools.call,
-    actions: () => new ChatActions({ db: ctx.db, distanceUnit: ctx.distanceUnit ?? "mi", here }),
+    actions: () => new ChatActions({ db: ctx.db, distanceUnit: ctx.distanceUnit ?? "mi", here, can, tz: timeZone }),
     close: tools.close,
   };
 }
@@ -124,7 +127,12 @@ export interface RunOptions {
   planner?: { drives?: DriveTimes; weather?: Weather };
   /** The phone's time zone, as the app's chat sends it (else the calendar's, else none: UTC). */
   timeZone?: string;
+  /** An app too old for the alarm, reminder and calendar cards (it does not list them in "can"). */
+  oldApp?: boolean;
 }
+
+/** An app that shows the alarm, reminder and calendar cards (phone_actions.ts), as the cases assume. */
+export const PHONE_CAN: ReadonlySet<string> = new Set([CAN_ALARM, CAN_REMINDER, CAN_CALENDAR_ADD]);
 
 export interface PhoneCalendar {
   time_zone: string;
@@ -149,7 +157,7 @@ export async function runConversation(
 ): Promise<RunRecord> {
   const world = new World();
   opts.setup?.(world);
-  const session = await openSession(world, opts.here, opts.timeZone ?? opts.calendar?.time_zone);
+  const session = await openSession(world, opts.here, opts.timeZone ?? opts.calendar?.time_zone, opts.oldApp ? new Set() : PHONE_CAN);
   const started = performance.now();
   const record: RunRecord = { turns: [], world, costCents: 0, modelCalls: 0, ms: 0 };
   const messages: Message[] = [];

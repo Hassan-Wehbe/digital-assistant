@@ -6,6 +6,8 @@
 //       {"type":"places","cards":[{id,title,kind,cuisine,address,maps_url,lat,lng,distance?}]}
 //   ask_for_location()                       the "📍 Share where I am" card:
 //       {"type":"location_request"}
+//   set_alarm, show_alarms, set_reminder, find_reminders, add_calendar_event: cards to confirm on
+//       the phone (phone_actions.ts, D31)
 //
 // Every id is checked as the user (lib/places.ts visiblePlaces): a place, not deleted, in one of
 // their own searchable spaces. Anything else gets the same "not found", so a restricted, deleted or
@@ -18,6 +20,7 @@ import type { SharedPoint } from "../_shared/assistant_prompt.ts";
 import type { ToolSpec } from "../_shared/llm/index.ts";
 import type { DistanceUnit } from "../mcp/lib/assistant.ts";
 import { distanceKm, inUnit, placePoint, type Point, type VisiblePlace, visiblePlaces } from "../mcp/lib/places.ts";
+import { PHONE_ACTION_NAMES, PHONE_ACTION_SPECS, PhoneActions } from "./phone_actions.ts";
 
 /** Place cards per message, whatever the model asks for (Q13). */
 export const MAX_PLACE_CARDS = 5;
@@ -55,6 +58,7 @@ export const ACTION_SPECS: ToolSpec[] = [
       "shared their location with this message. Changes nothing.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
   },
+  ...PHONE_ACTION_SPECS,
 ];
 
 export const ACTION_NAMES = new Set(ACTION_SPECS.map((s) => s.name));
@@ -84,6 +88,12 @@ export interface ActionContext {
   distanceUnit: DistanceUnit;
   /** The location shared with this message, if any (never stored or logged). */
   here?: SharedPoint;
+  /** What the app said it can do ("can"): the phone actions' cards (phone_actions.ts). */
+  can?: ReadonlySet<string>;
+  /** The phone's time zone, for the phone actions' times. */
+  tz?: string;
+  /** The clock (tests set it). */
+  now?: () => number;
 }
 
 const NOT_FOUND = "not found";
@@ -113,10 +123,14 @@ function card(p: VisiblePlace, from: Point | null, unit: DistanceUnit): PlaceCar
 export class ChatActions {
   private shown = new Set<string>();
   private asked = false;
+  private phone: PhoneActions;
 
-  constructor(private ctx: ActionContext) {}
+  constructor(private ctx: ActionContext) {
+    this.phone = new PhoneActions({ can: ctx.can ?? new Set(), tz: ctx.tz, now: ctx.now });
+  }
 
   async run(name: string, input: Record<string, unknown>): Promise<ActionOutput> {
+    if (PHONE_ACTION_NAMES.has(name)) return this.phone.run(name, input);
     try {
       if (name === "show_places") return await this.showPlaces(input);
       if (name === "ask_for_location") return this.askForLocation();

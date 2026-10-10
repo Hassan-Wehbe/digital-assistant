@@ -10,7 +10,8 @@
 //           (places step 7). It goes into this one message's instructions for find_places and
 //           nowhere else: never stored, never logged, never sent to the classifier.
 //           Optional "tz": the phone's time zone (e.g. "America/New_York"), so "today" is the
-//           user's day. Optional "can": ["calendar"] when the app reads the phone's calendar, and
+//           user's day. Optional "can": ["calendar"] when the app reads the phone's calendar (and
+//           "alarm", "reminder", "calendar_add" when it shows those cards, phone_actions.ts), and
 //           "agenda": {...}, the calendar it read for this message (agenda.ts: ask, then re-send).
 // Response: 401 without a valid sign-in, 400 for a malformed body, otherwise a stream of
 //           newline-delimited JSON events (application/x-ndjson):
@@ -24,6 +25,8 @@
 //             {"type":"location_request"}                             📍 Share where I am card
 //             {"type":"agenda_request","from":...,"to":...}            read the calendar, send again
 //             {"type":"day_plan","date":...}                            the answer used a day plan: Open my day
+//             {"type":"alarm"|"show_alarms"|"reminder"|"find_reminders"|"calendar_add",...}  cards to confirm
+//                                                                     on the phone (phone_actions.ts)
 //             {"type":"error","code":"allowance_used"|"service_paused"|"connection","message":...}
 //             {"type":"done","counted":true|false}                    the answer is complete
 //             {"type":"remembered","memories":[{"id","fact","updated","was"?}]} after done, only with
@@ -235,6 +238,7 @@ export function createHandler(deps: ChatDeps): (req: Request) => Promise<Respons
           const { memory } = await runChat({
             deps, token, userId, messages, here: data.here, emit, signal: abort.signal,
             tz: data.tz ?? data.agenda?.time_zone, canCalendar: !!data.can?.includes(CAN_CALENDAR), agenda: data.agenda,
+            can: new Set(data.can ?? []),
           });
           if (memory) {
             // After `done`: the instance stays up for it even when the app has stopped reading.
@@ -283,6 +287,8 @@ interface RunArgs {
   tz?: string;
   /** The app reads the phone's calendar when asked. */
   canCalendar: boolean;
+  /** Everything the app said it can do (phone_actions.ts reads its own entries). */
+  can?: ReadonlySet<string>;
   /** The calendar the app read for this message (never stored or logged, counts aside). */
   agenda?: Agenda;
   emit: (event: Record<string, unknown>) => void;
@@ -323,7 +329,7 @@ export function vaultEvents(tool: string, resultText: string): Record<string, un
  * object, so the async function hands the job back instead of waiting for it.)
  */
 async function runChat(
-  { deps, token, userId, messages, here, tz, canCalendar, agenda, emit, signal }: RunArgs,
+  { deps, token, userId, messages, here, tz, canCalendar, can, agenda, emit, signal }: RunArgs,
 ): Promise<{ memory: Promise<RememberedEvent | null> | null }> {
   const log: LogEntry = {
     event: "chat", request: crypto.randomUUID(), user: userId, outcome: "ok",
@@ -406,7 +412,7 @@ async function runChat(
     const system = systemPrompt(assistantName, tools.instructions, new Date(), here, tz, about);
     // The MCP tools plus the chat-only actions (never offered to the Claude connector).
     const specs = [...tools.specs, ...ACTION_SPECS];
-    const actions = new ChatActions({ db, distanceUnit, here });
+    const actions = new ChatActions({ db, distanceUnit, here, can, tz, now: deps.now });
     const cards = new Set<string>();
     let lastStatus = "";
     let wrote = false; // text already sent this message: the next round's text starts a new paragraph
