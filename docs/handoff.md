@@ -12,6 +12,14 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **versionCode 19 building (owner: "build for Play", 2026-10-10).** Production build from main at
+  07bf26b: GitHub run 38069088918 (checks passed), Expo build `6ac3ba0d-99d3-4d9f-a492-d48130618dcc`,
+  submission 4db69841-2ad9-4dc5-9044-1d58a0466ace to internal testing (scheduled after the build).
+  Carries the morning briefing and leave-by alerts, Settings → Theme (#199) and automatic memory
+  (#197, #198, #200, #201, #202). **Owner:** when it reaches Play, update and follow
+  `docs/versioncode19-phone-checklist.md` (and the briefing part of the versionCode 18 one).
+  **Next feature:** alarms and calendar entries (D31; plan to write; strongest model, fresh session),
+  then usage tracking and the admin page (D34, #203).
 - **Automatic memory step 5, privacy and build (2026-10-10): branch `claude/memory-step5`, not
   merged; needs the owner's OK on the privacy wording (merging publishes it).** Privacy page
   "Memory" paragraph and the OpenAI entry; Data safety: no change; legal checklist item;
