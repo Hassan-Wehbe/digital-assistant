@@ -12,6 +12,12 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Settings → Theme (owner, 2026-10-10): branch `claude/theme-setting`, not merged; app only.**
+  Same as the phone (default) / Light / Dark, kept on the phone (`wilma.theme.v1`, not per
+  account), applied app-wide with `Appearance.setColorScheme` (`lib/themeSetting.ts`), before the
+  splash screen goes so the app never opens in the wrong colours; hidden on the web build. 724 app
+  tests (4 new); `expo export --platform android` bundles. No server, privacy or Data safety
+  change (nothing leaves the phone). Ships with the next build (versionCode 19).
 - **Automatic memory step 2, noticing in the chat (2026-10-10): #198 merged (squash, 62ce384) and
   live: `chat` version 27, `mcp` version 31** (deploy chat runs 38063457900 and 38063775227,
   owner's OK; 401 checks passed). Memory is off for every account until step 3's switch. The

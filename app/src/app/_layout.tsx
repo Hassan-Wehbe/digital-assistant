@@ -1,8 +1,8 @@
 import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider, useRootNavigationState } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef } from 'react';
-import { useColorScheme } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Appearance, Platform, useColorScheme } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useColors } from '@/components/ui';
@@ -11,6 +11,7 @@ import { loadBriefing } from '@/lib/briefingSettings';
 import { deviceNotifier, onNotificationTap } from '@/lib/deviceNotifier';
 import { deviceSettingsStore } from '@/lib/deviceStorage';
 import { applyBriefing, tapTarget } from '@/lib/notifications';
+import { applyTheme, loadTheme } from '@/lib/themeSetting';
 import { ChatProvider } from '@/lib/chat';
 import { ShareProvider, useShare } from '@/lib/shareIntake';
 import { VaultProvider } from '@/lib/vault';
@@ -19,6 +20,11 @@ import { VaultProvider } from '@/lib/vault';
 // screen does not flash before the home screen.
 SplashScreen.preventAutoHideAsync();
 
+// Settings → Theme, applied before the splash screen goes, so the app never opens in the wrong
+// colours. The web build follows the browser.
+const themeApplied: Promise<void> =
+  Platform.OS === 'web' ? Promise.resolve() : loadTheme(deviceSettingsStore).then((t) => applyTheme(Appearance, t));
+
 function Screens() {
   const { signedIn, loading, session } = useAuth();
   const userId = session?.user.id ?? null;
@@ -26,9 +32,13 @@ function Screens() {
   // Android draws the app under its three-button bar (and iOS under the home indicator): pad every
   // screen's bottom by that bar, so the last button or text box is never hidden behind it.
   const insets = useSafeAreaInsets();
+  const [themeReady, setThemeReady] = useState(false);
   useEffect(() => {
-    if (!loading) SplashScreen.hideAsync();
-  }, [loading]);
+    void themeApplied.finally(() => setThemeReady(true));
+  }, []);
+  useEffect(() => {
+    if (!loading && themeReady) SplashScreen.hideAsync();
+  }, [loading, themeReady]);
 
   // Something was shared to Wilma: open the share screen once per share, as soon as the
   // app is signed in (signed out, the sign-in screen comes first and says why).
