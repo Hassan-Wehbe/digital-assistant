@@ -33,8 +33,8 @@ secrets, restricted spaces); a smaller one for step 5's wording and the build.
   Memories space. **The server refuses** to delete, rename, move or restrict a built-in space (a
   trigger, so neither the app, the chat nor the Claude connector can; Wilma says "Tasks is a
   built-in space, so it can't be deleted"); its description can still be edited, and its notes are
-  the user's to edit or delete as usual. **The app shows it:** a small 📌 Built-in label on the
-  space's row (Home, All spaces) and on its screen, and Edit space has no Delete, rename or
+  the user's to edit or delete as usual. **The app shows it:** a small **BUILT-IN** badge (the same style
+  as My day's PRO badge; owner, 2026-10-10) on the space's row (Home, All spaces) and on its screen, and Edit space has no Delete, rename or
   restricted switch for it, with the line "Built-in space: it can't be deleted or renamed." The
   `tasksSpace` fallback stays for safety. SQL tests: delete, rename, move and restrict are refused
   for the owner and for anyone else; an ordinary space is unaffected.
@@ -85,7 +85,7 @@ deletes it if they want).
    restricted space's details, a health detail not asked to keep, a fact asked to keep), then one
    paid evaluation run with the owner's OK and a dollar cap (rule 9, D21).
 3. **App:** Settings → Memory (on/off, "See what I remembered"), the one-time Home card, the
-   "🧠 Remembered · Undo" line in the chat, the Memories space's icon, and the 📌 Built-in label on
+   "🧠 Remembered · Undo" line in the chat, the Memories space's icon, and the BUILT-IN badge on
    Tasks and Memories (rows and space screen; no Delete or rename for them in Edit space).
 4. **Wilma uses them:** the "About the user" block in the system prompt; an evaluation run for it
    (prompt change).
