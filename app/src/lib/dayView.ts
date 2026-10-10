@@ -1,7 +1,8 @@
 // What My day shows for a plan (the mockups' screens 2, 3 and 5, docs/day-planner-mockups.html):
 // the words for each row, the chips at the top, and the sum behind an event's leave-by time. Every
 // number comes from the planner (dayPlan.ts); this only puts it into words. Pure functions.
-import type { DayDriveRow, DayEventRow, DayPlan, DayRow, TaskOption } from './dayPlan';
+import type { DayDriveRow, DayEventRow, DayPlan, DayRow, NotPlacedTask, TaskOption } from './dayPlan';
+import { addDays, timeText } from './tasks';
 
 const two = (n: number) => String(n).padStart(2, '0');
 
@@ -197,4 +198,28 @@ export function optionText(o: TaskOption, t: Map<string, string>): { title: stri
     title: `In free time, ${range(o.start, o.end)}`,
     detail: o.extra_drive_min ? `${o.extra_drive_min} min of driving there and back.` : 'No driving.',
   };
+}
+
+// ---- Left open (D35, docs/task-day-end-plan.md) ------------------------------------------------
+
+/** The plan's tasks without a time: those left open on an earlier day (asked about first), and the rest. */
+export function splitNotPlaced(plan: DayPlan): { leftOpen: NotPlacedTask[]; notPlaced: NotPlacedTask[] } {
+  return {
+    leftOpen: plan.tasks_not_placed.filter((t) => t.left_from),
+    notPlaced: plan.tasks_not_placed.filter((t) => !t.left_from),
+  };
+}
+
+const monthDay = (day: string) => new Date(`${day}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+
+/** "Left open yesterday" when every one is from the day before `date`, else "Left open". */
+export function leftOpenHeading(tasks: NotPlacedTask[], date: string): string {
+  return tasks.length && tasks.every((t) => t.left_from === addDays(date, -1)) ? 'Left open yesterday' : 'Left open';
+}
+
+/** "planned yesterday at 3:00 pm" / "planned Oct 8 at 3:00 pm". */
+export function leftOpenWhen(t: NotPlacedTask, date: string): string {
+  if (!t.left_from) return '';
+  const day = t.left_from === addDays(date, -1) ? 'yesterday' : monthDay(t.left_from);
+  return `planned ${day}${t.planned_time ? ` at ${timeText(t.planned_time)}` : ''}`;
 }

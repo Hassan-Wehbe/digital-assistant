@@ -2,13 +2,16 @@
 // suggestions (on a drive already planned, or in free time), or Not today. The task is saved as a
 // Wilma task first; picking a time only sets when it is done (planned_at). Every suggestion comes
 // from the planner's numbers (dayView.ts optionText); nothing here is kept after the sheet closes.
+// With the suggestions, the choice of what happens if it is not done by the end of the day (D35).
 import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
+import { Chips } from '@/components/PlaceFields';
 import { PlacePicker } from '@/components/PlacePicker';
 import type { TaskOption } from '@/lib/dayPlan';
 import { optionText } from '@/lib/dayView';
 import type { PickedSpot } from '@/lib/homePlace';
+import { DAY_END_CHOICES, DAY_END_LABEL, type TaskDayEnd } from '@/lib/tasks';
 
 import { Button, Card, Muted, space, styles, TextLink, useColors } from './ui';
 
@@ -31,18 +34,24 @@ export function AddTaskSheet({
   onPick,
   onNotToday,
   onClose,
+  dayEnd,
 }: {
   sheet: SheetStep;
   titles: Map<string, string>;
   busy: boolean;
   error: string | null;
   onFind: (task: NewDayTask) => void;
-  onPick: (option: TaskOption) => void;
+  /** With the end-of-day choice it was saved with (null: ask); undefined for a repeating task (no choice). */
+  onPick: (option: TaskOption, dayEnd: TaskDayEnd | null) => void;
   onNotToday: () => void;
   onClose: () => void;
+  dayEnd?: TaskDayEnd | null;
 }) {
   const c = useColors();
   const [task, setTask] = useState<NewDayTask>({ title: '', duration: '', place: null });
+  // Untouched (null): the task's own choice, which is known only once it is saved.
+  const [picked, setEnd] = useState<TaskDayEnd | 'ask' | null>(null);
+  const end = picked ?? dayEnd ?? 'ask';
   const [picking, setPicking] = useState(false);
   const input = [styles.input, { color: c.text, borderColor: c.line, backgroundColor: c.background }];
 
@@ -58,7 +67,7 @@ export function AddTaskSheet({
               key={`${o.kind}-${o.start}`}
               accessibilityRole="button"
               disabled={busy}
-              onPress={() => onPick(o)}
+              onPress={() => onPick(o, dayEnd === undefined || end === 'ask' ? null : end)}
               style={({ pressed }) => [{ borderWidth: 1, borderColor: c.line, borderRadius: 10, padding: space.m, gap: 2, backgroundColor: c.card }, pressed && { opacity: 0.6 }]}>
               <Text style={{ color: c.accent, fontSize: 15, fontWeight: '600' }}>{words.title}</Text>
               <Text style={{ color: c.text, fontSize: 13 }}>{words.detail}</Text>
@@ -66,6 +75,12 @@ export function AddTaskSheet({
           );
         })}
         {!sheet.options.length ? <Text style={{ color: c.text, fontSize: 15 }}>{sheet.note ?? 'No time today that fits it.'}</Text> : null}
+        {sheet.options.length && dayEnd !== undefined ? (
+          <View style={{ gap: space.xs }}>
+            <Muted>{DAY_END_LABEL}</Muted>
+            <Chips options={DAY_END_CHOICES} selected={(v) => v === end} onPress={setEnd} disabled={busy} />
+          </View>
+        ) : null}
         {error ? <Text style={{ color: c.danger, fontSize: 15 }}>{error}</Text> : null}
         <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: space.s }}>
           <Button title="Close" kind="plain" onPress={onClose} disabled={busy} />
