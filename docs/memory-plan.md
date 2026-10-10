@@ -6,7 +6,7 @@ secrets, restricted spaces); a smaller one for step 5's wording and the build.
 
 **Step 2 merged (#198) and live** (`chat` v27, `mcp` v31). **Step 3 merged (#200; server
 part live, `mcp` v32, `chat` v28; the app ships with versionCode 19):** see "As built: step 3" at
-the end. **Step 4 built (2026-10-10, branch `claude/memory-step4`), not merged:**
+the end. **Step 4 merged (#201) and live (`chat` v29):**
 see "As built: step 4" at the end.
 
 ## What the owner will see
