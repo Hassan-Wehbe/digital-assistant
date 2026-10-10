@@ -1,7 +1,7 @@
 # Alarms, reminders and calendar entries
 
-Status: plan, 2026-10-10. **Waiting for the owner's answers to the open questions below; nothing is
-built yet.** Design: D31 (and D25, whose "Wilma never changes your calendar" this ends), D30
+Status: plan, 2026-10-10. **Waiting for the owner's answers to the open questions below (Q2 answered);
+nothing is built yet.** Design: D31 (and D25, whose "Wilma never changes your calendar" this ends), D30
 (order: after automatic memory, before usage tracking D34). Model: the strongest for steps 1-3
 (chat loop, new chat actions, the calendar write); a smaller one for step 4 (wording, checklist,
 build).
@@ -53,7 +53,9 @@ first option.
   the Clock's "set alarm" screen only takes a time of day (the next 6:30, or weekly days), not
   "Thursday the 23rd". (c) A Wilma task with a due time. Recommended split: "wake me" and "alarm"
   → Clock; "remind me" → notification; "add a task" stays a task, as today.
-- **Q2. A tap before an alarm or reminder is set.** (a) **Yes, a card with one button
+- **Q2. A tap before an alarm or reminder is set. Decided (owner, 2026-10-10): a card to confirm, on
+  everything** (alarms, reminders and calendar entries; setting alarms silently in the Clock was
+  offered and declined). (a) **Yes, a card with one button
   (recommended):** the model never acts on its own (rule 9's spirit), and a misheard voice
   request costs nothing. (b) Reminders set at once with an Undo line, like memory. Calendar
   entries always need the tap (D31).
