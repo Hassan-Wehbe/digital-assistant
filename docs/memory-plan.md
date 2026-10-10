@@ -25,8 +25,19 @@ secrets, restricted spaces); a smaller one for step 5's wording and the build.
   picked up automatically.
 - **Q3 Off by default,** for every account; a one-time card offers it.
 - **Q4 A default Memories space** (owner): made at sign-up and given to every existing account, like
-  the Tasks space (`20261010120000_default_tasks_space.sql`). If the user renames or deletes it, the
-  next memory makes a new one (like `tasksSpace`).
+  the Tasks space (`20261010120000_default_tasks_space.sql`).
+- **Q8 Built-in spaces are marked and cannot be deleted** (owner, 2026-10-10): Tasks and Memories
+  are **built-in**. A new column `space.built_in` ('tasks' | 'memories', null for the user's own
+  spaces), set by the migration on each account's default Tasks space (the one
+  `20261010120000_default_tasks_space.sql` made, or the user's own top-level "Tasks") and on the new
+  Memories space. **The server refuses** to delete, rename, move or restrict a built-in space (a
+  trigger, so neither the app, the chat nor the Claude connector can; Wilma says "Tasks is a
+  built-in space, so it can't be deleted"); its description can still be edited, and its notes are
+  the user's to edit or delete as usual. **The app shows it:** a small 📌 Built-in label on the
+  space's row (Home, All spaces) and on its screen, and Edit space has no Delete, rename or
+  restricted switch for it, with the line "Built-in space: it can't be deleted or renamed." The
+  `tasksSpace` fallback stays for safety. SQL tests: delete, rename, move and restrict are refused
+  for the owner and for anyone else; an ordinary space is unaffected.
 
 ## How it works
 
@@ -62,8 +73,9 @@ deletes it if they want).
 
 ## Steps (one PR each)
 
-1. **Server: the Memories space and the memory notes** (strongest model): migration (Memories space
-   at sign-up and for existing accounts; `item_type 'memory'` allowed; `app_user.memory_on` false by
+1. **Server: the Memories space, built-in spaces and the memory notes** (strongest model): migration
+   (Memories space at sign-up and for existing accounts; `space.built_in` on Tasks and Memories and
+   the trigger that refuses deleting, renaming, moving or restricting them; `item_type 'memory'` allowed; `app_user.memory_on` false by
    default, the user may change only their own); `mcp/lib/memory.ts` (save or update a memory,
    duplicate check, credential check); SQL and Deno tests (RLS between two users, a credential never
    stored, a revision on update). Dry run for the owner, then apply.
@@ -73,7 +85,8 @@ deletes it if they want).
    restricted space's details, a health detail not asked to keep, a fact asked to keep), then one
    paid evaluation run with the owner's OK and a dollar cap (rule 9, D21).
 3. **App:** Settings → Memory (on/off, "See what I remembered"), the one-time Home card, the
-   "🧠 Remembered · Undo" line in the chat, the Memories space's icon.
+   "🧠 Remembered · Undo" line in the chat, the Memories space's icon, and the 📌 Built-in label on
+   Tasks and Memories (rows and space screen; no Delete or rename for them in Edit space).
 4. **Wilma uses them:** the "About the user" block in the system prompt; an evaluation run for it
    (prompt change).
 5. **Privacy and build** (smaller model): privacy page paragraph (what is remembered, where it is
