@@ -10,6 +10,7 @@
 // is dropped here, as it is read: the app opens its own vault screen and never keeps the link.
 
 import { toRemembered, type RememberedMemory } from './memory';
+import { type AlarmCardData, type ReminderCardData, toAbout, toAlarmData, toReminderData } from './phoneActions';
 
 /** The server's own wording for a lost connection (supabase/functions/chat/messages.ts). */
 export const CONNECTION_MESSAGE = "I'm having trouble connecting. Try again in a moment.";
@@ -45,6 +46,11 @@ export type ChatEvent =
   | { type: 'agenda_request'; from: string; to: string }
   /** The answer used a day plan (day planner step 3): the app shows Open my day for that date. */
   | { type: 'day_plan'; date: string }
+  /** Alarms and reminders (D31): cards to confirm; nothing happens until the user taps one. */
+  | ({ type: 'alarm' } & AlarmCardData)
+  | { type: 'show_alarms' }
+  | ({ type: 'reminder' } & ReminderCardData)
+  | { type: 'find_reminders'; about?: string }
   | { type: 'error'; code: string; message: string }
   | { type: 'done'; counted: boolean }
   /** After `done`: what Wilma kept from this message (memory on): "🧠 Remembered · Undo". */
@@ -142,6 +148,20 @@ export function toChatEvent(raw: unknown): ChatEvent | null {
       return isDay(raw.from) && isDay(raw.to) ? { type: 'agenda_request', from: raw.from, to: raw.to } : null;
     case 'day_plan':
       return isDay(raw.date) ? { type: 'day_plan', date: raw.date } : null;
+    case 'alarm': {
+      const a = toAlarmData(raw);
+      return a ? { type: 'alarm', ...a } : null;
+    }
+    case 'show_alarms':
+      return { type: 'show_alarms' };
+    case 'reminder': {
+      const r = toReminderData(raw);
+      return r ? { type: 'reminder', ...r } : null;
+    }
+    case 'find_reminders': {
+      const about = toAbout(raw.about);
+      return { type: 'find_reminders', ...(about ? { about } : {}) };
+    }
     case 'done':
       return { type: 'done', counted: raw.counted === true };
     case 'remembered': {

@@ -14,6 +14,7 @@ import {
   type LocationState, type NoteRef, type PlaceRef,
 } from './chatThread';
 import { toRemembered } from './memory';
+import { toAbout, toAlarmData, toReminderData } from './phoneActions';
 import type { AuthStorage } from './sessionStorage';
 
 const PREFIX = 'wilma.chat.';
@@ -144,6 +145,20 @@ export function toEntry(raw: unknown): Entry | null {
     case 'day':
       // The date only: the plan itself is never kept (Mapbox's terms; day planner step 3).
       return str(raw.date) && /^\d{4}-\d{2}-\d{2}$/.test(raw.date) ? { kind: 'day', id, date: raw.date } : null;
+    case 'alarm': {
+      const a = toAlarmData(raw);
+      return a ? { kind: 'alarm', id, ...a } : null;
+    }
+    case 'alarms':
+      return { kind: 'alarms', id };
+    case 'reminder': {
+      const r = toReminderData(raw);
+      return r ? { kind: 'reminder', id, ...r } : null;
+    }
+    case 'reminders': {
+      const about = toAbout(raw.about);
+      return { kind: 'reminders', id, ...(about ? { about } : {}) };
+    }
     case 'memory': {
       if (!Array.isArray(raw.memories)) return null;
       const undone = new Set(raw.memories.filter((m) => isObject(m) && m.undone === true).map((m) => (m as { id: unknown }).id));

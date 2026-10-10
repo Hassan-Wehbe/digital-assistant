@@ -12,6 +12,7 @@
 import { cancelledMessage, checkDelete, deletedMessage } from './chatDeletes';
 import type { ChatEvent, PlaceCardData } from './chatStream';
 import type { RememberedMemory } from './memory';
+import type { AlarmCardData, ReminderCardData } from './phoneActions';
 import type { Route } from './router';
 
 /** At most this many entries are kept (oldest dropped). */
@@ -134,6 +135,11 @@ export type Entry =
   | { kind: 'calendar'; id: string; problem: CalendarProblem }
   /** Wilma's answer used a day plan: Open my day for that date. Only the date: never the plan. */
   | { kind: 'day'; id: string; date: string }
+  /** Alarms and reminders (D31): set only when the user taps the card. */
+  | ({ kind: 'alarm'; id: string } & AlarmCardData)
+  | { kind: 'alarms'; id: string }
+  | ({ kind: 'reminder'; id: string } & ReminderCardData)
+  | { kind: 'reminders'; id: string; about?: string }
   /** What Wilma kept from the message before (memory on): "🧠 Remembered: … · Undo" for each. */
   | { kind: 'memory'; id: string; memories: (RememberedMemory & { undone?: true })[] };
 
@@ -427,6 +433,16 @@ function onEvent(state: ChatState, event: ChatEvent): ChatState {
     case 'agenda_request':
       // Nothing to show: the app reads the calendar after the answer ends (chat.tsx).
       return state;
+    case 'alarm': {
+      const { type: _t, ...a } = event;
+      return add(state, { kind: 'alarm', id, ...a });
+    }
+    case 'show_alarms':
+      return add(state, { kind: 'alarms', id });
+    case 'reminder':
+      return add(state, { kind: 'reminder', id, at: event.at, text: event.text });
+    case 'find_reminders':
+      return add(state, { kind: 'reminders', id, ...(event.about ? { about: event.about } : {}) });
     case 'day_plan':
       // Shown under the answer, once it has ended (the card follows Wilma's words).
       return { ...state, dayPlan: event.date };
