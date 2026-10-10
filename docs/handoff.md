@@ -12,6 +12,28 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Automatic memory step 1 (2026-10-10): migration applied (owner's dry run 29/29 ok; applied by
+  Claude through the Supabase connector at the owner's request, in one transaction; checked
+  read-only: 2 accounts, each with one built-in Tasks (the existing one, with its tasks) and one
+  built-in Memories, guard trigger on, memory off for both, sign-up uses the helper, helper and
+  guard not callable by users, anon cannot read memory_on); merged as the step 1 PR.** Migration `20261012120000_memory_builtin_spaces.sql`: `space.built_in` ('tasks' |
+  'memories', one of each per account), trigger `space_built_in_guard` (a built-in space cannot be
+  deleted, renamed, moved, restricted or given away; nobody can mark or make one but sign-up and the
+  migration; deleting the account still removes them), `_ensure_built_in_spaces` (marks the
+  account's oldest top-level, not restricted Tasks, or makes one; marks or makes Memories, "What
+  Wilma remembered about you"; a restricted space of that name is left alone), sign-up calls it
+  (`handle_new_auth_user` as in invite_signup, Tasks insert replaced), every existing account gets
+  it, `app_user.memory_on` (off; own row only). SQL test 16 (29 checks); tests 01, 08, 14 updated
+  (they counted spaces without the built-in ones; 14 now expects Tasks cannot be renamed). All SQL
+  tests pass on a local Postgres 16 stand-in (pgvector as text; test 06 needs Supabase storage
+  and was not run there). Dry run: `tests/sql/dry_runs/16_memory_builtin_spaces_dry_run.sql` (29/29
+  locally, nothing kept). Server: `Space.built_in` (loadSpaces selects it), `tasksSpace` prefers
+  the built-in one, update_space / delete_space / the chat's Delete card refuse a built-in space
+  with "…is a built-in space, so it can't be renamed/deleted." (no tool description change, no
+  evaluation), `mcp/lib/memory.ts` (`saveMemory`: credential check, Memories only, no duplicates,
+  a changed fact updates the older one; nothing calls it until step 2). 420 Deno tests (9 new).
+  No deploy needed yet (the next `mcp`/`chat` deploy carries the friendly refusals; the migration
+  it needs is applied). **Next:** memory step 2, noticing in the chat (strongest model).
 - **Next feature: automatic memory, plan written (owner, 2026-10-10): `docs/memory-plan.md`, branch
   `claude/memory-plan`.** Order after the briefing (D30, #194): memory, then alarms and calendar
   entries (D31), then sharing spaces and notes (D32); sharing a secret is open (D33). Owner's

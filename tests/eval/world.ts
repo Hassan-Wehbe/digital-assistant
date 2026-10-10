@@ -11,6 +11,8 @@ export interface Space {
   description: string | null;
   parent_id: string | null;
   is_restricted: boolean;
+  /** The account's built-in spaces (Tasks, Memories), for tests that add them. */
+  built_in?: string | null;
 }
 
 export interface Item {

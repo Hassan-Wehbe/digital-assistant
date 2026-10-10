@@ -254,7 +254,9 @@ export function withTask(body: string, task: TaskMetadata | null): string {
  */
 export async function tasksSpace(db: SupabaseClient, spaces?: Space[]): Promise<{ space: Space; created: boolean }> {
   const all = spaces ?? await loadSpaces(db);
-  const top = all.find((s) => !s.parent_id && s.name.trim().toLowerCase() === TASKS_SPACE.toLowerCase());
+  // The built-in Tasks space first (every account has one); the name is the fallback.
+  const top = all.find((s) => s.built_in === "tasks") ??
+    all.find((s) => !s.parent_id && s.name.trim().toLowerCase() === TASKS_SPACE.toLowerCase());
   if (top) {
     if (top.is_restricted) throw new Error(`The space "${top.name}" is restricted; ask which space to save the task in.`);
     return { space: top, created: false };

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { loadSpaces, resolveSpace } from "../lib/spaces.ts";
+import { builtInRefusal, loadSpaces, resolveSpace } from "../lib/spaces.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
 export const registerDeleteSpace: RegisterTool = (server, { db }) => {
@@ -17,6 +17,7 @@ export const registerDeleteSpace: RegisterTool = (server, { db }) => {
     ({ space }) =>
       guarded(async () => {
         const target = resolveSpace(await loadSpaces(db), space);
+        if (target.built_in) throw new Error(builtInRefusal(target, "deleted"));
         const { data, error } = await db.rpc("delete_space", { p_space_id: target.id });
         if (error) throw dbError("Could not delete the space", error);
         return ok({ ...data, path: target.path });

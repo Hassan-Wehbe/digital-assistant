@@ -5,7 +5,7 @@
 // delete on its own.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { attachmentById } from "../mcp/lib/attachments.ts";
-import { loadSpaces, resolveSpace } from "../mcp/lib/spaces.ts";
+import { builtInRefusal, loadSpaces, resolveSpace } from "../mcp/lib/spaces.ts";
 import { secretById } from "../mcp/lib/vault.ts";
 import type { ToolSession } from "./tools.ts";
 
@@ -73,6 +73,8 @@ export async function confirmCard(
       case "delete_space": {
         if (typeof args.space !== "string" || !args.space.trim()) throw new Error("space is required.");
         const space = resolveSpace(await loadSpaces(db), args.space);
+        // No Delete button for Tasks or Memories: the database would refuse it anyway.
+        if (space.built_in) return { error: builtInRefusal(space, "deleted") };
         return card(tool, { space: space.id }, space.id, space.path, `Delete the empty space "${space.path}"?`);
       }
       case "delete_secret": {

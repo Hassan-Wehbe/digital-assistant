@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { rejectCredentials } from "../lib/credentials.ts";
-import { loadSpaces, resolveSpace } from "../lib/spaces.ts";
+import { builtInRefusal, loadSpaces, resolveSpace } from "../lib/spaces.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
 // Rename a space or change its description (owner, 2026-10-07). Only these two: whether a space
@@ -30,6 +30,8 @@ export const registerUpdateSpace: RegisterTool = (server, { db, assistantName })
         rejectCredentials({ name, description }, assistantName);
         const spaces = await loadSpaces(db);
         const target = resolveSpace(spaces, space);
+        // Tasks and Memories keep their names (the database refuses too).
+        if (target.built_in && name !== undefined && name !== target.name) throw new Error(builtInRefusal(target, "renamed"));
         if (name !== undefined) {
           const taken = spaces.find((s) =>
             s.id !== target.id && s.parent_id === target.parent_id && s.name.toLowerCase() === name.toLowerCase()
