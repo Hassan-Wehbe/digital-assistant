@@ -12,6 +12,13 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Alarms and calendar entries (D31): plan written (2026-10-10), branch `claude/alarms-calendar`,
+  `docs/alarms-calendar-plan.md`. Waiting for the owner's answers (Q1-Q8; small ones Q9-Q13 have
+  defaults); nothing built.** Alarms open the phone's Clock filled in, reminders are Wilma
+  notifications, calendar entries are written only after a tap on the card; three chat-only actions
+  offered only to apps that say they can. Steps: (1) server actions + paid evaluation (owner's OK and
+  cap) + `chat` deploy; (2) app alarm and reminder cards; (3) app calendar card; (4) privacy wording,
+  checklist, versionCode 20. Strongest model for 1-3, smaller for 4.
 - **versionCode 19 building (owner: "build for Play", 2026-10-10).** Production build from main at
   07bf26b: GitHub run 38069088918 (checks passed), Expo build `6ac3ba0d-99d3-4d9f-a492-d48130618dcc`,
   submission 4db69841-2ad9-4dc5-9044-1d58a0466ace to internal testing (scheduled after the build).
