@@ -1,6 +1,7 @@
 # Help: a "?" with short topics, and "what can you do?" in the chat
 
-Status: plan, 2026-10-10. Waiting for the owner's answers to the questions below; nothing built.
+Status: plan, 2026-10-10. **Owner's answers given the same day: "agree with the recommendations",
+so the first option of every question (Q1-Q6).** Nothing built yet; next is step 1.
 Design: D37. It comes from the same tester feedback as D36: "everything is too verbose"; the
 tester wanted a way to ask for help.
 
@@ -70,7 +71,7 @@ and 3 (app screens and wording).
 - **Rules:** the card carries a topic name only. Nothing from notes, the vault or a restricted
   space appears in it (rules 1 and 3).
 
-## Questions (answer each, or "go with your recommendations")
+## Questions (owner, 2026-10-10: "agree with the recommendations", so (a) for each)
 
 - **Q1. Where the "?" goes.** (a) **Home and Ask Wilma headers, plus a Help row in Settings
   (recommended).** (b) Home only. (c) Settings only.

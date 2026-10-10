@@ -12,8 +12,8 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **Help (D37): plan written (2026-10-10), branch `claude/help-plan`, `docs/help-plan.md`; waiting
-  for the owner's answers (Q1-Q6); nothing built.** (A) a "?" in the Home and Ask Wilma headers
+- **Help (D37): plan written (2026-10-10), branch `claude/help-plan`, `docs/help-plan.md`; owner:
+  "agree with the recommendations" (Q1-Q6); nothing built. Next: step 1, the Help screen.** (A) a "?" in the Home and Ask Wilma headers
   opening short topics with "Try it" examples; (C) "what can you do?" gives a short answer and a 🛟
   card, plain "help" answered by the app with no AI call. Steps: (1) app Help screen (smaller
   model, owner OK on wording), (2) server `show_help` + instruction lines + evaluation (strongest,
