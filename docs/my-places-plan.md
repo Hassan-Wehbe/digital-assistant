@@ -1,6 +1,8 @@
 # My places: homes to plan from
 
-Status: plan, 2026-10-10, waiting for the owner's answers to the questions below; nothing built.
+Status: plan, 2026-10-10. **Owner's answers given the same day: "agree with the recommendations",
+so the first option of every question (Q1-Q9) and the small ones as written.** Nothing built yet;
+next is step 1.
 Design: D36 (and D25, whose "Home is a place note" this replaces; D24, automatic memory, which stops
 keeping home addresses). Model: the strongest for steps 1-4 (database and RLS, the chat loop,
 memory, location); a smaller one for step 5 (wording, checklist, build).
@@ -23,7 +25,7 @@ no way to set it, and the planner reads only that one note.
 
 ## What the owner will see
 
-- **Settings → My places** (name: Q1) lists your homes, for example "🏠 Home ★ · 12 Oak St,
+- **Settings → Homes** (Q1: not "My places", which would clash with Places) lists your homes, for example "🏠 Home ★ · 12 Oak St,
   Oviedo", "Mom's · 4 Elm Rd", "Lake house". Tap one to change its name or address (typed, picked
   from saved places, or **Use where I am**), to **Make default**, or to **Delete**. **Add a place**
   sits at the bottom. The first home you save becomes the default.
@@ -38,7 +40,7 @@ no way to set it, and the planner reads only that one note.
   default (Q4).
 - **Naming it:** "plan my day from Mom's" plans from Mom's without asking.
 - **My day** shows "🏠 Planned from Home · Change". Change lists your homes for that day, plus
-  **Manage My places**.
+  **Manage homes**.
 
 ## How it works
 
@@ -118,7 +120,7 @@ no way to set it, and the planner reads only that one note.
 **The Claude connector:** no change for homes (Q8). `save_item` and `update_item` keep accepting
 kind `home` for older apps, but the planner reads the table first.
 
-## Questions (answer each, or "go with your recommendations")
+## Questions (owner, 2026-10-10: "agree with the recommendations", so (a) for each)
 
 - **Q1. The name.** "Places" already means restaurants and places to visit (D26), so "My places"
   may confuse. (a) **Settings → Homes, rows "🏠 Home ★", "Mom's" (recommended).** (b) "My places".

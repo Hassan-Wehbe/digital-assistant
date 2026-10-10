@@ -13,7 +13,7 @@ tokens or keys in chat.
 
 **Newest first (2026-10-07):**
 - **My places / homes (D36): plan written (2026-10-10), branch `claude/my-places-plan`,
-  `docs/my-places-plan.md`; waiting for the owner's answers (Q1-Q9); nothing built.** From tester
+  `docs/my-places-plan.md`; owner: "agree with the recommendations" (Q1-Q9, so Settings → Homes); nothing built. Next: step 1, table and planner (strongest model, fresh session).** From tester
   feedback: homes in a new table `home_place` (several, one default, RLS), saved from the chat with
   a card, never as memories; the phone notices which home it is at while planning and asks when it
   is not the default. Five steps: (1) table and planner, (2) chat action, memory and evaluation,
