@@ -13,10 +13,9 @@ tokens or keys in chat.
 
 **Newest first (2026-10-07):**
 - **Automatic memory step 2, noticing in the chat (2026-10-10): #198 merged (squash, 62ce384) and
-  live: `chat` version 27** (deploy chat run 38063457900, owner's OK; 401 checks passed). Memory is
-  off for every account until step 3's switch. `mcp` stays at version 30: the Claude connector
-  still gets the database's own refusal for a built-in space, not step 1's friendlier wording,
-  until the next `mcp` deploy. Server only (`chat`). `chat/memory.ts`: after `done`, with memory on, one
+  live: `chat` version 27, `mcp` version 31** (deploy chat runs 38063457900 and 38063775227,
+  owner's OK; 401 checks passed). Memory is off for every account until step 3's switch. The
+  Claude connector now gives step 1's "…is a built-in space" refusal too. Server only (`chat`). `chat/memory.ts`: after `done`, with memory on, one
   small call on the new optional `memory` route (falls back to `router`, so `LLM_ROUTES` needs no
   change) reads the newest message plus up to two before it and names at most 3 facts as JSON; the
   server drops anything credential- or value-like, with vault words, not the user's own words, or
