@@ -10,6 +10,7 @@ import { chatStore, EMPTY_CHAT, type ChatStore } from './chatStore';
 import { dayMemoryStore, EMPTY_MEMORY, type DayMemoryStore } from './dayChoices';
 import { recentSpacesStore, type RecentSpacesStore } from './homeSpaces';
 import { base64Bytes, encryptedStorage, utf8Bytes, utf8Text, type Cipher, type KeyStore } from './sessionStorage';
+import { memoryCardKey } from './memory';
 import { welcomeKey } from './signup';
 
 // Kept on this device only: not synced to other devices or copied into backups.
@@ -89,4 +90,10 @@ export const deviceSettingsStore: SettingsStore = {
 export const deviceWelcome = {
   seen: async (userId: string) => (await kv.getItemAsync(welcomeKey(userId))) === '1',
   markSeen: (userId: string) => kv.setItemAsync(welcomeKey(userId), '1'),
+};
+
+/** The memory card on Home was closed (Turn on or Not now) for this account on this phone. */
+export const deviceMemoryCard = {
+  closed: async (userId: string) => (await kv.getItemAsync(memoryCardKey(userId))) === '1',
+  close: (userId: string) => kv.setItemAsync(memoryCardKey(userId), '1'),
 };

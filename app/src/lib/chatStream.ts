@@ -1,11 +1,15 @@
-// Reads the `chat` function's answer: newline-delimited JSON, one event per line, always
-// ending with `done` (docs/phase5-a5b-chat-function-plan.md "As built: step 3"). Pure logic:
+// Reads the `chat` function's answer: newline-delimited JSON, one event per line, the answer
+// always ending with `done` (docs/phase5-a5b-chat-function-plan.md "As built: step 3"). After
+// `done`, only `remembered` may still come (automatic memory, docs/memory-plan.md step 2): it is
+// read while the server keeps the stream open, and anything else after `done` is ignored. Pure logic:
 // the caller hands in the response body's reader (or any chunks), so the tests need no phone.
 //
 // Lines that are not valid JSON and event types this app does not know are skipped, so the
 // server can add events later without breaking older app versions. A stream that ends (or
 // breaks) without `done` becomes the usual "trouble connecting" error. A vault event's `link`
 // is dropped here, as it is read: the app opens its own vault screen and never keeps the link.
+
+import { toRemembered, type RememberedMemory } from './memory';
 
 /** The server's own wording for a lost connection (supabase/functions/chat/messages.ts). */
 export const CONNECTION_MESSAGE = "I'm having trouble connecting. Try again in a moment.";
@@ -42,7 +46,9 @@ export type ChatEvent =
   /** The answer used a day plan (day planner step 3): the app shows Open my day for that date. */
   | { type: 'day_plan'; date: string }
   | { type: 'error'; code: string; message: string }
-  | { type: 'done'; counted: boolean };
+  | { type: 'done'; counted: boolean }
+  /** After `done`: what Wilma kept from this message (memory on): "🧠 Remembered · Undo". */
+  | { type: 'remembered'; memories: RememberedMemory[] };
 
 /** One place card as the server sends it. `distance` is measured by the server, in the user's unit. */
 export interface PlaceCardData {
@@ -138,6 +144,10 @@ export function toChatEvent(raw: unknown): ChatEvent | null {
       return isDay(raw.date) ? { type: 'day_plan', date: raw.date } : null;
     case 'done':
       return { type: 'done', counted: raw.counted === true };
+    case 'remembered': {
+      const memories = toRemembered(raw.memories);
+      return memories.length ? { type: 'remembered', memories } : null;
+    }
     default:
       return null;
   }
@@ -178,13 +188,16 @@ const connectionLost: ChatEvent[] = [
 ];
 
 /**
- * The events of one answer, in order. Always finishes with `done`, unless `signal` was aborted
- * (Stop, leaving, signing out): then it simply stops, without an error.
+ * The events of one answer, in order. Always yields `done`, unless `signal` was aborted (Stop,
+ * leaving, signing out): then it simply stops, without an error. After `done` it goes on only
+ * for `remembered` events, until the server closes the stream (a break or an end there is
+ * quiet: the answer is complete). A caller that stops at `done` simply never sees them.
  */
 export async function* readChatEvents(source: ChunkSource, signal?: AbortSignal): AsyncGenerator<ChatEvent> {
   const chunks = chunksOf(source);
   const decoder = new TextDecoder('utf-8');
   let buffered = '';
+  let done = false;
   try {
     while (true) {
       if (signal?.aborted) return;
@@ -192,7 +205,7 @@ export async function* readChatEvents(source: ChunkSource, signal?: AbortSignal)
       try {
         chunk = await chunks.next();
       } catch {
-        if (signal?.aborted) return;
+        if (signal?.aborted || done) return;
         yield* connectionLost;
         return;
       }
@@ -204,12 +217,14 @@ export async function* readChatEvents(source: ChunkSource, signal?: AbortSignal)
       for (const line of lines) {
         const event = parseLine(line);
         if (!event) continue;
+        if (done && event.type !== 'remembered') continue;
+        if (!done && event.type === 'remembered') continue; // only ever after the answer
         yield event;
-        if (event.type === 'done') return;
+        if (event.type === 'done') done = true;
         if (signal?.aborted) return;
       }
       if (!chunk) {
-        yield* connectionLost;
+        if (!done) yield* connectionLost;
         return;
       }
     }

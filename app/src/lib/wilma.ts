@@ -41,6 +41,8 @@ export interface Space {
   path: string;
   description: string | null;
   restricted: boolean;
+  /** "tasks" or "memories" on the account's built-in spaces (never deleted or renamed). */
+  built_in?: string;
 }
 
 export interface NewSpace {

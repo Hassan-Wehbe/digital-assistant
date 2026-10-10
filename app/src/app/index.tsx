@@ -30,10 +30,12 @@ import {
   useLoad,
   useReloadOnReturn,
 } from '@/components/ui';
+import { MemoryCard } from '@/components/MemoryCard';
 import { WelcomeCard } from '@/components/WelcomeCard';
 import { BoxCounter, WilmaBox } from '@/components/WilmaBox';
 import { deviceRecentSpaces } from '@/lib/deviceStorage';
 import { homeSpaces } from '@/lib/homeSpaces';
+import { isBuiltIn, spaceTitle } from '@/lib/memory';
 import { useOpenSpace } from '@/lib/openSpace';
 import { useAuth } from '@/lib/auth';
 import { useChat } from '@/lib/chat';
@@ -212,6 +214,7 @@ export default function Home() {
   const header = (
     <View style={{ gap: space.m }}>
       {query ? null : <WelcomeCard />}
+      {query ? null : <MemoryCard />}
       {query ? null : <MorningCard refresh={pulls} />}
       {query ? (
         <Text style={[styles.title, { color: c.text }]}>{`Results for “${query}”`}</Text>
@@ -225,7 +228,14 @@ export default function Home() {
       {!query && home.shown.length ? (
         <GroupList>
           {home.shown.map((sp, i) => (
-            <GroupRow key={sp.id} first={i === 0} title={sp.path} subtitle={sp.description ?? undefined} onPress={() => openSpace(sp)} />
+            <GroupRow
+              key={sp.id}
+              first={i === 0}
+              title={spaceTitle(sp)}
+              subtitle={sp.description ?? undefined}
+              badge={isBuiltIn(sp) ? 'BUILT-IN' : undefined}
+              onPress={() => openSpace(sp)}
+            />
           ))}
         </GroupList>
       ) : null}

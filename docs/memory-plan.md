@@ -4,8 +4,8 @@ Status: plan, 2026-10-10. Owner's answers given the same day ("go with your reco
 default Memories space like Tasks). Design: D24, D30. Model: the strongest for steps 1-4 (chat loop,
 secrets, restricted spaces); a smaller one for step 5's wording and the build.
 
-**Step 2 built (2026-10-10, branch `claude/memory-step2`), not merged or deployed:** noticing in
-the chat, server only; see "As built: step 2" at the end.
+**Step 2 merged (#198) and live** (`chat` v27, `mcp` v31). **Step 3 built (2026-10-10, branch
+`claude/memory-step3`), not merged:** the app; see "As built: step 3" at the end.
 
 ## What the owner will see
 
@@ -144,3 +144,28 @@ deletes it if they want).
   name and by tool; a vault turn; health, money and another person's private news not asked to
   keep; "remember the alarm code"). **Run 38063018552 (owner's OK, $1 cap), Luna: 23/23, 0 leaks,
   $0.0011.**
+
+## As built: step 3 (the app)
+
+- **Settings → Memory:** On / Off (`app_user.memory_on`, read and written as the user, like
+  Distances; shown only once it is read), "🧠 See what I remembered" (opens the built-in Memories
+  space), and a line saying what memory does. `lib/memory.ts`.
+- **Home:** a one-time card, "🧠 Let Wilma remember" with Turn on / Not now, while memory is off;
+  closed for good per account on this phone (`wilma.memoryCard.v1.<id>`); gone when memory is turned
+  on in Settings. `components/MemoryCard.tsx`.
+- **Chat:** the stream is read past `done` for `remembered` only (`chatStream.ts`); `runTurn` gives
+  Send back at `done` as before and listens on in the background up to 20 seconds (`afterDone`).
+  The line goes right under the reply it came from (`memory` entry, kept with the thread):
+  "🧠 Remembered: … · Undo" (or "Updated: …"). Undo sends a new memory to the Recycle bin, or gives
+  a changed one its old text back (the event now carries `was`), then says "Forgotten: …" / "Back
+  to: …". `MemoryLine` in `ChatCards.tsx`.
+- **Built-in spaces:** `list_spaces` now says `built_in` for Tasks and Memories (server). Rows on
+  Home and All spaces show ✅ / 🧠 and a **BUILT-IN** badge (the PRO badge's style, `GroupRow`'s new
+  `badge`); the space's screen shows the badge and has no Delete space; Edit space has no Name
+  field for them, with "Built-in space: it can't be deleted or renamed." `isTasksSpace` prefers
+  the built-in one.
+- **Server changes in this step:** `list_spaces` output (`built_in`, only on the two built-in
+  spaces; no description change) and the `remembered` event's `was`. Both need a deploy (`mcp`,
+  `chat`); an app without them still works (no badges; Undo of a changed memory deletes it).
+- **Tests:** 739 app tests (15 new: `memory.test.ts`, and memory cases in `chatStream`, `chatRun`,
+  `chatThread`, `homeSpaces` tests); 446 Deno tests (1 new: `list_spaces` marks built-in spaces).

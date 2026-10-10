@@ -14,8 +14,10 @@ export const MAX_RECENT = 20;
 const PREFIX = 'wilma.recentSpaces.';
 export const recentKey = (userId: string) => `${PREFIX}${userId}`;
 
-/** The Tasks space (a top-level, not restricted space named Tasks; mcp/lib/tasks.ts tasksSpace). */
-export const isTasksSpace = (s: Pick<Space, 'path' | 'restricted'>) => !s.restricted && s.path.trim().toLowerCase() === 'tasks';
+/** The Tasks space: the built-in one, or (an older server) a top-level, not restricted space named
+ * Tasks (mcp/lib/tasks.ts tasksSpace). */
+export const isTasksSpace = (s: Pick<Space, 'path' | 'restricted' | 'built_in'>) =>
+  !s.restricted && (s.built_in === 'tasks' || (!s.built_in && s.path.trim().toLowerCase() === 'tasks'));
 
 /** Opened now: first, once. */
 export function rememberOpened(recent: string[], id: string): string[] {

@@ -288,6 +288,7 @@ export function GroupRow({
   first,
   dimmed,
   checked,
+  badge,
 }: {
   title: string;
   subtitle?: string;
@@ -297,13 +298,18 @@ export function GroupRow({
   dimmed?: boolean;
   /** One of a set of choices (Settings → Distances): a ✓ instead of ›, read out as a radio button. */
   checked?: boolean;
+  /** A small label after the title (BUILT-IN on Tasks and Memories). */
+  badge?: string;
 }) {
   const choice = checked !== undefined;
   const c = useColors();
   const body = (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.s, paddingVertical: space.m, paddingHorizontal: space.m }}>
       <View style={{ flex: 1, gap: 2 }}>
-        <Text style={{ color: c.text, fontSize: 16, fontWeight: onPress ? '600' : '400' }}>{title}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.s, flexWrap: 'wrap' }}>
+          <Text style={{ color: c.text, fontSize: 16, fontWeight: onPress ? '600' : '400' }}>{title}</Text>
+          {badge ? <Badge text={badge} /> : null}
+        </View>
         {subtitle ? <Muted>{subtitle}</Muted> : null}
       </View>
       {choice ? (

@@ -26,7 +26,7 @@
 //             {"type":"day_plan","date":...}                            the answer used a day plan: Open my day
 //             {"type":"error","code":"allowance_used"|"service_paused"|"connection","message":...}
 //             {"type":"done","counted":true|false}                    the answer is complete
-//             {"type":"remembered","memories":[{"id","fact","updated"}]} after done, only with
+//             {"type":"remembered","memories":[{"id","fact","updated","was"?}]} after done, only with
 //                                                                     memory on (memory.ts)
 //           `done` ends the answer; "remembered" is the only event that may follow it, while the
 //           app still reads (an app that stops at `done` simply never sees it).

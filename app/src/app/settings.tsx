@@ -1,4 +1,5 @@
 // Settings (docs/ui-review.md, plan step 2): what used to fill the bottom of the home screen.
+// Memory on or off and what Wilma remembered (memory step 3).
 // This month's AI allowance in full (D28), distances in miles or km (places Q14), the phone's
 // Theme (light, dark or the phone's), the
 // calendars Wilma may read (day planner step 1, app/calendars.tsx), the morning briefing and
@@ -16,6 +17,8 @@ import { briefingSummary, loadBriefing } from '@/lib/briefingSettings';
 import { loadChoice } from '@/lib/calendarSettings';
 import { versionLabel } from '@/lib/config';
 import { deviceSettingsStore } from '@/lib/deviceStorage';
+import { loadMemoryOn, type MemoryDb, memoriesSpace, saveMemoryOn } from '@/lib/memory';
+import { useOpenSpace } from '@/lib/openSpace';
 import { supabase } from '@/lib/supabase';
 import { applyTheme, loadTheme, saveTheme, THEME_CHOICES, type ThemeChoice } from '@/lib/themeSetting';
 import { type DistanceUnit, loadDistanceUnit, saveDistanceUnit, UNIT_CHOICES, type UnitsDb } from '@/lib/units';
@@ -23,7 +26,8 @@ import { loadAllowance, usageSummary } from '@/lib/usage';
 
 export default function Settings() {
   const c = useColors();
-  const { session, signOut } = useAuth();
+  const { session, signOut, wilma } = useAuth();
+  const openSpace = useOpenSpace();
   const usage = useLoad(`usage:${session?.user.id ?? ''}`, async () => {
     const a = await loadAllowance((fn) => supabase.rpc(fn));
     return a ? usageSummary(a) : null;
@@ -50,6 +54,33 @@ export default function Settings() {
     setTheme(t);
     applyTheme(Appearance, t);
     setThemeNote((await saveTheme(deviceSettingsStore, t)) ? null : "That wasn't saved on this phone, so it lasts until Wilma restarts.");
+  };
+
+  const memoryDb = supabase as unknown as MemoryDb;
+  const memory = useLoad(`memory:${userId}`, () => loadMemoryOn(memoryDb, userId));
+  const [memoryPicked, setMemoryPicked] = useState<boolean | null>(null);
+  const [memoryNote, setMemoryNote] = useState<string | null>(null);
+  const memoryOn = memoryPicked ?? memory.data;
+  const pickMemory = async (on: boolean) => {
+    if (on === memoryOn || !userId) return;
+    setMemoryPicked(on);
+    setMemoryNote(null);
+    if (await saveMemoryOn(memoryDb, userId, on)) {
+      memory.reload();
+    } else {
+      setMemoryPicked(null);
+      setMemoryNote("That wasn't saved. Check your connection and try again.");
+    }
+  };
+  const seeMemories = async () => {
+    setMemoryNote(null);
+    try {
+      const found = memoriesSpace(await wilma.listSpaces());
+      if (found) openSpace(found);
+      else setMemoryNote('Your Memories space cannot be found right now.');
+    } catch {
+      setMemoryNote('Your memories cannot be read right now. Check your connection and try again.');
+    }
   };
 
   const pickUnit = async (u: DistanceUnit) => {
@@ -112,6 +143,21 @@ export default function Settings() {
           <Muted>{themeNote ?? 'Kept on this phone. "Same as the phone" follows its dark mode.'}</Muted>
         </>
       )}
+
+      {heading('Memory')}
+      <GroupList>
+        <GroupRow first title="On" checked={memoryOn === true} onPress={typeof memoryOn === 'boolean' ? () => void pickMemory(true) : undefined} />
+        <GroupRow title="Off" checked={memoryOn === false} onPress={typeof memoryOn === 'boolean' ? () => void pickMemory(false) : undefined} />
+        <GroupRow title="🧠 See what I remembered" onPress={() => void seeMemories()} />
+      </GroupList>
+      <Muted>
+        {memoryNote ??
+          (typeof memoryOn === 'boolean'
+            ? 'With memory on, Wilma keeps lasting facts you mention and shows each under her reply, with Undo. Never passwords; health, money and other private topics only when you say “remember”. Turning it off keeps what she remembered.'
+            : memory.loading
+              ? 'Reading your setting…'
+              : 'Your setting cannot be read right now.')}
+      </Muted>
 
       {heading('Calendar')}
       <GroupList>

@@ -5,7 +5,7 @@
 import type { Agenda } from './calendar';
 import type { ChatClient, SharedPoint } from './chatClient';
 import { runDelete, type DeleteRunners } from './chatDeletes';
-import { CONNECTION_MESSAGE } from './chatStream';
+import { CONNECTION_MESSAGE, type ChatEvent } from './chatStream';
 import type { ChatAction, ChatState, Entry } from './chatThread';
 import { WilmaError } from './wilma';
 
@@ -22,11 +22,19 @@ export async function runTurn(
   /** The calendar Wilma asked for, sent with the question again. */
   agenda?: Agenda,
 ): Promise<TurnEnd> {
+  const events = send(entries, signal, here, agenda)[Symbol.asyncIterator]();
+  let handedOn = false;
   try {
-    for await (const event of send(entries, signal, here, agenda)) {
+    for (let r = await events.next(); !r.done; r = await events.next()) {
+      const event = r.value;
       if (signal.aborted) break;
       act({ type: 'event', event });
-      if (event.type === 'done') return 'done';
+      if (event.type === 'done') {
+        // The answer is complete (Send comes back now); "remembered" may still follow.
+        handedOn = true;
+        void afterDone(events, signal, act);
+        return 'done';
+      }
     }
   } catch (e) {
     if (e instanceof WilmaError && e.signedOut) {
@@ -34,6 +42,8 @@ export async function runTurn(
       return 'signed_out';
     }
     // Anything unexpected: the usual message, never the error's own text.
+  } finally {
+    if (!handedOn) void events.return?.(undefined)?.catch(() => {});
   }
   if (signal.aborted) {
     act({ type: 'stop' });
@@ -42,6 +52,37 @@ export async function runTurn(
   act({ type: 'event', event: { type: 'error', code: 'connection', message: CONNECTION_MESSAGE } });
   act({ type: 'event', event: { type: 'done', counted: false } });
   return 'done';
+}
+
+/** How long the app keeps listening after `done` for "remembered" (the server's own limit is
+ * about 8 seconds, plus saving). */
+export const REMEMBERED_WAIT_MS = 20_000;
+
+/**
+ * After `done`: the "remembered" events of this answer, until the server closes the stream, the
+ * wait is over, or the answer was abandoned (signed out). Never shows an error: the answer is
+ * already complete, and a memory missed here is still in the Memories space.
+ */
+export async function afterDone(
+  events: AsyncIterator<ChatEvent>,
+  signal: AbortSignal,
+  act: (action: ChatAction) => void,
+  waitMs = REMEMBERED_WAIT_MS,
+): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<'timeout'>((resolve) => (timer = setTimeout(() => resolve('timeout'), waitMs)));
+  try {
+    while (!signal.aborted) {
+      const r = await Promise.race([events.next(), timeout]);
+      if (r === 'timeout' || r.done || signal.aborted) break;
+      if (r.value.type === 'remembered') act({ type: 'remembered', memories: r.value.memories });
+    }
+  } catch {
+    // The connection went: nothing to say.
+  } finally {
+    clearTimeout(timer);
+    void events.return?.(undefined)?.catch(() => {});
+  }
 }
 
 /** How a tap on a card's Delete ended. */

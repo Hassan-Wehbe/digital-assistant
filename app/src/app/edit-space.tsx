@@ -1,11 +1,13 @@
 // Edit a space: its name and description (update_space). Whether it is restricted, and where it
-// sits, are not changed here. Notes and sub-spaces stay in it.
+// sits, are not changed here. Notes and sub-spaces stay in it. A built-in space (Tasks, Memories;
+// memory step 3, Q8) keeps its name: only its description can change.
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
 
-import { Button, ErrorBox, KeyboardScreen, Loading, Muted, styles, useColors, useLoad } from '@/components/ui';
+import { Badge, Button, ErrorBox, KeyboardScreen, Loading, Muted, styles, useColors, useLoad } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { BUILT_IN_LINE, isBuiltIn } from '@/lib/memory';
 import { SPACE_DESCRIPTION_MAX, SPACE_NAME_MAX, spaceChanges, spaceName } from '@/lib/spaces';
 import type { Space } from '@/lib/wilma';
 
@@ -37,8 +39,9 @@ function EditSpaceForm({ space }: { space: Space }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const builtIn = isBuiltIn(space);
   const save = async () => {
-    const out = spaceChanges(space, { name, description });
+    const out = spaceChanges(space, { name: builtIn ? spaceName(space.path) : name, description });
     if ('error' in out) return setError(out.error);
     if (!Object.keys(out.changes).length) return router.back();
     setBusy(true);
@@ -46,7 +49,10 @@ function EditSpaceForm({ space }: { space: Space }) {
     try {
       const saved = await wilma.updateSpace(space.id, out.changes);
       // Back to the space, under its new name.
-      router.dismissTo({ pathname: '/space/[id]', params: { id: space.id, path: saved.path } });
+      router.dismissTo({
+        pathname: '/space/[id]',
+        params: { id: space.id, path: saved.path, ...(space.built_in ? { builtIn: space.built_in } : {}) },
+      });
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       setError(/^Not saved: the \w+ looks like it contains/.test(message)
@@ -60,16 +66,27 @@ function EditSpaceForm({ space }: { space: Space }) {
   return (
     <KeyboardScreen>
       <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
-        <Text style={[styles.title, { color: c.text }]}>Name</Text>
-        <TextInput
-          style={input}
-          placeholder="Name"
-          placeholderTextColor={c.muted}
-          maxLength={SPACE_NAME_MAX}
-          value={name}
-          onChangeText={setName}
-          editable={!busy}
-        />
+        {builtIn ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Badge text="BUILT-IN" />
+            <View style={{ flex: 1 }}>
+              <Muted>{BUILT_IN_LINE}</Muted>
+            </View>
+          </View>
+        ) : (
+          <>
+            <Text style={[styles.title, { color: c.text }]}>Name</Text>
+            <TextInput
+              style={input}
+              placeholder="Name"
+              placeholderTextColor={c.muted}
+              maxLength={SPACE_NAME_MAX}
+              value={name}
+              onChangeText={setName}
+              editable={!busy}
+            />
+          </>
+        )}
         <Text style={[styles.title, { color: c.text }]}>Description</Text>
         <TextInput
           style={[input, { minHeight: 80, textAlignVertical: 'top' }]}

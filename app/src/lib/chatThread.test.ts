@@ -415,3 +415,48 @@ describe('the phone’s calendar (day planner step 1: ask, then re-send)', () =>
     expect(run(streaming, { type: 'calendar_card', problem: 'failed' })).toBe(streaming);
   });
 });
+
+describe('"🧠 Remembered" lines (memory step 3)', () => {
+  const m1 = { id: 'm1', fact: 'Lexi swims on Tuesdays', updated: false };
+  const answered = (text: string, state = initialChat()) => {
+    let s = chatReducer(state, { type: 'send', text });
+    s = chatReducer(s, { type: 'event', event: { type: 'text', text: 'Nice!' } });
+    return chatReducer(s, { type: 'event', event: { type: 'done', counted: true } });
+  };
+
+  it('goes right under the answer it came from, even after a new message was sent', () => {
+    let s = answered('Lexi swims on Tuesdays');
+    s = chatReducer(s, { type: 'send', text: 'and what about Wednesday?' });
+    s = chatReducer(s, { type: 'remembered', memories: [m1] });
+    expect(s.entries.map((e) => e.kind)).toEqual(['user', 'assistant', 'memory', 'user']);
+    expect(s.streaming).toBe(true); // the new answer is untouched
+    // Never sent to Wilma.
+    expect(messagesToSend(s.entries).map((m) => m.content)).toEqual(['Lexi swims on Tuesdays', 'Nice!', 'and what about Wednesday?']);
+  });
+
+  it('nothing remembered adds nothing; one before done is ignored', () => {
+    const s = answered('hi');
+    expect(chatReducer(s, { type: 'remembered', memories: [] })).toBe(s);
+    let streaming = chatReducer(initialChat(), { type: 'send', text: 'hi' });
+    const before = streaming;
+    streaming = chatReducer(streaming, { type: 'event', event: { type: 'remembered', memories: [m1] } as ChatEvent });
+    expect(streaming).toEqual(before);
+  });
+
+  it('Undo marks that one memory, once', () => {
+    let s = chatReducer(answered('Lexi swims on Tuesdays'), { type: 'remembered', memories: [m1, { ...m1, id: 'm2', fact: 'Plumber is Mike' }] });
+    const id = s.entries.find((e) => e.kind === 'memory')!.id;
+    s = chatReducer(s, { type: 'memory_undone', id, memoryId: 'm2' });
+    const card = s.entries.find((e) => e.kind === 'memory');
+    expect(card?.kind === 'memory' && card.memories.map((m) => !!m.undone)).toEqual([false, true]);
+    expect(chatReducer(s, { type: 'memory_undone', id, memoryId: 'm2' })).toBe(s);
+    expect(chatReducer(s, { type: 'memory_undone', id: 'nope', memoryId: 'm1' })).toBe(s);
+  });
+
+  it('is kept with the thread, Undo included, and a malformed one is dropped', () => {
+    expect(toEntry({ kind: 'memory', id: '4', memories: [{ ...m1, undone: true }, { id: 'm2', fact: 'Plumber is Mike', updated: true, was: 'Plumber is Joe' }] }))
+      .toEqual({ kind: 'memory', id: '4', memories: [{ ...m1, undone: true }, { id: 'm2', fact: 'Plumber is Mike', updated: true, was: 'Plumber is Joe' }] });
+    expect(toEntry({ kind: 'memory', id: '5', memories: [{ id: 'x' }] })).toBeNull();
+    expect(toEntry({ kind: 'memory', id: '6' })).toBeNull();
+  });
+});

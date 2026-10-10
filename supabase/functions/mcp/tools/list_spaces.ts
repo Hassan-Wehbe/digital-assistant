@@ -16,11 +16,13 @@ export const registerListSpaces: RegisterTool = (server, { db }) => {
       guarded(async () => {
         const spaces = await loadSpaces(db);
         return ok({
-          spaces: spaces.map(({ id, path, description, is_restricted }) => ({
+          spaces: spaces.map(({ id, path, description, is_restricted, built_in }) => ({
             id,
             path,
             description,
             restricted: is_restricted,
+            // Tasks and Memories: the app marks them BUILT-IN and offers no Delete or rename.
+            ...(built_in ? { built_in } : {}),
           })),
         });
       }),
