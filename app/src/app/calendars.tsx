@@ -2,13 +2,17 @@
 // calendar" asks for the calendar permission only when tapped, then lists the phone's calendars,
 // all ticked (Q2); the user unticks what Wilma must not read. Turn off at any time. Which calendars
 // are ticked is kept on this phone only (calendarSettings.ts); no event is read on this screen.
+// "New events go to" (alarms and calendar entries step 3, Q5): where the chat's 📅 card adds events,
+// among the ticked calendars the phone lets apps write to; Android only, like the card.
 import { useState } from 'react';
-import { Linking, ScrollView, Text } from 'react-native';
+import { Linking, Platform, ScrollView, Text } from 'react-native';
 
 import { Button, Card, GroupList, GroupRow, Muted, space, styles, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
-import { deviceCalendar, listCalendars, NO_PERMISSION, turnOn, type CalendarChoice, type PhoneCalendar } from '@/lib/calendar';
-import { loadChoice, OFF, saveChoice, toggleCalendar } from '@/lib/calendarSettings';
+import {
+  defaultTarget, deviceCalendar, listCalendars, NO_PERMISSION, turnOn, writableCalendars, type CalendarChoice, type PhoneCalendar,
+} from '@/lib/calendar';
+import { chooseTarget, loadChoice, OFF, saveChoice, toggleCalendar } from '@/lib/calendarSettings';
 import { deviceSettingsStore } from '@/lib/deviceStorage';
 
 const NOT_SAVED = "That wasn't saved on this phone. Try again.";
@@ -97,6 +101,7 @@ export default function Calendars() {
             <Muted>Reading your calendars…</Muted>
           )}
           {calendars && choice.ticked.length === 0 ? <Muted>No calendar is ticked, so Wilma reads none.</Muted> : null}
+          {calendars && Platform.OS === 'android' ? <NewEventsGoTo calendars={calendars} choice={choice} onPick={(id) => void save(chooseTarget(choice, id))} /> : null}
           <Muted>Don’t see a calendar? Add the account in your phone’s settings.</Muted>
           <Button title="Turn off" kind="plain" onPress={() => void switchOff()} />
         </>
@@ -111,5 +116,27 @@ export default function Calendars() {
         </Card>
       ) : null}
     </ScrollView>
+  );
+}
+
+/** Q5: where the chat's 📅 card adds events (changeable on the card, for that event). Writable calendars only. */
+function NewEventsGoTo({ calendars, choice, onPick }: { calendars: PhoneCalendar[]; choice: CalendarChoice; onPick: (id: string) => void }) {
+  const c = useColors();
+  const usable = writableCalendars(calendars, choice);
+  const target = defaultTarget(calendars, choice);
+  return (
+    <>
+      <Text style={[styles.title, { color: c.text }]}>New events go to</Text>
+      {usable.length ? (
+        <GroupList>
+          {usable.map((cal, i) => (
+            <GroupRow key={cal.id} first={i === 0} title={cal.title} subtitle={cal.account ?? undefined} checked={cal.id === target?.id} onPress={() => onPick(cal.id)} />
+          ))}
+        </GroupList>
+      ) : (
+        <Muted>None of the ticked calendars lets apps add events.</Muted>
+      )}
+      <Muted>When you ask Wilma to put something on your calendar, her card adds it here after you tap Add to calendar. You can pick another calendar on the card. Only ticked calendars that let apps add events are listed.</Muted>
+    </>
   );
 }

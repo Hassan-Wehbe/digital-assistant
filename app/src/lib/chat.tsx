@@ -56,8 +56,9 @@ import { runConfirm, runTurn } from './chatRun';
 import { threadsToKeep } from './chatStore';
 import { findCredential } from './credentials';
 import {
-  canLookup, chatReducer, homeAskActive, initialChat, monthKey, noticeVisible, type ChatAction, type ChatState, type HomeSaved,
+  canLookup, chatReducer, homeAskActive, initialChat, monthKey, noticeVisible, type ChatAction, type ChatState, type EventAdded, type HomeSaved,
 } from './chatThread';
+import type { EventCardData } from './phoneActions';
 import { deviceChatStore, deviceDayMemory, deviceSettingsStore } from './deviceStorage';
 import { deviceGeocoder, deviceLocation } from './location';
 import { undoMemory } from './memory';
@@ -111,6 +112,8 @@ interface ChatContextValue {
   /** Undo on a "🧠 Remembered" line: that memory is deleted (or gets its old text back). False
    * when it did not work. */
   undoMemory(entryId: string, memoryId: string): Promise<boolean>;
+  /** Add to calendar worked on a 📅 card: the card and the saved chat say Added. */
+  eventAdded(entryId: string, added: EventAdded, event: EventCardData): void;
   /** A 🏠 card's home was saved (the card wrote it on the tap): the card says so from now on. */
   homeSaved(entryId: string, saved: HomeSaved): void;
   /** "You're at Mom's": plan today from that home (kept for today), then the question again. */
@@ -409,6 +412,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         }
         if (user.current === forUser) act({ type: 'memory_undone', id: entryId, memoryId });
         return true;
+      },
+      eventAdded(entryId, added, event) {
+        act({ type: 'event_added', id: entryId, added, event });
       },
       homeSaved(entryId, saved) {
         act({ type: 'home_saved', id: entryId, saved });
