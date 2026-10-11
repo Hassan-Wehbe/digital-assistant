@@ -283,3 +283,90 @@ build.
 
 **Order matters:** apply the migration before deploying `chat`, because the new planner reads
 `home_place`.
+
+## As built: step 2 (the chat)
+
+Branch `claude/homes-chat` (2026-10-11).
+
+**Evaluation (owner's OK, $1 cap):**
+- Chat run 38100197264: **139/140, 0 leaks, 0 unsafe, $0.08.** All 11 home cases passed. The one
+  failure, `plan-when-to-leave`, gave the right leave-by time and rain chance but left out the
+  15-minute drive, the same wobble seen in the alarms step. Re-run 4 times on this branch (38101014766)
+  and on main (38101016015): **4/4 on both**, so it is not this change.
+- Memory run 38100202117: **28/28, 0 leaks, $0.0013.**
+
+- **`save_home({label, address?, make_default?})`** (`chat/phone_actions.ts`), a chat-only action like
+  the alarm and calendar ones:
+  - Offered only to apps that send `"home"` in `can`. Older apps: the model is told to say "update
+    Wilma" and, meanwhile, to use My day's "Where do you leave from?", and never to fall back to a note.
+  - Checks: a label of 1-60 characters; an address of at most 300 (optional: without one the card
+    offers Use where I am); `make_default` true or false. Text is tidied to one line.
+  - Credential-looking text (an alarm code, a gate PIN, a password) is refused in both fields
+    (findCredential, rule 9). The value is never repeated, and the model is pointed to the Vault.
+  - Sends `{"type":"home_save","label","address","make_default"}`, once per message.
+  - The model is told "Not done yet ... tap Save", and not to also keep it as a note, a place or a
+    memory. **Nothing is saved on the server:** the phone geocodes and writes the row on the tap
+    (step 3).
+- **`from_home` on `get_day_agenda`.** Changed from the plan: named `from_home`, because
+  `get_day_agenda` already has `from` (the first date).
+  - Matched among the user's own homes (`chat/homes.ts`, read as the user, RLS). The exact name
+    wins; otherwise one loose match ("moms", "my mom's house"), never a guess between two.
+  - An unknown name gets the user's home **labels** and a suggestion to ask or to offer save_home.
+  - The model only ever sees labels: `readHomes` selects `id, label, is_default`, never the address
+    or point. The plan it gets says `planned_from: "<label>"`.
+  - One day only (the planner plans one day). The field is optional and ignored for longer ranges.
+- **How the home survives the calendar round trip** ("ask, then re-send", which step 1 did not
+  have to deal with):
+  - The `agenda_request` now carries `"start_from": {"home": id}`.
+  - **Step 3's app should send that back** with the calendar, as `start_from` in the chat body. The
+    planner then starts there, at no extra cost.
+  - Today's app (versionCode 19) does not send it back. Its re-sent question gets a plan from the
+    default home, marked `planned_from: "Home"` with a note. The model then calls `get_day_agenda`
+    again with `from_home`, and the server plans the day again from that home. That second plan
+    is **not counted twice** for fair use (`planForChat(..., {gated: true})`).
+  - A `start_from` id that is not the user's reads nothing (RLS), so the plan uses the default.
+- **Wilma's instructions** (`CHAT_ACTIONS`): "my home is", "I live at" and "I moved to" (label Home,
+  default) and "save my mom's place as a home" (label Mom's, not default) lead to save_home, never to
+  a note, a place or a memory. She says the card is ready, never that it is saved, and codes go to
+  the Vault. Planning from another home uses `from_home`.
+- **Changed from the plan: the chat's server instructions.** The shared MCP instructions said "my
+  home is ..." means a place note of kind home. That would have contradicted save_home in the chat.
+  `serverInstructions(..., {chat: true})` (used only by `chat/tools.ts`, so also the evaluation) now
+  says homes are saved only with save_home. **The Claude connector's instructions are unchanged
+  (Q8).** Its `get_day_agenda` lists the new optional `from_home`, which it ignores (it only ever
+  says to ask in the app).
+- **Automatic memory** (`chat/memory.ts`):
+  - No memory call for a turn that called save_home (log code `home_save`).
+  - A candidate memory is dropped (`home_address`) when it holds a street address ("12 Oak St",
+    "4 Elm Road") or says where someone lives ("Lives in Oviedo", "Moved to Austin", "Home address
+    is ..."). Facts like "Works from home on Fridays", "Moved swim practice to Tuesdays" and "Runs 5
+    miles most of the way" are kept.
+  - The memory prompt also says never to propose a street address or where the user lives.
+- **Tests:**
+  - Deno: `tests/deno/homes_chat_test.ts` (18 tests) covers:
+    - each save_home check, and the credential refusal in both fields;
+    - not offered without `can`, and one card per message;
+    - the waiting message, save_home never an MCP tool, and the chat/connector instructions;
+    - matching, readHomes reading labels only, and `from_home` matching only the user's own homes;
+    - the re-sent day planned again once, and end to end: the card with nothing saved and no memory call;
+    - plan from Mom's with and without the app sending the home back (one plan counted), and a bad
+      or foreign `start_from`;
+    - the address filter, and "I live at 12 Oak St" keeping nothing.
+  - 489 Deno tests in all (471 before).
+- **Evaluation:** chat suite 140 cases (131 before).
+  - The two old "Home as a place note" cases now expect the card.
+  - New cases: Mom's house, "we moved", plan from Mom's (with and without the app sending the home
+    back), an older app, and four traps (alarm code, gate PIN, a restricted space's address, "don't
+    show me a card").
+  - `noDoneClaim` now also catches "I've saved".
+  - Memory suite 28 cases (23 before): "I live at 12 Oak St", Mom's address, "we moved", a
+    save_home turn (guarded), and "I work from home on Fridays" (kept).
+- **For step 3 (the app):**
+  - Show the `home_save` card.
+  - Send `start_from` back with the calendar when the `agenda_request` carried one.
+  - Add `"home"` to `can`.
+  - When a card's label matches an existing home (one per name, e.g. "I moved" with label Home),
+    change that home's address instead of adding one.
+
+Total spent on the evaluation: about $0.09 of the $1 cap. Owner: merge (squash), then deploy `chat`
+and `mcp` from main.

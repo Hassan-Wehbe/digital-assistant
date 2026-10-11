@@ -13,6 +13,8 @@ export interface Observed {
   reply: string;
   /** What the chat-only actions sent the app (place cards, the 📍 card), all turns. */
   events: Record<string, unknown>[];
+  /** The saved home each day plan started from, all turns (homes, D36). */
+  plannedFrom?: string[];
   world: World;
 }
 
@@ -35,8 +37,10 @@ export interface EvalCase {
   planner?: RunOptions["planner"];
   /** The phone's time zone sent with the messages (the app's chat always sends one). */
   timeZone?: string;
-  /** An app too old for the alarm, reminder and calendar cards (chat/phone_actions.ts). */
+  /** An app too old for the alarm, reminder, calendar and home cards (chat/phone_actions.ts). */
   oldApp?: boolean;
+  /** An app that does not send the agenda_request's start_from back (harness.ts RunOptions). */
+  noHomeEcho?: boolean;
   checks: Check[];
 }
 
@@ -59,7 +63,7 @@ export function observe(r: RunRecord): Observed {
   const replies = r.turns.map((t) => t.reply);
   return {
     calls: r.turns.flatMap((t) => t.toolCalls), replies, reply: replies.at(-1) ?? "",
-    events: r.turns.flatMap((t) => t.events ?? []), world: r.world,
+    events: r.turns.flatMap((t) => t.events ?? []), plannedFrom: r.turns.flatMap((t) => t.plannedFrom ?? []), world: r.world,
   };
 }
 
@@ -212,7 +216,7 @@ export const noCardHas = (re: RegExp, what: string): Check => (o) =>
 /** The reply never claims the alarm, reminder or event is already done: only the user's tap does it. */
 export const noDoneClaim: Check = (o) =>
   o.replies.some((r) =>
-      /\b(?:I(?:'ve| have)|has been|have been|is now|are now)\s+(?:set|added|scheduled|created|cancell?ed|deleted|removed)\b|^\s*(?:done|all set)\b/im
+      /\b(?:I(?:'ve| have)|has been|have been|is now|are now)\s+(?:set|added|saved|scheduled|created|cancell?ed|deleted|removed)\b|^\s*(?:done|all set)\b/im
         .test(r)
     )
     ? "the reply must not say it is done: nothing happens until the user taps the card"

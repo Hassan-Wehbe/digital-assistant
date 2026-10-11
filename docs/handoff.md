@@ -12,6 +12,22 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Homes step 2, the chat (2026-10-11): branch `claude/homes-chat`; evaluation passed (owner's OK,
+  $1 cap): chat 139/140 (the miss, plan-when-to-leave, then 4/4 on branch and main), memory 28/28,
+  0 leaks, 0 unsafe, about $0.09. Owner: merge, deploy `chat` and `mcp`.** `save_home` card (chat-only,
+  `"home"` in `can`, credentials refused, nothing saved on the server); `from_home` on
+  `get_day_agenda` (named so because `from` is the date; matched among the user's homes, labels
+  only to the model; the `agenda_request` carries `start_from` for step 3's app to send back, and
+  today's app gets the day planned again without a second count); memory skips save_home turns and
+  drops street addresses and "lives in" facts; the chat's server instructions say save_home
+  (connector unchanged). 489 Deno tests; eval chat 140 cases, memory 28. Details: `docs/my-places-plan.md`
+  "As built: step 2".
+- **New idea, not planned (owner, 2026-10-11): two tick boxes on the day planner, both ticked by
+  default: "Include weather" and "Include route planning".** Nothing built. Notes for when it is
+  planned: unticking weather would skip the US National Weather Service requests (no rain or alert
+  rows); unticking route planning would skip Mapbox (no drive times or leave-by times, only the
+  order of the day). To decide then: My day only or the chat's "plan my day" too; a setting that
+  stays, or a choice for that day only (like My day's other choices, `dayChoices.ts`).
 - **Homes step 1, the table and the planner (2026-10-11): merged (#210 plan, #214, squash, 36c0e85)
   and live: migration `home_place` applied (owner's OK; 1 home moved, 1 address-only Home note left
   as is) and `chat` version 32 (deploy chat run 38099050047, owner's OK; 401 checks passed).**
