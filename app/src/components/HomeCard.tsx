@@ -18,6 +18,7 @@ import { ChatCard, ChatCardDone, ChatCardText } from '@/components/ChatCard';
 import { Button, Muted, TextLink, useColors } from '@/components/ui';
 import type { Entry, HomeSaved } from '@/lib/chatThread';
 import { findCredential } from '@/lib/credentials';
+import { noticeText } from '@/lib/homeNotice';
 import { CREDENTIAL_TEXT, homeCardButtons, listHomes, saveHomeAt, type HomeRow, type HomesDb } from '@/lib/homePlace';
 import { deviceGeocoder, deviceLocation, whereAmI } from '@/lib/location';
 import { lookUpPlace } from '@/lib/placeLookup';
@@ -144,6 +145,36 @@ export function HomeCard({ entry, onSaved }: { entry: HomeEntry; onSaved: (saved
         <Button title={busy && !spot ? 'Finding where you are…' : 'Use where I am'} kind="plain" disabled={busy} onPress={() => void readHere()} />
       ) : null}
       {error ? <Text style={{ color: c.danger, fontSize: 15 }}>{error}</Text> : null}
+    </ChatCard>
+  );
+}
+
+/**
+ * "You're at Mom's. Plan your day from: Home · Mom's" (homes step 4), before the chat's plan for
+ * today is made. The tap keeps the answer for today and sends the question again with that home.
+ */
+export function HomeAskCard({
+  entry,
+  active,
+  onAnswer,
+}: {
+  entry: Extract<Entry, { kind: 'home_ask' }>;
+  /** It waits, it is for today, and a message can go to Wilma now. */
+  active: boolean;
+  onAnswer: (chosen: 'at' | 'def') => void;
+}) {
+  if (entry.state === 'answered' && entry.chosen) return <ChatCardDone icon="📍" text={`Planning from ${entry[entry.chosen].label}.`} />;
+  if (entry.state !== 'pending' || !active) return <ChatCardDone icon="📍" text={`You were at ${entry.at.label}.`} />;
+  return (
+    <ChatCard
+      icon="📍"
+      actions={
+        <>
+          <Button title={`🏠 ${entry.def.label}`} kind="plain" onPress={() => onAnswer('def')} />
+          <Button title={`🏠 ${entry.at.label}`} onPress={() => onAnswer('at')} />
+        </>
+      }>
+      <ChatCardText>{noticeText(entry)}</ChatCardText>
     </ChatCard>
   );
 }

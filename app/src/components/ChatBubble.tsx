@@ -4,7 +4,7 @@ import { Text, View } from 'react-native';
 
 import { ChatCard, ChatCardText } from '@/components/ChatCard';
 import { CalendarCard, DayCard, DeleteCard, LocationCard, MemoryLine, NotesCard, PlacesCard, VaultCard } from '@/components/ChatCards';
-import { HomeCard } from '@/components/HomeCard';
+import { HomeAskCard, HomeCard } from '@/components/HomeCard';
 import { Button, Muted, useColors } from '@/components/ui';
 import type { Entry, ErrorButton, HomeSaved } from '@/lib/chatThread';
 
@@ -24,6 +24,8 @@ export function ChatBubble({
   onNotNow,
   onUndoMemory,
   onHomeSaved,
+  homeAskActive = false,
+  onAnswerHomeAsk,
 }: {
   entry: Entry;
   onButton: (button: ErrorButton) => void;
@@ -44,6 +46,9 @@ export function ChatBubble({
   onUndoMemory?: (entryId: string, memoryId: string) => Promise<boolean>;
   /** A 🏠 card's home was saved (on its tap). */
   onHomeSaved?: (entryId: string, saved: HomeSaved) => void;
+  /** A "You're at Mom's" card can be tapped. */
+  homeAskActive?: boolean;
+  onAnswerHomeAsk?: (entryId: string, chosen: 'at' | 'def') => void;
 }) {
   const c = useColors();
   switch (entry.kind) {
@@ -111,6 +116,8 @@ export function ChatBubble({
       return <DayCard entry={entry} />;
     case 'home':
       return <HomeCard entry={entry} onSaved={(saved) => onHomeSaved?.(entry.id, saved)} />;
+    case 'home_ask':
+      return <HomeAskCard entry={entry} active={homeAskActive && !!onAnswerHomeAsk} onAnswer={(chosen) => onAnswerHomeAsk?.(entry.id, chosen)} />;
     case 'memory':
       return <MemoryLine entry={entry} onUndo={(memoryId) => onUndoMemory?.(entry.id, memoryId) ?? Promise.resolve(false)} />;
   }

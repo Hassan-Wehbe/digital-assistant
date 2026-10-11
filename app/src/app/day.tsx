@@ -17,7 +17,9 @@
 // Where the day starts (homes, D36): "Where do you leave from?" saves the first home in the
 // home_place table (homePlace.ts; it becomes the default). "🏠 Planned from Home · Change" lists the
 // saved homes for this day only (dayChoices.ts, sent as `start_from`) and Manage homes (Settings →
-// Homes).
+// Homes). With Settings → Homes → "Notice which home I'm at" on, opening today's plan reads the
+// location once and, at a saved home that is not the default, asks "You're at Mom's. Plan your day
+// from: Home · Mom's" (homeNotice.ts); only the picked home's id is sent.
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Linking, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
@@ -46,9 +48,10 @@ import { deviceNotifier } from '@/lib/deviceNotifier';
 import { deviceDayMemory, deviceSettingsStore } from '@/lib/deviceStorage';
 import { homeLine, listHomes, saveHomeAt, spotAddress, HOME_TITLE, type HomeRow, type HomesDb, type PickedSpot } from '@/lib/homePlace';
 import { findCredential } from '@/lib/credentials';
-import { deviceGeocoder } from '@/lib/location';
+import { deviceGeocoder, deviceLocation } from '@/lib/location';
 import { LOOKS_LIKE_SECRET, editError } from '@/lib/noteEdit';
 import { scheduleForPlan } from '@/lib/notifications';
+import { loadNotice, noticeHome, noticeText, type Noticed } from '@/lib/homeNotice';
 import { supabase } from '@/lib/supabase';
 import { needsPro } from '@/lib/pro';
 import { addDays, addToDay, EMPTY_TASK, plannedAt, shortDay, taskMetadata, type TaskDayEnd, type TaskMetadata, withTime } from '@/lib/tasks';
@@ -86,6 +89,8 @@ export default function MyDay() {
   const [homesOpen, setHomesOpen] = useState(false);
   const [homes, setHomes] = useState<HomeRow[] | null | undefined>(undefined);
   const managing = useRef(false);
+  const [noticed, setNoticed] = useState<Noticed | null>(null);
+  const noticedFor = useRef<string | null>(null);
   const [kept, setKept] = useState<Set<string>>(new Set());
   const [memory, setMemory] = useState<DayMemory>(EMPTY_MEMORY);
   // ＋ Add / Find a time: the sheet, the task it is for, and what was just put in the day.
@@ -241,10 +246,29 @@ export default function MyDay() {
     }
   };
 
-  /** Change: plan this day from that home (the default: no choice kept). That day only. */
+  /** Change: plan this day from that home (kept as this day's answer). That day only. */
   const planFrom = (h: HomeRow) => {
     setHomesOpen(false);
-    change(chooseHome(memory, date, h.is_default ? null : h.id));
+    setNoticed(null);
+    change(chooseHome(memory, date, h.id));
+  };
+
+  // "You're at Mom's" (homes step 4, homeNotice.ts): today only, with the Settings switch on, two
+  // homes or more, and no answer yet for today. One reading, compared on the phone, kept nowhere;
+  // the plan already shown (from the default) stays until the user picks.
+  useEffect(() => {
+    if (!plan || date !== days.today || homeFor(mem.current, date) || noticedFor.current === date || !userId) return;
+    noticedFor.current = date;
+    void noticeHome({ on: () => loadNotice(deviceSettingsStore, userId), homes: () => listHomes(homesDb), location: deviceLocation }).then((n) => {
+      if (alive.current && n && !homeFor(mem.current, date)) setNoticed(n);
+    });
+  }, [plan, date, days.today, userId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** The answer to "You're at Mom's": kept for today; Mom's plans the day again from there. */
+  const answerNotice = (n: Noticed, h: HomeRow) => {
+    setNoticed(null);
+    if (h.id === n.def.id) keepMemory(chooseHome(mem.current, date, h.id));
+    else change(chooseHome(mem.current, date, h.id));
   };
 
   // Back from Settings → Homes (Manage homes): the homes and the default may have changed.
@@ -523,6 +547,16 @@ export default function MyDay() {
   // "🏠 Planned from Home · Change", and the homes for this day when it is open.
   const chosen = homeFor(memory, date);
   const current = homes?.find((h) => h.id === chosen) ?? homes?.find((h) => h.is_default);
+  const noticeLine = noticed && date === days.today && !chosen ? (
+    <View style={[box(c.tint), { gap: space.s, paddingVertical: space.s }]}>
+      <Text style={{ color: c.text, fontSize: 15 }}>{`📍 ${noticeText(noticed)}`}</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: space.s }}>
+        <Button title={`🏠 ${noticed.def.label}`} kind="plain" onPress={() => answerNotice(noticed, noticed.def)} />
+        <Button title={`🏠 ${noticed.at.label}`} onPress={() => answerNotice(noticed, noticed.at)} />
+      </View>
+    </View>
+  ) : null;
+
   const plannedFrom = plan?.home.set ? (
     <View style={{ gap: space.s }}>
       {!homesOpen ? (
@@ -605,6 +639,7 @@ export default function MyDay() {
     content = (
       <View style={{ gap: space.m }}>
         {homeCard}
+        {noticeLine}
         {plannedFrom}
         {sheet ? (
           <AddTaskSheet
@@ -684,6 +719,7 @@ export default function MyDay() {
     setAsking(null);
     setAdded(null);
     setHomesOpen(false);
+    setNoticed(null);
     closeSheet();
     setPlan(null);
     shown.current = false;

@@ -95,7 +95,7 @@ describe('the My day screen', () => {
 
   it('shows "🏠 Planned from … · Change", lists the homes for this day, and Manage homes', () => {
     expect(src).toContain('title={`🏠 Planned from ${plan.home.label ?? HOME_TITLE} · Change`}');
-    expect(src).toContain('change(chooseHome(memory, date, h.is_default ? null : h.id));');
+    expect(src).toContain('change(chooseHome(memory, date, h.id));');
     expect(src).toContain("router.push('/homes');");
     expect(src).toContain('For this day only.');
   });

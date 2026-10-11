@@ -1,6 +1,6 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-10-11 (newest: homes step 3, the app, on `claude/homes-app`; before that: invite-only sign-up merged (#186) and live, versionCode 17 built and submitted, testers getting "Item not found" on the Play link; live `mcp` v30, `chat` v26 (places cuisine fix #188), `delete-account` deployed; see the first entry under "Where things stand"). Earlier: 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
+Last updated 2026-10-11 (newest: homes step 4 on `claude/homes-notice`, and step 3, the app, merged as #216; before that: invite-only sign-up merged (#186) and live, versionCode 17 built and submitted, testers getting "Item not found" on the Play link; live `mcp` v30, `chat` v26 (places cuisine fix #188), `delete-account` deployed; see the first entry under "Where things stand"). Earlier: 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
 #102), with Expo patch updates (#98). Step 2, server, is live. Places step 5b ("places near me",
 server) **merged and live** (#104, `mcp` v13, `chat` v6; first entry below). Then step 6, the places build, which also carries the mic fix #91. Play Console:
 Data safety and other forms saved, **not yet sent for review**; see the first entry below).
@@ -12,7 +12,19 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **Homes step 3, the app (2026-10-11): branch `claude/homes-app`, PR #216, not merged. App
+- **Homes step 4, noticing where you are (2026-10-11): branch `claude/homes-notice` (on main
+  after #216), not merged, no PR yet. App only; ships with versionCode 20.**
+  Settings → Homes → "Notice which home I’m at when I plan" (off until turned on; asks for the
+  location permission then). With it on, two homes or more and no pick yet for today, today's plan
+  reads the location once (never asks for the permission while planning; 10 s limit), compares it
+  on the phone (150 m), and at a non-default home asks "You’re at Mom’s. Plan your day from: Home ·
+  Mom’s": in My day above the plan, in the chat as a card before the plan is made. Only the picked
+  home's id is sent; the answer holds for that day (the default's id kept too, also now for step 3's
+  Change). 792 app tests (14 new). Details and phone checks: `docs/my-places-plan.md` "As built:
+  step 4". **Owner:** ask for this PR when ready. **Next:** step 5, privacy wording
+  (the location is now read while planning, on the phone only), Data safety check, checklist,
+  build (smaller model).
+- **Homes step 3, the app (2026-10-11): PR #216 merged (squash, 46c1227), 2026-10-11. App
   only, no server change; ships with versionCode 20.** Settings → Homes (list, rename, change
   address by typing / saved place / Use where I am, Make default through `set_default_home`,
   Delete after a confirm, Add a home); My day's "Where do you leave from?" now saves to
@@ -27,8 +39,7 @@ tokens or keys in chat.
   CAN_REMINDER, CAN_HOME]` on Android), `chatStream.ts`, `chatThread.ts`, `chatStore.ts` and
   `ChatBubble.tsx` (keep both sides' cases); and with #209 in `app/day.tsx`. **#212 (Help):** its
   Places topic should mention Settings → Homes once this merges. Phone checks and details:
-  `docs/my-places-plan.md` "As built: step 3". **Owner:** review PR #216; merge (squash)
-  on your word. **Next:** step 4, noticing which home you are at (strongest model, fresh session).
+  `docs/my-places-plan.md` "As built: step 3". Merged on the owner's word. **Next:** step 4, noticing which home you are at (strongest model, fresh session).
 - **Homes step 2, the chat (2026-10-11): branch `claude/homes-chat`; evaluation passed (owner's OK,
   $1 cap): chat 139/140 (the miss, plan-when-to-leave, then 4/4 on branch and main), memory 28/28,
   0 leaks, 0 unsafe, about $0.09. Owner: merge, deploy `chat` and `mcp`.** `save_home` card (chat-only,

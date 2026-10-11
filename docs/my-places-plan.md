@@ -2,8 +2,8 @@
 
 Status: plan, 2026-10-10. **Owner's answers given the same day: "agree with the recommendations",
 so the first option of every question (Q1-Q9) and the small ones as written.** Steps 1 and 2 merged
-and live (#214, #215); step 3, the app, written on `claude/homes-app` (2026-10-11), PR #216, not merged.
-Next: step 4.
+and live (#214, #215); step 3, the app, merged (#216); step 4 written on `claude/homes-notice` (2026-10-11), not
+merged. Next: step 5.
 Design: D36 (and D25, whose "Home is a place note" this replaces; D24, automatic memory, which stops
 keeping home addresses). Model: the strongest for steps 1-4 (database and RLS, the chat loop,
 memory, location); a smaller one for step 5 (wording, checklist, build).
@@ -458,6 +458,61 @@ run. Ships with the next build (versionCode 20), with steps 4 and 5.
     Settings → Homes as the default.
 12. 🚸 drop off on an event, leave My day and come back: still on.
 
-**Owner, next:** review PR #216, and merge (squash) on your word. It ships with
+**Merged** (squash, #216, 2026-10-11). It ships with
 versionCode 20, after steps 4 (noticing where you are) and 5 (privacy wording, build). PR #212
 (Help) should mention Settings → Homes in its Places topic once this is merged.
+
+## As built: step 4 (noticing where you are)
+
+Branch `claude/homes-notice` (2026-10-11), on main after step 3 (#216, merged). App only: no server change. Ships with versionCode 20.
+
+- **The switch (Q3):** Settings → Homes → "Notice which home I’m at when I plan", **Off until
+  turned on**. It is kept on this phone, per account (`lib/homeNotice.ts`). Turning it on asks for
+  the location permission then. If the permission is refused, the switch stays off and the screen
+  says how to allow it. Hidden on the web build.
+- **When the location is read:** once, only when all of these hold:
+  - the switch is on;
+  - there are two homes or more;
+  - the permission is already given (it is never asked for while planning) and location is on;
+  - it is **today's** plan (where you are now says nothing about tomorrow);
+  - nothing is picked for today yet.
+
+  The reading gives up after 10 seconds and is compared with the homes on the phone (within 150 m;
+  the nearest wins). It is not returned, stored or sent: only home rows come out of `noticeHome`.
+- **At a saved home that is not the default:**
+  - **My day:** today's plan shows at once from the default, with "📍 You’re at Mom’s. Plan your
+    day from: 🏠 Home · 🏠 Mom’s" above it. Mom’s plans the day again from there; Home keeps the plan.
+  - **Chat ("plan my day"):** the same question comes as a card **before** the calendar is read or
+    the plan made. The tap reads the calendar and sends the question again with that home's id
+    (`start_from`). A new message first leaves the card "not done"; a card from an earlier day can't
+    be tapped.
+  - At the default home, or away from every home, nothing is asked (Q4).
+- **The answer holds for that day (Q5):** kept with the day's choices (`dayChoices.ts`), the
+  default's id included, so it is not asked again that day; gone the next day. **Changed from step
+  3:** My day's Change now also keeps the default's id when it is picked, for the same reason.
+  Naming a home in the chat ("plan my day from Mom's") never asks.
+- **What reaches the server:** only the picked home's id, as `start_from`. The saved chat keeps the
+  card's home ids and names, never the reading.
+- **Tests:** 792 app tests (14 new, `homeNotice.test.ts`):
+  - no reading with the switch off, with one home, or without the permission (never asked while
+    planning);
+  - at Mom's: the homes to offer, and nothing of the reading;
+  - at the default or away: nothing asked;
+  - a slow reading gives up; "at" means within 150 m;
+  - the answer kept for that day only;
+  - the chat card's states and saved form; the provider passing ids and names only and sending the
+    picked id.
+  - `npm run check` passes; `expo export --platform android` bundles.
+
+**Phone checks (versionCode 20 checklist):**
+1. Settings → Homes: the switch is Off. Turn it On: the location permission is asked (if not
+   already given).
+2. With two homes, at the non-default one: open My day (today) → "📍 You’re at Mom’s…"; tap Mom’s:
+   drives start there. Close and reopen My day: not asked again today.
+3. Same place, in the chat: "plan my day" → the card first; tap Home → the plan starts from Home.
+4. At the default home, and somewhere else entirely: nothing is asked.
+5. Switch Off: nothing is asked, and no location icon appears in the status bar while planning.
+6. Tomorrow's plan never asks.
+
+**Owner, next:** review; open a PR when you want one.
+Then step 5: privacy wording, Data safety check, checklist, build (smaller model).
