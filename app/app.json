@@ -20,6 +20,9 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png",
         "backgroundImage": "./assets/images/android-icon-background.png"
       },
+      "permissions": [
+        "com.android.alarm.permission.SET_ALARM"
+      ],
       "blockedPermissions": [
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.READ_MEDIA_IMAGES",
