@@ -158,6 +158,16 @@ insert into item (space_id, item_type, title, metadata)
 values ((select id from space where owner_user_id = '00000000-0000-4000-a000-00000000000b' and name = 'Places'),
         'place', 'Home', '{"kind":"home","lat":40.71,"lng":-74.01,"address":"1 Main St"}');
 alter table item enable trigger item_home_note;
+-- A third person whose Home note has an address but no point (as some real notes do).
+insert into auth.users (id, email, aud, role) values
+  ('00000000-0000-4000-a000-00000000000c', 'test-user-c@example.invalid', 'authenticated', 'authenticated');
+insert into space (owner_user_id, name) values ('00000000-0000-4000-a000-00000000000c', 'Places');
+insert into item (space_id, item_type, title, metadata)
+values ((select id from space where owner_user_id = '00000000-0000-4000-a000-00000000000c' and name = 'Places'),
+        'place', 'Home', '{"kind":"home","address":"5 Pine Ct"}');
+insert into item (space_id, item_type, title, metadata)
+values ((select id from space where owner_user_id = '00000000-0000-4000-a000-00000000000c' and name = 'Places'),
+        'place', 'Cabin', '{"kind":"home","lat":"28.1","lng":null}');
 
 select public._home_from_note(i) from public.item i
 where i.item_type = 'place' and i.metadata->>'kind' = 'home' and i.deleted_at is null;
@@ -177,5 +187,11 @@ select pg_temp.check('the move: a restricted space''s Home note stays where it i
   (select deleted_at is null from item where title = 'Secret cabin'));
 select public._home_from_note(i) from public.item i
 where i.item_type = 'place' and i.metadata->>'kind' = 'home' and i.deleted_at is null;
+select pg_temp.check('the move: a Home note without a point is not copied and stays where it is',
+  (select count(*) = 0 from home_place where user_id = '00000000-0000-4000-a000-00000000000c')
+  and (select count(*) = 2 from item i join space sp on sp.id = i.space_id
+       where sp.owner_user_id = '00000000-0000-4000-a000-00000000000c' and i.deleted_at is null));
+select pg_temp.check('an older app saving a Home note without a point does not fail',
+  (select count(*) = 1 from item where title = 'Cabin' and deleted_at is null));
 select pg_temp.check('the move: running it again changes nothing',
   (select count(*) = 1 from home_place where user_id = '00000000-0000-4000-a000-00000000000b'));

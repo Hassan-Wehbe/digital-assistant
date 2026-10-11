@@ -139,12 +139,14 @@ begin
   if p_item.item_type <> 'place' or p_item.metadata->>'kind' is distinct from 'home' or p_item.deleted_at is not null then
     return;
   end if;
-  if jsonb_typeof(p_item.metadata->'lat') <> 'number' or jsonb_typeof(p_item.metadata->'lng') <> 'number' then
+  -- A note without a point (an address only) is not copied: the planner cannot start from it.
+  -- "is distinct from", not "<>": a missing lat gives null, which "<>" would let through.
+  if jsonb_typeof(p_item.metadata->'lat') is distinct from 'number' or jsonb_typeof(p_item.metadata->'lng') is distinct from 'number' then
     return;
   end if;
   v_lat := (p_item.metadata->>'lat')::double precision;
   v_lng := (p_item.metadata->>'lng')::double precision;
-  if v_lat not between -90 and 90 or v_lng not between -180 and 180 then
+  if v_lat is null or v_lng is null or v_lat not between -90 and 90 or v_lng not between -180 and 180 then
     return;
   end if;
   select sp.owner_user_id into v_owner from public.space sp where sp.id = p_item.space_id and not sp.is_restricted;

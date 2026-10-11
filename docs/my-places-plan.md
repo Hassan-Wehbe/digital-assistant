@@ -245,7 +245,7 @@ build.
   or no longer there falls back to the default. It never reads Home notes now. My day, the chat's
   "plan my day" and the morning briefing all go through it.
 - **Tests:**
-  - SQL test `tests/sql/17_home_place.sql` (27 checks) covers:
+  - SQL test `tests/sql/17_home_place.sql` (29 checks) covers:
     - two-user isolation;
     - the default not settable directly;
     - one default each;
@@ -264,6 +264,10 @@ build.
   - The dry-run script against a database without the migration: 27/27 ok, nothing kept.
   - The migration on a database holding an old-style Home note: the note became the default home
     and went to the bin.
+- **Found by the owner's dry run (2026-10-11), fixed:** a real Home note with an address but no
+  point made the copy fail (a missing `lat` slipped past a `<>` check, as null). Such notes are now
+  skipped and stay where they are; the planner could not start from them before either. SQL test 17
+  gained two checks (29): a Home note without a point at the move, and an older app saving one.
 - **Dry run for the real database:** `tests/sql/dry_runs/17_home_place_dry_run.sql`. It ends with
   a deliberate error, so nothing is kept.
 
