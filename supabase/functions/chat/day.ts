@@ -13,7 +13,8 @@
 // Response: 401 without a valid sign-in; 400 for a malformed body; 403 {"error":"pro_required"};
 //           429 {"error":"fair_use","used","limit"}; otherwise {"plan": DayPlan, "usage": {"used","limit"}}.
 //
-// From the database, as the user (RLS): Home (the place of kind home), saved places to match an
+// From the database, as the user (RLS): Home (home_place: "start_from": {"home": id} when the
+// app asks, else the default home; D36), saved places to match an
 // event's location text by name, and open tasks for the day, all from searchable spaces only
 // (rule 3: a restricted space never adds anything to the plan). Drive times from Mapbox and weather
 // from the US National Weather Service (step 3; only points and times leave, never a title). Nothing
@@ -50,6 +51,8 @@ export const dayBody = z.object({
   events: z.array(dayEvent).max(MAX_AGENDA_EVENTS),
   choices: choicesSchema.optional(),
   options_for: z.string().regex(UUID).optional(),
+  /** Plan from this saved home (home_place id) instead of the default (D36, My places step 4). */
+  start_from: z.object({ home: z.string().regex(UUID) }).strict().optional(),
 });
 
 export type DayBody = z.infer<typeof dayBody>;
@@ -106,6 +109,23 @@ async function readItems(db: SupabaseClient): Promise<{ places: Row[]; tasks: Ro
   return { places: await read(PLACE_TYPE), tasks: await read(TASK_TYPE) };
 }
 
+/**
+ * Where the plan starts (D36, docs/my-places-plan.md): the home asked for, else the default home,
+ * from home_place, as the user (RLS: another person's id reads nothing, so it is the default
+ * again). Never a place note: older apps' Home notes are copied into the table by the database
+ * (migration home_place). Null when the person has no home.
+ */
+async function readHome(db: SupabaseClient, startFrom?: string): Promise<PlanPlace | null> {
+  const read = async (column: "id" | "is_default", value: string | boolean) => {
+    const { data, error } = await db.from("home_place").select("id, label, lat, lng, is_default").eq(column, value).limit(1);
+    if (error) throw new Error(`db:${error.code ?? "home"}`);
+    const r = (data ?? [])[0] as { label?: unknown; lat?: unknown; lng?: unknown } | undefined;
+    const p = r ? placePoint({ lat: r.lat, lng: r.lng }) : null;
+    return p && typeof r?.label === "string" ? { ...p, label: r.label } : null;
+  };
+  return (startFrom ? await read("id", startFrom) : null) ?? await read("is_default", true);
+}
+
 /** A saved place with a location, as the planner takes it. */
 function asPlace(r: Row): PlanPlace | null {
   const p = placePoint(r.metadata);
@@ -151,6 +171,8 @@ interface PlanRequest {
   events: SentEvent[];
   choices?: Choices;
   optionsFor?: string;
+  /** A home_place id; else the default home. */
+  startFrom?: string;
 }
 
 /** Pro, and under today's fair-use limit (counted only when allowed): use_day_plan(), migration day_plan. */
@@ -171,8 +193,7 @@ async function gate(db: SupabaseClient): Promise<Gate | null> {
  */
 async function makePlan(deps: DayDeps, db: SupabaseClient, req: PlanRequest, log: DayLog): Promise<DayPlan> {
   const { places, tasks } = await readItems(db);
-  const homeRow = places.find((p) => p.metadata?.kind === HOME_KIND);
-  const home = homeRow ? asPlace(homeRow) : null;
+  const home = await readHome(db, req.startFrom);
   // A saved place named like the event's location ("Aquatic Center", "Hinode Sushi, Oviedo") is
   // the most reliable point; else the phone's geocoder result; else the app asks "Where is this?".
   const byName = new Map<string, PlanPlace>();
@@ -291,6 +312,7 @@ export async function dayPlan(deps: DayDeps, token: string, userId: string, raw:
   try {
     const plan = await makePlan(deps, db, {
       date: body.date, tz: body.tz, now: body.now, events: body.events, choices: body.choices, optionsFor: body.options_for,
+      startFrom: body.start_from?.home,
     }, log);
     return done(200, { plan, usage: { used: g.used, limit: g.limit } });
   } catch (e) {
