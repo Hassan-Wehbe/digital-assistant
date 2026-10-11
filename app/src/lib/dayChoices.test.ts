@@ -114,12 +114,12 @@ describe('on the phone', () => {
     expect(await store.load('u2', TODAY)).toEqual(EMPTY_MEMORY);
   });
 
-  it('never writes anything but the choices, answers and looked-up points (no plan, no drive times)', async () => {
+  it('never writes anything but the choices, answers, drop-off titles and looked-up points (no plan, no drive times)', async () => {
     const { storage, store } = setup();
     const withPlan = { ...EMPTY_MEMORY, plan: { rows: [{ kind: 'drive', minutes: 15 }] }, leave_at: '16:10' } as unknown as DayMemory;
     await store.save('u1', withPlan);
     const written = JSON.parse((await storage.getItem(memoryKey('u1')))!);
-    expect(Object.keys(written).sort()).toEqual(['choices', 'found', 'places', 'user', 'v']);
+    expect(Object.keys(written).sort()).toEqual(['choices', 'drop_off', 'found', 'places', 'user', 'v']);
     expect(JSON.stringify(written)).not.toMatch(/minutes|leave_at|plan/);
   });
 

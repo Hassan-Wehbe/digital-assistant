@@ -29,7 +29,7 @@ export default function Chat() {
   const { session } = useAuth();
   const {
     state, ready, canSend, routing, bannerVisible, send, askWilma, stop, retry, dismissBanner, clear, confirmDelete, cancelDelete,
-    shareLocation, dismissLocation, undoMemory,
+    shareLocation, dismissLocation, undoMemory, homeSaved,
   } = useChat();
   const [text, setText] = useState('');
   // 🌅 Plan my day in an empty thread: Pro (the badge and the Pro card without it).
@@ -159,6 +159,7 @@ export default function Chat() {
               onShareLocation={shareLocation}
               onNotNow={dismissLocation}
               onUndoMemory={undoMemory}
+              onHomeSaved={homeSaved}
             />
           )}
           ListEmptyComponent={

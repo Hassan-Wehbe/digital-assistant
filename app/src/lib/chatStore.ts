@@ -10,9 +10,10 @@
 
 import { toPlaceCard } from './chatStream';
 import {
-  CALENDAR_PROBLEMS, errorButtons, MAX_ENTRIES, MAX_TEXT, noteRef, PARTIAL_NOTE, type CalendarProblem, type ConfirmState, type Entry,
-  type LocationState, type NoteRef, type PlaceRef,
+  CALENDAR_PROBLEMS, errorButtons, HOME_SAVED, MAX_ENTRIES, MAX_TEXT, noteRef, PARTIAL_NOTE, type CalendarProblem, type ConfirmState, type Entry,
+  type HomeSaved, type LocationState, type NoteRef, type PlaceRef,
 } from './chatThread';
+import { toHomeCard } from './homePlace';
 import { toRemembered } from './memory';
 import type { AuthStorage } from './sessionStorage';
 
@@ -144,6 +145,13 @@ export function toEntry(raw: unknown): Entry | null {
     case 'day':
       // The date only: the plan itself is never kept (Mapbox's terms; day planner step 3).
       return str(raw.date) && /^\d{4}-\d{2}-\d{2}$/.test(raw.date) ? { kind: 'day', id, date: raw.date } : null;
+    case 'home': {
+      // The card's words and whether it was saved; nothing else (no point is ever kept here).
+      const card = toHomeCard(raw, 'makeDefault');
+      if (!card) return null;
+      const saved = HOME_SAVED.includes(raw.saved as HomeSaved) ? { saved: raw.saved as HomeSaved } : {};
+      return { kind: 'home', id, ...card, ...saved };
+    }
     case 'memory': {
       if (!Array.isArray(raw.memories)) return null;
       const undone = new Set(raw.memories.filter((m) => isObject(m) && m.undone === true).map((m) => (m as { id: unknown }).id));

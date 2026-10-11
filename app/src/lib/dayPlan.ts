@@ -109,6 +109,8 @@ export interface DayBody {
   choices?: { together?: string[][]; not_driving?: string[] };
   /** A task's id: the plan also says where it fits. */
   options_for?: string;
+  /** Plan from this saved home (home_place id), the day's Change; else the default (D36). */
+  start_from?: { home: string };
 }
 
 // ---- Checking the answer -----------------------------------------------------------------------

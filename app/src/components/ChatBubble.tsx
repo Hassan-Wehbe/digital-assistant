@@ -4,8 +4,9 @@ import { Text, View } from 'react-native';
 
 import { ChatCard, ChatCardText } from '@/components/ChatCard';
 import { CalendarCard, DayCard, DeleteCard, LocationCard, MemoryLine, NotesCard, PlacesCard, VaultCard } from '@/components/ChatCards';
+import { HomeCard } from '@/components/HomeCard';
 import { Button, Muted, useColors } from '@/components/ui';
-import type { Entry, ErrorButton } from '@/lib/chatThread';
+import type { Entry, ErrorButton, HomeSaved } from '@/lib/chatThread';
 
 const BUTTON_TITLES: Record<ErrorButton, string> = { search: 'Search', vault: 'Vault', try_again: 'Try again' };
 
@@ -22,6 +23,7 @@ export function ChatBubble({
   onShareLocation,
   onNotNow,
   onUndoMemory,
+  onHomeSaved,
 }: {
   entry: Entry;
   onButton: (button: ErrorButton) => void;
@@ -40,6 +42,8 @@ export function ChatBubble({
   onNotNow?: (id: string) => void;
   /** Undo on a "🧠 Remembered" line. */
   onUndoMemory?: (entryId: string, memoryId: string) => Promise<boolean>;
+  /** A 🏠 card's home was saved (on its tap). */
+  onHomeSaved?: (entryId: string, saved: HomeSaved) => void;
 }) {
   const c = useColors();
   switch (entry.kind) {
@@ -105,6 +109,8 @@ export function ChatBubble({
       return <CalendarCard entry={entry} />;
     case 'day':
       return <DayCard entry={entry} />;
+    case 'home':
+      return <HomeCard entry={entry} onSaved={(saved) => onHomeSaved?.(entry.id, saved)} />;
     case 'memory':
       return <MemoryLine entry={entry} onUndo={(memoryId) => onUndoMemory?.(entry.id, memoryId) ?? Promise.resolve(false)} />;
   }

@@ -26,6 +26,11 @@
 // read, a card says why. The calendar lines are never kept: not in the thread, not on the phone.
 // For one day ("plan my day"), the events go with the places the phone found for them and the
 // day's choices from My day (dayAgenda.ts); an answer that used a day plan ends with Open my day.
+// The saved home to plan from goes back with it (D36): the one the request named, else the home
+// picked for that day in My day.
+//
+// A 🏠 card (save a home, D36) writes nothing by itself: the card saves on the tap
+// (components/HomeCard.tsx), and the thread then only marks it saved.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { useAuth } from './auth';
@@ -34,13 +39,13 @@ import { loadChoice } from './calendarSettings';
 import type { SharedPoint } from './chatClient';
 import { MAX_NOTES, routeMessage, type MessageRoute } from './chatRoute';
 import { calendarFollowUp } from './chatCalendar';
-import { agendaForChat, phoneGeocode } from './dayAgenda';
+import { agendaForChat, chatStartFrom, phoneGeocode } from './dayAgenda';
 import { todayAndTomorrow } from './dayView';
 import { shareFromCard } from './chatHere';
 import { runConfirm, runTurn } from './chatRun';
 import { threadsToKeep } from './chatStore';
 import { findCredential } from './credentials';
-import { canLookup, chatReducer, initialChat, monthKey, noticeVisible, type ChatAction, type ChatState } from './chatThread';
+import { canLookup, chatReducer, initialChat, monthKey, noticeVisible, type ChatAction, type ChatState, type HomeSaved } from './chatThread';
 import { deviceChatStore, deviceDayMemory, deviceSettingsStore } from './deviceStorage';
 import { deviceGeocoder, deviceLocation } from './location';
 import { undoMemory } from './memory';
@@ -94,6 +99,8 @@ interface ChatContextValue {
   /** Undo on a "🧠 Remembered" line: that memory is deleted (or gets its old text back). False
    * when it did not work. */
   undoMemory(entryId: string, memoryId: string): Promise<boolean>;
+  /** A 🏠 card's home was saved (the card wrote it on the tap): the card says so from now on. */
+  homeSaved(entryId: string, saved: HomeSaved): void;
 }
 
 const ChatContext = createContext<ChatContextValue | null>(null);
@@ -171,19 +178,21 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, [keep, queue]);
 
   // start() calls itself again (through this ref) to send a question back with the calendar.
-  const startRef = useRef<(entries: ChatState['entries'], here?: SharedPoint, agenda?: Agenda) => void>(() => {});
+  const startRef = useRef<(entries: ChatState['entries'], here?: SharedPoint, agenda?: Agenda, startFrom?: string) => void>(() => {});
   const start = useCallback(
-    (entries: ChatState['entries'], here?: SharedPoint, agenda?: Agenda) => {
+    (entries: ChatState['entries'], here?: SharedPoint, agenda?: Agenda, startFrom?: string) => {
       const controller = new AbortController();
       request.current = controller;
       lastHere.current = here;
       const forUser = user.current;
-      let asked: { from: string; to: string } | null = null;
+      let asked: { from: string; to: string; start_from?: { home: string } } | null = null;
       runTurn(chat.send, entries, controller.signal, (a) => {
-        if (a.type === 'event' && a.event.type === 'agenda_request') asked = { from: a.event.from, to: a.event.to };
+        if (a.type === 'event' && a.event.type === 'agenda_request') {
+          asked = { from: a.event.from, to: a.event.to, ...(a.event.start_from ? { start_from: a.event.start_from } : {}) };
+        }
         // An answer for an account that has since signed out is dropped.
         if (user.current === forUser && !controller.signal.aborted) act(a);
-      }, here, agenda).then(async (end) => {
+      }, here, agenda, startFrom).then(async (end) => {
         if (request.current === controller) request.current = null;
         if (end === 'signed_out') return signOut();
         if (end !== 'done' || !asked || controller.signal.aborted || user.current !== forUser || !forUser) return;
@@ -205,6 +214,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             };
           },
         }, !!agenda);
+        const from = 'agenda' in out
+          ? await chatStartFrom(asked, () => deviceDayMemory.load(forUser, todayAndTomorrow(new Date()).today))
+          : undefined;
         // Signed out, a new message, or another answer started meanwhile: nothing more.
         if (user.current !== forUser || current.current.streaming || current.current.entries.findLast((e) => e.kind === 'user') !== question) return;
         if ('problem' in out) {
@@ -214,7 +226,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         const before = current.current;
         if (before.blocked !== null) return;
         const next = act({ type: 'resend' });
-        if (next !== before) startRef.current(next.entries, here, out.agenda);
+        if (next !== before) startRef.current(next.entries, here, out.agenda, from);
       });
     },
     [chat, act, signOut],
@@ -355,6 +367,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         }
         if (user.current === forUser) act({ type: 'memory_undone', id: entryId, memoryId });
         return true;
+      },
+      homeSaved(entryId, saved) {
+        act({ type: 'home_saved', id: entryId, saved });
       },
     }),
     [state, routingNow, loadedFor, userId, act, start, abort, wilma, chat, removeSecret, signOut],
