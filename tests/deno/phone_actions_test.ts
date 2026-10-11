@@ -6,7 +6,7 @@ import { assert, assertEquals } from "jsr:@std/assert@1";
 import "../eval/harness.ts"; // Edge runtime stand-ins
 import { ACTION_NAMES, ChatActions } from "../../supabase/functions/chat/actions.ts";
 import {
-  CAN_ALARM, CAN_CALENDAR_ADD, CAN_REMINDER, PHONE_ACTION_NAMES, PhoneActions,
+  CAN_ALARM, CAN_CALENDAR_ADD, CAN_HELP, CAN_REMINDER, HELP_TOPICS, PHONE_ACTION_NAMES, PhoneActions,
 } from "../../supabase/functions/chat/phone_actions.ts";
 import { ALL_TOOLS } from "../../supabase/functions/mcp/tools/all.ts";
 import { World } from "../eval/world.ts";
@@ -110,4 +110,36 @@ Deno.test("chat actions route the phone actions; the Claude connector never has 
   const fake = { registerTool: (name: string) => registered.push(name) };
   for (const r of ALL_TOOLS) r(fake as never, { db: new World().client(), userId: "u", accessToken: "t", assistantName: "Wilma", log: () => {} });
   for (const name of PHONE_ACTION_NAMES) assert(!registered.includes(name), `${name} must not be an MCP tool`);
+});
+
+// ---- show_help (docs/help-plan.md step 2, design D37) ------------------------------------------
+
+Deno.test("show_help: the card with a topic, or the list; a topic outside the app's is refused", () => {
+  const help = (input: Record<string, unknown>) => phone(new Set([CAN_HELP])).run("show_help", input);
+  const vault = help({ topic: "vault" });
+  assertEquals(vault.isError, false);
+  assertEquals(vault.events, [{ type: "help", topic: "vault" }]);
+  assertEquals(JSON.parse(vault.text).status, "shown");
+  assert(JSON.parse(vault.text).message.includes("Do not repeat"));
+  assertEquals(help({}).events, [{ type: "help" }]);
+  assertEquals(help({ topic: "billing" }).isError, true);
+  assertEquals(help({ topic: 7 }).isError, true);
+  assertEquals(HELP_TOPICS, ["notes", "vault", "day", "alarms", "places", "memory", "spaces", "privacy"]);
+});
+
+Deno.test("show_help: once per message; an app without it gets a short answer, not an update nag", () => {
+  const p = phone(new Set([CAN_HELP]));
+  assertEquals(p.run("show_help", { topic: "day" }).events.length, 1);
+  assertEquals(p.run("show_help", { topic: "day" }).events.length, 0, "the same card is not sent twice");
+  const old = phone(new Set()).run("show_help", { topic: "day" });
+  assertEquals(old.isError, false);
+  assertEquals(old.events, []);
+  assert(!/updat/i.test(old.text), "no 'update Wilma' for help");
+  assert(/one or two sentences/.test(old.text));
+});
+
+Deno.test("show_help: the app's topics match the server's names", () => {
+  const app = Deno.readTextFileSync(new URL("../../app/src/lib/help.ts", import.meta.url));
+  const ids = [...app.matchAll(/^    id: '([a-z]+)',$/gm)].map((m) => m[1]);
+  assertEquals(ids, [...HELP_TOPICS]);
 });

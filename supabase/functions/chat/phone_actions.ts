@@ -13,6 +13,11 @@
 // save_home (homes, design D36, docs/my-places-plan.md step 2) works the same way: the phone finds
 // the address on the map with its own geocoder (or uses where it is) and writes the home_place row
 // on the tap. Nothing is saved on the server here, and the model never sees a point.
+//   show_help({topic?})                         {"type":"help","topic"?}                       🛟 Help topics
+//
+// show_help (docs/help-plan.md step 2, design D37) is the one card here that changes nothing: it
+// opens the app's own Help topics. It carries a topic name only, never user data. An app without
+// it gets a short answer in words instead of the "update Wilma" sentence.
 //
 // Times are the user's local wall-clock times in the phone's time zone. Text that looks like a
 // password, PIN or code is refused here (and again on the phone): a reminder shows on the lock
@@ -28,6 +33,10 @@ export const CAN_ALARM = "alarm";
 export const CAN_REMINDER = "reminder";
 export const CAN_CALENDAR_ADD = "calendar_add";
 export const CAN_HOME = "home";
+export const CAN_HELP = "help";
+
+/** The app's Help topics (app/src/lib/help.ts); show_help names one of these. */
+export const HELP_TOPICS = ["notes", "vault", "day", "alarms", "places", "memory", "spaces", "privacy"] as const;
 
 export const MAX_TEXT = 200;
 export const MAX_LOCATION = 300;
@@ -151,6 +160,21 @@ export const PHONE_ACTION_SPECS: ToolSpec[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: "show_help",
+    description:
+      "Chat app only. Shows the user a Help card with the app's short topics (notes, the vault, My day, alarms " +
+      "and calendar, places, memory, spaces, privacy), opened at `topic` when one fits. For \"what can you do\", " +
+      "\"help\", \"how does this work\" and \"how do I …\" questions: answer in one or two short sentences and always call " +
+      "this too, even when your sentences answer. Never list every feature yourself. It changes nothing and saves nothing.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        topic: { type: "string", enum: [...HELP_TOPICS], description: "The closest topic (optional: leave out for the list)" },
+      },
+      additionalProperties: false,
+    },
+  },
 ];
 
 export const PHONE_ACTION_NAMES = new Set(PHONE_ACTION_SPECS.map((s) => s.name));
@@ -175,12 +199,13 @@ const NEEDS: Record<string, string> = {
   set_reminder: CAN_REMINDER, find_reminders: CAN_REMINDER,
   add_calendar_event: CAN_CALENDAR_ADD,
   save_home: CAN_HOME,
+  show_help: CAN_HELP,
 };
 
 const WHAT: Record<string, string> = {
   set_alarm: "set alarms", show_alarms: "open your alarms", set_reminder: "set reminders",
   find_reminders: "show your reminders", add_calendar_event: "add calendar events",
-  save_home: "save homes from the chat",
+  save_home: "save homes from the chat", show_help: "show Help",
 };
 
 const fail = (text: string): PhoneOutput => ({ isError: true, text, events: [] });
@@ -242,6 +267,18 @@ export class PhoneActions {
   run(name: string, input: Record<string, unknown>): PhoneOutput {
     const need = NEEDS[name];
     if (!need) return fail(`${name} is not a phone action.`);
+    if (!this.ctx.can.has(need) && name === "show_help") {
+      // Nothing to update for: the answer in words is enough.
+      return {
+        isError: false,
+        text: JSON.stringify({
+          status: "app_cannot",
+          message: "This app shows no Help card. Your short answer is all the user gets: one or two sentences, " +
+            "the few things that matter for their question. Do not list every feature.",
+        }),
+        events: [],
+      };
+    }
     if (!this.ctx.can.has(need)) {
       return {
         isError: false,
@@ -270,6 +307,8 @@ export class PhoneActions {
         return this.findReminders(input);
       case "save_home":
         return this.home(input);
+      case "show_help":
+        return this.help(input);
       default:
         return this.calendar(input);
     }
@@ -317,6 +356,21 @@ export class PhoneActions {
     const words = text(input.text, "text", MAX_TEXT, true);
     if (words.error) return fail(words.error);
     return this.card({ type: "reminder", at, text: words.value }, waiting("Set reminder", "Set reminder"));
+  }
+
+  private help(input: Record<string, unknown>): PhoneOutput {
+    const topic = input.topic;
+    if (topic !== undefined && topic !== null && !(HELP_TOPICS as readonly unknown[]).includes(topic)) {
+      return fail(`topic must be one of: ${HELP_TOPICS.join(", ")} (or left out).`);
+    }
+    return this.card(
+      { type: "help", ...(typeof topic === "string" ? { topic } : {}) },
+      JSON.stringify({
+        status: "shown",
+        message: "The app is showing the user a Help card with its topics" + (typeof topic === "string" ? `, open at ${topic}` : "") +
+          ". Do not repeat what the card holds; your one or two sentences are enough. Nothing was saved or changed.",
+      }),
+    );
   }
 
   private findReminders(input: Record<string, unknown>): PhoneOutput {

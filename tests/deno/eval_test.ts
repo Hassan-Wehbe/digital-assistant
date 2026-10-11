@@ -50,10 +50,10 @@ const caseById = (id: string) => CASES.find((c) => c.id === id)!;
 Deno.test("eval world: the real tools save, search and read through the pretend account", async () => {
   const s = await openSession();
   // The MCP tools plus the chat-only actions (chat/actions.ts), as the chat function offers them.
-  assertEquals(s.tools.length, ALL_TOOLS.length + 8);
-  assertEquals(s.tools.length, 34);
-  assertEquals(s.tools.slice(-8).map((t) => t.name), [
-    "show_places", "ask_for_location", "set_alarm", "show_alarms", "set_reminder", "find_reminders", "add_calendar_event", "save_home",
+  assertEquals(s.tools.length, ALL_TOOLS.length + 9);
+  assertEquals(s.tools.length, 35);
+  assertEquals(s.tools.slice(-9).map((t) => t.name), [
+    "show_places", "ask_for_location", "set_alarm", "show_alarms", "set_reminder", "find_reminders", "add_calendar_event", "save_home", "show_help",
   ]);
   assert(s.system.includes("You are Wilma"));
   assert(s.system.includes("save_secret"), "the server instructions are part of the system prompt");

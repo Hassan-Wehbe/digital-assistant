@@ -11,7 +11,7 @@
 //           nowhere else: never stored, never logged, never sent to the classifier.
 //           Optional "tz": the phone's time zone (e.g. "America/New_York"), so "today" is the
 //           user's day. Optional "can": ["calendar"] when the app reads the phone's calendar (and
-//           "alarm", "reminder", "calendar_add" when it shows those cards, phone_actions.ts), and
+//           "alarm", "reminder", "calendar_add", "help" when it shows those cards, phone_actions.ts), and
 //           "agenda": {...}, the calendar it read for this message (agenda.ts: ask, then re-send), and
 //           "start_from": {"home": id} when the agenda_request carried one (plan from that saved home,
 //           D36). "home" in "can": the app shows the save-home card (phone_actions.ts).
@@ -29,6 +29,7 @@
 //                                                                     send again (with start_from)
 //             {"type":"day_plan","date":...}                            the answer used a day plan: Open my day
 //             {"type":"alarm"|"show_alarms"|"reminder"|"find_reminders"|"calendar_add"|"home_save",...}  cards to confirm
+//             {"type":"help","topic"?}                                🛟 Help topics (changes nothing)
 //                                                                     on the phone (phone_actions.ts)
 //             {"type":"error","code":"allowance_used"|"service_paused"|"connection","message":...}
 //             {"type":"done","counted":true|false}                    the answer is complete

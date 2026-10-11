@@ -13,6 +13,12 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Help step 2, server `show_help` (2026-10-11): branch `claude/help-chat` (from
+  `claude/help-screen`, #212), not merged, not deployed, evaluation not run.** Chat-only
+  `show_help({topic?})` in `chat/phone_actions.ts`, Wilma's help lines, 7 new evaluation cases
+  (138), 471 Deno tests. **Owner:** OK and a dollar cap for the evaluation run, then merge and OK to
+  deploy `chat`. Note: Deno was installed here from npm (`deno@2`), as deno.land is blocked by this
+  environment's network policy. Details: `docs/help-plan.md` "As built: step 2".
 - **My day opens the day asked for, and 📅 Pick a day (2026-10-10): branch `claude/my-day-date`, not
   merged; app only, ships with versionCode 20.** Tester feedback (Denisse): "show the plan for
   Tuesday October 13" showed today. Cause: My day accepted only today or tomorrow
