@@ -13,8 +13,15 @@
 // Event places are found on the phone (dayAgenda.ts): the user's answer for that title, else the
 // phone's geocoder on the location text, only when the location permission is already given.
 // Titles never go to Mapbox or the Weather Service (the server sends them only points and times).
+//
+// Where the day starts (homes, D36): "Where do you leave from?" saves the first home in the
+// home_place table (homePlace.ts; it becomes the default). "🏠 Planned from Home · Change" lists the
+// saved homes for this day only (dayChoices.ts, sent as `start_from`) and Manage homes (Settings →
+// Homes). With Settings → Homes → "Notice which home I'm at" on, opening today's plan reads the
+// location once and, at a saved home that is not the default, asks "You're at Mom's. Plan your day
+// from: Home · Mom's" (homeNotice.ts); only the picked home's id is sent.
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Linking, Platform, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 
@@ -30,7 +37,7 @@ import { loadChoice } from '@/lib/calendarSettings';
 import { CALENDAR_TEXT } from '@/lib/chatThread';
 import { dayBody, phoneGeocode, placeEvents, withKeys, type DayEvent } from '@/lib/dayAgenda';
 import {
-  answerPlace, choicesFor, EMPTY_MEMORY, forgetPlace, isDropOff, rememberFound, resetChoices, separate, takeBoth, textKey, toggleDropOff, toggleNotDriving,
+  answerPlace, chooseHome, choicesFor, EMPTY_MEMORY, forgetPlace, homeFor, isDropOff, rememberFound, resetChoices, separate, takeBoth, textKey, toggleDropOff, toggleNotDriving,
   type DayMemory, type EventPlace,
 } from '@/lib/dayChoices';
 import type { DayEventRow, DayPlan, DayRow, NotPlacedTask, TaskOption } from '@/lib/dayPlan';
@@ -40,11 +47,13 @@ import {
 } from '@/lib/dayView';
 import { deviceNotifier } from '@/lib/deviceNotifier';
 import { deviceDayMemory, deviceSettingsStore } from '@/lib/deviceStorage';
-import { saveHome, type PickedSpot } from '@/lib/homePlace';
+import { homeLine, listHomes, saveHomeAt, spotAddress, HOME_TITLE, type HomeRow, type HomesDb, type PickedSpot } from '@/lib/homePlace';
 import { findCredential } from '@/lib/credentials';
-import { deviceGeocoder } from '@/lib/location';
+import { deviceGeocoder, deviceLocation } from '@/lib/location';
 import { LOOKS_LIKE_SECRET, editError } from '@/lib/noteEdit';
 import { scheduleForPlan } from '@/lib/notifications';
+import { loadNotice, noticeHome, noticeText, type Noticed } from '@/lib/homeNotice';
+import { supabase } from '@/lib/supabase';
 import { needsPro } from '@/lib/pro';
 import { addDays, addToDay, EMPTY_TASK, localParts, plannedAt, shortDay, taskMetadata, type TaskDayEnd, type TaskMetadata, withTime } from '@/lib/tasks';
 import { WilmaError } from '@/lib/wilma';
@@ -77,8 +86,13 @@ export default function MyDay() {
   const [busy, setBusy] = useState(false);
   const [detail, setDetail] = useState<string | null>(null);
   const [asking, setAsking] = useState<{ key: string; title: string; location: string } | null>(null);
-  const [homeOpen, setHomeOpen] = useState(false);
   const [homeError, setHomeError] = useState<string | null>(null);
+  // "Planned from … · Change": the saved homes (undefined while read, null when they cannot be).
+  const [homesOpen, setHomesOpen] = useState(false);
+  const [homes, setHomes] = useState<HomeRow[] | null | undefined>(undefined);
+  const managing = useRef(false);
+  const [noticed, setNoticed] = useState<Noticed | null>(null);
+  const noticedFor = useRef<string | null>(null);
   const [kept, setKept] = useState<Set<string>>(new Set());
   const [memory, setMemory] = useState<DayMemory>(EMPTY_MEMORY);
   // ＋ Add / Find a time: the sheet, the task it is for, and what was just put in the day.
@@ -206,29 +220,68 @@ export default function MyDay() {
     change(answerPlace(memory, title, a));
   };
 
+  const homesDb = supabase as unknown as HomesDb;
+
+  /** "Where do you leave from?": the first home, saved as Home in Settings → Homes (the default). */
   const pickHome = async (spot: PickedSpot) => {
     setHomeError(null);
     setBusy(true);
-    const out = await saveHome(
-      {
-        listSpaces: wilma.listSpaces,
-        createSpace: wilma.createSpace,
-        search: wilma.search,
-        saveItem: wilma.saveItem,
-        updateItem: wilma.updateItem,
-      },
-      { lat: spot.lat, lng: spot.lng, ...(spot.address ? { address: spot.address } : {}) },
-      plan?.home.label,
-    );
+    const out = await saveHomeAt(homesDb, { label: HOME_TITLE, address: spotAddress(spot), lat: spot.lat, lng: spot.lng }, { asDefault: true });
     if (!alive.current) return;
     if ('error' in out) {
       setBusy(false);
       setHomeError(out.error);
       return;
     }
-    setHomeOpen(false);
+    setHomes(undefined);
     void load(false);
   };
+
+  const openHomes = async () => {
+    setHomesOpen(true);
+    setHomes(undefined);
+    try {
+      const h = await listHomes(homesDb);
+      if (alive.current) setHomes(h);
+    } catch {
+      if (alive.current) setHomes(null);
+    }
+  };
+
+  /** Change: plan this day from that home (kept as this day's answer). That day only. */
+  const planFrom = (h: HomeRow) => {
+    setHomesOpen(false);
+    setNoticed(null);
+    change(chooseHome(memory, date, h.id));
+  };
+
+  // "You're at Mom's" (homes step 4, homeNotice.ts): today only, with the Settings switch on, two
+  // homes or more, and no answer yet for today. One reading, compared on the phone, kept nowhere;
+  // the plan already shown (from the default) stays until the user picks.
+  useEffect(() => {
+    if (!plan || date !== days.today || homeFor(mem.current, date) || noticedFor.current === date || !userId) return;
+    noticedFor.current = date;
+    void noticeHome({ on: () => loadNotice(deviceSettingsStore, userId), homes: () => listHomes(homesDb), location: deviceLocation }).then((n) => {
+      if (alive.current && n && !homeFor(mem.current, date)) setNoticed(n);
+    });
+  }, [plan, date, days.today, userId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** The answer to "You're at Mom's": kept for today; Mom's plans the day again from there. */
+  const answerNotice = (n: Noticed, h: HomeRow) => {
+    setNoticed(null);
+    if (h.id === n.def.id) keepMemory(chooseHome(mem.current, date, h.id));
+    else change(chooseHome(mem.current, date, h.id));
+  };
+
+  // Back from Settings → Homes (Manage homes): the homes and the default may have changed.
+  useFocusEffect(
+    useCallback(() => {
+      if (!managing.current) return;
+      managing.current = false;
+      setHomesOpen(false);
+      void load(false);
+    }, [load]),
+  );
 
   // ---- ＋ Add and Find a time ----
 
@@ -480,17 +533,66 @@ export default function MyDay() {
     );
   };
 
-  const homeCard = plan && (!plan.home.set || homeOpen) ? (
+  const homeCard = plan && !plan.home.set ? (
     <View style={{ gap: space.s }}>
       <PlacePicker
         title="Where do you leave from?"
-        intro="Wilma times your drives from home. It’s saved as a place called Home, and you can change it later."
+        intro="Wilma times your drives from home. It’s saved as Home in Settings → Homes, where you can change it or add others."
         allowHere
         onPick={(spot) => void pickHome(spot)}
-        onCancel={plan.home.set ? () => setHomeOpen(false) : undefined}
       />
       {homeError ? <Text style={{ color: c.danger, fontSize: 15 }}>{homeError}</Text> : null}
-      {!plan.home.set ? <Muted>Until then, the day shows without drive times.</Muted> : null}
+      <Muted>Until then, the day shows without drive times.</Muted>
+    </View>
+  ) : null;
+
+  // "🏠 Planned from Home · Change", and the homes for this day when it is open.
+  const chosen = homeFor(memory, date);
+  const current = homes?.find((h) => h.id === chosen) ?? homes?.find((h) => h.is_default);
+  const noticeLine = noticed && date === days.today && !chosen ? (
+    <View style={[box(c.tint), { gap: space.s, paddingVertical: space.s }]}>
+      <Text style={{ color: c.text, fontSize: 15 }}>{`📍 ${noticeText(noticed)}`}</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: space.s }}>
+        <Button title={`🏠 ${noticed.def.label}`} kind="plain" onPress={() => answerNotice(noticed, noticed.def)} />
+        <Button title={`🏠 ${noticed.at.label}`} onPress={() => answerNotice(noticed, noticed.at)} />
+      </View>
+    </View>
+  ) : null;
+
+  const plannedFrom = plan?.home.set ? (
+    <View style={{ gap: space.s }}>
+      {!homesOpen ? (
+        <TextLink title={`🏠 Planned from ${plan.home.label ?? HOME_TITLE} · Change`} onPress={() => void openHomes()} />
+      ) : (
+        <View style={[box(c.card, c.line), { gap: space.s, paddingVertical: space.s }]}>
+          <Text style={{ color: c.text, fontSize: 14, fontWeight: '600' }}>{`Plan ${date === days.today ? 'today' : shortDay(date, days.today)} from:`}</Text>
+          {homes === undefined ? <Muted>Reading your homes…</Muted> : null}
+          {homes === null ? <Muted>Your homes cannot be read right now. Check your connection and try again.</Muted> : null}
+          {homes?.map((h) => (
+            <Pressable
+              key={h.id}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: h.id === current?.id }}
+              onPress={() => planFrom(h)}
+              style={({ pressed }) => [{ paddingVertical: space.xs }, pressed && { opacity: 0.6 }]}>
+              <Text style={{ color: h.id === current?.id ? c.accent : c.text, fontSize: 15, fontWeight: h.id === current?.id ? '600' : '400' }}>
+                {`${h.id === current?.id ? '✓ ' : ''}${homeLine(h)}`}
+              </Text>
+            </Pressable>
+          ))}
+          <Muted>For this day only. ★ is your default.</Muted>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.m }}>
+            <TextLink
+              title="Manage homes"
+              onPress={() => {
+                managing.current = true;
+                router.push('/homes');
+              }}
+            />
+            <TextLink title="Close" onPress={() => setHomesOpen(false)} />
+          </View>
+        </View>
+      )}
     </View>
   ) : null;
 
@@ -539,6 +641,8 @@ export default function MyDay() {
     content = (
       <View style={{ gap: space.m }}>
         {homeCard}
+        {noticeLine}
+        {plannedFrom}
         {sheet ? (
           <AddTaskSheet
             sheet={sheet}
@@ -605,7 +709,6 @@ export default function MyDay() {
         {plan.credits.length ? <Muted>{plan.credits.join(' · ')}</Muted> : null}
         <Muted>{`The plan is a suggestion: your calendar is not changed.${updatedAt ? ` Updated ${updatedAt}.` : ''}`}</Muted>
         <View style={{ gap: space.s }}>
-          {plan.home.set && !homeOpen ? <TextLink title={`🏠 ${plan.home.label ?? 'Home'} · Change`} onPress={() => setHomeOpen(true)} /> : null}
           {choices.together || choices.not_driving ? <TextLink title="↺ Start over (undo today’s choices)" onPress={() => change(resetChoices(memory, date))} /> : null}
         </View>
       </View>
@@ -617,6 +720,8 @@ export default function MyDay() {
     setDetail(null);
     setAsking(null);
     setAdded(null);
+    setHomesOpen(false);
+    setNoticed(null);
     closeSheet();
     setPlan(null);
     shown.current = false;

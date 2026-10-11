@@ -8,6 +8,8 @@ import { Platform } from 'react-native';
 import type { Notifier, Permission } from './notifications';
 
 const CHANNEL = 'day-plan';
+/** Reminders the user set from the chat: their own channel, shown as a heads-up. */
+const REMINDERS = 'reminders';
 
 // Shown while Wilma is open too (a leave-by alert matters then as well).
 if (Platform.OS !== 'web') {
@@ -19,7 +21,10 @@ if (Platform.OS !== 'web') {
 let channelReady: Promise<unknown> | null = null;
 const channel = () =>
   (channelReady ??= Platform.OS === 'android'
-    ? Notifications.setNotificationChannelAsync(CHANNEL, { name: 'Day plan', importance: Notifications.AndroidImportance.DEFAULT })
+    ? Promise.all([
+      Notifications.setNotificationChannelAsync(CHANNEL, { name: 'Day plan', importance: Notifications.AndroidImportance.DEFAULT }),
+      Notifications.setNotificationChannelAsync(REMINDERS, { name: 'Reminders', importance: Notifications.AndroidImportance.HIGH }),
+    ])
     : Promise.resolve());
 
 const asPermission = (status: string): Permission => (status === 'granted' ? 'granted' : status === 'denied' ? 'denied' : 'undetermined');
@@ -37,7 +42,7 @@ const phone: Notifier = {
     await Notifications.scheduleNotificationAsync({
       identifier: note.id,
       content: { title: note.title, body: note.body, data: { url: note.url, userId, at: note.at.getTime() } },
-      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: note.at, channelId: CHANNEL },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: note.at, channelId: note.channel === 'reminders' ? REMINDERS : CHANNEL },
     });
   },
   async cancel(id) {
@@ -50,6 +55,7 @@ const phone: Notifier = {
         id: r.identifier,
         ...(typeof data.userId === 'string' ? { userId: data.userId } : {}),
         ...(typeof data.at === 'number' ? { at: data.at } : {}),
+        ...(typeof r.content.body === 'string' ? { body: r.content.body } : {}),
       };
     });
   },

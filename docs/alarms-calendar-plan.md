@@ -240,3 +240,48 @@ then test on the phone with the checklist.
   `plan-when-to-leave` 4/5 in 38083420633 (5/6 with the full run), the model's own variation.
 - **Owner, next:** merge and OK to deploy `chat` (`mcp` is unchanged). Today's app (versionCode 19) never shows these cards;
   Wilma tells its users to update.
+
+## As built: step 2 (app: alarm and reminder cards)
+
+- **Cards** (`components/PhoneCards.tsx`, rendered by `ChatBubble`):
+  - ⏰ **alarm**: "Alarm 6:30 am · tomorrow" with **Set in Clock**, which opens the Clock's own
+    set-alarm screen filled in (`android.intent.action.SET_ALARM`, hour and minutes as whole
+    numbers, label, `SKIP_UI` false). The user saves it there. The card then says so, with
+    **Open Clock**.
+  - ⏰ **alarms**: **Open Clock** (`SHOW_ALARMS`), for "cancel my 6:30 alarm" and "what alarms do I
+    have".
+  - 🔔 **reminder**: "5:00 pm today: Call Sam" with **Set reminder**. Android's notification
+    permission is asked on the first tap. Once set: "Reminder set: …" with **Cancel reminder**.
+  - 🔔 **reminders**: this phone's matching reminders (every word of "call Sam", still ahead,
+    soonest first; matched on the phone, so the model never sees them), each with Cancel, and
+    "All reminders".
+  - A reminder whose time has passed, or whose words look like a password, is one dimmed line,
+    never set.
+- **Weekdays:** Android's set-alarm screen wants the days as a list of whole numbers, which
+  `expo-intent-launcher` passes as decimals. So for "weekdays" the Clock opens with the time and the
+  card says "tick Mon–Fri there", rather than sending days the Clock might ignore without saying so.
+- **Reminders** are Wilma notifications of a new kind, `wilma.<date>.reminder.<card>`
+  (`lib/notifications.ts` `setReminder`, `listReminders`, `cancelReminder`). They go on their own
+  Android channel "Reminders" (shown as a heads-up). The id comes from the chat card, so tapping
+  Set again replaces the reminder instead of adding a second one. Like every Wilma notification,
+  signing out or another account signing in cancels them. A tap opens Home.
+- **Settings → Reminders** (`app/reminders.tsx`, Android only): the upcoming reminders with Cancel,
+  and a line on timing (may be a few minutes late; use an alarm when the minute matters).
+- **`can`** sends `alarm` and `reminder` on Android only (`chatClient.ts`), so on the web build
+  Wilma says these aren't available there.
+- **Native:** `expo-intent-launcher` 57.0.1 (installed with npm; `npx expo install` could not reach
+  Expo's version service from this environment). Permission
+  `com.android.alarm.permission.SET_ALARM` (install-time, no prompt, no Play form); `expo prebuild`
+  confirmed it is the only permission change.
+- **Tests:** `app/src/lib/phoneActions.test.ts` (10). 756 app tests pass;
+  `expo export --platform android` bundles. Needs a phone to check the Clock part (phone checks below).
+
+**Phone checks for the versionCode 20 checklist:**
+1. "Wake me at 6:30": tap Set in Clock. The Clock opens at 6:30; save; it rings.
+2. "Alarm at 5:45 on weekdays": the Clock opens at 5:45 and the card says to tick Mon–Fri.
+3. "Cancel my 6:30 alarm": Open Clock shows the list.
+4. "Remind me in 5 minutes to stretch": tap Set reminder (allow notifications). It shows on time
+   or a few minutes late, as a heads-up.
+5. "Cancel my reminder to stretch" (with one set): the card lists it; Cancel works. Settings →
+   Reminders shows the same list.
+6. Sign out and back in: Settings → Reminders is empty.

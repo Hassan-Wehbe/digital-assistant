@@ -1,6 +1,6 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-10-10 (newest: invite-only sign-up merged (#186) and live, versionCode 17 built and submitted, testers getting "Item not found" on the Play link; live `mcp` v30, `chat` v26 (places cuisine fix #188), `delete-account` deployed; see the first entry under "Where things stand"). Earlier: 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
+Last updated 2026-10-11 (newest: homes steps 3-5 merged (#216, #217, #218): the app's Settings → Homes, the 🏠 chat card, noticing which home you are at, and the privacy page; they ship with versionCode 20, not built yet; before that: invite-only sign-up merged (#186) and live, versionCode 17 built and submitted, testers getting "Item not found" on the Play link; live `mcp` v30, `chat` v26 (places cuisine fix #188), `delete-account` deployed; see the first entry under "Where things stand"). Earlier: 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
 #102), with Expo patch updates (#98). Step 2, server, is live. Places step 5b ("places near me",
 server) **merged and live** (#104, `mcp` v13, `chat` v6; first entry below). Then step 6, the places build, which also carries the mic fix #91. Play Console:
 Data safety and other forms saved, **not yet sent for review**; see the first entry below).
@@ -25,6 +25,83 @@ tokens or keys in chat.
   the default; saving a home from the chat with a card, asking whether to make it the default),
   a Help sheet behind a "?" (option A), and "what can you do?" in the chat (option C). Plans to
   write; strongest model for My places.
+- **Alarms step 1 merged (#206, squash, 040222c) and live: `chat` version 31** (deploy chat run
+  38084528151, owner's OK; 401 checks passed). Evaluation: 131/131, 0 leaks (run 38083418773).
+- **Alarms step 2, the app's alarm and reminder cards (2026-10-10): branch `claude/alarms-app`, not
+  merged; app only, ships with versionCode 20.** Set in Clock (the Clock's own screen, filled in;
+  weekdays ticked there), Open Clock, Set reminder (a Wilma notification, own channel), the
+  cancel-my-reminder card (matched on the phone), Settings → Reminders. `expo-intent-launcher`, the
+  SET_ALARM permission. 756 app tests (10 new). Details and phone checks:
+  `docs/alarms-calendar-plan.md` "As built: step 2". **Next:** step 3, the calendar card.
+- **Homes step 5, privacy and build (2026-10-11): PR #218 merged (squash, 34aacb9), docs only;
+  the owner approved the privacy wording, and merging published it. All five homes steps are on
+  main; the app part ships with versionCode 20 (not built).** Privacy page: "Your homes" item, the Location paragraph covers "Notice which home I'm at"
+  (never sent or stored by Wilma), AI sees home names only, memory never keeps home addresses.
+  Play Data safety: **no change** (reasons in `docs/phase4-play-release.md`). Legal checklist
+  item; D36 updated; `docs/versioncode20-phone-checklist.md` (homes). **Then:** "build for Play"
+  (versionCode 20) once the rest of that build is merged (#207, #208, #209 and the Help PRs; #207-#209
+  now conflict with main in the chat and My day files: keep both sides). Check the live privacy
+  page shows "Your homes". Details: `docs/my-places-plan.md` "As
+  built: step 5".
+- **Homes step 4, noticing where you are (2026-10-11): PR #217 merged (squash, 1ab1ed6). App only; ships with versionCode 20.**
+  Settings → Homes → "Notice which home I’m at when I plan" (off until turned on; asks for the
+  location permission then). With it on, two homes or more and no pick yet for today, today's plan
+  reads the location once (never asks for the permission while planning; 10 s limit), compares it
+  on the phone (150 m), and at a non-default home asks "You’re at Mom’s. Plan your day from: Home ·
+  Mom’s": in My day above the plan, in the chat as a card before the plan is made. Only the picked
+  home's id is sent; the answer holds for that day (the default's id kept too, also now for step 3's
+  Change). 792 app tests (14 new). Details and phone checks: `docs/my-places-plan.md` "As built:
+  step 4". Merged on the owner's word. Step 5 followed (#218, above): privacy wording
+  (the location is now read while planning, on the phone only), Data safety check, checklist,
+  then the build.
+- **Homes step 3, the app (2026-10-11): PR #216 merged (squash, 46c1227), 2026-10-11. App
+  only, no server change; ships with versionCode 20.** Settings → Homes (list, rename, change
+  address by typing / saved place / Use where I am, Make default through `set_default_home`,
+  Delete after a confirm, Add a home); My day's "Where do you leave from?" now saves to
+  `home_place`, and "🏠 Planned from Home · Change" picks a home for that day only (kept in
+  `dayChoices.ts`, sent as `start_from`, with Manage homes); the 🏠 chat card for `home_save`
+  (geocoded on the phone, Check on Maps, Use where I am, Save / Save as default, nothing saved
+  without a tap, marked saved in the saved chat); `"home"` in `can` on Android; `start_from` sent
+  back with the calendar (and, beyond the plan, the day's My day pick for a one-day request).
+  Password-like text refused on the phone. Fixed in passing: My day's 🚸 drop off titles were never
+  saved on the phone. 778 app tests (32 new); `expo export --platform android` bundles. **Expect
+  conflicts with #207/#208** in `chatClient.ts` (CAN: keep both, e.g. `['calendar', CAN_ALARM,
+  CAN_REMINDER, CAN_HOME]` on Android), `chatStream.ts`, `chatThread.ts`, `chatStore.ts` and
+  `ChatBubble.tsx` (keep both sides' cases); and with #209 in `app/day.tsx`. **#212 (Help):** its
+  Places topic should mention Settings → Homes once this merges. Phone checks and details:
+  `docs/my-places-plan.md` "As built: step 3". Merged on the owner's word. **Next:** step 4, noticing which home you are at (strongest model, fresh session).
+- **Homes step 2, the chat (2026-10-11): branch `claude/homes-chat`; evaluation passed (owner's OK,
+  $1 cap): chat 139/140 (the miss, plan-when-to-leave, then 4/4 on branch and main), memory 28/28,
+  0 leaks, 0 unsafe, about $0.09. Owner: merge, deploy `chat` and `mcp`.** `save_home` card (chat-only,
+  `"home"` in `can`, credentials refused, nothing saved on the server); `from_home` on
+  `get_day_agenda` (named so because `from` is the date; matched among the user's homes, labels
+  only to the model; the `agenda_request` carries `start_from` for step 3's app to send back, and
+  today's app gets the day planned again without a second count); memory skips save_home turns and
+  drops street addresses and "lives in" facts; the chat's server instructions say save_home
+  (connector unchanged). 489 Deno tests; eval chat 140 cases, memory 28. Details: `docs/my-places-plan.md`
+  "As built: step 2".
+- **New idea, not planned (owner, 2026-10-11): two tick boxes on the day planner, both ticked by
+  default: "Include weather" and "Include route planning".** Nothing built. Notes for when it is
+  planned: unticking weather would skip the US National Weather Service requests (no rain or alert
+  rows); unticking route planning would skip Mapbox (no drive times or leave-by times, only the
+  order of the day). To decide then: My day only or the chat's "plan my day" too; a setting that
+  stays, or a choice for that day only (like My day's other choices, `dayChoices.ts`).
+- **Homes step 1, the table and the planner (2026-10-11): branch `claude/homes-db` (from
+  `claude/my-places-plan`, #210), PR #214, not merged; **migration APPLIED 2026-10-11 (owner's OK; 1 home
+  moved); `chat` NOT deployed: deploy soon, the moved person's plans have no Home until then.**
+  `home_place` (RLS, one default moved only by `set_default_home`, 10 max, one per name); today's
+  Home notes copied in and binned; a trigger keeps older apps' Home notes in step (instead of the
+  planned fallback); the planner reads the table (`start_from` or the default). SQL test 17 (27
+  checks), 471 Deno tests; all migrations and SQL tests checked on a local Postgres. **Owner:** OK
+  to dry-run and apply the migration, then merge and OK to deploy `chat` (migration first). Details:
+  `docs/my-places-plan.md` "As built: step 1".
+- **My places / homes (D36): plan written (2026-10-10), branch `claude/my-places-plan`,
+  `docs/my-places-plan.md`; owner: "agree with the recommendations" (Q1-Q9, so Settings → Homes); nothing built. Next: step 1, table and planner (strongest model, fresh session).** From tester
+  feedback: homes in a new table `home_place` (several, one default, RLS), saved from the chat with
+  a card, never as memories; the phone notices which home it is at while planning and asks when it
+  is not the default. Five steps: (1) table and planner, (2) chat action, memory and evaluation,
+  (3) app Settings → Homes and the chat card, (4) noticing where you are, (5) privacy and build.
+  Strongest model for 1-4. Help A and C (same feedback) get their own short plan after this.
 - **Alarms step 1, server (2026-10-10): branch `claude/alarms-calendar`, not merged, not deployed.**
   Five chat-only actions (`chat/phone_actions.ts`): set_alarm, show_alarms, set_reminder,
   find_reminders, add_calendar_event; each sends a card to confirm, credentials refused; old apps

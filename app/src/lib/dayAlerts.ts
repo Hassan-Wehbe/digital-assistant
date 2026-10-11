@@ -17,6 +17,8 @@ export interface DayNote {
   body: string;
   /** The screen a tap opens. */
   url: string;
+  /** Reminders go to their own Android channel (heads-up); everything else to "Day plan". */
+  channel?: 'reminders';
 }
 
 /** How many mornings ahead are scheduled (one-offs, so a day's summary can replace its greeting). */

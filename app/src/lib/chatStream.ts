@@ -9,7 +9,9 @@
 // breaks) without `done` becomes the usual "trouble connecting" error. A vault event's `link`
 // is dropped here, as it is read: the app opens its own vault screen and never keeps the link.
 
+import { toHomeCard, type HomeCardData } from './homePlace';
 import { toRemembered, type RememberedMemory } from './memory';
+import { type AlarmCardData, type ReminderCardData, toAbout, toAlarmData, toReminderData } from './phoneActions';
 
 /** The server's own wording for a lost connection (supabase/functions/chat/messages.ts). */
 export const CONNECTION_MESSAGE = "I'm having trouble connecting. Try again in a moment.";
@@ -41,10 +43,18 @@ export type ChatEvent =
   /** Wilma asks for the location: the "📍 Share where I am" card. */
   | { type: 'location_request' }
   /** Wilma asks for these days of the phone's calendar (day planner step 1): the app reads the
-   * ticked calendars and sends the question again with them (chat.tsx). */
-  | { type: 'agenda_request'; from: string; to: string }
+   * ticked calendars and sends the question again with them (chat.tsx), and with `start_from` when
+   * it came (plan from that saved home, D36). */
+  | { type: 'agenda_request'; from: string; to: string; start_from?: { home: string } }
   /** The answer used a day plan (day planner step 3): the app shows Open my day for that date. */
   | { type: 'day_plan'; date: string }
+  /** Alarms and reminders (D31): cards to confirm; nothing happens until the user taps one. */
+  | ({ type: 'alarm' } & AlarmCardData)
+  | { type: 'show_alarms' }
+  | ({ type: 'reminder' } & ReminderCardData)
+  | { type: 'find_reminders'; about?: string }
+  /** Save a home (D36): the 🏠 card; nothing is saved until the user taps Save. */
+  | ({ type: 'home_save' } & HomeCardData)
   | { type: 'error'; code: string; message: string }
   | { type: 'done'; counted: boolean }
   /** After `done`: what Wilma kept from this message (memory on): "🧠 Remembered · Undo". */
@@ -73,6 +83,7 @@ const str = (v: unknown): v is string => typeof v === 'string';
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const short = (v: unknown, max: number): v is string => str(v) && v.trim().length > 0 && v.length <= max;
 const isDay = (v: unknown): v is string => str(v) && /^\d{4}-\d{2}-\d{2}$/.test(v);
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const inRange = (v: unknown, limit: number): v is number => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= limit;
 
 /** One card, copied field by field; null without an id and a name. */
@@ -138,10 +149,31 @@ export function toChatEvent(raw: unknown): ChatEvent | null {
     }
     case 'location_request':
       return { type: 'location_request' };
-    case 'agenda_request':
-      return isDay(raw.from) && isDay(raw.to) ? { type: 'agenda_request', from: raw.from, to: raw.to } : null;
+    case 'agenda_request': {
+      if (!isDay(raw.from) || !isDay(raw.to)) return null;
+      const home = isObject(raw.start_from) && str(raw.start_from.home) && UUID.test(raw.start_from.home) ? raw.start_from.home : null;
+      return { type: 'agenda_request', from: raw.from, to: raw.to, ...(home ? { start_from: { home } } : {}) };
+    }
+    case 'home_save': {
+      const card = toHomeCard(raw, 'make_default');
+      return card ? { type: 'home_save', ...card } : null;
+    }
     case 'day_plan':
       return isDay(raw.date) ? { type: 'day_plan', date: raw.date } : null;
+    case 'alarm': {
+      const a = toAlarmData(raw);
+      return a ? { type: 'alarm', ...a } : null;
+    }
+    case 'show_alarms':
+      return { type: 'show_alarms' };
+    case 'reminder': {
+      const r = toReminderData(raw);
+      return r ? { type: 'reminder', ...r } : null;
+    }
+    case 'find_reminders': {
+      const about = toAbout(raw.about);
+      return { type: 'find_reminders', ...(about ? { about } : {}) };
+    }
     case 'done':
       return { type: 'done', counted: raw.counted === true };
     case 'remembered': {

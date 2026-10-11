@@ -87,6 +87,11 @@ export class World {
   /** app_user.memory_on (memory step 1): off unless a test turns it on. */
   memoryOn = false;
   dayPlansUsed = 0;
+  /**
+   * home_place rows (D36). Left empty, the table holds what the database copies from a Home note
+   * in a searchable space (migration home_place, item_home_note), as the default.
+   */
+  homes: { id: string; label: string; address?: string; lat: number; lng: number; is_default: boolean }[] = [];
   /** What the tools handed out: vault entry links, reveal links, upload links. */
   secretEntries: { secret_id: string; name: string; space_id: string; secret_type: string }[] = [];
   reveals: string[] = [];
@@ -391,6 +396,16 @@ class Query implements PromiseLike<Result> {
         })).filter(where));
       case "item_chunk":
         return this.shape([]); // nothing pending: embeddings are not part of the evaluation
+      case "home_place": {
+        // One pretend user: every row is theirs (RLS keeps other people's out in the database).
+        const copied = w.liveItems()
+          .filter((i) => i.item_type === "place" && i.metadata?.kind === "home" && !w.spaceById(i.space_id)?.is_restricted &&
+            typeof i.metadata?.lat === "number" && typeof i.metadata?.lng === "number")
+          .slice(0, 1)
+          .map((i) => ({ id: i.id, label: i.title, lat: i.metadata!.lat as number, lng: i.metadata!.lng as number, is_default: true }));
+        const rows = w.homes.length ? w.homes : copied;
+        return this.shape(rows.map((h) => ({ ...h })).filter(where));
+      }
       default:
         return err(`table ${this.table} is not part of the evaluation world`);
     }
