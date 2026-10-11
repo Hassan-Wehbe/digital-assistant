@@ -26,6 +26,17 @@
 // read, a card says why. The calendar lines are never kept: not in the thread, not on the phone.
 // For one day ("plan my day"), the events go with the places the phone found for them and the
 // day's choices from My day (dayAgenda.ts); an answer that used a day plan ends with Open my day.
+// The saved home to plan from goes back with it (D36): the one the request named, else the home
+// picked for that day in My day.
+//
+// "You're at Mom's" (homes step 4): before today's plan is read and sent, with Settings → Homes →
+// "Notice which home I'm at" on and no answer yet for today, the location is read once and
+// compared with the saved homes on the phone (homeNotice.ts). At a saved home that is not the
+// default, a card asks which home to plan from; the calendar is read and the question sent again
+// only after the tap, with the picked home's id (the reading itself is never sent or kept).
+//
+// A 🏠 card (save a home, D36) writes nothing by itself: the card saves on the tap
+// (components/HomeCard.tsx), and the thread then only marks it saved.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { useAuth } from './auth';
@@ -34,13 +45,19 @@ import { loadChoice } from './calendarSettings';
 import type { SharedPoint } from './chatClient';
 import { MAX_NOTES, routeMessage, type MessageRoute } from './chatRoute';
 import { calendarFollowUp } from './chatCalendar';
-import { agendaForChat, phoneGeocode } from './dayAgenda';
+import { agendaForChat, chatStartFrom, phoneGeocode } from './dayAgenda';
+import { chooseHome, EMPTY_MEMORY, homeFor } from './dayChoices';
+import { listHomes, type HomesDb } from './homePlace';
+import { loadNotice, noticeHome } from './homeNotice';
+import { supabase } from './supabase';
 import { todayAndTomorrow } from './dayView';
 import { shareFromCard } from './chatHere';
 import { runConfirm, runTurn } from './chatRun';
 import { threadsToKeep } from './chatStore';
 import { findCredential } from './credentials';
-import { canLookup, chatReducer, initialChat, monthKey, noticeVisible, type ChatAction, type ChatState, type EventAdded } from './chatThread';
+import {
+  canLookup, chatReducer, homeAskActive, initialChat, monthKey, noticeVisible, type ChatAction, type ChatState, type EventAdded, type HomeSaved,
+} from './chatThread';
 import type { EventCardData } from './phoneActions';
 import { deviceChatStore, deviceDayMemory, deviceSettingsStore } from './deviceStorage';
 import { deviceGeocoder, deviceLocation } from './location';
@@ -97,6 +114,10 @@ interface ChatContextValue {
   undoMemory(entryId: string, memoryId: string): Promise<boolean>;
   /** Add to calendar worked on a 📅 card: the card and the saved chat say Added. */
   eventAdded(entryId: string, added: EventAdded, event: EventCardData): void;
+  /** A 🏠 card's home was saved (the card wrote it on the tap): the card says so from now on. */
+  homeSaved(entryId: string, saved: HomeSaved): void;
+  /** "You're at Mom's": plan today from that home (kept for today), then the question again. */
+  answerHomeAsk(entryId: string, chosen: 'at' | 'def'): void;
 }
 
 const ChatContext = createContext<ChatContextValue | null>(null);
@@ -173,51 +194,50 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     if (keep !== undefined) queue(() => deviceChatStore.forgetOthers(keep));
   }, [keep, queue]);
 
+  type Asked = { from: string; to: string; start_from?: { home: string } };
+  // Reads the calendar Wilma asked for, then sends the same question again with it (once); or the
+  // card saying why not. `question`: the user message it answers (nothing happens if it changed).
+  const followRef = useRef<(asked: Asked, here: SharedPoint | undefined, forUser: string, alreadySent: boolean, question: unknown) => Promise<void>>(
+    async () => {},
+  );
+
   // start() calls itself again (through this ref) to send a question back with the calendar.
-  const startRef = useRef<(entries: ChatState['entries'], here?: SharedPoint, agenda?: Agenda) => void>(() => {});
+  const startRef = useRef<(entries: ChatState['entries'], here?: SharedPoint, agenda?: Agenda, startFrom?: string) => void>(() => {});
   const start = useCallback(
-    (entries: ChatState['entries'], here?: SharedPoint, agenda?: Agenda) => {
+    (entries: ChatState['entries'], here?: SharedPoint, agenda?: Agenda, startFrom?: string) => {
       const controller = new AbortController();
       request.current = controller;
       lastHere.current = here;
       const forUser = user.current;
-      let asked: { from: string; to: string } | null = null;
+      let asked: Asked | null = null;
       runTurn(chat.send, entries, controller.signal, (a) => {
-        if (a.type === 'event' && a.event.type === 'agenda_request') asked = { from: a.event.from, to: a.event.to };
+        if (a.type === 'event' && a.event.type === 'agenda_request') {
+          asked = { from: a.event.from, to: a.event.to, ...(a.event.start_from ? { start_from: a.event.start_from } : {}) };
+        }
         // An answer for an account that has since signed out is dropped.
         if (user.current === forUser && !controller.signal.aborted) act(a);
-      }, here, agenda).then(async (end) => {
+      }, here, agenda, startFrom).then(async (end) => {
         if (request.current === controller) request.current = null;
         if (end === 'signed_out') return signOut();
         if (end !== 'done' || !asked || controller.signal.aborted || user.current !== forUser || !forUser) return;
-        // Wilma asked for the calendar: read it, then the same question again (once).
         const question = current.current.entries.findLast((e) => e.kind === 'user');
-        const out = await calendarFollowUp(asked, {
-          choice: () => loadChoice(deviceSettingsStore, forUser),
-          read: async (choice, from, to) => {
-            const read = await readAgenda(deviceCalendar, choice, from, to, phoneTimeZone());
-            if (!('agenda' in read)) return read;
-            // One day ("plan my day"): with the places found on the phone and the day's choices
-            // (Take both, Not driving), so the chat's plan matches My day.
-            return {
-              agenda: await agendaForChat(read.agenda, {
-                load: () => deviceDayMemory.load(forUser, todayAndTomorrow(new Date()).today),
-                save: (m) => deviceDayMemory.save(forUser, m),
-                geocode: phoneGeocode(deviceGeocoder),
-              }),
-            };
-          },
-        }, !!agenda);
-        // Signed out, a new message, or another answer started meanwhile: nothing more.
-        if (user.current !== forUser || current.current.streaming || current.current.entries.findLast((e) => e.kind === 'user') !== question) return;
-        if ('problem' in out) {
-          act({ type: 'calendar_card', problem: out.problem });
-          return;
+        const ask: Asked = asked;
+        // Today's plan, no home named and none picked for today yet: maybe ask which home first.
+        const today = todayAndTomorrow(new Date()).today;
+        if (!agenda && !ask.start_from && ask.from === ask.to && ask.from === today) {
+          const memory = await deviceDayMemory.load(forUser, today).catch(() => EMPTY_MEMORY);
+          if (!homeFor(memory, today)) {
+            const homesDb = supabase as unknown as HomesDb;
+            const n = await noticeHome({ on: () => loadNotice(deviceSettingsStore, forUser), homes: () => listHomes(homesDb), location: deviceLocation });
+            if (n) {
+              if (user.current !== forUser || current.current.streaming || current.current.entries.findLast((e) => e.kind === 'user') !== question) return;
+              // Ids and names only: where the phone was is not passed on.
+              act({ type: 'home_ask', date: today, at: { id: n.at.id, label: n.at.label }, def: { id: n.def.id, label: n.def.label } });
+              return;
+            }
+          }
         }
-        const before = current.current;
-        if (before.blocked !== null) return;
-        const next = act({ type: 'resend' });
-        if (next !== before) startRef.current(next.entries, here, out.agenda);
+        await followRef.current(ask, here, forUser, !!agenda, question);
       });
     },
     [chat, act, signOut],
@@ -225,6 +245,40 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     startRef.current = start;
   }, [start]);
+
+  useEffect(() => {
+    followRef.current = async (asked, here, forUser, alreadySent, question) => {
+      const out = await calendarFollowUp(asked, {
+        choice: () => loadChoice(deviceSettingsStore, forUser),
+        read: async (choice, from, to) => {
+          const read = await readAgenda(deviceCalendar, choice, from, to, phoneTimeZone());
+          if (!('agenda' in read)) return read;
+          // One day ("plan my day"): with the places found on the phone and the day's choices
+          // (Take both, Not driving), so the chat's plan matches My day.
+          return {
+            agenda: await agendaForChat(read.agenda, {
+              load: () => deviceDayMemory.load(forUser, todayAndTomorrow(new Date()).today),
+              save: (m) => deviceDayMemory.save(forUser, m),
+              geocode: phoneGeocode(deviceGeocoder),
+            }),
+          };
+        },
+      }, alreadySent);
+      const from = 'agenda' in out
+        ? await chatStartFrom(asked, () => deviceDayMemory.load(forUser, todayAndTomorrow(new Date()).today))
+        : undefined;
+      // Signed out, a new message, or another answer started meanwhile: nothing more.
+      if (user.current !== forUser || current.current.streaming || current.current.entries.findLast((e) => e.kind === 'user') !== question) return;
+      if ('problem' in out) {
+        act({ type: 'calendar_card', problem: out.problem });
+        return;
+      }
+      const before = current.current;
+      if (before.blocked !== null) return;
+      const next = act({ type: 'resend' });
+      if (next !== before) startRef.current(next.entries, here, out.agenda, from);
+    };
+  }, [act]);
 
   const value = useMemo<ChatContextValue>(
     () => ({
@@ -361,6 +415,25 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       },
       eventAdded(entryId, added, event) {
         act({ type: 'event_added', id: entryId, added, event });
+      },
+      homeSaved(entryId, saved) {
+        act({ type: 'home_saved', id: entryId, saved });
+      },
+      answerHomeAsk(entryId, chosen) {
+        const card = current.current.entries.find((e) => e.id === entryId);
+        const forUser = user.current;
+        const today = todayAndTomorrow(new Date()).today;
+        if (!card || card.kind !== 'home_ask' || !forUser || !homeAskActive(current.current, card, today)) return;
+        const home = card[chosen];
+        const question = current.current.entries.findLast((e) => e.kind === 'user');
+        act({ type: 'home_ask_answer', id: entryId, chosen });
+        void (async () => {
+          // Kept for today, as My day's Change (the answer holds for that day, Q5).
+          const memory = await deviceDayMemory.load(forUser, today).catch(() => EMPTY_MEMORY);
+          await deviceDayMemory.save(forUser, chooseHome(memory, today, home.id)).catch(() => {});
+          if (user.current !== forUser) return;
+          await followRef.current({ from: card.date, to: card.date, start_from: { home: home.id } }, undefined, forUser, false, question);
+        })();
       },
     }),
     [state, routingNow, loadedFor, userId, act, start, abort, wilma, chat, removeSecret, signOut],

@@ -320,3 +320,16 @@ create policy secret_log_insert on secret_access_log
 --   from the account's metadata.
 -- create_invite_code(note, max_uses, days, plan): owner only (SQL editor); returns the code once.
 -- signup_mode(): 'invite' or 'open', the one thing anon can call (the Create account screen).
+
+-- =========================================================
+-- Homes to plan from (20261013120000_home_place.sql; design.md D36, docs/my-places-plan.md)
+-- =========================================================
+-- home_place: user_id (owner, auth.uid()), label (1-60, one per name), address (optional, at most
+--   300), lat, lng, is_default (exactly one per person: the first saved; moved only by
+--   set_default_home; deleting it passes it to the oldest left), created_at, updated_at. At most
+--   10 per person. RLS: own rows only; authenticated may insert and change label, address and the
+--   point, and delete. Not a note: never searched, embedded or shared.
+-- set_default_home(id): moves the default to one of your own homes.
+-- item_home_note (trigger on item): an older app's place note of kind "home" in a searchable space
+--   updates the default home (remove once versionCode 20 is the oldest app allowed). Today's Home
+--   notes were copied in and went to the Recycle bin.

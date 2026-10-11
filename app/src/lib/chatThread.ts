@@ -11,6 +11,7 @@
 
 import { cancelledMessage, checkDelete, deletedMessage } from './chatDeletes';
 import type { ChatEvent, PlaceCardData } from './chatStream';
+import type { HomeCardData } from './homePlace';
 import type { RememberedMemory } from './memory';
 import type { AlarmCardData, EventCardData, ReminderCardData } from './phoneActions';
 import type { Route } from './router';
@@ -51,6 +52,8 @@ const READ_ONLY_TOOLS = new Set([
   'list_deleted_items',
   'find_tasks',
   'get_day_agenda',
+  // Only shows the 🏠 card: nothing is saved until the user taps it.
+  'save_home',
 ]);
 
 export type ErrorButton = 'search' | 'vault' | 'try_again';
@@ -146,8 +149,41 @@ export type Entry =
    * offers to add it twice.
    */
   | ({ kind: 'event'; id: string; added?: EventAdded } & EventCardData)
+  /**
+   * Save a home (D36): written only when the user taps Save. `saved` once it was: "home", or
+   * "default" when it became the default. Never a point: the card finds it again on the phone.
+   */
+  | ({ kind: 'home'; id: string; saved?: HomeSaved } & HomeCardData)
+  /**
+   * "You're at Mom's. Plan your day from: Home · Mom's" (homes step 4), before the chat's plan for
+   * today is made. Home names and ids only: never where the phone was.
+   */
+  | {
+      kind: 'home_ask';
+      id: string;
+      date: string;
+      at: HomeChoice;
+      def: HomeChoice;
+      state: HomeAskState;
+      /** Which one was picked (state answered). */
+      chosen?: 'at' | 'def';
+    }
   /** What Wilma kept from the message before (memory on): "🧠 Remembered: … · Undo" for each. */
   | { kind: 'memory'; id: string; memories: (RememberedMemory & { undone?: true })[] };
+
+/** A saved home as the "You're at Mom's" card names it. */
+export interface HomeChoice {
+  id: string;
+  label: string;
+}
+
+/** Waiting for a tap, answered, or not done (the conversation moved on). */
+export type HomeAskState = 'pending' | 'answered' | 'not_done';
+export const HOME_ASK_STATES: HomeAskState[] = ['pending', 'answered', 'not_done'];
+
+/** How a 🏠 card's home was saved. */
+export type HomeSaved = 'home' | 'default';
+export const HOME_SAVED: HomeSaved[] = ['home', 'default'];
 
 /** A calendar entry the user added: the phone's event id (for Open in Calendar) and where it went. */
 export interface EventAdded {
@@ -238,7 +274,13 @@ export type ChatAction =
   /** Undo worked for one of those memories. */
   | { type: 'memory_undone'; id: string; memoryId: string }
   /** Add to calendar worked: the card (and the saved chat) says Added, with Open in Calendar. */
-  | { type: 'event_added'; id: string; added: EventAdded; event: EventCardData };
+  | { type: 'event_added'; id: string; added: EventAdded; event: EventCardData }
+  /** A 🏠 card's home was saved (the tap wrote the row): the card says so from now on. */
+  | { type: 'home_saved'; id: string; saved: HomeSaved }
+  /** At a saved home that is not the default: ask before today's plan is made (nothing sent yet). */
+  | { type: 'home_ask'; date: string; at: HomeChoice; def: HomeChoice }
+  /** The "You're at Mom's" card answered (the caller then sends the question again with it). */
+  | { type: 'home_ask_answer'; id: string; chosen: 'at' | 'def' };
 
 /** A thread as loaded from the phone (or empty). Status, banner and limits start fresh. */
 export function initialChat(entries: Entry[] = [], noticeDismissed: string | null = null): ChatState {
@@ -311,6 +353,11 @@ export function cardActive(state: ChatState, entry: Entry): boolean {
   );
 }
 
+/** A "You're at Mom's" card can be tapped: it waits, it is for today, and a message can go to Wilma now. */
+export function homeAskActive(state: ChatState, entry: Entry, today: string): boolean {
+  return entry.kind === 'home_ask' && entry.state === 'pending' && entry.date === today && canSend(state);
+}
+
 /** A "📍 Share where I am" card can be tapped: it waits, and a message can go to Wilma now. */
 export function locationActive(state: ChatState, entry: Entry): boolean {
   return entry.kind === 'location' && entry.state === 'pending' && canSend(state);
@@ -335,6 +382,7 @@ const cap = (entries: Entry[]) => (entries.length > MAX_ENTRIES ? entries.slice(
 /** The conversation moved on: a delete or 📍 card left unanswered can no longer be tapped. */
 function moveOn(entries: Entry[]): Entry[] {
   return entries.map((e) => {
+    if (e.kind === 'home_ask' && e.state === 'pending') return { ...e, state: 'not_done' as const };
     if (e.kind === 'location' && (e.state === 'pending' || e.state === 'locating')) {
       const { error: _, ...rest } = e;
       return { ...rest, state: 'not_done' as const };
@@ -464,6 +512,9 @@ function onEvent(state: ChatState, event: ChatEvent): ChatState {
     case 'day_plan':
       // Shown under the answer, once it has ended (the card follows Wilma's words).
       return { ...state, dayPlan: event.date };
+    case 'home_save':
+      // A card only: nothing is saved until the user taps it (homes, D36).
+      return add(state, { kind: 'home', id, label: event.label, address: event.address, makeDefault: event.makeDefault });
     case 'location_request': {
       // One card per answer, for the question it answers; nothing to ask again without one.
       const question = lastUserText(state.entries);
@@ -549,6 +600,24 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       // What was added, as edited on the card.
       const { title, start, end, allDay, location } = action.event;
       const next: Entry = { kind: 'event', id: card.id, title, start, end, allDay, ...(location?.trim() ? { location: location.trim() } : {}), added: action.added };
+      return { ...state, entries: state.entries.map((e, i) => (i === at ? next : e)) };
+    }
+    case 'home_ask':
+      // Between answers only, and only for a question in the thread (it is sent again on the tap).
+      if (state.streaming || !lastUserText(state.entries)) return state;
+      return add(state, { kind: 'home_ask', id: String(state.seq), date: action.date, at: action.at, def: action.def, state: 'pending' });
+    case 'home_ask_answer': {
+      const at = state.entries.findIndex((e) => e.id === action.id);
+      const card = state.entries[at];
+      if (!card || card.kind !== 'home_ask' || card.state !== 'pending' || !canSend(state)) return state;
+      const next: Entry = { ...card, state: 'answered', chosen: action.chosen };
+      return { ...state, entries: state.entries.map((e, i) => (i === at ? next : e)) };
+    }
+    case 'home_saved': {
+      const at = state.entries.findIndex((e) => e.id === action.id);
+      const card = state.entries[at];
+      if (!card || card.kind !== 'home') return state;
+      const next: Entry = { ...card, saved: action.saved };
       return { ...state, entries: state.entries.map((e, i) => (i === at ? next : e)) };
     }
     case 'stop':

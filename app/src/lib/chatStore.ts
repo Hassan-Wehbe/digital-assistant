@@ -10,9 +10,10 @@
 
 import { toPlaceCard } from './chatStream';
 import {
-  CALENDAR_PROBLEMS, errorButtons, MAX_ENTRIES, MAX_TEXT, noteRef, PARTIAL_NOTE, type CalendarProblem, type ConfirmState, type Entry,
-  type LocationState, type NoteRef, type PlaceRef,
+  CALENDAR_PROBLEMS, errorButtons, HOME_ASK_STATES, HOME_SAVED, MAX_ENTRIES, MAX_TEXT, noteRef, PARTIAL_NOTE, type CalendarProblem, type ConfirmState, type Entry,
+  type HomeAskState, type HomeChoice, type HomeSaved, type LocationState, type NoteRef, type PlaceRef,
 } from './chatThread';
+import { toHomeCard } from './homePlace';
 import { toRemembered } from './memory';
 import { toAbout, toAlarmData, toEventData, toReminderData } from './phoneActions';
 import type { AuthStorage } from './sessionStorage';
@@ -168,6 +169,20 @@ export function toEntry(raw: unknown): Entry | null {
         : undefined;
       return { kind: 'event', id, ...e, ...(added ? { added } : {}) };
     }
+    case 'home': {
+      // The card's words and whether it was saved; nothing else (no point is ever kept here).
+      const card = toHomeCard(raw, 'makeDefault');
+      if (!card) return null;
+      const saved = HOME_SAVED.includes(raw.saved as HomeSaved) ? { saved: raw.saved as HomeSaved } : {};
+      return { kind: 'home', id, ...card, ...saved };
+    }
+    case 'home_ask': {
+      const at = homeChoice(raw.at);
+      const def = homeChoice(raw.def);
+      if (!at || !def || !str(raw.date) || !/^\d{4}-\d{2}-\d{2}$/.test(raw.date) || !HOME_ASK_STATES.includes(raw.state as HomeAskState)) return null;
+      const chosen = raw.state === 'answered' && (raw.chosen === 'at' || raw.chosen === 'def') ? { chosen: raw.chosen as 'at' | 'def' } : {};
+      return { kind: 'home_ask', id, date: raw.date, at, def, state: raw.state as HomeAskState, ...chosen };
+    }
     case 'memory': {
       if (!Array.isArray(raw.memories)) return null;
       const undone = new Set(raw.memories.filter((m) => isObject(m) && m.undone === true).map((m) => (m as { id: unknown }).id));
@@ -177,6 +192,12 @@ export function toEntry(raw: unknown): Entry | null {
     default:
       return null;
   }
+}
+
+/** A home as the "You're at Mom's" card keeps it: its id and name, nothing else. */
+function homeChoice(raw: unknown): HomeChoice | null {
+  if (!isObject(raw) || !str(raw.id) || !raw.id || raw.id.length > 100 || !str(raw.label) || !raw.label.trim() || raw.label.length > 60) return null;
+  return { id: raw.id, label: raw.label };
 }
 
 function toSaved(entries: unknown, noticeDismissed: unknown): SavedChat {

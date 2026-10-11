@@ -17,6 +17,14 @@
 // planner step 3): the model gets its numbers (leave-by times, drive minutes with traffic, rain,
 // overlaps) with the calendar, and writes the answer from them, never inventing its own (D25).
 //
+// Planning from another saved home (D36, docs/my-places-plan.md step 2): "plan my day from Mom's" is
+// get_day_agenda with from_home, the home's name, matched among the user's own homes (homes.ts; RLS).
+// The agenda_request then carries "start_from": {"home": id} for the app to send back with the
+// calendar, and the planner starts there. An app that does not send it back (versionCode 19 and
+// older) gets the plan from the default home; the model, told where the plan starts, asks again with
+// from_home, and the day is planned again from that home (no second fair-use count). The model only
+// ever sees home names.
+//
 // An app that cannot read the calendar (older versions) gets a plain sentence to update the app.
 // The evaluation (tests/eval/harness.ts) uses this same file, so what is evaluated is what ships.
 import { z } from "zod";
@@ -24,6 +32,7 @@ import type { Message, ToolResult } from "../_shared/llm/index.ts";
 import type { DayPlan } from "../_shared/dayplan/plan.ts";
 import { findCredential } from "../mcp/lib/credentials.ts";
 import { MAX_AGENDA_DAYS } from "../mcp/tools/get_day_agenda.ts";
+import { type Home, matchHome, noSuchHome } from "./homes.ts";
 
 export { MAX_AGENDA_DAYS };
 export const AGENDA_TOOL = "get_day_agenda";
@@ -186,6 +195,13 @@ export function planForModel(plan: DayPlan, titles: Map<string, string>): Record
       "Open my day button under your answer.",
     date: plan.date,
     home_set: plan.home.set,
+    ...(plan.home.set && plan.home.label
+      ? {
+        planned_from: screened(plan.home.label),
+        planned_from_note: "The saved home the plan starts from. If the user asked to plan from another of their " +
+          "saved homes, call get_day_agenda again for this day with from_home set to that home's name.",
+      }
+      : {}),
     drive_times: plan.drive_times,
     weather: plan.weather === "outside_us" ? "not available outside the US" : plan.weather,
     rows,
@@ -238,24 +254,44 @@ export const AGENDA_CALL_ID = "phone_calendar";
  * The conversation with the calendar the app sent, as a get_day_agenda call and its result after the
  * user's question: so the model reads it as a tool result (data), exactly where it asked for it.
  */
-export function withAgenda(messages: Message[], agenda: Agenda, plan?: ChatPlan): Message[] {
+export function withAgenda(messages: Message[], agenda: Agenda, plan?: ChatPlan, fromHome?: string): Message[] {
+  const input: Record<string, unknown> = { from: agenda.from, to: agenda.to, ...(fromHome ? { from_home: fromHome } : {}) };
   return [
     ...messages,
-    { role: "assistant", text: "", toolCalls: [{ id: AGENDA_CALL_ID, name: AGENDA_TOOL, input: { from: agenda.from, to: agenda.to } }] },
+    { role: "assistant", text: "", toolCalls: [{ id: AGENDA_CALL_ID, name: AGENDA_TOOL, input }] },
     { role: "tool", results: [{ callId: AGENDA_CALL_ID, content: agendaText(agenda, plan) }] },
   ];
 }
 
+export type AgendaRequest = {
+  type: "agenda_request";
+  from: string;
+  to: string;
+  /** The saved home to plan from, for the app to send back with the calendar (D36). */
+  start_from?: { home: string };
+};
+
 export type AgendaOutcome =
   /** Ask the app: send `event`, give the model `result`, and end the answer after this round. */
-  | { request: { type: "agenda_request"; from: string; to: string }; result: Omit<ToolResult, "callId"> }
-  | { request?: undefined; result: Omit<ToolResult, "callId"> };
+  | { request: AgendaRequest; result: Omit<ToolResult, "callId">; plan?: undefined }
+  /** `plan`: the day planned again from the home the model named; it replaces the message's plan. */
+  | { request?: undefined; result: Omit<ToolResult, "callId">; plan?: ChatPlan };
+
+/** The user's homes for from_home (homes.ts), read only when the model names one. */
+export interface AgendaHomes {
+  list(): Promise<Home[]>;
+  /** The re-sent day planned again from this home (day.ts planForChat, not counted a second time). */
+  replan(homeId: string): Promise<ChatPlan>;
+}
 
 /**
  * A get_day_agenda call in the chat. `canCalendar`: the app can read the phone's calendar.
- * `agenda`: the calendar the app already sent with this message, if any.
+ * `agenda`: the calendar the app already sent with this message, if any; `plan`, the planner's
+ * answer for it. `homes`: for from_home.
  */
-export function agendaCall(input: Record<string, unknown>, canCalendar: boolean, agenda?: Agenda, plan?: ChatPlan): AgendaOutcome {
+export async function agendaCall(
+  input: Record<string, unknown>, canCalendar: boolean, agenda?: Agenda, plan?: ChatPlan, homes?: AgendaHomes,
+): Promise<AgendaOutcome> {
   const from = typeof input.from === "string" ? input.from : "";
   const to = input.to === undefined ? from : typeof input.to === "string" ? input.to : "";
   const n = spanDays(from, to);
@@ -267,10 +303,31 @@ export function agendaCall(input: Record<string, unknown>, canCalendar: boolean,
       },
     };
   }
+  // A saved home to plan from: one day only (the planner plans one day), matched among the user's own.
+  let home: Home | undefined;
+  const named = typeof input.from_home === "string" ? input.from_home.trim() : "";
+  if (named && from === to && homes && canCalendar) {
+    let list: Home[];
+    try {
+      list = await homes.list();
+    } catch {
+      return { result: { isError: true, content: "The saved homes could not be read just now. Try again in a moment." } };
+    }
+    const found = matchHome(list, named);
+    if (!found) return { result: { content: noSuchHome(list, named) } };
+    home = found;
+  }
   if (agenda) {
     // Already read for this message: the same days again, or a part of them, come from it. Other
     // days would mean another round trip in the same answer: the user asks again instead.
-    if (from >= agenda.from && to <= agenda.to) return { result: { content: agendaText(agenda, plan) } };
+    if (from >= agenda.from && to <= agenda.to) {
+      // The model named a home the plan did not start from (an app that did not send it back).
+      if (home && homes && plan?.made && agenda.from === agenda.to && plan.plan.home.label !== home.label) {
+        const again = await homes.replan(home.id);
+        return { result: { content: agendaText(agenda, again) }, plan: again };
+      }
+      return { result: { content: agendaText(agenda, plan) } };
+    }
     return {
       result: {
         content: `Only ${agenda.from} to ${agenda.to} was read from the phone for this message. Answer from that; ` +
@@ -287,7 +344,7 @@ export function agendaCall(input: Record<string, unknown>, canCalendar: boolean,
     };
   }
   return {
-    request: { type: "agenda_request", from, to },
+    request: { type: "agenda_request", from, to, ...(home ? { start_from: { home: home.id } } : {}) },
     result: {
       content: `The app is reading the phone's calendar for ${from} to ${to}; the question comes back with it. ` +
         "Say nothing more now.",
