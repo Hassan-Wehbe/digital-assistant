@@ -11,7 +11,7 @@
 //           nowhere else: never stored, never logged, never sent to the classifier.
 //           Optional "tz": the phone's time zone (e.g. "America/New_York"), so "today" is the
 //           user's day. Optional "can": ["calendar"] when the app reads the phone's calendar (and
-//           "alarm", "reminder", "calendar_add" when it shows those cards, phone_actions.ts), and
+//           "alarm", "reminder", "calendar_add", "help" when it shows those cards, phone_actions.ts), and
 //           "agenda": {...}, the calendar it read for this message (agenda.ts: ask, then re-send).
 // Response: 401 without a valid sign-in, 400 for a malformed body, otherwise a stream of
 //           newline-delimited JSON events (application/x-ndjson):
@@ -26,6 +26,7 @@
 //             {"type":"agenda_request","from":...,"to":...}            read the calendar, send again
 //             {"type":"day_plan","date":...}                            the answer used a day plan: Open my day
 //             {"type":"alarm"|"show_alarms"|"reminder"|"find_reminders"|"calendar_add",...}  cards to confirm
+//             {"type":"help","topic"?}                                🛟 Help topics (changes nothing)
 //                                                                     on the phone (phone_actions.ts)
 //             {"type":"error","code":"allowance_used"|"service_paused"|"connection","message":...}
 //             {"type":"done","counted":true|false}                    the answer is complete

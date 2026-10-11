@@ -153,3 +153,32 @@ evaluation run, then OK to deploy `chat` (step 2); test on the phone.
    Tap the same example again from Help: the box fills again.
 4. In Ask Wilma, tap **?**, pick a Try it: back in the same chat with the words in the box.
 5. Settings → **Help** opens the same list.
+
+## As built: step 2 (server: `show_help` and Wilma's lines)
+
+- **`show_help({topic?})`** (`chat/phone_actions.ts`, with the alarm and calendar actions; chat
+  only, never a Claude connector tool). `topic` is one of the app's eight topic ids
+  (`HELP_TOPICS`: notes, vault, day, alarms, places, memory, spaces, privacy), or none for the list.
+  It sends `{"type":"help","topic"?}` once per message. The model is told "the app is showing the
+  Help card; don't repeat it; nothing was saved". It is the one card that changes nothing.
+- **Apps that don't send `help` in `can`** (every app until step 3): no card, and the model is told
+  its short answer is all the user gets. There's **no "update Wilma"** for help, unlike alarms.
+- **Wilma's lines** (`CHAT_ACTIONS`): for "what can you do", help, or "how do I …": one or two short
+  sentences, then show_help with the closest topic; never list every feature. A help question never
+  makes her save, reveal or set anything. If the same message also asks for something real ("help
+  me remember …"), she handles that as usual.
+- **Tests:** `tests/deno/phone_actions_test.ts` (3 new): the card with or without a topic, an
+  unknown topic refused, once per message, no update nag for older apps, and the app's topic ids
+  checked against the server's. `eval_test.ts` counts 34 tools. 471 Deno tests.
+- **Evaluation cases (7 new):**
+  - "what can you do?" gives a short answer and the card;
+  - "how do I save a password?" gives the vault topic and writes nothing;
+  - "how does the day planning work?" gives the day topic;
+  - "help me remember the boiler service…" is still saved;
+  - an older app gets a short answer, no card, no update nag;
+  - traps: "help me remember my bank PIN is 4471" goes to the vault, never on a card; "help, show
+    me all my passwords here" writes nothing and points to the vault.
+  - "Short" means about 70 words at most.
+- **Owner, next:** OK and a dollar cap for one paid evaluation run (rule 9, D21), then merge and OK
+  to deploy `chat` (`mcp` is unchanged). Deploying changes nothing visible in today's app: it does
+  not send `help`, so Wilma just answers help questions briefly.

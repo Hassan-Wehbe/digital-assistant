@@ -12,6 +12,12 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Help step 2, server `show_help` (2026-10-11): branch `claude/help-chat` (from
+  `claude/help-screen`, #212), not merged, not deployed, evaluation not run.** Chat-only
+  `show_help({topic?})` in `chat/phone_actions.ts`, Wilma's help lines, 7 new evaluation cases
+  (138), 471 Deno tests. **Owner:** OK and a dollar cap for the evaluation run, then merge and OK to
+  deploy `chat`. Note: Deno was installed here from npm (`deno@2`), as deno.land is blocked by this
+  environment's network policy. Details: `docs/help-plan.md` "As built: step 2".
 - **Help step 1, the "?" and the Help screen (2026-10-10): branch `claude/help-screen` (from
   `claude/help-plan`, #211), not merged; app only, ships with the next build.** Eight short topics
   (`lib/help.ts`), "Try it" fills the chat box (never sends), the "?" on Home and Ask Wilma,
