@@ -2,7 +2,7 @@
 
 Status: plan, 2026-10-10. **Owner's answers given the same day: "agree with the recommendations",
 so the first option of every question (Q1-Q9) and the small ones as written.** Steps 1 and 2 merged
-and live (#214, #215); step 3, the app, PR #216, not merged; step 4 written on `claude/homes-notice` (2026-10-11), not
+and live (#214, #215); step 3, the app, merged (#216); step 4 written on `claude/homes-notice` (2026-10-11), not
 merged. Next: step 5.
 Design: D36 (and D25, whose "Home is a place note" this replaces; D24, automatic memory, which stops
 keeping home addresses). Model: the strongest for steps 1-4 (database and RLS, the chat loop,
@@ -458,14 +458,13 @@ run. Ships with the next build (versionCode 20), with steps 4 and 5.
     Settings → Homes as the default.
 12. 🚸 drop off on an event, leave My day and come back: still on.
 
-**Owner, next:** review PR #216, and merge (squash) on your word. It ships with
+**Merged** (squash, #216, 2026-10-11). It ships with
 versionCode 20, after steps 4 (noticing where you are) and 5 (privacy wording, build). PR #212
 (Help) should mention Settings → Homes in its Places topic once this is merged.
 
 ## As built: step 4 (noticing where you are)
 
-Branch `claude/homes-notice` (2026-10-11), built on step 3's `claude/homes-app` (#216, not merged
-yet). App only: no server change. Ships with versionCode 20.
+Branch `claude/homes-notice` (2026-10-11), on main after step 3 (#216, merged). App only: no server change. Ships with versionCode 20.
 
 - **The switch (Q3):** Settings → Homes → "Notice which home I’m at when I plan", **Off until
   turned on**. It is kept on this phone, per account (`lib/homeNotice.ts`). Turning it on asks for
@@ -515,5 +514,5 @@ yet). App only: no server change. Ships with versionCode 20.
 5. Switch Off: nothing is asked, and no location icon appears in the status bar while planning.
 6. Tomorrow's plan never asks.
 
-**Owner, next:** review; open a PR when you want one (it stacks on #216, so merge #216 first).
+**Owner, next:** review; open a PR when you want one.
 Then step 5: privacy wording, Data safety check, checklist, build (smaller model).
