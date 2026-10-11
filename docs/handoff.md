@@ -12,6 +12,14 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Alarms step 1 merged (#206, squash, 040222c) and live: `chat` version 31** (deploy chat run
+  38084528151, owner's OK; 401 checks passed). Evaluation: 131/131, 0 leaks (run 38083418773).
+- **Alarms step 2, the app's alarm and reminder cards (2026-10-10): branch `claude/alarms-app`, not
+  merged; app only, ships with versionCode 20.** Set in Clock (the Clock's own screen, filled in;
+  weekdays ticked there), Open Clock, Set reminder (a Wilma notification, own channel), the
+  cancel-my-reminder card (matched on the phone), Settings → Reminders. `expo-intent-launcher`, the
+  SET_ALARM permission. 756 app tests (10 new). Details and phone checks:
+  `docs/alarms-calendar-plan.md` "As built: step 2". **Next:** step 3, the calendar card.
 - **Homes step 5, privacy and build (2026-10-11): PR #218 merged (squash, 34aacb9), docs only;
   the owner approved the privacy wording, and merging published it. All five homes steps are on
   main; the app part ships with versionCode 20 (not built).** Privacy page: "Your homes" item, the Location paragraph covers "Notice which home I'm at"

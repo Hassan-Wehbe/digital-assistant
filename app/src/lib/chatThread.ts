@@ -13,6 +13,7 @@ import { cancelledMessage, checkDelete, deletedMessage } from './chatDeletes';
 import type { ChatEvent, PlaceCardData } from './chatStream';
 import type { HomeCardData } from './homePlace';
 import type { RememberedMemory } from './memory';
+import type { AlarmCardData, ReminderCardData } from './phoneActions';
 import type { Route } from './router';
 
 /** At most this many entries are kept (oldest dropped). */
@@ -137,6 +138,11 @@ export type Entry =
   | { kind: 'calendar'; id: string; problem: CalendarProblem }
   /** Wilma's answer used a day plan: Open my day for that date. Only the date: never the plan. */
   | { kind: 'day'; id: string; date: string }
+  /** Alarms and reminders (D31): set only when the user taps the card. */
+  | ({ kind: 'alarm'; id: string } & AlarmCardData)
+  | { kind: 'alarms'; id: string }
+  | ({ kind: 'reminder'; id: string } & ReminderCardData)
+  | { kind: 'reminders'; id: string; about?: string }
   /**
    * Save a home (D36): written only when the user taps Save. `saved` once it was: "home", or
    * "default" when it became the default. Never a point: the card finds it again on the phone.
@@ -475,6 +481,16 @@ function onEvent(state: ChatState, event: ChatEvent): ChatState {
     case 'agenda_request':
       // Nothing to show: the app reads the calendar after the answer ends (chat.tsx).
       return state;
+    case 'alarm': {
+      const { type: _t, ...a } = event;
+      return add(state, { kind: 'alarm', id, ...a });
+    }
+    case 'show_alarms':
+      return add(state, { kind: 'alarms', id });
+    case 'reminder':
+      return add(state, { kind: 'reminder', id, at: event.at, text: event.text });
+    case 'find_reminders':
+      return add(state, { kind: 'reminders', id, ...(event.about ? { about: event.about } : {}) });
     case 'day_plan':
       // Shown under the answer, once it has ended (the card follows Wilma's words).
       return { ...state, dayPlan: event.date };

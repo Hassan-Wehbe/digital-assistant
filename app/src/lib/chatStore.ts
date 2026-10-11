@@ -15,6 +15,7 @@ import {
 } from './chatThread';
 import { toHomeCard } from './homePlace';
 import { toRemembered } from './memory';
+import { toAbout, toAlarmData, toReminderData } from './phoneActions';
 import type { AuthStorage } from './sessionStorage';
 
 const PREFIX = 'wilma.chat.';
@@ -145,6 +146,20 @@ export function toEntry(raw: unknown): Entry | null {
     case 'day':
       // The date only: the plan itself is never kept (Mapbox's terms; day planner step 3).
       return str(raw.date) && /^\d{4}-\d{2}-\d{2}$/.test(raw.date) ? { kind: 'day', id, date: raw.date } : null;
+    case 'alarm': {
+      const a = toAlarmData(raw);
+      return a ? { kind: 'alarm', id, ...a } : null;
+    }
+    case 'alarms':
+      return { kind: 'alarms', id };
+    case 'reminder': {
+      const r = toReminderData(raw);
+      return r ? { kind: 'reminder', id, ...r } : null;
+    }
+    case 'reminders': {
+      const about = toAbout(raw.about);
+      return { kind: 'reminders', id, ...(about ? { about } : {}) };
+    }
     case 'home': {
       // The card's words and whether it was saved; nothing else (no point is ever kept here).
       const card = toHomeCard(raw, 'makeDefault');

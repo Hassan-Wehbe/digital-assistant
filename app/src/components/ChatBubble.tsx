@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 
 import { ChatCard, ChatCardText } from '@/components/ChatCard';
 import { CalendarCard, DayCard, DeleteCard, LocationCard, MemoryLine, NotesCard, PlacesCard, VaultCard } from '@/components/ChatCards';
+import { AlarmCard, AlarmsCard, ReminderCard, RemindersCard } from '@/components/PhoneCards';
 import { HomeAskCard, HomeCard } from '@/components/HomeCard';
 import { Button, Muted, useColors } from '@/components/ui';
 import type { Entry, ErrorButton, HomeSaved } from '@/lib/chatThread';
@@ -114,6 +115,14 @@ export function ChatBubble({
       return <CalendarCard entry={entry} />;
     case 'day':
       return <DayCard entry={entry} />;
+    case 'alarm':
+      return <AlarmCard entry={entry} />;
+    case 'alarms':
+      return <AlarmsCard />;
+    case 'reminder':
+      return <ReminderCard entry={entry} />;
+    case 'reminders':
+      return <RemindersCard entry={entry} />;
     case 'home':
       return <HomeCard entry={entry} onSaved={(saved) => onHomeSaved?.(entry.id, saved)} />;
     case 'home_ask':

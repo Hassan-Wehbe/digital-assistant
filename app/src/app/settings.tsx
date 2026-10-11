@@ -179,6 +179,7 @@ export default function Settings() {
           subtitle={briefing.data ? briefingSummary(briefing.data) : undefined}
           onPress={() => router.push('/briefing')}
         />
+        {Platform.OS === 'android' ? <GroupRow title="Reminders" subtitle="Set from the chat, on this phone" onPress={() => router.push('/reminders')} /> : null}
         <GroupRow title="Homes" subtitle="Where My day plans from" onPress={() => router.push('/homes')} />
       </GroupList>
 

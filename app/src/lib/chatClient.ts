@@ -12,6 +12,7 @@ import { phoneTimeZone, type Agenda } from './calendar';
 import { CONNECTION_MESSAGE, readChatEvents, type ChatEvent, type ChunkSource } from './chatStream';
 import type { Verdict } from './chatRoute';
 import { messagesToSend, type Entry } from './chatThread';
+import { CAN_ALARM, CAN_REMINDER } from './phoneActions';
 import { WilmaError } from './wilma';
 
 /** The part of a streaming fetch the client uses. */
@@ -42,10 +43,11 @@ export const CAN_HOME = 'home';
 
 /**
  * What this app version can do for Wilma: read the phone's calendar (chat/agenda.ts on the server),
- * and on Android show the 🏠 save-a-home card (chat/phone_actions.ts). Other platforms leave it out,
- * so Wilma says to update instead of showing a card (the web build has no map lookup).
+ * and on Android show the alarm, reminder and 🏠 save-a-home cards (chat/phone_actions.ts). Other
+ * platforms leave those out, so Wilma says they are not available there instead of showing a card
+ * that cannot work (the web build has no Clock and no map lookup).
  */
-export const CAN = Platform.OS === 'android' ? ['calendar', CAN_HOME] : ['calendar'];
+export const CAN = Platform.OS === 'android' ? ['calendar', CAN_ALARM, CAN_REMINDER, CAN_HOME] : ['calendar'];
 
 /**
  * The request body: the thread, what the app can do, the phone's time zone (so "today" is the

@@ -106,7 +106,7 @@ describe('"home" in can', () => {
       });
       return can;
     };
-    expect(canOn('android')).toEqual(['calendar', 'home']);
+    expect(canOn('android')).toEqual(['calendar', 'alarm', 'reminder', 'home']);
     expect(canOn('ios')).toEqual(['calendar']);
     expect(canOn('web')).toEqual(['calendar']);
   });
