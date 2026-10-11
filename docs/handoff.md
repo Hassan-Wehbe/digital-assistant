@@ -12,7 +12,7 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **Homes step 3, the app (2026-10-11): branch `claude/homes-app`, not merged; no PR yet. App
+- **Homes step 3, the app (2026-10-11): branch `claude/homes-app`, PR #216, not merged. App
   only, no server change; ships with versionCode 20.** Settings → Homes (list, rename, change
   address by typing / saved place / Use where I am, Make default through `set_default_home`,
   Delete after a confirm, Add a home); My day's "Where do you leave from?" now saves to
@@ -27,7 +27,7 @@ tokens or keys in chat.
   CAN_REMINDER, CAN_HOME]` on Android), `chatStream.ts`, `chatThread.ts`, `chatStore.ts` and
   `ChatBubble.tsx` (keep both sides' cases); and with #209 in `app/day.tsx`. **#212 (Help):** its
   Places topic should mention Settings → Homes once this merges. Phone checks and details:
-  `docs/my-places-plan.md` "As built: step 3". **Owner:** review, then ask for a PR; merge (squash)
+  `docs/my-places-plan.md` "As built: step 3". **Owner:** review PR #216; merge (squash)
   on your word. **Next:** step 4, noticing which home you are at (strongest model, fresh session).
 - **Homes step 2, the chat (2026-10-11): branch `claude/homes-chat`; evaluation passed (owner's OK,
   $1 cap): chat 139/140 (the miss, plan-when-to-leave, then 4/4 on branch and main), memory 28/28,

@@ -2,7 +2,7 @@
 
 Status: plan, 2026-10-10. **Owner's answers given the same day: "agree with the recommendations",
 so the first option of every question (Q1-Q9) and the small ones as written.** Steps 1 and 2 merged
-and live (#214, #215); step 3, the app, written on `claude/homes-app` (2026-10-11), not merged.
+and live (#214, #215); step 3, the app, written on `claude/homes-app` (2026-10-11), PR #216, not merged.
 Next: step 4.
 Design: D36 (and D25, whose "Home is a place note" this replaces; D24, automatic memory, which stops
 keeping home addresses). Model: the strongest for steps 1-4 (database and RLS, the chat loop,
@@ -458,6 +458,6 @@ run. Ships with the next build (versionCode 20), with steps 4 and 5.
     Settings → Homes as the default.
 12. 🚸 drop off on an event, leave My day and come back: still on.
 
-**Owner, next:** review; open a PR when you want one, and merge (squash) on your word. It ships with
+**Owner, next:** review PR #216, and merge (squash) on your word. It ships with
 versionCode 20, after steps 4 (noticing where you are) and 5 (privacy wording, build). PR #212
 (Help) should mention Settings → Homes in its Places topic once this is merged.
