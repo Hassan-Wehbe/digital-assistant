@@ -121,3 +121,35 @@ Step 1's PR confirms this.
 
 **What the owner must do:** answer Q1–Q6; OK the topic wording (step 1); OK and a cap for the
 evaluation run, then OK to deploy `chat` (step 2); test on the phone.
+
+## As built: step 1 (app: the Help screen and the "?")
+
+- **Help** (`app/help.tsx`, a modal): the topic list, one line each. A topic shows its lines, its
+  **Try it** examples, and a link to the right screen ("Open the Vault", "Settings → Calendars",
+  "All spaces", "Delete account", the privacy policy). **All topics** goes back to the list.
+  `?topic=vault` opens one topic directly (for step 3's 🛟 card).
+- **The topics** (`lib/help.ts`): Notes, Passwords & the Vault, My day (Pro), Alarms, reminders &
+  calendar (Android only), Places & Homes, Memory, Spaces, Privacy & your data. Homes joined the
+  Places topic when D36 step 3 merged (#216): a line, a Try it, and a link to Settings → Homes. Every line is at
+  most 100 characters, a topic has at most four lines, and tests keep it that way.
+- **The "?"**: in the top bar of Home (next to ⚙ Settings) and of Ask Wilma (next to New chat),
+  and **Settings → Help**. The welcome card has one new line: "Tap ? any time for help."
+- **Try it** goes back to the chat (or opens it in place of Help) with the words in the box
+  (`/chat?draft=…`). It never sends, and the box still holds back anything that looks like a
+  password. The same example tapped twice fills the box again.
+- No server change. Nothing new is collected, sent or stored, so the privacy page and Play Data
+  safety are unchanged.
+- **Tests:** `app/src/lib/help.test.ts` (8): the eight topics and their lengths, Try it examples
+  fit and look nothing like a password, links point to screens that exist, Android-only topics
+  hidden elsewhere, Try it only fills the box, the "?" in both top bars, the Settings row and the
+  welcome line. 754 app tests; `expo export --platform android` bundles.
+- **Owner:** OK on the topic wording (in `app/src/lib/help.ts`; a word change there needs no other
+  change).
+
+**Phone checks (with the next build):**
+1. Home: tap **?**. Help lists the topics; Alarms is there on Android.
+2. Open **Passwords & the Vault**, tap **Open the Vault**: the Vault opens.
+3. Open **Alarms…**, tap “Wake me at 6:30”: the chat opens with those words in the box, not sent.
+   Tap the same example again from Help: the box fills again.
+4. In Ask Wilma, tap **?**, pick a Try it: back in the same chat with the words in the box.
+5. Settings → **Help** opens the same list.

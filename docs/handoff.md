@@ -13,6 +13,12 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Help step 1, the "?" and the Help screen (2026-10-10): branch `claude/help-screen` (from
+  `claude/help-plan`, #211), not merged; app only, ships with the next build.** Eight short topics
+  (`lib/help.ts`), "Try it" fills the chat box (never sends), the "?" on Home and Ask Wilma,
+  Settings → Help, one welcome line. 754 app tests (8 new). **Owner:** OK on the topic wording.
+  Details and phone checks: `docs/help-plan.md` "As built: step 1". **Next:** step 2 (server
+  `show_help` + evaluation; strongest model, OK and cap).
 - **Alarms step 3, the app's calendar entry card (2026-10-10): branch `claude/alarms-calendar-card`
   (from `claude/alarms-app`, #207), not merged; app only, ships with versionCode 20.** The 📅 card
   (title, day, start, end and place editable; the calendar shown and changeable), **Add to
