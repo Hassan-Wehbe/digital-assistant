@@ -269,6 +269,10 @@ build.
   skipped and stay where they are; the planner could not start from them before either. SQL test 17
   gained two checks (29): a Home note without a point at the move, and an older app saving one.
 - **Dry run on the real database (owner, SQL editor, 2026-10-11): 29/29 ok**, rolled back.
+- **Applied (owner's OK, 2026-10-11)** through the Supabase connector as migration `home_place`.
+  Checked after: 1 home moved (1 person, 1 default), 1 Home note left (address only, no point),
+  RLS on, anon cannot read or call `set_default_home`, the 3 triggers in place. **`chat` not yet
+  deployed:** until it is, that person's plans have no Home (their note is in the Recycle bin).
 - **Dry run for the real database:** `tests/sql/dry_runs/17_home_place_dry_run.sql`. It ends with
   a deliberate error, so nothing is kept.
 

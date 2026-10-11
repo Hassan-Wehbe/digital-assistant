@@ -13,7 +13,8 @@ tokens or keys in chat.
 
 **Newest first (2026-10-07):**
 - **Homes step 1, the table and the planner (2026-10-11): branch `claude/homes-db` (from
-  `claude/my-places-plan`, #210), not merged; migration NOT applied; `chat` NOT deployed.**
+  `claude/my-places-plan`, #210), PR #214, not merged; **migration APPLIED 2026-10-11 (owner's OK; 1 home
+  moved); `chat` NOT deployed: deploy soon, the moved person's plans have no Home until then.**
   `home_place` (RLS, one default moved only by `set_default_home`, 10 max, one per name); today's
   Home notes copied in and binned; a trigger keeps older apps' Home notes in step (instead of the
   planned fallback); the planner reads the table (`start_from` or the default). SQL test 17 (27
