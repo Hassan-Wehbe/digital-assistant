@@ -2,8 +2,8 @@
 
 Status: plan, 2026-10-10. **Owner's answers given the same day: "agree with the recommendations",
 so the first option of every question (Q1-Q9) and the small ones as written.** Steps 1 and 2 merged
-and live (#214, #215); step 3, the app, merged (#216); step 4 merged (#217); step 5 (privacy) on `claude/homes-privacy`, waiting for the owner's OK
-on the wording.
+and live (#214, #215); step 3, the app, merged (#216); step 4 merged (#217); step 5 (privacy) merged (#218, the owner
+approved the wording). **All steps built; the app part ships with versionCode 20 (not built yet).**
 Design: D36 (and D25, whose "Home is a place note" this replaces; D24, automatic memory, which stops
 keeping home addresses). Model: the strongest for steps 1-4 (database and RLS, the chat loop,
 memory, location); a smaller one for step 5 (wording, checklist, build).
@@ -518,8 +518,8 @@ Branch `claude/homes-notice` (2026-10-11), on main after step 3 (#216, merged). 
 
 ## As built: step 5 (privacy and build)
 
-Branch `claude/homes-privacy` (2026-10-11). Docs only. **Merging publishes the privacy page, so it
-needs the owner's OK on the wording first.**
+PR #218 (2026-10-11), merged (squash) after the owner approved the wording. Docs only; merging
+published the privacy page.
 
 - **Privacy page** (`docs/legal/privacy.html`, dated 11 October 2026):
   - What Wilma stores: a new **"Your homes"** item. Name, address if given, the point on the map
@@ -545,9 +545,7 @@ needs the owner's OK on the wording first.**
 - **Phone checklist:** `docs/versioncode20-phone-checklist.md` (homes; the other work in versionCode
   20 adds its own sections as it merges).
 
-**Owner:**
-1. Read the new privacy wording (the "Your homes" item and the Location paragraph) and say OK or
-   what to change.
-2. Merge (squash) on your word. That publishes the page.
-3. "Build for Play" (versionCode 20) when the rest of versionCode 20 is merged.
-4. Then test with `docs/versioncode20-phone-checklist.md`.
+**Owner, next:**
+1. Check the live privacy page shows "Your homes".
+2. "Build for Play" (versionCode 20) when the rest of versionCode 20 is merged.
+3. Then test with `docs/versioncode20-phone-checklist.md`.
