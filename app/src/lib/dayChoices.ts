@@ -1,8 +1,10 @@
 // What My day keeps on the phone (day planner step 2, Q7; docs/phase6-day-planner-step2-plan.md
 // "How it works" 3 and 4), never on the server:
 //
-//   * choices: per day (today and tomorrow, Q5), the events done as one trip (Take both) and the
-//     events not driven to (Not driving). A day's choices are dropped once it has passed.
+//   * choices: per day (today and tomorrow, Q5), the events done as one trip (Take both), the
+//     events not driven to (Not driving), and the home the day is planned from when it is not the
+//     default ("🏠 Planned from Mom's · Change"; homes, D36: that day only, Q5). A day's choices are
+//     dropped once it has passed.
 //   * places: the user's answers per event title ("Dentist" is Dr. Lee's office; "Standup" is not
 //     a trip), so they are asked once.
 //   * drop_off: the event titles the user only drops off and picks up at (🚸; "Lexi school"), so
@@ -29,6 +31,8 @@ export interface DayChoice {
   together: string[][];
   /** Events the user does not drive to. */
   not_driving: string[];
+  /** The saved home (home_place id) this day is planned from; none: the default home. */
+  home?: string;
 }
 
 /** The user's answer for an event title: a place, or "not a trip". */
@@ -53,6 +57,8 @@ export const textKey = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' '
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const isDay = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
 const key = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= 200;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isHomeId = (v: unknown): v is string => typeof v === 'string' && UUID.test(v);
 const onMap = (lat: unknown, lng: unknown): boolean =>
   typeof lat === 'number' && typeof lng === 'number' && Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
 
@@ -64,7 +70,7 @@ function toChoice(raw: unknown): DayChoice | null {
     .filter((g) => g.length >= 2)
     .slice(0, 20);
   const notDriving = [...new Set((Array.isArray(raw.not_driving) ? raw.not_driving : []).filter(key))].slice(0, 100);
-  return { date: raw.date, together, not_driving: notDriving };
+  return { date: raw.date, together, not_driving: notDriving, ...(isHomeId(raw.home) ? { home: raw.home } : {}) };
 }
 
 function toPlace(raw: unknown): EventPlace | null {
@@ -119,7 +125,7 @@ function withChoice(m: DayMemory, date: string, change: (c: DayChoice) => DayCho
   const before = m.choices.find((x) => x.date === date) ?? { date, together: [], not_driving: [] };
   const after = change(before);
   const rest = m.choices.filter((x) => x.date !== date);
-  const empty = !after.together.length && !after.not_driving.length;
+  const empty = !after.together.length && !after.not_driving.length && !after.home;
   return { ...m, choices: empty ? rest : [...rest, after] };
 }
 
@@ -148,6 +154,20 @@ export function toggleNotDriving(m: DayMemory, date: string, eventKey: string): 
     ...c,
     not_driving: c.not_driving.includes(eventKey) ? c.not_driving.filter((k) => k !== eventKey) : [...c.not_driving, eventKey].slice(-100),
   }));
+}
+
+/** The home picked for this day (Change), when there is one; else the plan starts from the default. */
+export function homeFor(m: DayMemory, date: string): string | undefined {
+  return m.choices.find((x) => x.date === date)?.home;
+}
+
+/** Plan this day from that home (Change); null: back to the default. Only that day changes. */
+export function chooseHome(m: DayMemory, date: string, homeId: string | null): DayMemory {
+  if (homeId !== null && !isHomeId(homeId)) return m;
+  return withChoice(m, date, (c) => {
+    const { home: _, ...rest } = c;
+    return homeId ? { ...rest, home: homeId } : rest;
+  });
 }
 
 /** Start over: the day's choices go. */
@@ -213,10 +233,10 @@ export function dayMemoryStore(storage: AuthStorage, listKeys: () => Promise<str
       }
     },
     async save(userId, memory) {
-      // Only the three known parts are written, checked again, whatever else the object holds.
+      // Only the known parts are written, checked again, whatever else the object holds.
       const checked = parseMemory(memory, '0000-00-00');
-      const { choices, places, found } = checked;
-      await storage.setItem(memoryKey(userId), JSON.stringify({ v: 1, user: userId, choices, places, found }));
+      const { choices, places, found, drop_off } = checked;
+      await storage.setItem(memoryKey(userId), JSON.stringify({ v: 1, user: userId, choices, places, found, drop_off }));
     },
     async forgetOthers(userId) {
       let keys: string[];

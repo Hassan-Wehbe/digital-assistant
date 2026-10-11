@@ -1,5 +1,6 @@
 // Picking a place for My day (day planner step 4; mockups screen 5): "Where do you leave from?"
-// (Home) and "📍 Where is this?" (an event without a place). Three ways: a saved place (found by
+// (Home) and "📍 Where is this?" (an event without a place); and a home's address in Settings →
+// Homes (D36). Three ways: a saved place (found by
 // name among the user's notes), a typed address (the phone's own map lookup, as "Is this it?":
 // only the typed words are looked up, never where the phone is), or, for Home only, where the
 // phone is now (one reading, on the tap). Nothing is kept here: the caller saves the choice.
@@ -30,7 +31,7 @@ export function PlacePicker({
 }: {
   title: string;
   intro?: string;
-  /** Offer "Use where I am now" (Home). */
+  /** Offer "Use where I am now" (homes). */
   allowHere?: boolean;
   /** Prefills the search and the address (an event's location text). */
   startText?: string;
@@ -71,7 +72,7 @@ export function PlacePicker({
   const useHere = async () => {
     setS({ step: 'here' });
     const out = await whereAmI(deviceLocation);
-    if ('here' in out) onPick({ lat: out.here.lat, lng: out.here.lng, label: 'Home' });
+    if ('here' in out) onPick({ lat: out.here.lat, lng: out.here.lng, label: 'Where I am', here: true });
     else setS({ step: 'here', error: out.error });
   };
 

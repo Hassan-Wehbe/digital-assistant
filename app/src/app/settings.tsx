@@ -3,7 +3,8 @@
 // This month's AI allowance in full (D28), distances in miles or km (places Q14), the phone's
 // Theme (light, dark or the phone's), the
 // calendars Wilma may read (day planner step 1, app/calendars.tsx), the morning briefing and
-// leave-by alerts (day planner step 4, app/briefing.tsx), the account,
+// leave-by alerts (day planner step 4, app/briefing.tsx), the homes days are planned from (D36,
+// app/homes.tsx), the account,
 // the recycle bin, deleting the account (D29, app/delete-account.tsx), sign out, the version.
 import * as Application from 'expo-application';
 import { router } from 'expo-router';
@@ -178,6 +179,7 @@ export default function Settings() {
           subtitle={briefing.data ? briefingSummary(briefing.data) : undefined}
           onPress={() => router.push('/briefing')}
         />
+        <GroupRow title="Homes" subtitle="Where My day plans from" onPress={() => router.push('/homes')} />
       </GroupList>
 
       {heading('Account')}

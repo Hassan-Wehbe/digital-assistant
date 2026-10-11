@@ -11,6 +11,7 @@
 
 import { cancelledMessage, checkDelete, deletedMessage } from './chatDeletes';
 import type { ChatEvent, PlaceCardData } from './chatStream';
+import type { HomeCardData } from './homePlace';
 import type { RememberedMemory } from './memory';
 import type { Route } from './router';
 
@@ -50,6 +51,8 @@ const READ_ONLY_TOOLS = new Set([
   'list_deleted_items',
   'find_tasks',
   'get_day_agenda',
+  // Only shows the 🏠 card: nothing is saved until the user taps it.
+  'save_home',
 ]);
 
 export type ErrorButton = 'search' | 'vault' | 'try_again';
@@ -134,8 +137,17 @@ export type Entry =
   | { kind: 'calendar'; id: string; problem: CalendarProblem }
   /** Wilma's answer used a day plan: Open my day for that date. Only the date: never the plan. */
   | { kind: 'day'; id: string; date: string }
+  /**
+   * Save a home (D36): written only when the user taps Save. `saved` once it was: "home", or
+   * "default" when it became the default. Never a point: the card finds it again on the phone.
+   */
+  | ({ kind: 'home'; id: string; saved?: HomeSaved } & HomeCardData)
   /** What Wilma kept from the message before (memory on): "🧠 Remembered: … · Undo" for each. */
   | { kind: 'memory'; id: string; memories: (RememberedMemory & { undone?: true })[] };
+
+/** How a 🏠 card's home was saved. */
+export type HomeSaved = 'home' | 'default';
+export const HOME_SAVED: HomeSaved[] = ['home', 'default'];
 
 /** Why the calendar was not read: turned off (or nothing ticked), not allowed, or a failure. */
 export type CalendarProblem = 'off' | 'permission' | 'failed';
@@ -218,7 +230,9 @@ export type ChatAction =
   /** After an answer: what Wilma remembered from its message (automatic memory). */
   | { type: 'remembered'; memories: RememberedMemory[] }
   /** Undo worked for one of those memories. */
-  | { type: 'memory_undone'; id: string; memoryId: string };
+  | { type: 'memory_undone'; id: string; memoryId: string }
+  /** A 🏠 card's home was saved (the tap wrote the row): the card says so from now on. */
+  | { type: 'home_saved'; id: string; saved: HomeSaved };
 
 /** A thread as loaded from the phone (or empty). Status, banner and limits start fresh. */
 export function initialChat(entries: Entry[] = [], noticeDismissed: string | null = null): ChatState {
@@ -430,6 +444,9 @@ function onEvent(state: ChatState, event: ChatEvent): ChatState {
     case 'day_plan':
       // Shown under the answer, once it has ended (the card follows Wilma's words).
       return { ...state, dayPlan: event.date };
+    case 'home_save':
+      // A card only: nothing is saved until the user taps it (homes, D36).
+      return add(state, { kind: 'home', id, label: event.label, address: event.address, makeDefault: event.makeDefault });
     case 'location_request': {
       // One card per answer, for the question it answers; nothing to ask again without one.
       const question = lastUserText(state.entries);
@@ -506,6 +523,13 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       const card = state.entries[at];
       if (!card || card.kind !== 'memory' || !card.memories.some((m) => m.id === action.memoryId && !m.undone)) return state;
       const next: Entry = { ...card, memories: card.memories.map((m) => (m.id === action.memoryId ? { ...m, undone: true as const } : m)) };
+      return { ...state, entries: state.entries.map((e, i) => (i === at ? next : e)) };
+    }
+    case 'home_saved': {
+      const at = state.entries.findIndex((e) => e.id === action.id);
+      const card = state.entries[at];
+      if (!card || card.kind !== 'home') return state;
+      const next: Entry = { ...card, saved: action.saved };
       return { ...state, entries: state.entries.map((e, i) => (i === at ? next : e)) };
     }
     case 'stop':
