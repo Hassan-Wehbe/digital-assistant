@@ -13,6 +13,19 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **My day opens the day asked for, and 📅 Pick a day (2026-10-10): branch `claude/my-day-date`, not
+  merged; app only, ships with versionCode 20.** Tester feedback (Denisse): "show the plan for
+  Tuesday October 13" showed today. Cause: My day accepted only today or tomorrow
+  (`app/day.tsx`), so the chat's "Open my day" for any other date opened today. Now any day from
+  today up to 366 days ahead opens (`dayView.ts openingDay`), and a third chip, **📅 Pick a day**
+  (Android, the phone's date picker), sits next to Today and Tomorrow. 748 app tests (2 new).
+  **Phone check:** ask "plan Tuesday the 13th", tap Open my day: it shows the 13th; Pick a day
+  shows any later day. If Wilma's *words* also described today, that is the model, not this bug.
+  **Also from the same feedback, next (owner, 2026-10-10):** "My places" (a new table: several
+  homes, one default; Wilma notices which one you are at and asks whether to plan from there or
+  the default; saving a home from the chat with a card, asking whether to make it the default),
+  a Help sheet behind a "?" (option A), and "what can you do?" in the chat (option C). Plans to
+  write; strongest model for My places.
 - **Help step 1, the "?" and the Help screen (2026-10-10): branch `claude/help-screen` (from
   `claude/help-plan`, #211), not merged; app only, ships with the next build.** Eight short topics
   (`lib/help.ts`), "Try it" fills the chat box (never sends), the "?" on Home and Ask Wilma,
