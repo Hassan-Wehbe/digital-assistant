@@ -2,8 +2,8 @@
 
 Status: plan, 2026-10-10. **Owner's answers given the same day: "agree with the recommendations",
 so the first option of every question (Q1-Q9) and the small ones as written.** Steps 1 and 2 merged
-and live (#214, #215); step 3, the app, merged (#216); step 4 written on `claude/homes-notice` (2026-10-11), not
-merged. Next: step 5.
+and live (#214, #215); step 3, the app, merged (#216); step 4 merged (#217); step 5 (privacy) on `claude/homes-privacy`, waiting for the owner's OK
+on the wording.
 Design: D36 (and D25, whose "Home is a place note" this replaces; D24, automatic memory, which stops
 keeping home addresses). Model: the strongest for steps 1-4 (database and RLS, the chat loop,
 memory, location); a smaller one for step 5 (wording, checklist, build).
@@ -514,5 +514,40 @@ Branch `claude/homes-notice` (2026-10-11), on main after step 3 (#216, merged). 
 5. Switch Off: nothing is asked, and no location icon appears in the status bar while planning.
 6. Tomorrow's plan never asks.
 
-**Owner, next:** review; open a PR when you want one.
-Then step 5: privacy wording, Data safety check, checklist, build (smaller model).
+**Merged** (squash, #217, 2026-10-11). Then step 5: privacy wording, Data safety check, checklist, build (smaller model).
+
+## As built: step 5 (privacy and build)
+
+Branch `claude/homes-privacy` (2026-10-11). Docs only. **Merging publishes the privacy page, so it
+needs the owner's OK on the wording first.**
+
+- **Privacy page** (`docs/legal/privacy.html`, dated 11 October 2026):
+  - What Wilma stores: a new **"Your homes"** item. Name, address if given, the point on the map
+    and which one is the default; added and changed only with a tap; kept with the account but not
+    notes: never searched or shared; a deleted home is gone for good. "Your Home place" is gone from
+    the notes item.
+  - Location: read "only when you choose to", now including **"Notice which home I'm at when I
+    plan"**: off unless turned on, asks for the permission then, one reading each time you plan
+    today with two homes or more and no home chosen yet, compared on the phone, **never sent or
+    stored by Wilma**. (Not "never leaves your phone": Android's own location service may use the
+    network to work a position out.) "Use where I am" stores the point in that home.
+  - Planning your day: homes kept with the account; the AI service sees only home **names**; the
+    home picked for a day is kept on the phone with the day's other choices.
+  - Memory: never a home address or where you live.
+  - The phone's map lookup: the addresses typed for a home, and the address of a home the chat
+    offers to save.
+- **Play Data safety: no change** (`docs/phase4-play-release.md`, a new Homes bullet). A home's
+  address is "Other user-generated content" and its point *Precise location* (stored), both
+  already declared. The noticing reading is compared on the phone only, and Google does not count
+  data processed only on the device as collected. Background location stays blocked.
+- **Legal checklist:** a Homes item (`docs/legal-review-checklist.md`).
+- **Design D36:** the trigger that replaced the planned fallback, and what was built.
+- **Phone checklist:** `docs/versioncode20-phone-checklist.md` (homes; the other work in versionCode
+  20 adds its own sections as it merges).
+
+**Owner:**
+1. Read the new privacy wording (the "Your homes" item and the Location paragraph) and say OK or
+   what to change.
+2. Merge (squash) on your word. That publishes the page.
+3. "Build for Play" (versionCode 20) when the rest of versionCode 20 is merged.
+4. Then test with `docs/versioncode20-phone-checklist.md`.
