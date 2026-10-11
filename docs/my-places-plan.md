@@ -286,7 +286,13 @@ build.
 
 ## As built: step 2 (the chat)
 
-Branch `claude/homes-chat` (2026-10-11). Not merged, not deployed; the paid evaluation run is still to do.
+Branch `claude/homes-chat` (2026-10-11).
+
+**Evaluation (owner's OK, $1 cap):**
+- Chat run 38100197264: **139/140, 0 leaks, 0 unsafe, $0.08.** All 11 home cases passed. The one
+  failure, `plan-when-to-leave`, gave the right leave-by time and rain chance but left out the
+  15-minute drive, the same wobble seen in the alarms step.
+- Memory run 38100202117: **28/28, 0 leaks, $0.0013.**
 
 - **`save_home({label, address?, make_default?})`** (`chat/phone_actions.ts`), a chat-only action like
   the alarm and calendar ones:
