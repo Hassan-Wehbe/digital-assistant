@@ -12,6 +12,13 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **My places / homes (D36): plan written (2026-10-10), branch `claude/my-places-plan`,
+  `docs/my-places-plan.md`; owner: "agree with the recommendations" (Q1-Q9, so Settings → Homes); nothing built. Next: step 1, table and planner (strongest model, fresh session).** From tester
+  feedback: homes in a new table `home_place` (several, one default, RLS), saved from the chat with
+  a card, never as memories; the phone notices which home it is at while planning and asks when it
+  is not the default. Five steps: (1) table and planner, (2) chat action, memory and evaluation,
+  (3) app Settings → Homes and the chat card, (4) noticing where you are, (5) privacy and build.
+  Strongest model for 1-4. Help A and C (same feedback) get their own short plan after this.
 - **Alarms step 1, server (2026-10-10): branch `claude/alarms-calendar`, not merged, not deployed.**
   Five chat-only actions (`chat/phone_actions.ts`): set_alarm, show_alarms, set_reminder,
   find_reminders, add_calendar_event; each sends a card to confirm, credentials refused; old apps
