@@ -2,8 +2,8 @@
 
 Status: plan, 2026-10-10. **Owner's answers given the same day: "agree with the recommendations",
 so the first option of every question (Q1-Q9) and the small ones as written.** Steps 1 and 2 merged
-and live (#214, #215); step 3, the app, merged (#216); step 4 written on `claude/homes-notice` (2026-10-11), not
-merged. Next: step 5.
+and live (#214, #215); step 3, the app, merged (#216); step 4 merged (#217); step 5 (privacy) on `claude/homes-privacy`, waiting for the owner's OK
+on the wording.
 Design: D36 (and D25, whose "Home is a place note" this replaces; D24, automatic memory, which stops
 keeping home addresses). Model: the strongest for steps 1-4 (database and RLS, the chat loop,
 memory, location); a smaller one for step 5 (wording, checklist, build).
@@ -514,8 +514,7 @@ Branch `claude/homes-notice` (2026-10-11), on main after step 3 (#216, merged). 
 5. Switch Off: nothing is asked, and no location icon appears in the status bar while planning.
 6. Tomorrow's plan never asks.
 
-**Owner, next:** review; open a PR when you want one.
-Then step 5: privacy wording, Data safety check, checklist, build (smaller model).
+**Merged** (squash, #217, 2026-10-11). Then step 5: privacy wording, Data safety check, checklist, build (smaller model).
 
 ## As built: step 5 (privacy and build)
 
