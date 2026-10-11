@@ -2,7 +2,7 @@
 // (lib/chat.tsx), so this screen only draws them. The box at the bottom is the Wilma box, as on
 // home (docs/ui-review.md, plan step 5): ＋ (📍 "Send where I am", a photo, pictures, a new note),
 // the usage counter, 🎤 and ↑ (■ while Wilma writes), with one status chip above it.
-import { router, Stack } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 
@@ -19,6 +19,7 @@ import { cardActive, type Entry, type ErrorButton, homeAskActive, lastUserText, 
 import { todayAndTomorrow } from '@/lib/dayView';
 import { VOICE_ENABLED } from '@/lib/config';
 import { findCredential } from '@/lib/credentials';
+import { draftText } from '@/lib/help';
 import { deviceLocation } from '@/lib/location';
 import { needsPro, PLAN_MY_DAY } from '@/lib/pro';
 import { supabase } from '@/lib/supabase';
@@ -33,6 +34,15 @@ export default function Chat() {
     shareLocation, dismissLocation, undoMemory, eventAdded, homeSaved, answerHomeAsk,
   } = useChat();
   const [text, setText] = useState('');
+  // Help's "Try it" (help plan Q3): the words go in the box, never sent by themselves. `at` makes
+  // the same example tapped twice fill the box again.
+  const { draft, at } = useLocalSearchParams<{ draft?: string; at?: string }>();
+  const [drafted, setDrafted] = useState<string | null>(null);
+  const draftKey = draftText(draft) !== null ? `${at ?? ''}|${draft}` : null;
+  if (draftKey !== null && draftKey !== drafted) {
+    setDrafted(draftKey);
+    setText(draftText(draft)!);
+  }
   // 🌅 Plan my day in an empty thread: Pro (the badge and the Pro card without it).
   const pro = useProPlan();
   const planMyDay = () => (needsPro(pro) ? router.push('/pro') : void askWilma(PLAN_MY_DAY));
@@ -116,14 +126,19 @@ export default function Chat() {
         options={{
           title: 'Ask Wilma',
           headerRight: () => (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="New chat"
-              onPress={newConversation}
-              disabled={!state.entries.length && !state.streaming}
-              hitSlop={8}>
-              <Text style={{ color: c.accent, fontSize: 16 }}>New chat</Text>
-            </Pressable>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20 }}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Help" onPress={() => router.push('/help')} hitSlop={8}>
+                <Text style={{ color: c.accent, fontSize: 17, fontWeight: '700' }}>?</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="New chat"
+                onPress={newConversation}
+                disabled={!state.entries.length && !state.streaming}
+                hitSlop={8}>
+                <Text style={{ color: c.accent, fontSize: 16 }}>New chat</Text>
+              </Pressable>
+            </View>
           ),
         }}
       />

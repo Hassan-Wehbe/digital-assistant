@@ -252,7 +252,14 @@ export default function Home() {
   return (
     <KeyboardScreen>
       <Stack.Screen
-        options={{ headerRight: () => <TextLink title="⚙ Settings" onPress={() => router.push('/settings')} /> }}
+        options={{
+          headerRight: () => (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.l }}>
+              <TextLink title="?" accessibilityLabel="Help" onPress={() => router.push('/help')} />
+              <TextLink title="⚙ Settings" onPress={() => router.push('/settings')} />
+            </View>
+          ),
+        }}
       />
       {panel}
       <FlatList
