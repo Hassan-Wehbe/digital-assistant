@@ -18,9 +18,9 @@ tokens or keys in chat.
   Settings → Help, one welcome line. 754 app tests (8 new). **Owner:** OK on the topic wording.
   Details and phone checks: `docs/help-plan.md` "As built: step 1". **Next:** step 2 (server
   `show_help` + evaluation; strongest model, OK and cap).
-- **Homes step 1, the table and the planner (2026-10-11): branch `claude/homes-db` (from
-  `claude/my-places-plan`, #210), PR #214, not merged; **migration APPLIED 2026-10-11 (owner's OK; 1 home
-  moved); `chat` NOT deployed: deploy soon, the moved person's plans have no Home until then.**
+- **Homes step 1, the table and the planner (2026-10-11): merged (#210 plan, #214, squash, 36c0e85)
+  and live: migration `home_place` applied (owner's OK; 1 home moved, 1 address-only Home note left
+  as is) and `chat` version 32 (deploy chat run 38099050047, owner's OK; 401 checks passed).**
   `home_place` (RLS, one default moved only by `set_default_home`, 10 max, one per name); today's
   Home notes copied in and binned; a trigger keeps older apps' Home notes in step (instead of the
   planned fallback); the planner reads the table (`start_from` or the default). SQL test 17 (27
