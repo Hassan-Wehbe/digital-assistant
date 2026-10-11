@@ -12,6 +12,12 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **New idea, not planned (owner, 2026-10-11): two tick boxes on the day planner, both ticked by
+  default: "Include weather" and "Include route planning".** Nothing built. Notes for when it is
+  planned: unticking weather would skip the US National Weather Service requests (no rain or alert
+  rows); unticking route planning would skip Mapbox (no drive times or leave-by times, only the
+  order of the day). To decide then: My day only or the chat's "plan my day" too; a setting that
+  stays, or a choice for that day only (like My day's other choices, `dayChoices.ts`).
 - **Homes step 1, the table and the planner (2026-10-11): branch `claude/homes-db` (from
   `claude/my-places-plan`, #210), PR #214, not merged; **migration APPLIED 2026-10-11 (owner's OK; 1 home
   moved); `chat` NOT deployed: deploy soon, the moved person's plans have no Home until then.**
