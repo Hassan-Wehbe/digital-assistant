@@ -18,6 +18,22 @@ tokens or keys in chat.
   Settings → Help, one welcome line. 754 app tests (8 new). **Owner:** OK on the topic wording.
   Details and phone checks: `docs/help-plan.md` "As built: step 1". **Next:** step 2 (server
   `show_help` + evaluation; strongest model, OK and cap).
+- **Homes step 1, the table and the planner (2026-10-11): branch `claude/homes-db` (from
+  `claude/my-places-plan`, #210), PR #214, not merged; **migration APPLIED 2026-10-11 (owner's OK; 1 home
+  moved); `chat` NOT deployed: deploy soon, the moved person's plans have no Home until then.**
+  `home_place` (RLS, one default moved only by `set_default_home`, 10 max, one per name); today's
+  Home notes copied in and binned; a trigger keeps older apps' Home notes in step (instead of the
+  planned fallback); the planner reads the table (`start_from` or the default). SQL test 17 (27
+  checks), 471 Deno tests; all migrations and SQL tests checked on a local Postgres. **Owner:** OK
+  to dry-run and apply the migration, then merge and OK to deploy `chat` (migration first). Details:
+  `docs/my-places-plan.md` "As built: step 1".
+- **My places / homes (D36): plan written (2026-10-10), branch `claude/my-places-plan`,
+  `docs/my-places-plan.md`; owner: "agree with the recommendations" (Q1-Q9, so Settings → Homes); nothing built. Next: step 1, table and planner (strongest model, fresh session).** From tester
+  feedback: homes in a new table `home_place` (several, one default, RLS), saved from the chat with
+  a card, never as memories; the phone notices which home it is at while planning and asks when it
+  is not the default. Five steps: (1) table and planner, (2) chat action, memory and evaluation,
+  (3) app Settings → Homes and the chat card, (4) noticing where you are, (5) privacy and build.
+  Strongest model for 1-4. Help A and C (same feedback) get their own short plan after this.
 - **Help (D37): plan written (2026-10-10), branch `claude/help-plan`, `docs/help-plan.md`; owner:
   "agree with the recommendations" (Q1-Q6); nothing built. Next: step 1, the Help screen.** (A) a "?" in the Home and Ask Wilma headers
   opening short topics with "Try it" examples; (C) "what can you do?" gives a short answer and a 🛟
