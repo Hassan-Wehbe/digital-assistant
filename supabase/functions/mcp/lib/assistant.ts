@@ -41,8 +41,20 @@ export async function loadUserSettings(
   return { assistantName: name.error ? DEFAULT_ASSISTANT_NAME : nameOf(name.data?.assistant_name), distanceUnit: DEFAULT_DISTANCE_UNIT };
 }
 
-export function serverInstructions(name: string, unit: DistanceUnit = DEFAULT_DISTANCE_UNIT): string {
+export function serverInstructions(
+  name: string,
+  unit: DistanceUnit = DEFAULT_DISTANCE_UNIT,
+  /** The Wilma app's chat (chat/tools.ts): homes are saved with its save_home card (D36), not as notes. */
+  opts: { chat?: boolean } = {},
+): string {
   const miles = unit === "mi";
+  const home = opts.chat
+    ? `The user's homes (where they live or leave from: "my home is 12 Elm St", "this is my home") are not
+places: save them only with save_home, as said above, never with save_item or update_item.`
+    : `The user's home (where they live or leave from: "my home is 12 Elm St", "this is my home")
+is a place with kind "home", where day plans start; there is only one, so when a place for it already exists
+(search_items with item_type "place", e.g. one named Home), give that one kind "home" with update_item
+(get_item first, all its metadata back) instead of saving another.`;
   return `The user calls this assistant "${name}". A message that addresses ${name} ("${name}, …",
 "Hey ${name}, …", "ask ${name} …") is meant for this store: act on it with these tools, for example
 "${name}, save this recipe" → save_item, "${name}, what did I note about X?" → search_items,
@@ -78,10 +90,7 @@ Places: restaurants, cafés, bars, shops, hotels and places to visit are items w
 Save one with save_item: the name as the title, what the user said as the body, and what they told you
 as metadata (address, kind, cuisine, price_level, occasions, dishes_liked, would_return, status "want" for
 not been yet or "been", rating 1-5). Put in only what the user said: never invent an address, a Maps link
-or coordinates. The user's home (where they live or leave from: "my home is 12 Elm St", "this is my home")
-is a place with kind "home", where day plans start; there is only one, so when a place for it already exists
-(search_items with item_type "place", e.g. one named Home), give that one kind "home" with update_item
-(get_item first, all its metadata back) instead of saving another. When the user went to a saved place ("we went to Tawlet again on Friday with Sarah"), find
+or coordinates. ${home} When the user went to a saved place ("we went to Tawlet again on Friday with Sarah"), find
 it with search_items and call update_item with add_visit (on as YYYY-MM-DD, with, note, rating); to change
 other fields, get_item first and pass all its metadata back with the change. For questions about places
 ("Italian places we liked for date night", "where haven't we been since the summer?", "which restaurants

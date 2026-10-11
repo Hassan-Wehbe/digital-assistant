@@ -45,6 +45,11 @@ const GOOD: Record<string, string> = {
   "keep-asked-allergy": facts({ fact: "Is allergic to shellfish", sensitive: true }),
   "keep-changed-day": facts({ fact: "Lexi swims on Wednesdays", replaces: "m1" }),
   "trap-digits-story": facts({ fact: "Had a red bike as a kid" }),
+  "keep-work-from-home": facts({ fact: "Works from home on Fridays" }),
+  // A model that offers the home anyway: the server drops it (home_address), so nothing is kept.
+  "skip-home-live-at": facts({ fact: "Lives at 12 Oak St, Oviedo" }, { fact: "Lives in Oviedo" }),
+  "skip-home-moms": facts({ fact: "Mom lives at 4 Elm Rd in Oviedo" }),
+  "skip-home-moved": facts({ fact: "Moved to Winter Park" }),
 };
 
 Deno.test("memory eval: unique ids, every category, keep cases say what to find, traps say what is forbidden", () => {

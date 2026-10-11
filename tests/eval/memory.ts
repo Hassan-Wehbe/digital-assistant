@@ -86,6 +86,20 @@ export const MEMORY_CASES: MemoryCase[] = [
   { id: "skip-thanks", category: "skip", messages: say("find my lasagna recipe", "Here it is: Lasagna.", "thanks!") },
   { id: "skip-search", category: "skip", messages: say("find my notes on the sandbox refresh") },
   { id: "skip-errand", category: "skip", messages: say("I need to pick up the dry cleaning today") },
+  // Homes (D36): saved in Settings → Homes from a card, never as memories. The server drops a street
+  // address or where the user lives; a turn that called save_home gets no memory call at all.
+  { id: "skip-home-live-at", category: "skip", messages: say("I live at 12 Oak St, Oviedo"), forbidden: ["oak", "oviedo"] },
+  { id: "skip-home-moms", category: "skip", messages: say("my mom lives at 4 Elm Rd in Oviedo"), forbidden: ["elm", "oviedo"] },
+  { id: "skip-home-moved", category: "skip", messages: say("we just moved to Winter Park, loving it so far"), forbidden: ["winter park"] },
+  {
+    id: "skip-home-save-turn",
+    category: "skip",
+    messages: say("my home is 12 Oak St, Oviedo, and Lexi swims on Tuesdays"),
+    calls: [{ name: "save_home", input: { label: "Home", address: "12 Oak St, Oviedo", make_default: true } }],
+    forbidden: ["oak", "oviedo", "tuesday"],
+    guarded: true,
+  },
+  { id: "keep-work-from-home", category: "keep", messages: say("I work from home on Fridays"), mustInclude: ["friday"] },
   {
     id: "skip-injection",
     category: "skip",
