@@ -7,8 +7,15 @@
 //
 // The package is loaded on first use (a require inside a function), as location.ts does, so the
 // rest of the app never touches it. The logic takes its phone calls as `deps`, so it is tested
-// without a phone. Wilma only reads: no function here creates, changes or deletes anything.
+// without a phone.
+//
+// One write (alarms and calendar entries step 3, design D31): `addEvent` creates one event, only
+// from a tap on Add to calendar on the chat's 📅 card, in a calendar the user ticked and the phone
+// lets apps write to. It is the only write here, and it only creates: nothing in this file changes
+// or deletes an event, including the ones Wilma added (owner, Q6).
 import { Platform } from 'react-native';
+
+import { eventProblem, type EventCardData } from './phoneActions';
 
 /** At most this many days per question (Q5; the server refuses more). */
 export const MAX_AGENDA_DAYS = 14;
@@ -24,6 +31,21 @@ export interface PhoneCalendar {
   account: string | null;
   /** The calendar's time zone, when the phone says (e.g. "America/New_York"). */
   timeZone?: string | null;
+  /** The phone lets apps add events to it (not a holidays or other read-only calendar). */
+  writable?: boolean;
+  /** The account's main calendar (Android says). */
+  primary?: boolean;
+}
+
+/** A new event as the phone's calendar takes it. */
+export interface NewPhoneEvent {
+  title: string;
+  startDate: Date;
+  endDate: Date;
+  allDay: boolean;
+  location?: string;
+  /** "UTC" for an all-day event on Android, which stores those at midnight UTC. */
+  timeZone?: string;
 }
 
 /** An event as the phone gives it (only the fields read here). */
@@ -54,6 +76,8 @@ export interface CalendarDeps {
   events: (calendarIds: string[], start: Date, end: Date) => Promise<PhoneEvent[]>;
   /** All-day events are stored at midnight UTC (Android), not local midnight (iPhone). */
   allDayInUtc: boolean;
+  /** Creates one event and gives its id. Only `addEvent` calls it. */
+  createEvent: (calendarId: string, event: NewPhoneEvent) => Promise<string>;
 }
 
 /** One event as the app sends it to Wilma (the server checks it again). */
@@ -164,6 +188,8 @@ export type AgendaResult =
 export interface CalendarChoice {
   on: boolean;
   ticked: string[];
+  /** "New events go to" (Q5): a calendar id; when unset or no longer usable, `defaultTarget`. */
+  addTo?: string;
 }
 
 /**
@@ -232,9 +258,98 @@ export async function listCalendars(deps: CalendarDeps): Promise<{ calendars: Ph
   }
 }
 
+// ---- Adding an event (the only write) ----------------------------------------------------------
+
+/** The calendars an event may be added to: ticked in Settings → Calendars and writable. */
+export function writableCalendars(calendars: PhoneCalendar[], choice: CalendarChoice): PhoneCalendar[] {
+  if (!choice.on) return [];
+  return calendars.filter((c) => c.writable === true && choice.ticked.includes(c.id));
+}
+
+/**
+ * Where new events go (Q5): the user's "New events go to" while it is still ticked and writable;
+ * else the phone's primary calendar among those; else the first of them; null when there is none.
+ */
+export function defaultTarget(calendars: PhoneCalendar[], choice: CalendarChoice): PhoneCalendar | null {
+  const usable = writableCalendars(calendars, choice);
+  return usable.find((c) => c.id === choice.addTo) ?? usable.find((c) => c.primary) ?? usable[0] ?? null;
+}
+
+/**
+ * The event as the phone takes it. Timed: the phone's local times. All day: from the first day's
+ * midnight to the midnight after the last day; on Android at midnight UTC with the UTC zone, as
+ * Android's calendar stores all-day events (readAgenda reads them back the same way).
+ */
+export function toPhoneEvent(e: EventCardData, allDayInUtc: boolean): NewPhoneEvent | null {
+  const place = e.location?.trim();
+  const base = { title: e.title.trim(), allDay: e.allDay, ...(place ? { location: place } : {}) };
+  if (!e.allDay) {
+    const start = localTime(e.start);
+    const end = localTime(e.end);
+    return start && end ? { ...base, startDate: start, endDate: end } : null;
+  }
+  const first = startOfDay(e.start);
+  const last = startOfDay(e.end);
+  if (!first || !last) return null;
+  if (allDayInUtc) {
+    return {
+      ...base,
+      startDate: new Date(Date.UTC(first.getFullYear(), first.getMonth(), first.getDate())),
+      endDate: new Date(Date.UTC(last.getFullYear(), last.getMonth(), last.getDate() + 1)),
+      timeZone: 'UTC',
+    };
+  }
+  return { ...base, startDate: first, endDate: new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1) };
+}
+
+const LOCAL_TIME = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
+function localTime(text: string): Date | null {
+  const m = LOCAL_TIME.exec(text);
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]));
+  return timeText(d) === text ? d : null;
+}
+
+export const TURN_ON_TO_ADD = 'To add events, turn on Use my calendar in Settings → Calendars.';
+export const NOT_WRITABLE = 'Wilma can’t add events to that calendar. Pick another one.';
+export const ADD_FAILED = 'The event could not be added just now. Try again.';
+
+export type AddResult = { added: { eventId: string; calendar: string } } | { problem: string };
+
+/**
+ * Adds one event: called only from the tap on Add to calendar. Everything is checked again here,
+ * right before writing: the fields (eventProblem), the calendar setting on, the permission (asked
+ * now if it can be), and the calendar still on the phone, ticked and writable. Create only: there
+ * is no update or delete, and none may be added (owner, Q6).
+ */
+export async function addEvent(
+  deps: CalendarDeps,
+  choice: CalendarChoice,
+  calendarId: string,
+  event: EventCardData,
+  now: Date,
+): Promise<AddResult> {
+  const problem = eventProblem(event, now);
+  if (problem) return { problem };
+  if (!choice.on) return { problem: TURN_ON_TO_ADD };
+  try {
+    let p = await deps.permission();
+    if (!p.granted && p.canAskAgain) p = await deps.askPermission();
+    if (!p.granted) return { problem: NO_PERMISSION };
+    const target = writableCalendars(await deps.calendars(), choice).find((c) => c.id === calendarId);
+    if (!target) return { problem: NOT_WRITABLE };
+    const details = toPhoneEvent(event, deps.allDayInUtc);
+    if (!details) return { problem: ADD_FAILED };
+    const eventId = await deps.createEvent(target.id, details);
+    return { added: { eventId: String(eventId), calendar: clip(target.title, MAX_CALENDAR_NAME) || 'Calendar' } };
+  } catch {
+    return { problem: ADD_FAILED };
+  }
+}
+
 type CalendarPackage = typeof import('expo-calendar');
 
-/** The phone's calendar calls (expo-calendar, loaded on first use). Read-only. */
+/** The phone's calendar calls (expo-calendar, loaded on first use). Reads, and createEvent for addEvent. */
 export const deviceCalendar: CalendarDeps = {
   permission: () => pkg().getCalendarPermissions(),
   askPermission: () => pkg().requestCalendarPermissions(),
@@ -246,6 +361,8 @@ export const deviceCalendar: CalendarDeps = {
       title: String(c.title ?? c.name ?? 'Calendar'),
       account: typeof c.source?.name === 'string' && c.source.name ? c.source.name : null,
       timeZone: typeof c.timeZone === 'string' ? c.timeZone : null,
+      writable: c.allowsModifications === true,
+      primary: c.isPrimary === true,
     }));
   },
   events: async (ids, start, end) => {
@@ -263,7 +380,31 @@ export const deviceCalendar: CalendarDeps = {
     }));
   },
   allDayInUtc: Platform.OS === 'android',
+  // Create only (Q6). No guests and no reminders of our own: the calendar's default reminder applies (Q9).
+  createEvent: async (calendarId, e) => {
+    const calendar = await pkg().ExpoCalendar.get(calendarId);
+    const created = await calendar.createEvent({
+      title: e.title,
+      startDate: e.startDate,
+      endDate: e.endDate,
+      allDay: e.allDay,
+      ...(e.location ? { location: e.location } : {}),
+      ...(e.timeZone ? { timeZone: e.timeZone } : {}),
+    });
+    return String(created.id);
+  },
 };
+
+/** "Open in Calendar" after adding: the phone's calendar app shows the event (nothing is changed). */
+export async function openEvent(eventId: string): Promise<boolean> {
+  try {
+    const event = await pkg().ExpoCalendarEvent.get(eventId);
+    await event.openInCalendar();
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function pkg(): CalendarPackage {
   // eslint-disable-next-line @typescript-eslint/no-require-imports

@@ -15,7 +15,8 @@ import { BoxCounter, WilmaBox } from '@/components/WilmaBox';
 import { useAuth } from '@/lib/auth';
 import { useChat } from '@/lib/chat';
 import { chatChip, pinPoint, tapPin, type PinState } from '@/lib/chatHere';
-import { cardActive, type Entry, type ErrorButton, lastUserText, locationActive, notesActive } from '@/lib/chatThread';
+import { cardActive, type Entry, type ErrorButton, homeAskActive, lastUserText, locationActive, notesActive } from '@/lib/chatThread';
+import { todayAndTomorrow } from '@/lib/dayView';
 import { VOICE_ENABLED } from '@/lib/config';
 import { findCredential } from '@/lib/credentials';
 import { draftText } from '@/lib/help';
@@ -30,7 +31,7 @@ export default function Chat() {
   const { session } = useAuth();
   const {
     state, ready, canSend, routing, bannerVisible, send, askWilma, stop, retry, dismissBanner, clear, confirmDelete, cancelDelete,
-    shareLocation, dismissLocation, undoMemory,
+    shareLocation, dismissLocation, undoMemory, eventAdded, homeSaved, answerHomeAsk,
   } = useChat();
   const [text, setText] = useState('');
   // Help's "Try it" (help plan Q3): the words go in the box, never sent by themselves. `at` makes
@@ -174,6 +175,10 @@ export default function Chat() {
               onShareLocation={shareLocation}
               onNotNow={dismissLocation}
               onUndoMemory={undoMemory}
+              onEventAdded={eventAdded}
+              onHomeSaved={homeSaved}
+              homeAskActive={homeAskActive(state, item, todayAndTomorrow(new Date()).today) && canSend}
+              onAnswerHomeAsk={answerHomeAsk}
             />
           )}
           ListEmptyComponent={

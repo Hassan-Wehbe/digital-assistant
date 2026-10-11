@@ -11,7 +11,7 @@
 <body>
 <main>
   <h1>Wilma privacy policy</h1>
-  <p class="muted">Last updated 10 October 2026. Wilma is a personal assistant app.
+  <p class="muted">Last updated 11 October 2026. Wilma is a personal assistant app.
      Contact: <a href="mailto:zaftechlabs@gmail.com">zaftechlabs@gmail.com</a></p>
 
   <p>Wilma keeps the notes, files and passwords you give it and finds them again when you ask.
@@ -26,8 +26,12 @@
     <li><strong>What you save:</strong> spaces, notes, photos and files you add, their titles, tags and
         descriptions, and earlier versions of notes you edit. A place note can also hold an address, a
         Google Maps link and, if you choose, the location where you saved it (see below). Tasks you
-        add (what, how long, where, by when) and your Home place, if you set one for planning your day,
-        are saved the same way, as your notes.</li>
+        add (what, how long, where, by when) are saved the same way, as your notes.</li>
+    <li><strong>Your homes:</strong> the places Wilma plans your day from (for example Home, Mom's or
+        Work), each with a name, an address if you give one, its location on the map, and which one is
+        your default. You add and change them in Settings → Homes, in My day or from the chat (always
+        with a tap). They are kept with your account but are not notes: they are never searched or
+        shared, and a home you delete is gone for good.</li>
     <li><strong>Your vault:</strong> passwords, keys and other secrets you save in the vault. Their values
         are encrypted on your phone (or in your browser) with a key only you hold, before they are sent.
         The name, kind and website you give each secret are stored readable, so you can find it; a log
@@ -38,13 +42,20 @@
         chat conversations themselves are kept only on your phone; clearing the chat in the app forgets them.</li>
   </ul>
   <p>Wilma has no advertising, no analytics and no tracking, and does not collect your contacts.
-     <strong>Location:</strong> Wilma reads your phone's location only when you tap <em>Save where I am</em>
-     or <em>Use where I am now</em> on a place or for your Home, or 📍 in the chat, or 🔎 <em>Find it on the map</em> on a place you
-     shared (that tap only asks for the permission; your location is not read). It asks for permission on that first tap, reads the
-     location once, and stores it in that place note only, like the rest of the note; you can remove it
-     from the note at any time. A place you share from Google Maps can also get a location from that place's name and address (never from where you are), after you confirm it. In the chat, if you tap 📍, Wilma reads your location once and sends it
+     <strong>Location:</strong> Wilma reads your phone's location only when you choose to: when you tap <em>Save where I am</em>
+     on a place, <em>Use where I am</em> for a home, or 📍 in the chat, or 🔎 <em>Find it on the map</em> on a place you
+     shared (that tap only asks for the permission; your location is not read), or, if you turn it on,
+     when you plan your day (see below). It asks for permission on that first tap, reads the
+     location once, and stores it in that place note or that home only; you can change or remove it
+     at any time. A place you share from Google Maps can also get a location from that place's name and address (never from where you are), after you confirm it. In the chat, if you tap 📍, Wilma reads your location once and sends it
      with that one message so she can find your saved places nearby. Like the message itself, it goes to
-     our AI service for that answer only; it is not saved or logged. Wilma never reads your location in the background and never tracks where
+     our AI service for that answer only; it is not saved or logged. If you turn on <em>Notice which
+     home I'm at when I plan</em> (Settings → Homes; off unless you turn it on, and it asks for the
+     permission then), Wilma also reads your location once each time you plan today in My day or the
+     chat, while you have two homes or more and have not yet chosen a home for that day. Your phone
+     compares that reading with your homes; if you are at one that is not your default, Wilma asks
+     which one to plan from. Wilma never sends that reading anywhere and does not store it; only the
+     home you pick is used. Wilma never reads your location in the background and never tracks where
      you go. The camera, the microphone and file access are used only when you choose to: the camera
      and files when you add a photo or file, the microphone when you tap the microphone button to
      dictate a message. Dictation uses your phone's own speech recognition. Depending on your phone,
@@ -63,10 +74,12 @@
      below), only if you have already allowed location for Wilma; the event's title is not sent. Wilma
      then sends those places' map coordinates and the times you would travel to <strong>Mapbox</strong> (for
      drive times with traffic) and to the <strong>US National Weather Service</strong> (for the forecast),
-     never event titles or who is going. Your Home place and your tasks are saved with your notes. The
-     plan itself is not stored, and Wilma never changes your calendar. Your own choices for the day
-     ("take both", "not driving") and your answers to "where is this?" are kept only on your phone,
-     encrypted, and are forgotten when you sign out.</p>
+     never event titles or who is going. Your homes are kept with your account (see above) and your
+     tasks with your notes; when you plan in the chat, our AI service sees only your homes' names,
+     never their addresses or locations. The plan itself is not stored, and Wilma never changes your
+     calendar. Your own choices for the day ("take both", "not driving", the home you plan that day
+     from) and your answers to "where is this?" are kept only on your phone, encrypted, and are
+     forgotten when you sign out.</p>
   <p><strong>Morning briefing and leave-by alerts (optional, Wilma Pro, off unless you turn them on).</strong>
      In Settings → Morning briefing you choose each part. With the briefing on, the first time you open
      Wilma after your briefing time it plans your day the same way as My day (above) and shows a short
@@ -86,7 +99,8 @@
      at most three, each as a short note in a built-in <em>Memories</em> space. Each one is shown under
      Wilma's reply with <em>Undo</em>. Wilma never keeps passwords, PINs or other codes, nothing from a
      chat about your vault or a restricted space, and keeps health, money, religion, politics, sexuality
-     or private details about other people only when you ask her to remember them. Your memories are
+     or private details about other people only when you ask her to remember them. She never keeps
+     your home address or where you live as a memory: homes are saved in Settings → Homes instead. Your memories are
      stored like your other notes (see above), and your newest memories are sent with your chat
      messages so Wilma can use them in her answers. You can read, change or delete any of them in the
      Memories space (Settings → Memory → See what I remembered); deleted ones go to the recycle bin.
@@ -130,7 +144,8 @@
         then the spot it found, to show you its street and town, so Wilma can ask "Is this it?". The lookup
         happens under your phone's own privacy terms, and nothing is saved unless you confirm. Your own location is not sent.
         When you plan your day, the same lookup finds the addresses of your calendar events (the address
-        text only, never the event's title), and the addresses you type for your Home or a task.</li>
+        text only, never the event's title), the addresses you type for a home or a task, and the
+        address of a home Wilma offers to save from the chat (only that address).</li>
     <li><strong>Mapbox</strong>, in the United States, only when you plan your day: Wilma's server sends
         it the map coordinates of the places you drive between and when you would leave, to get drive
         times with traffic. Nothing else about you is sent, and Wilma does not keep the answers.</li>

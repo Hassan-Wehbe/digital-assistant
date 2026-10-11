@@ -129,8 +129,8 @@ evaluation run, then OK to deploy `chat` (step 2); test on the phone.
   "All spaces", "Delete account", the privacy policy). **All topics** goes back to the list.
   `?topic=vault` opens one topic directly (for step 3's 🛟 card).
 - **The topics** (`lib/help.ts`): Notes, Passwords & the Vault, My day (Pro), Alarms, reminders &
-  calendar (Android only), Places, Memory, Spaces, Privacy & your data. **Places covers
-  restaurants and places to visit only for now**; Homes join it with D36 step 3. Every line is at
+  calendar (Android only), Places & Homes, Memory, Spaces, Privacy & your data. Homes joined the
+  Places topic when D36 step 3 merged (#216): a line, a Try it, and a link to Settings → Homes. Every line is at
   most 100 characters, a topic has at most four lines, and tests keep it that way.
 - **The "?"**: in the top bar of Home (next to ⚙ Settings) and of Ask Wilma (next to New chat),
   and **Settings → Help**. The welcome card has one new line: "Tap ? any time for help."

@@ -21,8 +21,10 @@ export async function runTurn(
   here?: SharedPoint,
   /** The calendar Wilma asked for, sent with the question again. */
   agenda?: Agenda,
+  /** The saved home to plan from (home_place id), sent with that calendar (D36). */
+  startFrom?: string,
 ): Promise<TurnEnd> {
-  const events = send(entries, signal, here, agenda)[Symbol.asyncIterator]();
+  const events = send(entries, signal, here, agenda, startFrom)[Symbol.asyncIterator]();
   let handedOn = false;
   try {
     for (let r = await events.next(); !r.done; r = await events.next()) {

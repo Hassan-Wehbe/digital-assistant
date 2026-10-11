@@ -1,8 +1,9 @@
 # My places: homes to plan from
 
 Status: plan, 2026-10-10. **Owner's answers given the same day: "agree with the recommendations",
-so the first option of every question (Q1-Q9) and the small ones as written.** Nothing built yet;
-next is step 1.
+so the first option of every question (Q1-Q9) and the small ones as written.** Steps 1 and 2 merged
+and live (#214, #215); step 3, the app, merged (#216); step 4 merged (#217); step 5 (privacy) merged (#218, the owner
+approved the wording). **All steps built; the app part ships with versionCode 20 (not built yet).**
 Design: D36 (and D25, whose "Home is a place note" this replaces; D24, automatic memory, which stops
 keeping home addresses). Model: the strongest for steps 1-4 (database and RLS, the chat loop,
 memory, location); a smaller one for step 5 (wording, checklist, build).
@@ -370,3 +371,181 @@ Branch `claude/homes-chat` (2026-10-11).
 
 Total spent on the evaluation: about $0.09 of the $1 cap. Owner: merge (squash), then deploy `chat`
 and `mcp` from main.
+
+## As built: step 3 (the app)
+
+Branch `claude/homes-app` (2026-10-11). App only: no server change, no migration, no evaluation
+run. Ships with the next build (versionCode 20), with steps 4 and 5.
+
+- **`lib/homePlace.ts` is now the `home_place` module** (it used to save Home as a place note):
+  - list, add, change, delete, and **Make default only through `set_default_home`**. The app never
+    writes `is_default`, and the database would refuse it anyway.
+  - Saving by name: a home with the same name (case and spaces ignored) gets the new address and
+    point ("I moved", "Where do you leave from?" again); a new name adds a home.
+  - Checked on the phone before anything is sent: a name of 1-60 characters, an address of at most
+    300, a real point. **Text that looks like a password or a code is refused** (findCredential,
+    rule 9), with "keep codes in the Vault".
+  - The database's refusals in plain words: the limit of 10 (its own sentence), a name used twice,
+    anything else "That wasn't saved".
+- **Settings → Homes** (`app/homes.tsx`, a new row under Calendar in Settings):
+  - "🏠 Home ★" with the address under it, then the others (default first, then oldest first).
+    A home set with Use where I am has no address and says "Set from where you were".
+  - Tap one: change its name; Check on Maps; **Change address** (type it and find it with the
+    phone's map lookup, pick a saved place, or **Use where I am**: one reading, on the tap);
+    **Make default**; **Delete**, which asks first and says it is gone for good (Q6) and, for the
+    default, that the ★ passes to the oldest home left.
+  - **＋ Add a home** at the bottom: a name ("Home" filled in for the first), then where it is.
+    Hidden at 10 homes, with a line saying why.
+- **My day** (`app/day.tsx`):
+  - "Where do you leave from?" (only when there is no home yet) saves **Home** in `home_place`,
+    which makes it the default. It no longer makes a Places note.
+  - **"🏠 Planned from Home · Change"** at the top of the plan (the old "🏠 Home · Change" at the
+    bottom is gone). Change lists the homes, ✓ on the one this day starts from, "For this day only",
+    and **Manage homes** (Settings → Homes; coming back plans the day again).
+  - The pick is kept with the day's other choices (`dayChoices.ts`, `home`), dropped once the day
+    has passed (Q5), and sent as `start_from: {"home": id}`. Picking the default keeps no choice.
+    Start over clears it with the day's other choices.
+- **The 🏠 chat card** (`components/HomeCard.tsx`) for `home_save`, from the stream and from a
+  saved chat:
+  - "Save “Home”: 12 Oak St, Oviedo as a home". The phone's map lookup finds the address by itself
+    only when the location permission is already given, else **Find it on the map** asks. Only the
+    address words are looked up. It shows "📍 Found at: …" and **Check on Maps**.
+  - **Use where I am** when there is no address, or it was not found.
+  - **Save**, plus **Save as default** when a default already exists and this is not it (filled
+    when Wilma was asked to make it the default). The first home gets Save only. A card named like
+    an existing home says "This changes where your home “Home” is".
+  - **Nothing is saved until a tap.** The thread then marks the card saved ("Saved “Home”: …, your
+    default home. Change it in Settings → Homes."), and a saved chat keeps that mark, never the point.
+  - Password-like text in the card is refused on the phone too, with no buttons.
+  - `"home"` is in `can` on Android only (like the alarm cards in #207): other platforms get
+    Wilma's "update Wilma" sentence. `save_home` counts as changing nothing, so a dropped connection
+    after it does not say "part of this may be done".
+- **`start_from` sent back:** when the `agenda_request` carries `start_from`, the app sends it back
+  with the calendar. **Beyond the plan:** with no `start_from` and a one-day request, it sends the
+  home picked for that day in My day, so the chat's plan starts where My day's does (as the day's
+  other choices already do).
+- **Fixed in passing:** My day's 🚸 drop off & pick up titles were never written to the phone (the
+  save kept only choices, places and found points), so the choice was lost each time My day
+  reopened. They are now saved with the rest.
+- **Tests:** 778 app tests (746 before; 32 new, counting the rewritten homePlace tests):
+  - `homePlace.test.ts`: only name, address and point written; credential text refused with
+    nothing sent; one default only through `set_default_home`; save by name; Save as default;
+    plain errors; the card's buttons.
+  - `chatHome.test.ts`: the card from the stream and from a saved chat; nothing saved without the
+    tap (the thread's code never writes a home; the card saves only from its two buttons);
+    `"home"` in `can` on Android only; `start_from` read, sent back only with the calendar, and
+    the day's pick for one day only.
+  - `dayHome.test.ts`: Change for that day only (not the next, gone after the day); `start_from` in
+    that day's request; kept encrypted with 🚸 drop off.
+  - `npm run check` passes; `npx expo export --platform android` bundles.
+
+**Phone checks (for the versionCode 20 checklist):**
+1. Settings → Homes with your moved Home: "🏠 Home ★" and its address.
+2. Add a home "Mom's" by typing an address: Found at …, Check on Maps opens the right spot. Add
+   one with Use where I am: "Set from where you were".
+3. Make Mom's the default: the ★ moves. Back to Home.
+4. Rename Mom's to "Gate code 1234": refused, nothing changes.
+5. Delete Mom's: asked first; gone after Delete.
+6. My day: "🏠 Planned from Home · Change" → pick another home: drive times start there. Tomorrow
+   still says Home. Manage homes opens Settings → Homes.
+7. Chat: "my mom's house is 4 Elm Rd, Oviedo, save it as a home": the 🏠 card with Found at, Check
+   on Maps, Save and Save as default. Leave the chat and come back: the card still waits; nothing in
+   Settings → Homes yet. Tap Save: the card says saved; it is in Settings → Homes.
+8. Chat: "I'm home, save this as my home" (no address): Use where I am, then Save.
+9. Chat: "I moved to 9 Pine Ave": the card says it changes Home; Save; Home's address changes.
+10. Chat: "plan my day from Mom's": the plan's drives start at Mom's.
+11. A new account with no home: My day's "Where do you leave from?" saves Home, and it shows in
+    Settings → Homes as the default.
+12. 🚸 drop off on an event, leave My day and come back: still on.
+
+**Merged** (squash, #216, 2026-10-11). It ships with
+versionCode 20, after steps 4 (noticing where you are) and 5 (privacy wording, build). PR #212
+(Help) should mention Settings → Homes in its Places topic once this is merged.
+
+## As built: step 4 (noticing where you are)
+
+Branch `claude/homes-notice` (2026-10-11), on main after step 3 (#216, merged). App only: no server change. Ships with versionCode 20.
+
+- **The switch (Q3):** Settings → Homes → "Notice which home I’m at when I plan", **Off until
+  turned on**. It is kept on this phone, per account (`lib/homeNotice.ts`). Turning it on asks for
+  the location permission then. If the permission is refused, the switch stays off and the screen
+  says how to allow it. Hidden on the web build.
+- **When the location is read:** once, only when all of these hold:
+  - the switch is on;
+  - there are two homes or more;
+  - the permission is already given (it is never asked for while planning) and location is on;
+  - it is **today's** plan (where you are now says nothing about tomorrow);
+  - nothing is picked for today yet.
+
+  The reading gives up after 10 seconds and is compared with the homes on the phone (within 150 m;
+  the nearest wins). It is not returned, stored or sent: only home rows come out of `noticeHome`.
+- **At a saved home that is not the default:**
+  - **My day:** today's plan shows at once from the default, with "📍 You’re at Mom’s. Plan your
+    day from: 🏠 Home · 🏠 Mom’s" above it. Mom’s plans the day again from there; Home keeps the plan.
+  - **Chat ("plan my day"):** the same question comes as a card **before** the calendar is read or
+    the plan made. The tap reads the calendar and sends the question again with that home's id
+    (`start_from`). A new message first leaves the card "not done"; a card from an earlier day can't
+    be tapped.
+  - At the default home, or away from every home, nothing is asked (Q4).
+- **The answer holds for that day (Q5):** kept with the day's choices (`dayChoices.ts`), the
+  default's id included, so it is not asked again that day; gone the next day. **Changed from step
+  3:** My day's Change now also keeps the default's id when it is picked, for the same reason.
+  Naming a home in the chat ("plan my day from Mom's") never asks.
+- **What reaches the server:** only the picked home's id, as `start_from`. The saved chat keeps the
+  card's home ids and names, never the reading.
+- **Tests:** 792 app tests (14 new, `homeNotice.test.ts`):
+  - no reading with the switch off, with one home, or without the permission (never asked while
+    planning);
+  - at Mom's: the homes to offer, and nothing of the reading;
+  - at the default or away: nothing asked;
+  - a slow reading gives up; "at" means within 150 m;
+  - the answer kept for that day only;
+  - the chat card's states and saved form; the provider passing ids and names only and sending the
+    picked id.
+  - `npm run check` passes; `expo export --platform android` bundles.
+
+**Phone checks (versionCode 20 checklist):**
+1. Settings → Homes: the switch is Off. Turn it On: the location permission is asked (if not
+   already given).
+2. With two homes, at the non-default one: open My day (today) → "📍 You’re at Mom’s…"; tap Mom’s:
+   drives start there. Close and reopen My day: not asked again today.
+3. Same place, in the chat: "plan my day" → the card first; tap Home → the plan starts from Home.
+4. At the default home, and somewhere else entirely: nothing is asked.
+5. Switch Off: nothing is asked, and no location icon appears in the status bar while planning.
+6. Tomorrow's plan never asks.
+
+**Merged** (squash, #217, 2026-10-11). Then step 5: privacy wording, Data safety check, checklist, build (smaller model).
+
+## As built: step 5 (privacy and build)
+
+PR #218 (2026-10-11), merged (squash) after the owner approved the wording. Docs only; merging
+published the privacy page.
+
+- **Privacy page** (`docs/legal/privacy.html`, dated 11 October 2026):
+  - What Wilma stores: a new **"Your homes"** item. Name, address if given, the point on the map
+    and which one is the default; added and changed only with a tap; kept with the account but not
+    notes: never searched or shared; a deleted home is gone for good. "Your Home place" is gone from
+    the notes item.
+  - Location: read "only when you choose to", now including **"Notice which home I'm at when I
+    plan"**: off unless turned on, asks for the permission then, one reading each time you plan
+    today with two homes or more and no home chosen yet, compared on the phone, **never sent or
+    stored by Wilma**. (Not "never leaves your phone": Android's own location service may use the
+    network to work a position out.) "Use where I am" stores the point in that home.
+  - Planning your day: homes kept with the account; the AI service sees only home **names**; the
+    home picked for a day is kept on the phone with the day's other choices.
+  - Memory: never a home address or where you live.
+  - The phone's map lookup: the addresses typed for a home, and the address of a home the chat
+    offers to save.
+- **Play Data safety: no change** (`docs/phase4-play-release.md`, a new Homes bullet). A home's
+  address is "Other user-generated content" and its point *Precise location* (stored), both
+  already declared. The noticing reading is compared on the phone only, and Google does not count
+  data processed only on the device as collected. Background location stays blocked.
+- **Legal checklist:** a Homes item (`docs/legal-review-checklist.md`).
+- **Design D36:** the trigger that replaced the planned fallback, and what was built.
+- **Phone checklist:** `docs/versioncode20-phone-checklist.md` (homes; the other work in versionCode
+  20 adds its own sections as it merges).
+
+**Owner, next:**
+1. Check the live privacy page shows "Your homes".
+2. "Build for Play" (versionCode 20) when the rest of versionCode 20 is merged.
+3. Then test with `docs/versioncode20-phone-checklist.md`.

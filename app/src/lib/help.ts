@@ -80,14 +80,15 @@ export const HELP_TOPICS: HelpTopic[] = [
   {
     id: 'places',
     icon: '📍',
-    title: 'Places',
-    line: 'Restaurants and places to visit, with Open in Maps.',
+    title: 'Places & Homes',
+    line: 'Places to visit, and the homes My day plans from.',
     lines: [
       'Save a place from the chat, from Google Maps, or with 📍 Save here.',
-      'Add what you liked and who you went with.',
-      'Ask for ideas later.',
+      'Add what you liked and who you went with, and ask for ideas later.',
+      'Homes: where your day starts. Add or change them in Settings → Homes.',
     ],
-    tryIt: ['Where should we go for date night?', 'Places near me'],
+    tryIt: ['Where should we go for date night?', 'Places near me', 'Save my mom’s house as a home'],
+    more: { label: 'Settings → Homes', path: '/homes' },
   },
   {
     id: 'memory',

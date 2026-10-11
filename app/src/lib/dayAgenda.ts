@@ -12,7 +12,7 @@
 // named "e0", "e1", ... by their order and the choices are renamed to match.
 import type { Agenda, AgendaEvent } from './calendar';
 import { findCredential } from './credentials';
-import { choicesFor, rememberFound, textKey, type DayMemory, type FoundPlace } from './dayChoices';
+import { choicesFor, homeFor, rememberFound, textKey, type DayMemory, type FoundPlace } from './dayChoices';
 import type { DayBody } from './dayPlan';
 import type { GeocodeDeps } from './placeLookup';
 
@@ -139,6 +139,7 @@ export function dayBody(date: string, tz: string, now: string | undefined, event
   const c = choicesFor(memory, date);
   const together = c.together?.map((g) => g.filter((k) => keys.has(k))).filter((g) => g.length >= 2);
   const notDriving = c.not_driving?.filter((k) => keys.has(k));
+  const home = homeFor(memory, date);
   return {
     mode: 'day',
     date,
@@ -149,6 +150,7 @@ export function dayBody(date: string, tz: string, now: string | undefined, event
       ? { choices: { ...(together?.length ? { together } : {}), ...(notDriving?.length ? { not_driving: notDriving } : {}) } }
       : {}),
     ...(optionsFor ? { options_for: optionsFor } : {}),
+    ...(home ? { start_from: { home } } : {}),
   };
 }
 
@@ -181,6 +183,21 @@ export async function chatAgenda(
     },
     found,
   };
+}
+
+/**
+ * The saved home the chat's plan starts from, sent back with the calendar (D36): the one the
+ * agenda_request named ("plan my day from Mom's"), else for one day the home picked for that day in
+ * My day (Change), so the chat's plan matches My day; else none (the default home).
+ */
+export async function chatStartFrom(ask: { from: string; to: string; start_from?: { home: string } }, load: () => Promise<DayMemory>): Promise<string | undefined> {
+  if (ask.start_from) return ask.start_from.home;
+  if (ask.from !== ask.to) return undefined;
+  try {
+    return homeFor(await load(), ask.from);
+  } catch {
+    return undefined;
+  }
 }
 
 export interface ChatAgendaDeps {
