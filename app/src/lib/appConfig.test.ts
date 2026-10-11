@@ -184,9 +184,11 @@ describe('the calendar (day planner step 1)', () => {
     for (const l of lines) expect(l).toMatch(/^type \w+ = typeof import\('expo-calendar'\);$|^\s+const \w+(: \w+)? = require\('expo-calendar'\);$/);
   });
 
-  it('Wilma only reads: nothing creates, changes or deletes a calendar, an event or a reminder', () => {
+  it('Wilma reads, and only creates events (D31 step 3): nothing changes or deletes a calendar, an event or a reminder', () => {
     const src = readFileSync(join(SRC, 'lib/calendar.ts'), 'utf8');
-    expect(src).not.toMatch(/createEvent|createCalendar|createReminder|createAttendee|\.update\(|\.delete\(|addEventWithForm|Reminders/);
+    expect(src).not.toMatch(/createCalendar|createReminder|createAttendee|\.update\(|\.delete\(|addEventWithForm|editInCalendar|Reminders/);
+    // The one write: addEvent → deps.createEvent → the package's calendar.createEvent.
+    expect(src.match(/\.createEvent\(/g)).toHaveLength(2);
   });
 
   it('the permission is explained, and reminders are not asked for', () => {

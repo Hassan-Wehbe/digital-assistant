@@ -1,6 +1,7 @@
 // Which calendars Wilma may read (Settings → Calendars): kept on this phone only, per account,
 // never sent to the server (docs/phase6-day-planner-step1-plan.md, "How it works" 5). Only the
-// on/off switch and the ticked calendars' ids are stored; never a calendar's events.
+// on/off switch, the ticked calendars' ids and "New events go to" (one calendar id; alarms and
+// calendar entries step 3, Q5) are stored; never a calendar's events.
 import type { CalendarChoice } from './calendar';
 
 export interface SettingsStore {
@@ -10,6 +11,7 @@ export interface SettingsStore {
 
 export const OFF: CalendarChoice = { on: false, ticked: [] };
 const MAX_TICKED = 100;
+const isId = (t: unknown): t is string => typeof t === 'string' && t.length > 0 && t.length <= 200;
 
 const key = (userId: string) => `wilma.calendars.v1.${userId}`;
 
@@ -19,10 +21,10 @@ export function parseChoice(raw: string | null): CalendarChoice {
   try {
     const v = JSON.parse(raw) as unknown;
     if (typeof v !== 'object' || v === null) return OFF;
-    const { on, ticked } = v as Record<string, unknown>;
+    const { on, ticked, addTo } = v as Record<string, unknown>;
     if (on !== true || !Array.isArray(ticked)) return OFF;
-    const ids = [...new Set(ticked.filter((t): t is string => typeof t === 'string' && t.length > 0 && t.length <= 200))];
-    return { on: true, ticked: ids.slice(0, MAX_TICKED) };
+    const ids = [...new Set(ticked.filter(isId))];
+    return { on: true, ticked: ids.slice(0, MAX_TICKED), ...(isId(addTo) ? { addTo } : {}) };
   } catch {
     return OFF;
   }
@@ -40,7 +42,9 @@ export async function loadChoice(store: SettingsStore, userId: string): Promise<
 /** Saves the choice; false when the phone could not write it. Off keeps no calendar ids. */
 export async function saveChoice(store: SettingsStore, userId: string, choice: CalendarChoice): Promise<boolean> {
   if (!userId) return false;
-  const value: CalendarChoice = choice.on ? { on: true, ticked: [...new Set(choice.ticked)].slice(0, MAX_TICKED) } : OFF;
+  const value: CalendarChoice = choice.on
+    ? { on: true, ticked: [...new Set(choice.ticked)].slice(0, MAX_TICKED), ...(isId(choice.addTo) ? { addTo: choice.addTo } : {}) }
+    : OFF;
   try {
     await store.set(key(userId), JSON.stringify(value));
     return true;
@@ -52,5 +56,10 @@ export async function saveChoice(store: SettingsStore, userId: string, choice: C
 /** The ticked calendars after a tap on one of them. */
 export function toggleCalendar(choice: CalendarChoice, id: string): CalendarChoice {
   const ticked = choice.ticked.includes(id) ? choice.ticked.filter((t) => t !== id) : [...choice.ticked, id];
-  return { on: choice.on, ticked };
+  return { ...choice, ticked };
+}
+
+/** "New events go to" set to this calendar (Settings → Calendars). */
+export function chooseTarget(choice: CalendarChoice, id: string): CalendarChoice {
+  return { ...choice, addTo: id };
 }

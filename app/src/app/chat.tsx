@@ -30,7 +30,7 @@ export default function Chat() {
   const { session } = useAuth();
   const {
     state, ready, canSend, routing, bannerVisible, send, askWilma, stop, retry, dismissBanner, clear, confirmDelete, cancelDelete,
-    shareLocation, dismissLocation, undoMemory, homeSaved, answerHomeAsk,
+    shareLocation, dismissLocation, undoMemory, eventAdded, homeSaved, answerHomeAsk,
   } = useChat();
   const [text, setText] = useState('');
   // 🌅 Plan my day in an empty thread: Pro (the badge and the Pro card without it).
@@ -160,6 +160,7 @@ export default function Chat() {
               onShareLocation={shareLocation}
               onNotNow={dismissLocation}
               onUndoMemory={undoMemory}
+              onEventAdded={eventAdded}
               onHomeSaved={homeSaved}
               homeAskActive={homeAskActive(state, item, todayAndTomorrow(new Date()).today) && canSend}
               onAnswerHomeAsk={answerHomeAsk}

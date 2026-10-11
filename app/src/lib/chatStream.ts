@@ -11,7 +11,9 @@
 
 import { toHomeCard, type HomeCardData } from './homePlace';
 import { toRemembered, type RememberedMemory } from './memory';
-import { type AlarmCardData, type ReminderCardData, toAbout, toAlarmData, toReminderData } from './phoneActions';
+import {
+  type AlarmCardData, type EventCardData, type ReminderCardData, toAbout, toAlarmData, toEventData, toReminderData,
+} from './phoneActions';
 
 /** The server's own wording for a lost connection (supabase/functions/chat/messages.ts). */
 export const CONNECTION_MESSAGE = "I'm having trouble connecting. Try again in a moment.";
@@ -53,6 +55,8 @@ export type ChatEvent =
   | { type: 'show_alarms' }
   | ({ type: 'reminder' } & ReminderCardData)
   | { type: 'find_reminders'; about?: string }
+  /** A calendar entry to confirm (D31 step 3): written only when the user taps Add to calendar. */
+  | ({ type: 'calendar_add' } & EventCardData)
   /** Save a home (D36): the 🏠 card; nothing is saved until the user taps Save. */
   | ({ type: 'home_save' } & HomeCardData)
   | { type: 'error'; code: string; message: string }
@@ -173,6 +177,10 @@ export function toChatEvent(raw: unknown): ChatEvent | null {
     case 'find_reminders': {
       const about = toAbout(raw.about);
       return { type: 'find_reminders', ...(about ? { about } : {}) };
+    }
+    case 'calendar_add': {
+      const e = toEventData(raw);
+      return e ? { type: 'calendar_add', ...e } : null;
     }
     case 'done':
       return { type: 'done', counted: raw.counted === true };
