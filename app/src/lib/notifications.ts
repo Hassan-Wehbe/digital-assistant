@@ -7,6 +7,7 @@
 import type { BriefingSettings } from './briefingSettings';
 import { leaveAlerts, morningSummary, mornings, type DayNote } from './dayAlerts';
 import type { DayPlan } from './dayPlan';
+import { isReminderId, type ReminderRow } from './phoneActions';
 
 export type Permission = 'granted' | 'denied' | 'undetermined';
 
@@ -16,6 +17,8 @@ export interface Scheduled {
   userId?: string;
   /** When it fires, in ms (as scheduled). */
   at?: number;
+  /** Its text (a reminder's words). */
+  body?: string;
 }
 
 export interface Notifier {
@@ -106,6 +109,43 @@ export async function forgetOtherAccounts(n: Notifier, keep: string | null): Pro
     await cancelAll(n, ids);
   } catch {
     // Unreadable: nothing more can be done here; they show "tap to see your day" at most.
+  }
+}
+
+// ---- Reminders (alarms and reminders, docs/alarms-calendar-plan.md step 2) ---------------------
+
+/**
+ * Sets a reminder from the chat card's tap: Android's permission asked first if not asked yet.
+ * "denied": not allowed (Settings to turn it on); "failed": the phone refused it.
+ */
+export async function setReminder(n: Notifier, userId: string, note: DayNote): Promise<'set' | 'denied' | 'failed'> {
+  try {
+    let allowed = (await n.permission()) === 'granted';
+    if (!allowed) allowed = await n.ask();
+    if (!allowed) return 'denied';
+    await n.schedule(note, userId);
+    return 'set';
+  } catch {
+    return 'failed';
+  }
+}
+
+/** This account's reminders still in the phone's schedule (soonest first), with their words. */
+export async function listReminders(n: Notifier, userId: string): Promise<ReminderRow[]> {
+  const rows = (await n.scheduled())
+    .filter((x) => isReminderId(x.id) && x.userId === userId && typeof x.at === 'number')
+    .map((x) => ({ id: x.id, at: x.at as number, text: x.body ?? 'Reminder' }));
+  return rows.sort((a, b) => a.at - b.at);
+}
+
+/** Cancels one reminder; false when it failed. */
+export async function cancelReminder(n: Notifier, id: string): Promise<boolean> {
+  if (!isReminderId(id)) return false;
+  try {
+    await n.cancel(id);
+    return true;
+  } catch {
+    return false;
   }
 }
 

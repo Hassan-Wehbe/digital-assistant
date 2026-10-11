@@ -3,7 +3,7 @@
 Status: plan, 2026-10-10. **Owner's answers given the same day: a card to confirm on everything
 (Q2), cancelling added (alarms through "Open Clock", reminders from the chat or Settings), and
 "go with your recommendations" for the rest. Step 1 written (server, not merged, not deployed;
-evaluation run waiting for the owner's OK and cap): see "As built: step 1" at the end.** Design: D31 (and D25, whose "Wilma never changes your calendar" this ends), D30
+evaluation run waiting for the owner's OK and cap): see "As built: step 1" at the end.** Later: step 1 merged (#206) and live (`chat` v31); step 2 on `claude/alarms-app` (#207); step 3 on `claude/alarms-calendar-card` (see "As built" at the end). Design: D31 (and D25, whose "Wilma never changes your calendar" this ends), D30
 (order: after automatic memory, before usage tracking D34). Model: the strongest for steps 1-3
 (chat loop, new chat actions, the calendar write); a smaller one for step 4 (wording, checklist,
 build).
@@ -240,3 +240,112 @@ then test on the phone with the checklist.
   `plan-when-to-leave` 4/5 in 38083420633 (5/6 with the full run), the model's own variation.
 - **Owner, next:** merge and OK to deploy `chat` (`mcp` is unchanged). Today's app (versionCode 19) never shows these cards;
   Wilma tells its users to update.
+
+## As built: step 2 (app: alarm and reminder cards)
+
+- **Cards** (`components/PhoneCards.tsx`, rendered by `ChatBubble`):
+  - ⏰ **alarm**: "Alarm 6:30 am · tomorrow" with **Set in Clock**, which opens the Clock's own
+    set-alarm screen filled in (`android.intent.action.SET_ALARM`, hour and minutes as whole
+    numbers, label, `SKIP_UI` false). The user saves it there. The card then says so, with
+    **Open Clock**.
+  - ⏰ **alarms**: **Open Clock** (`SHOW_ALARMS`), for "cancel my 6:30 alarm" and "what alarms do I
+    have".
+  - 🔔 **reminder**: "5:00 pm today: Call Sam" with **Set reminder**. Android's notification
+    permission is asked on the first tap. Once set: "Reminder set: …" with **Cancel reminder**.
+  - 🔔 **reminders**: this phone's matching reminders (every word of "call Sam", still ahead,
+    soonest first; matched on the phone, so the model never sees them), each with Cancel, and
+    "All reminders".
+  - A reminder whose time has passed, or whose words look like a password, is one dimmed line,
+    never set.
+- **Weekdays:** Android's set-alarm screen wants the days as a list of whole numbers, which
+  `expo-intent-launcher` passes as decimals. So for "weekdays" the Clock opens with the time and the
+  card says "tick Mon–Fri there", rather than sending days the Clock might ignore without saying so.
+- **Reminders** are Wilma notifications of a new kind, `wilma.<date>.reminder.<card>`
+  (`lib/notifications.ts` `setReminder`, `listReminders`, `cancelReminder`). They go on their own
+  Android channel "Reminders" (shown as a heads-up). The id comes from the chat card, so tapping
+  Set again replaces the reminder instead of adding a second one. Like every Wilma notification,
+  signing out or another account signing in cancels them. A tap opens Home.
+- **Settings → Reminders** (`app/reminders.tsx`, Android only): the upcoming reminders with Cancel,
+  and a line on timing (may be a few minutes late; use an alarm when the minute matters).
+- **`can`** sends `alarm` and `reminder` on Android only (`chatClient.ts`), so on the web build
+  Wilma says these aren't available there.
+- **Native:** `expo-intent-launcher` 57.0.1 (installed with npm; `npx expo install` could not reach
+  Expo's version service from this environment). Permission
+  `com.android.alarm.permission.SET_ALARM` (install-time, no prompt, no Play form); `expo prebuild`
+  confirmed it is the only permission change.
+- **Tests:** `app/src/lib/phoneActions.test.ts` (10). 756 app tests pass;
+  `expo export --platform android` bundles. Needs a phone to check the Clock part (phone checks below).
+
+**Phone checks for the versionCode 20 checklist:**
+1. "Wake me at 6:30": tap Set in Clock. The Clock opens at 6:30; save; it rings.
+2. "Alarm at 5:45 on weekdays": the Clock opens at 5:45 and the card says to tick Mon–Fri.
+3. "Cancel my 6:30 alarm": Open Clock shows the list.
+4. "Remind me in 5 minutes to stretch": tap Set reminder (allow notifications). It shows on time
+   or a few minutes late, as a heads-up.
+5. "Cancel my reminder to stretch" (with one set): the card lists it; Cancel works. Settings →
+   Reminders shows the same list.
+6. Sign out and back in: Settings → Reminders is empty.
+
+## As built: step 3 (app: calendar entry card)
+
+- **The 📅 card** (`EventCard` in `components/PhoneCards.tsx`, rendered by `ChatBubble`): "Dentist",
+  "Wed, Oct 14 · 3:00 pm – 4:00 pm" (or "· all day"), the place, and "Calendar: Family" with
+  **Change** (the writable calendars, for this event only). **Change details** opens the title and
+  place as text and Day / Start / End with the phone's own pickers (a new start keeps the length; an
+  end before the start is the next day). **Add to calendar** is the only button that writes.
+  Afterwards: "Added to Family: Dentist" with **Open in Calendar** (the phone's calendar app shows
+  the event). No Cancel button, as on step 2's cards: not tapping adds nothing.
+- **The write** (`lib/calendar.ts addEvent`), the first and only one in that file, with the rule
+  next to it: **create only**; nothing there changes or deletes an event (Q6), and tests check the
+  file for it. It is called only from the tap, and checks again right then: the fields
+  (`eventProblem`: a title, at most 200 characters, place at most 300, real days and times, the end
+  after the start, at most 14 days, today or later, within a year, **no password-looking text**,
+  `findCredential`); Settings → Calendars read again (on, the calendar still ticked); the
+  permission (asked now if Android still can); the calendar still on the phone and writable. Then one
+  `createEvent`. One write per tap, even on a double tap.
+- **Not `createEventAsync`:** in the installed expo-calendar (57.0.5) the old `createEventAsync`
+  is deprecated and *throws at runtime*; the app already reads with the newer API, so the write is
+  its `ExpoCalendar.get(id).createEvent(...)` (same effect: one new event). No guests and no
+  reminder of Wilma's own, so the calendar's default reminder applies (Q9). All-day events are
+  written at midnight UTC with the UTC zone, as Android stores them.
+- **Which calendars:** only calendars **ticked** in Settings → Calendars **and** that the phone lets
+  apps write to (`allowsModifications`; holidays, birthdays and shared read-only calendars never
+  appear). Adding needs Use my calendar on; otherwise the card says so with a Settings → Calendars
+  button. Without the permission: **Allow calendar** (asks, or opens the phone's settings).
+- **"New events go to"** in Settings → Calendars (Android): the writable ticked calendars, one
+  chosen. First (and whenever the saved one is no longer ticked or writable) the phone's primary
+  calendar among them, else the first. Kept on the phone with the calendar choice
+  (`calendarSettings.ts`, `addTo`).
+- **Overlap line (Q13):** with calendar reading on, the card reads the ticked calendars for the
+  event's day(s) on the phone (nothing is sent) and says "You have Swim at 3:00 pm then." (or
+  "You're busy at …" for a private event, "and 2 more"). Timed events only; all-day and Free events
+  don't count.
+- **The saved chat** keeps the card and, once added, the phone's event id and the calendar's name,
+  so a reopened chat shows "Added" and never offers to add it twice. Edits made on the card are what
+  is kept.
+- **`can`** sends `calendar_add` on Android only (`chatClient.ts`).
+- **No server or instruction change, so no evaluation run.**
+- **Tests:** `app/src/lib/calendarAdd.test.ts` (19): nothing written without the tap (the stream,
+  the thread and the saved chat never call the calendar; the card calls `addEvent` only from the
+  button), the chosen calendar used, read-only / unticked / vanished calendars never offered or
+  written, every field checked again, the permission asked on the tap, create only, all-day in UTC,
+  "New events go to", the card from the stream and from a saved chat, the overlap line.
+  `appConfig.test.ts`'s "only reads" check became "reads, and only creates events". 775 app tests;
+  `expo export --platform android` bundles.
+- **Left for step 4 (wording, owner's OK):** the calendar permission text, the Settings → Calendars
+  paragraph (it still says "your calendar is never changed"), the privacy page and D25.
+
+**Phone checks for the versionCode 20 checklist:**
+1. Settings → Calendars (Use my calendar on): "New events go to" lists only calendars you can add
+   to (no Holidays or Birthdays); your main calendar is chosen. Pick another; it stays chosen.
+2. "Put the dentist on my calendar Tuesday at 3": the card says Tue · 3:00 pm – 4:00 pm and the
+   calendar from step 1. Don't tap: the calendar app shows nothing new.
+3. Tap Add to calendar: "Added to …"; Open in Calendar shows it, 3-4 pm, with your calendar's usual
+   reminder. Close and reopen the chat: the card still says Added.
+4. "Put Lexi's recital on Friday": an all-day event on Friday (check it is on Friday, not Thursday
+   or Saturday, in the calendar app).
+5. On a card, Change details: change the time and the place, and Change the calendar; add it; check
+   the calendar app has what you set, in that calendar.
+6. Ask for an event at a time you already have something: the card says "You have … then".
+7. Change a card's title to "garage code 4471": the card refuses, and Add to calendar is greyed.
+8. Turn off Use my calendar, ask for an event: the card says to turn it on; nothing is added.

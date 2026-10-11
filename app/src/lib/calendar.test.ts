@@ -34,6 +34,10 @@ function phone(over: Partial<CalendarDeps> = {}) {
     ]),
     events: jest.fn<CalendarDeps['events']>(async (ids) => EVENTS.filter((e) => ids.includes(e.calendarId))),
     allDayInUtc: true,
+    // Reading never writes: any call fails the test.
+    createEvent: jest.fn<CalendarDeps['createEvent']>(async () => {
+      throw new Error('reading must never write');
+    }),
     ...over,
   };
 }
