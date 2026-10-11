@@ -95,35 +95,35 @@ Deno.test("agenda: the model gets it as data, marked as such, after the user's q
   assertEquals([data.time_zone, data.calendars_read, data.events[0].declined], ["America/New_York", 2, true]);
 });
 
-Deno.test("agenda: a call asks the app once it can read the calendar, and says nothing more", () => {
-  const out = agendaCall({ from: "2026-10-08", to: "2026-10-09" }, true);
+Deno.test("agenda: a call asks the app once it can read the calendar, and says nothing more", async () => {
+  const out = await agendaCall({ from: "2026-10-08", to: "2026-10-09" }, true);
   assertEquals(out.request, { type: "agenda_request", from: "2026-10-08", to: "2026-10-09" });
   assert(out.result.content.includes("Say nothing more"));
-  assertEquals(agendaCall({ from: "2026-10-08" }, true).request?.to, "2026-10-08", "to defaults to from");
+  assertEquals((await agendaCall({ from: "2026-10-08" }, true)).request?.to, "2026-10-08", "to defaults to from");
 });
 
-Deno.test("agenda: bad days go back to the model as an error, and nothing is asked", () => {
+Deno.test("agenda: bad days go back to the model as an error, and nothing is asked", async () => {
   for (const input of [{}, { from: "today" }, { from: "2026-10-09", to: "2026-10-08" }, { from: "2026-10-01", to: "2026-10-20" }, { from: 5 }]) {
-    const out = agendaCall(input, true);
+    const out = await agendaCall(input, true);
     assertEquals(out.request, undefined, JSON.stringify(input));
     assert(out.result.isError);
   }
 });
 
-Deno.test("agenda: an older app gets a sentence to update; the Claude connector says to ask in the app", () => {
-  const out = agendaCall({ from: "2026-10-08" }, false);
+Deno.test("agenda: an older app gets a sentence to update; the Claude connector says to ask in the app", async () => {
+  const out = await agendaCall({ from: "2026-10-08" }, false);
   assertEquals(out.request, undefined);
   assertFalse(out.result.isError);
   assert(out.result.content.includes("update the Wilma app"));
   assert(AGENDA_ELSEWHERE.includes("Wilma app's chat"));
 });
 
-Deno.test("agenda: with the calendar already sent, those days come from it; other days are not asked again", () => {
+Deno.test("agenda: with the calendar already sent, those days come from it; other days are not asked again", async () => {
   const a = parsed({ to: "2026-10-10" });
-  const same = agendaCall({ from: "2026-10-09" }, true, a);
+  const same = await agendaCall({ from: "2026-10-09" }, true, a);
   assertEquals(same.request, undefined);
   assertEquals(same.result.content, agendaText(a));
-  const other = agendaCall({ from: "2026-10-12" }, true, a);
+  const other = await agendaCall({ from: "2026-10-12" }, true, a);
   assertEquals(other.request, undefined);
   assert(other.result.content.includes("Only 2026-10-08 to 2026-10-10"));
 });

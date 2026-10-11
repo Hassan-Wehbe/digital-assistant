@@ -31,6 +31,9 @@ export const registerGetDayAgenda: RegisterTool = (server, { assistantName }) =>
         from: z.string().regex(DAY, "a date, YYYY-MM-DD").describe("First day, the user's local date (YYYY-MM-DD)"),
         to: z.string().regex(DAY, "a date, YYYY-MM-DD").optional()
           .describe(`Last day, included; default the same day; at most ${MAX_AGENDA_DAYS} days in all`),
+        from_home: z.string().max(60).optional()
+          .describe("Planning one day from a saved home other than the default (\"plan my day from Mom's\"): that home's " +
+            "name. Leave out to plan from the default home"),
       },
       annotations: { readOnlyHint: true },
     },
