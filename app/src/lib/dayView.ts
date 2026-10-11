@@ -36,6 +36,22 @@ export function dayTitle(date: string): string {
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' });
 }
 
+/** My day plans up to this many days ahead (📅 Pick a day, and "plan Tuesday the 13th" from the chat). */
+export const MAX_DAYS_AHEAD = 366;
+
+/**
+ * The day My day opens on: the `date` it was given ("Open my day" from the chat, any day from today
+ * on), else today. A day that has passed, is too far ahead or is not a real day opens today.
+ */
+export function openingDay(date: string | undefined, now: Date): string {
+  const { today } = todayAndTomorrow(now);
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return today;
+  const d = new Date(`${date}T00:00:00Z`);
+  if (!Number.isFinite(d.getTime()) || d.toISOString().slice(0, 10) !== date) return today;
+  const ahead = Math.round((d.getTime() - new Date(`${today}T00:00:00Z`).getTime()) / 86_400_000);
+  return ahead >= 0 && ahead <= MAX_DAYS_AHEAD ? date : today;
+}
+
 /** The phone's day and the next one ("2026-10-09"), from a local Date. */
 export function todayAndTomorrow(now: Date): { today: string; tomorrow: string } {
   const day = (d: Date) => `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}`;

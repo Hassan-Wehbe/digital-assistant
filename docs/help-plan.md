@@ -190,6 +190,6 @@ evaluation run, then OK to deploy `chat` (step 2); test on the phone.
   `can` values and both instruction paragraphs kept; 492 Deno tests. **Check run of the combined
   instructions, 38102620189 at 8090fcb: 147/147, 0 leaks, 0 unsafe, $0.08** (homes and Help cases
   together). About $0.24 spent of the $1 cap in all.
-- **Owner, next:** OK and a dollar cap for one paid evaluation run (rule 9, D21), then merge and OK
-  to deploy `chat` (`mcp` is unchanged). Deploying changes nothing visible in today's app: it does
+- **Merged on the owner's word ("merge all", 2026-10-11).** **Owner, next:** OK to deploy `chat`
+  (`mcp` is unchanged). Deploying changes nothing visible in today's app: it does
   not send `help`, so Wilma just answers help questions briefly.
