@@ -73,7 +73,7 @@ export default function Calendars() {
         <Muted>
           Wilma reads the calendars you choose, only when you ask about your day (or, with the morning briefing on, when it is made), and sends the titles, times and places
           needed for that answer to her AI provider. Never descriptions, attendees or meeting links; private events only
-          as “Busy”. Nothing is stored, and your calendar is never changed.
+          as “Busy”. Nothing is stored. Wilma adds an event only when you tap Add to calendar on a card in the chat, and never changes or deletes one.
         </Muted>
       </Card>
 

@@ -1,7 +1,7 @@
 # Handoff: state of the project and how to keep building
 
 Last updated 2026-10-10 (newest: alarms step 3, the calendar card, on branch `claude/alarms-calendar-card`; before that: invite-only sign-up merged (#186) and live, versionCode 17 built and submitted, testers getting "Item not found" on the Play link; live `mcp` v30, `chat` v26 (places cuisine fix #188), `delete-account` deployed; see the first entry under "Where things stand"). Earlier: 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
-Last updated 2026-10-11 (newest: homes steps 3-5 merged (#216, #217, #218): the app's Settings → Homes, the 🏠 chat card, noticing which home you are at, and the privacy page; they ship with versionCode 20, not built yet; before that: invite-only sign-up merged (#186) and live, versionCode 17 built and submitted, testers getting "Item not found" on the Play link; live `mcp` v30, `chat` v26 (places cuisine fix #188), `delete-account` deployed; see the first entry under "Where things stand"). Earlier: 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
+Last updated 2026-10-11 (newest: all open PRs merged and `chat` v34 deployed; alarms step 4 wording on `claude/alarms-wording`, then versionCode 20; before that: homes steps 3-5 merged (#216, #217, #218): the app's Settings → Homes, the 🏠 chat card, noticing which home you are at, and the privacy page; they ship with versionCode 20, not built yet; before that: invite-only sign-up merged (#186) and live, versionCode 17 built and submitted, testers getting "Item not found" on the Play link; live `mcp` v30, `chat` v26 (places cuisine fix #188), `delete-account` deployed; see the first entry under "Where things stand"). Earlier: 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
 #102), with Expo patch updates (#98). Step 2, server, is live. Places step 5b ("places near me",
 server) **merged and live** (#104, `mcp` v13, `chat` v6; first entry below). Then step 6, the places build, which also carries the mic fix #91. Play Console:
 Data safety and other forms saved, **not yet sent for review**; see the first entry below).
@@ -13,6 +13,19 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **versionCode 20 is ready to build once alarms step 4 merges (2026-10-11).** Merged today on the
+  owner's "merge all" (conflicts resolved keeping both sides): #207 and #208 (alarm, reminder and
+  calendar entry cards), #209 (My day opens the day asked for, 📅 Pick a day), #211, #212 and #213
+  (Help plan, the "?" screen with Places & Homes, `show_help` on the server). **`chat` deployed:
+  version 34** (deploy chat run 38105810431, owner's OK, from main at 719af30; `mcp` stays 34).
+  On Android, `can` is calendar, alarm, reminder, calendar_add and home. 831 app tests, 492 Deno
+  tests on main.
+- **Alarms step 4, wording (2026-10-11): branch `claude/alarms-wording`, not merged; needs the
+  owner's OK on the wording (merging publishes the privacy page).** Calendar permission text and
+  Settings → Calendars say Wilma adds an event only on the Add to calendar tap; privacy page: the
+  calendar paragraph and a new "Alarms and reminders (Android)" paragraph; Play Data safety: no
+  change; D25/D31; legal checklist; `docs/versioncode20-phone-checklist.md` covers the whole build.
+  Details: `docs/alarms-calendar-plan.md` "As built: step 4". **Then:** "build for Play".
 - **Help step 2, server `show_help` (2026-10-11): branch `claude/help-chat` (from
   `claude/help-screen`, #212), not merged, not deployed, evaluation not run.** Chat-only
   `show_help({topic?})` in `chat/phone_actions.ts`, Wilma's help lines, 7 new evaluation cases
