@@ -38,24 +38,30 @@ export interface ChatClientOptions {
 
 const SESSION_ENDED = 'Your session has ended. Please sign in again.';
 
+/** The 🏠 card (save a home, D36; chat/phone_actions.ts save_home). */
+export const CAN_HOME = 'home';
+
 /**
  * What this app version can do for Wilma: read the phone's calendar (chat/agenda.ts on the server),
- * and on Android show the alarm and reminder cards (chat/phone_actions.ts). Other platforms leave
- * those out, so Wilma says they are not available there instead of showing a card that cannot work.
+ * and on Android show the alarm, reminder and 🏠 save-a-home cards (chat/phone_actions.ts). Other
+ * platforms leave those out, so Wilma says they are not available there instead of showing a card
+ * that cannot work (the web build has no Clock and no map lookup).
  */
-export const CAN = Platform.OS === 'android' ? ['calendar', CAN_ALARM, CAN_REMINDER] : ['calendar'];
+export const CAN = Platform.OS === 'android' ? ['calendar', CAN_ALARM, CAN_REMINDER, CAN_HOME] : ['calendar'];
 
 /**
  * The request body: the thread, what the app can do, the phone's time zone (so "today" is the
- * user's day), and for this one message the 📍 location or the calendar Wilma asked for.
+ * user's day), and for this one message the 📍 location or the calendar Wilma asked for, with the
+ * saved home to plan from (`startFrom`, a home_place id: sent back from the agenda_request, D36).
  */
-export function chatBody(entries: Entry[], here?: SharedPoint, agenda?: Agenda, timeZone: string | null = phoneTimeZone()): string {
+export function chatBody(entries: Entry[], here?: SharedPoint, agenda?: Agenda, timeZone: string | null = phoneTimeZone(), startFrom?: string): string {
   return JSON.stringify({
     messages: messagesToSend(entries),
     can: CAN,
     ...(timeZone ? { tz: timeZone } : {}),
     ...(here ? { here: { lat: here.lat, lng: here.lng } } : {}),
     ...(agenda ? { agenda } : {}),
+    ...(agenda && startFrom ? { start_from: { home: startFrom } } : {}),
   });
 }
 
@@ -86,10 +92,11 @@ export function chatClient({ url, token, refresh, fetch: f = expoFetch as unknow
    * connection error event; only an ended session throws (a WilmaError marked signed out).
    * Aborting `signal` (Stop) ends the events quietly. `here`: the phone's location from the 📍
    * tap (places step 7), sent with this one message only; never with the classifier. `agenda`:
-   * the calendar days Wilma asked for (lib/calendar.ts), sent with the question again.
+   * the calendar days Wilma asked for (lib/calendar.ts), sent with the question again, and
+   * `startFrom`, the saved home to plan that day from.
    */
-  async function* send(entries: Entry[], signal?: AbortSignal, here?: SharedPoint, agenda?: Agenda): AsyncGenerator<ChatEvent> {
-    const body = chatBody(entries, here, agenda);
+  async function* send(entries: Entry[], signal?: AbortSignal, here?: SharedPoint, agenda?: Agenda, startFrom?: string): AsyncGenerator<ChatEvent> {
+    const body = chatBody(entries, here, agenda, phoneTimeZone(), startFrom);
     const post = (accessToken: string) =>
       f(url, {
         method: 'POST',

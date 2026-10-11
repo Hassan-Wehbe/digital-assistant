@@ -37,6 +37,12 @@ and is a starting point, not legal advice.
 - [ ] **Calendar** (D25): read on the phone, chosen calendars only, needed lines sent to the AI
       provider, nothing stored; later Google connection under Google's Limited Use policy.
 - [ ] **Location** (D26 "Save where I am"): on-tap only, stored in the note; consent wording.
+- [ ] **Homes** (D36, `docs/my-places-plan.md`): home addresses and points stored with the
+      account (not notes, never shared; a deleted home is gone for good, no revision); "Notice which
+      home I'm at when I plan" (off until turned on) reads the location in the foreground while
+      planning and compares it on the phone only. Check the consent wording (Settings → Homes, the
+      privacy paragraph); Wilma never sends the reading, though the phone's own location service
+      (Google's on most Android phones) may use the network to work it out, as for every reading.
 - [ ] **AI**: disclosure that answers come from AI providers, provider data terms (no training on
       API data), any AI-disclosure laws in force at launch.
 - [ ] **Voice** (A5e) and the future **wearable**: recording consent. Florida requires the consent
