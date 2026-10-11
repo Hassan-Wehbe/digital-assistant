@@ -7,8 +7,12 @@
 // way the ★ moves), or to Delete (asked first; a home is a setting, so it is gone for good, Q6).
 // Add a home sits at the bottom. Text that looks like a password is refused before anything is
 // sent (rule 9). Homes are never searched, shared or kept as notes.
+//
+// "Notice which home I'm at when I plan" (step 4, Q3): off until turned on, kept on this phone per
+// account; turning it on asks for the location permission then (the only time it is asked for
+// this). See homeNotice.ts for the one reading while planning.
 import { useState } from 'react';
-import { Linking, ScrollView, Text, TextInput, View } from 'react-native';
+import { Linking, Platform, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { PlacePicker } from '@/components/PlacePicker';
 import { Button, Card, confirm, GroupList, GroupRow, Muted, space, styles, TextLink, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
@@ -18,6 +22,9 @@ import {
   type HomeRow, type HomesDb, type PickedSpot,
 } from '@/lib/homePlace';
 import { findCredential } from '@/lib/credentials';
+import { deviceSettingsStore } from '@/lib/deviceStorage';
+import { allowForNotice, loadNotice, saveNotice } from '@/lib/homeNotice';
+import { deviceLocation, NO_PERMISSION } from '@/lib/location';
 import { mapsLink } from '@/lib/places';
 import { supabase } from '@/lib/supabase';
 
@@ -37,6 +44,24 @@ export default function Homes() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  const notice = useLoad(`homeNotice:${userId}`, () => loadNotice(deviceSettingsStore, userId));
+  const [noticePicked, setNoticePicked] = useState<boolean | null>(null);
+  const [noticeNote, setNoticeNote] = useState<string | null>(null);
+  const noticeOn = noticePicked ?? notice.data;
+
+  const pickNotice = async (on: boolean) => {
+    if (on === noticeOn || !userId) return;
+    setNoticeNote(null);
+    if (on) {
+      const problem = await allowForNotice(deviceLocation, NO_PERMISSION);
+      if (problem) return setNoticeNote(problem);
+    }
+    setNoticePicked(on);
+    if (!(await saveNotice(deviceSettingsStore, userId, on))) {
+      setNoticePicked(null);
+      setNoticeNote("That wasn't saved on this phone. Try again.");
+    }
+  };
 
   const list = homes.data ?? [];
   const open = editing.step === 'home' ? list.find((h) => h.id === editing.id) : undefined;
@@ -200,6 +225,19 @@ export default function Homes() {
         ) : (
           <Button title="＋ Add a home" kind="plain" onPress={() => start({ step: 'add', name: list.length ? '' : HOME_TITLE, picking: false })} />
         )
+      ) : null}
+      {Platform.OS !== 'web' ? (
+        <>
+          {heading('Notice which home I’m at when I plan')}
+          <GroupList>
+            <GroupRow first title="On" checked={noticeOn === true} onPress={typeof noticeOn === 'boolean' ? () => void pickNotice(true) : undefined} />
+            <GroupRow title="Off" checked={noticeOn === false} onPress={typeof noticeOn === 'boolean' ? () => void pickNotice(false) : undefined} />
+          </GroupList>
+          <Muted>
+            {noticeNote ??
+              'With two homes or more: when you plan today in My day or the chat, Wilma checks your location once. At a home that isn’t your default, she asks which one to plan from. Where you are is compared on this phone and never sent or kept; only the home you pick is.'}
+          </Muted>
+        </>
       ) : null}
       <Muted>Homes are kept with your account, never searched or shared. A deleted home is gone for good.</Muted>
     </ScrollView>

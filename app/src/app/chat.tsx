@@ -15,7 +15,8 @@ import { BoxCounter, WilmaBox } from '@/components/WilmaBox';
 import { useAuth } from '@/lib/auth';
 import { useChat } from '@/lib/chat';
 import { chatChip, pinPoint, tapPin, type PinState } from '@/lib/chatHere';
-import { cardActive, type Entry, type ErrorButton, lastUserText, locationActive, notesActive } from '@/lib/chatThread';
+import { cardActive, type Entry, type ErrorButton, homeAskActive, lastUserText, locationActive, notesActive } from '@/lib/chatThread';
+import { todayAndTomorrow } from '@/lib/dayView';
 import { VOICE_ENABLED } from '@/lib/config';
 import { findCredential } from '@/lib/credentials';
 import { deviceLocation } from '@/lib/location';
@@ -29,7 +30,7 @@ export default function Chat() {
   const { session } = useAuth();
   const {
     state, ready, canSend, routing, bannerVisible, send, askWilma, stop, retry, dismissBanner, clear, confirmDelete, cancelDelete,
-    shareLocation, dismissLocation, undoMemory, homeSaved,
+    shareLocation, dismissLocation, undoMemory, homeSaved, answerHomeAsk,
   } = useChat();
   const [text, setText] = useState('');
   // 🌅 Plan my day in an empty thread: Pro (the badge and the Pro card without it).
@@ -160,6 +161,8 @@ export default function Chat() {
               onNotNow={dismissLocation}
               onUndoMemory={undoMemory}
               onHomeSaved={homeSaved}
+              homeAskActive={homeAskActive(state, item, todayAndTomorrow(new Date()).today) && canSend}
+              onAnswerHomeAsk={answerHomeAsk}
             />
           )}
           ListEmptyComponent={

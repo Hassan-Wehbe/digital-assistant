@@ -161,7 +161,11 @@ export function homeFor(m: DayMemory, date: string): string | undefined {
   return m.choices.find((x) => x.date === date)?.home;
 }
 
-/** Plan this day from that home (Change); null: back to the default. Only that day changes. */
+/**
+ * Plan this day from that home (Change, or the answer to "You're at Mom's"); null: back to the
+ * default, as if never asked. Only that day changes. Picking the default keeps its id too, so the
+ * day counts as answered and is not asked again (homes step 4).
+ */
 export function chooseHome(m: DayMemory, date: string, homeId: string | null): DayMemory {
   if (homeId !== null && !isHomeId(homeId)) return m;
   return withChoice(m, date, (c) => {
