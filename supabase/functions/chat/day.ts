@@ -322,26 +322,40 @@ export async function dayPlan(deps: DayDeps, token: string, userId: string, raw:
   }
 }
 
+export interface ChatPlanOptions {
+  /** Plan from this saved home (home_place id; D36): the app sent it back, or the model named it. */
+  startFrom?: string;
+  /** This message already passed the Pro and fair-use check (planning the same day again from another
+   * home): not counted a second time. */
+  gated?: boolean;
+  now?: number;
+}
+
 /**
  * The planner on the calendar the app re-sent for get_day_agenda (one day only: "plan my day",
  * "plan tomorrow"). Pro and fair use as for My day (a chat plan counts as one plan). The events are
  * keyed e0, e1, ... in the agenda's order; `titles` maps them back. Logged like My day (counts only).
  */
-export async function planForChat(deps: DayDeps, db: SupabaseClient, userId: string, agenda: Agenda, now = deps.now?.() ?? Date.now()): Promise<ChatPlan> {
+export async function planForChat(
+  deps: DayDeps, db: SupabaseClient, userId: string, agenda: Agenda, opts: ChatPlanOptions = {},
+): Promise<ChatPlan> {
+  const now = opts.now ?? deps.now?.() ?? Date.now();
   if (agenda.from !== agenda.to) return { made: false, reason: "not_one_day" };
   const log: DayLog = {
     event: "day", request: crypto.randomUUID(), user: userId, outcome: "ok", events: agenda.events.length, tasks: 0, drives: 0,
     matched_places: 0,
   };
   const out = await (async (): Promise<ChatPlan> => {
-    const g = await gate(db);
-    if (!g) return { made: false, reason: "connection" };
-    if (!g.allowed) return { made: false, reason: g.reason };
+    if (!opts.gated) {
+      const g = await gate(db);
+      if (!g) return { made: false, reason: "connection" };
+      if (!g.allowed) return { made: false, reason: g.reason };
+    }
     const events = agenda.events.map((e, i) => ({ ...e, key: `e${i}` }));
     const today = localTime(now, agenda.time_zone);
     const plan = await makePlan(deps, db, {
       date: agenda.from, tz: agenda.time_zone, now: today?.startsWith(agenda.from) ? today : undefined, events,
-      choices: agenda.choices,
+      choices: agenda.choices, startFrom: opts.startFrom,
     }, log);
     return { made: true, plan, titles: new Map(events.map((e) => [e.key, e.busy_only ? "Busy" : e.title])) };
   })().catch((e): ChatPlan => {
