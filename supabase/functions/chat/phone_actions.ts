@@ -8,6 +8,11 @@
 //   set_reminder({at, text})                    {"type":"reminder","at","text"}                Set reminder
 //   find_reminders({about?})                    {"type":"find_reminders","about"?}             Cancel / list
 //   add_calendar_event({title, start, ...})     {"type":"calendar_add","title","start","end","all_day","location"}
+//   save_home({label, address?, make_default?}) {"type":"home_save","label","address","make_default"}  Save
+//
+// save_home (homes, design D36, docs/my-places-plan.md step 2) works the same way: the phone finds
+// the address on the map with its own geocoder (or uses where it is) and writes the home_place row
+// on the tap. Nothing is saved on the server here, and the model never sees a point.
 //   show_help({topic?})                         {"type":"help","topic"?}                       🛟 Help topics
 //
 // show_help (docs/help-plan.md step 2, design D37) is the one card here that changes nothing: it
@@ -27,6 +32,7 @@ import { findCredential } from "../mcp/lib/credentials.ts";
 export const CAN_ALARM = "alarm";
 export const CAN_REMINDER = "reminder";
 export const CAN_CALENDAR_ADD = "calendar_add";
+export const CAN_HOME = "home";
 export const CAN_HELP = "help";
 
 /** The app's Help topics (app/src/lib/help.ts); show_help names one of these. */
@@ -34,6 +40,9 @@ export const HELP_TOPICS = ["notes", "vault", "day", "alarms", "places", "memory
 
 export const MAX_TEXT = 200;
 export const MAX_LOCATION = 300;
+/** A home's name and address, as home_place allows (migration home_place). */
+export const MAX_HOME_LABEL = 60;
+export const MAX_HOME_ADDRESS = 300;
 /** Reminders and events at most this far ahead. */
 export const MAX_DAYS_AHEAD = 366;
 /** An event at most this long (a timed one), or this many days (an all-day one). */
@@ -123,6 +132,35 @@ export const PHONE_ACTION_SPECS: ToolSpec[] = [
     },
   },
   {
+    name: "save_home",
+    description:
+      "Chat app only. Shows the user a card to save a home: where they live, or another place they plan their " +
+      "day from (\"my home is 12 Oak St, Oviedo\", \"I live at ...\", \"I moved to ...\", \"save my mom's house, " +
+      "4 Elm Rd, as a home\"). The phone finds the address on the map; nothing is saved until they tap Save. " +
+      "The only way to save a home: never as a note, a place or a memory. Never put a code, PIN or password in it.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        label: {
+          type: "string",
+          description: `Its name, at most ${MAX_HOME_LABEL} characters: "Home" for where the user lives, else their own ` +
+            "name for it (\"Mom's\", \"Lake house\", \"Work\")",
+        },
+        address: {
+          type: "string",
+          description: "The address as the user gave it (optional: without one, the card offers Use where I am)",
+        },
+        make_default: {
+          type: "boolean",
+          description: "True when it is where the user lives now (\"my home is\", \"I live at\", \"I moved to\"): plans " +
+            "start there. False for other places (optional, default false)",
+        },
+      },
+      required: ["label"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "show_help",
     description:
       "Chat app only. Shows the user a Help card with the app's short topics (notes, the vault, My day, alarms " +
@@ -160,12 +198,14 @@ const NEEDS: Record<string, string> = {
   set_alarm: CAN_ALARM, show_alarms: CAN_ALARM,
   set_reminder: CAN_REMINDER, find_reminders: CAN_REMINDER,
   add_calendar_event: CAN_CALENDAR_ADD,
+  save_home: CAN_HOME,
   show_help: CAN_HELP,
 };
 
 const WHAT: Record<string, string> = {
   set_alarm: "set alarms", show_alarms: "open your alarms", set_reminder: "set reminders",
-  find_reminders: "show your reminders", add_calendar_event: "add calendar events", show_help: "show Help",
+  find_reminders: "show your reminders", add_calendar_event: "add calendar events",
+  save_home: "save homes from the chat", show_help: "show Help",
 };
 
 const fail = (text: string): PhoneOutput => ({ isError: true, text, events: [] });
@@ -174,6 +214,11 @@ const fail = (text: string): PhoneOutput => ({ isError: true, text, events: [] }
 const CREDENTIAL = "Not shown: that text looks like it contains a password, PIN or code. A reminder shows on the " +
   "lock screen and a calendar may be shared, so it can't go there. Do not repeat the value. Passwords belong in " +
   "the Vault: offer save_secret. The card can be made again without the value.";
+
+/** The same refusal for a home: an alarm code or gate PIN is never part of one (rule 9). */
+const HOME_CREDENTIAL = "Not shown: that text looks like it contains a password, PIN or code (an alarm code or gate " +
+  "PIN, for example), which never goes in a home's name or address. Do not repeat the value. Codes and passwords " +
+  "belong in the Vault: offer save_secret. The card can be made again without the value.";
 
 function waiting(card: string, button: string, extra = ""): string {
   return JSON.stringify({
@@ -184,14 +229,14 @@ function waiting(card: string, button: string, extra = ""): string {
 }
 
 /** A text field: trimmed, one line, at most `max` characters; refused when it looks like a credential. */
-function text(v: unknown, field: string, max: number, required: boolean): { value?: string; error?: string } {
+function text(v: unknown, field: string, max: number, required: boolean, credential = CREDENTIAL): { value?: string; error?: string } {
   if (v === undefined || v === null || (typeof v === "string" && !v.trim())) {
     return required ? { error: `${field} is required.` } : {};
   }
   if (typeof v !== "string") return { error: `${field} must be text.` };
   const value = v.trim().replace(/\s+/g, " ");
   if (value.length > max) return { error: `${field} can be at most ${max} characters.` };
-  if (findCredential(value)) return { error: CREDENTIAL };
+  if (findCredential(value)) return { error: credential };
   return { value };
 }
 
@@ -241,7 +286,8 @@ export class PhoneActions {
           status: "app_cannot",
           message: `This version of the app cannot ${WHAT[name]}. Tell the user in one short sentence that updating ` +
             "Wilma from the Play Store adds it" + (name === "set_alarm" || name === "show_alarms" ? ", and that meanwhile " +
-              "they can use their Clock app." : "."),
+              "they can use their Clock app." : name === "save_home" ? ", and that meanwhile they can set where they leave " +
+              "from in My day. Do not save the home as a note, a place or a memory instead." : "."),
         }),
         events: [],
       };
@@ -259,6 +305,8 @@ export class PhoneActions {
         return this.reminder(input);
       case "find_reminders":
         return this.findReminders(input);
+      case "save_home":
+        return this.home(input);
       case "show_help":
         return this.help(input);
       default:
@@ -336,6 +384,23 @@ export class PhoneActions {
           "them: do not list, guess or confirm any reminder. Nothing is cancelled unless they tap. Say so in one " +
           "short sentence.",
       }),
+    );
+  }
+
+  private home(input: Record<string, unknown>): PhoneOutput {
+    const label = text(input.label, "label", MAX_HOME_LABEL, true, HOME_CREDENTIAL);
+    if (label.error) return fail(label.error);
+    const address = text(input.address, "address", MAX_HOME_ADDRESS, false, HOME_CREDENTIAL);
+    if (address.error) return fail(address.error);
+    if (input.make_default !== undefined && typeof input.make_default !== "boolean") return fail("make_default must be true or false.");
+    return this.card(
+      { type: "home_save", label: label.value, address: address.value ?? null, make_default: input.make_default === true },
+      waiting(
+        "Save home",
+        "Save",
+        " The phone finds the address on the map, so they can check it on the card (or use where they are). Do not also " +
+          "save it as a note, a place or a memory.",
+      ),
     );
   }
 

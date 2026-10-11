@@ -8,12 +8,13 @@
 // chat function receives it, with the day planner's numbers for one day (chat/day.ts planForChat;
 // Pro cases only, with fake drive times and weather: no Mapbox or NWS request is made).
 import { ACTION_NAMES, ACTION_SPECS, ChatActions } from "../../supabase/functions/chat/actions.ts";
-import { CAN_ALARM, CAN_CALENDAR_ADD, CAN_HELP, CAN_REMINDER } from "../../supabase/functions/chat/phone_actions.ts";
+import { CAN_ALARM, CAN_CALENDAR_ADD, CAN_HELP, CAN_HOME, CAN_REMINDER } from "../../supabase/functions/chat/phone_actions.ts";
 import {
-  type Agenda, type AgendaEvent, AGENDA_TOOL, agendaCall, agendaSchema, withAgenda,
+  type Agenda, type AgendaEvent, type AgendaHomes, type AgendaRequest, AGENDA_TOOL, agendaCall, agendaSchema, withAgenda,
 } from "../../supabase/functions/chat/agenda.ts";
+import { readHomes } from "../../supabase/functions/chat/homes.ts";
 import { connectTools } from "../../supabase/functions/chat/tools.ts";
-import { type ChatPlan, planForChat } from "../../supabase/functions/chat/day.ts";
+import { type ChatPlan, type DayDeps, planForChat } from "../../supabase/functions/chat/day.ts";
 import type { DriveTimes } from "../../supabase/functions/_shared/dayplan/plan.ts";
 import type { Weather } from "../../supabase/functions/_shared/dayplan/nws.ts";
 import type { ToolContext } from "../../supabase/functions/mcp/tools/_shared.ts";
@@ -66,6 +67,8 @@ export interface TurnRecord {
   /** What the chat function would have sent the app from the actions (place cards, 📍 card). */
   events: Record<string, unknown>[];
   stop: StopReason;
+  /** The saved home each day plan of this turn started from (observed, never sent to the model). */
+  plannedFrom?: string[];
 }
 
 export interface RunRecord {
@@ -127,12 +130,15 @@ export interface RunOptions {
   planner?: { drives?: DriveTimes; weather?: Weather };
   /** The phone's time zone, as the app's chat sends it (else the calendar's, else none: UTC). */
   timeZone?: string;
-  /** An app too old for the alarm, reminder and calendar cards (it does not list them in "can"). */
+  /** An app too old for the alarm, reminder, calendar and home cards (it does not list them in "can"). */
   oldApp?: boolean;
+  /** An app that does not send the agenda_request's start_from back with the calendar (versionCode 19
+   * and older): the plan starts from the default home, and the model must name the home again. */
+  noHomeEcho?: boolean;
 }
 
-/** An app that shows the alarm, reminder and calendar cards (phone_actions.ts), as the cases assume. */
-export const PHONE_CAN: ReadonlySet<string> = new Set([CAN_ALARM, CAN_REMINDER, CAN_CALENDAR_ADD, CAN_HELP]);
+/** An app that shows the alarm, reminder, calendar, home and Help cards (phone_actions.ts), as the cases assume. */
+export const PHONE_CAN: ReadonlySet<string> = new Set([CAN_ALARM, CAN_REMINDER, CAN_CALENDAR_ADD, CAN_HOME, CAN_HELP]);
 
 export interface PhoneCalendar {
   time_zone: string;
@@ -170,6 +176,21 @@ export async function runConversation(
       const asked = messages.length; // the conversation as the app sends it, ending with this message
       let agenda: Agenda | undefined;
       let plan: ChatPlan | undefined;
+      const dayDeps: DayDeps = {
+        clientFor: () => world.client(),
+        drives: () => opts.planner?.drives ?? null,
+        weather: () => opts.planner?.weather ?? null,
+        log: () => {},
+      };
+      const noted = (p: ChatPlan) => {
+        if (p.made && p.plan.home.label) (turn.plannedFrom ??= []).push(p.plan.home.label);
+        return p;
+      };
+      // As the chat function: the homes read when the model names one, the day planned again from it.
+      const homes: AgendaHomes = {
+        list: () => readHomes(world.client()),
+        replan: async (homeId) => noted(await planForChat(dayDeps, world.client(), "eval-user", agenda!, { startFrom: homeId, gated: true })),
+      };
       for (let step = 0; ; step++) {
         if (step >= (opts.maxStepsPerTurn ?? 8)) {
           turn.stop = "other";
@@ -189,13 +210,14 @@ export async function runConversation(
         if (done.stop !== "tool_calls") break;
 
         const results: ToolResult[] = [];
-        let request: { from: string; to: string } | undefined;
+        let request: AgendaRequest | undefined;
         for (const c of done.turn.toolCalls) {
           let out: { isError: boolean; text: string };
           if (c.invalidInput) {
             out = { isError: true, text: "The tool arguments were not a JSON object." };
           } else if (c.name === AGENDA_TOOL) {
-            const a = agendaCall(c.input, !!opts.calendar, agenda, plan);
+            const a = await agendaCall(c.input, !!opts.calendar, agenda, plan, homes);
+            if (a.plan) plan = a.plan;
             if (a.request && !request) {
               turn.events.push(a.request);
               request = a.request;
@@ -215,15 +237,14 @@ export async function runConversation(
         if (request && opts.calendar) {
           // The app reads those days and sends the same conversation again, with the calendar.
           agenda = readCalendar(opts.calendar, request.from, request.to);
+          // A newer app sends the agenda_request's start_from back with it.
+          const startFrom = opts.noHomeEcho || opts.oldApp ? undefined : request.start_from?.home;
           // As the chat function: the planner for one day (Pro), its numbers with the calendar.
-          plan = await planForChat({
-            clientFor: () => world.client(),
-            drives: () => opts.planner?.drives ?? null,
-            weather: () => opts.planner?.weather ?? null,
-            log: () => {},
-          }, world.client(), "eval-user", agenda);
+          plan = noted(await planForChat(dayDeps, world.client(), "eval-user", agenda, { startFrom }));
           if (plan.made) turn.events.push({ type: "day_plan", date: agenda.from });
-          messages.splice(asked, messages.length - asked, ...withAgenda([], agenda, plan));
+          messages.splice(
+            asked, messages.length - asked, ...withAgenda([], agenda, plan, startFrom && plan.made ? plan.plan.home.label : undefined),
+          );
         }
       }
     }

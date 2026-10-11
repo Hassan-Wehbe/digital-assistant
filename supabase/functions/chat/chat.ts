@@ -12,7 +12,9 @@
 //           Optional "tz": the phone's time zone (e.g. "America/New_York"), so "today" is the
 //           user's day. Optional "can": ["calendar"] when the app reads the phone's calendar (and
 //           "alarm", "reminder", "calendar_add", "help" when it shows those cards, phone_actions.ts), and
-//           "agenda": {...}, the calendar it read for this message (agenda.ts: ask, then re-send).
+//           "agenda": {...}, the calendar it read for this message (agenda.ts: ask, then re-send), and
+//           "start_from": {"home": id} when the agenda_request carried one (plan from that saved home,
+//           D36). "home" in "can": the app shows the save-home card (phone_actions.ts).
 // Response: 401 without a valid sign-in, 400 for a malformed body, otherwise a stream of
 //           newline-delimited JSON events (application/x-ndjson):
 //             {"type":"notice","code":"allowance_low","message":...}   heads-up at 80%
@@ -23,9 +25,10 @@
 //              "new_secret":bool,"link":...}
 //             {"type":"places","cards":[...]}                          place cards (actions.ts)
 //             {"type":"location_request"}                             📍 Share where I am card
-//             {"type":"agenda_request","from":...,"to":...}            read the calendar, send again
+//             {"type":"agenda_request","from":...,"to":...,"start_from"?:{"home":id}}  read the calendar,
+//                                                                     send again (with start_from)
 //             {"type":"day_plan","date":...}                            the answer used a day plan: Open my day
-//             {"type":"alarm"|"show_alarms"|"reminder"|"find_reminders"|"calendar_add",...}  cards to confirm
+//             {"type":"alarm"|"show_alarms"|"reminder"|"find_reminders"|"calendar_add"|"home_save",...}  cards to confirm
 //             {"type":"help","topic"?}                                🛟 Help topics (changes nothing)
 //                                                                     on the phone (phone_actions.ts)
 //             {"type":"error","code":"allowance_used"|"service_paused"|"connection","message":...}
@@ -55,7 +58,10 @@ import { type CredentialKind, findCredential } from "../mcp/lib/credentials.ts";
 import { classify, classifyBody, type ClassifyLog } from "./classify.ts";
 import { ACTION_NAMES, ACTION_SPECS, ChatActions } from "./actions.ts";
 import { CONFIRM_TOOLS, confirmCard } from "./confirm.ts";
-import { type Agenda, AGENDA_TOOL, agendaCall, agendaSchema, CAN_CALENDAR, isTimeZone, withAgenda } from "./agenda.ts";
+import {
+  type Agenda, type AgendaHomes, AGENDA_TOOL, agendaCall, agendaSchema, CAN_CALENDAR, isTimeZone, withAgenda,
+} from "./agenda.ts";
+import { type Home, readHomes } from "./homes.ts";
 import {
   ALLOWANCE_LOW, allowanceUsed, type ChatErrorCode, ERROR_TEXT, heldText, REMOVED_TEXT, STATUS, STATUS_DEFAULT,
   TOO_MANY_STEPS,
@@ -139,6 +145,8 @@ const bodySchema = z.object({
   can: z.array(z.string().max(30)).max(10).optional(),
   /** The calendar the app read for this message (agenda.ts). */
   agenda: agendaSchema.optional(),
+  /** The saved home the agenda_request named, sent back with the calendar (D36). */
+  start_from: z.object({ home: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i) }).strict().optional(),
 });
 
 function jsonError(status: number, error: string, detail: string): Response {
@@ -239,7 +247,7 @@ export function createHandler(deps: ChatDeps): (req: Request) => Promise<Respons
           const { memory } = await runChat({
             deps, token, userId, messages, here: data.here, emit, signal: abort.signal,
             tz: data.tz ?? data.agenda?.time_zone, canCalendar: !!data.can?.includes(CAN_CALENDAR), agenda: data.agenda,
-            can: new Set(data.can ?? []),
+            can: new Set(data.can ?? []), startFrom: data.agenda ? data.start_from?.home : undefined,
           });
           if (memory) {
             // After `done`: the instance stays up for it even when the app has stopped reading.
@@ -292,6 +300,8 @@ interface RunArgs {
   can?: ReadonlySet<string>;
   /** The calendar the app read for this message (never stored or logged, counts aside). */
   agenda?: Agenda;
+  /** The saved home to plan the re-sent day from (home_place id; D36). */
+  startFrom?: string;
   emit: (event: Record<string, unknown>) => void;
   signal: AbortSignal;
 }
@@ -330,7 +340,7 @@ export function vaultEvents(tool: string, resultText: string): Record<string, un
  * object, so the async function hands the job back instead of waiting for it.)
  */
 async function runChat(
-  { deps, token, userId, messages, here, tz, canCalendar, can, agenda, emit, signal }: RunArgs,
+  { deps, token, userId, messages, here, tz, canCalendar, can, agenda, startFrom, emit, signal }: RunArgs,
 ): Promise<{ memory: Promise<RememberedEvent | null> | null }> {
   const log: LogEntry = {
     event: "chat", request: crypto.randomUUID(), user: userId, outcome: "ok",
@@ -382,7 +392,7 @@ async function runChat(
   let plan: ChatPlan | undefined;
   if (agenda) {
     // One day re-sent ("plan my day"): the planner's numbers go with the calendar (day.ts, Pro only).
-    plan = await planForChat(deps, db, userId, agenda);
+    plan = await planForChat(deps, db, userId, agenda, { startFrom });
     if (plan.made) {
       log.day_plan = "made";
       emit({ type: "day_plan", date: agenda.from });
@@ -390,7 +400,7 @@ async function runChat(
       log.day_plan = plan.reason;
     }
     // The calendar the app read for this question, as the result of the model's own call (agenda.ts).
-    messages = withAgenda(messages, agenda, plan);
+    messages = withAgenda(messages, agenda, plan, startFrom && plan.made ? plan.plan.home.label : undefined);
     log.agenda = "read";
     log.agenda_events = agenda.events.length;
   }
@@ -415,6 +425,12 @@ async function runChat(
     const specs = [...tools.specs, ...ACTION_SPECS];
     const actions = new ChatActions({ db, distanceUnit, here, can, tz, now: deps.now });
     const cards = new Set<string>();
+    // The user's homes, read once when the model names one (from_home); labels only reach the model.
+    let homeList: Promise<Home[]> | undefined;
+    const homes: AgendaHomes = {
+      list: () => (homeList ??= readHomes(db)),
+      replan: (homeId) => planForChat(deps, db, userId, agenda!, { startFrom: homeId, gated: true }),
+    };
     let lastStatus = "";
     let wrote = false; // text already sent this message: the next round's text starts a new paragraph
     for (let round = 0;; round++) {
@@ -456,7 +472,8 @@ async function runChat(
         }
         if (call.name === AGENDA_TOOL) {
           // Never run here: the phone's calendar comes from the app (agenda.ts).
-          const out = agendaCall(call.input, canCalendar, agenda, plan);
+          const out = await agendaCall(call.input, canCalendar, agenda, plan, homes);
+          if (out.plan) plan = out.plan;
           if (out.request && !askedApp) {
             emit({ type: "status", tool: call.name, text: STATUS[call.name] });
             emit(out.request);
