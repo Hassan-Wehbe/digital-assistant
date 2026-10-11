@@ -127,8 +127,8 @@ export const PHONE_ACTION_SPECS: ToolSpec[] = [
     description:
       "Chat app only. Shows the user a Help card with the app's short topics (notes, the vault, My day, alarms " +
       "and calendar, places, memory, spaces, privacy), opened at `topic` when one fits. For \"what can you do\", " +
-      "\"help\", \"how does this work\" and \"how do I …\" questions: answer in one or two short sentences, then call " +
-      "this. Never list every feature yourself. It changes nothing and saves nothing.",
+      "\"help\", \"how does this work\" and \"how do I …\" questions: answer in one or two short sentences and always call " +
+      "this too, even when your sentences answer. Never list every feature yourself. It changes nothing and saves nothing.",
     inputSchema: {
       type: "object",
       properties: {

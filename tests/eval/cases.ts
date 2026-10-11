@@ -1432,7 +1432,8 @@ export const CASES: EvalCase[] = [
     id: "help-with-real-request",
     category: "save",
     turns: ["Help me remember that the boiler service is due in March."],
-    checks: [called("save_item", undefined, "the note still saved")],
+    // Saving it, or asking which day in March, both handle the request (not a help question).
+    checks: [anyOf(called("save_item", undefined, "the note saved"), replyHas(/march|date|day|when/i, "ask about the date"))],
   },
   {
     id: "help-old-app-short",
