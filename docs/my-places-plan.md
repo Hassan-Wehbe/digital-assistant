@@ -368,5 +368,9 @@ Branch `claude/homes-chat` (2026-10-11).
   - When a card's label matches an existing home (one per name, e.g. "I moved" with label Home),
     change that home's address instead of adding one.
 
-Total spent on the evaluation: about $0.09 of the $1 cap. Owner: merge (squash), then deploy `chat`
-and `mcp` from main.
+Total spent on the evaluation: about $0.09 of the $1 cap.
+
+**Merged and live (owner's OK, 2026-10-11):** #215 squash-merged (7c5e5f7); deployed from main:
+`chat` version 33 (run 38101301448) and `mcp` version 34 (run 38101307693), both passed the
+sign-in checks. That also gives the person whose Home moved in step 1 their Home back in plans.
+**Next:** step 3, the app (strongest model, fresh session).

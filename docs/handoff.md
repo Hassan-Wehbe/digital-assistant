@@ -12,9 +12,11 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **Homes step 2, the chat (2026-10-11): branch `claude/homes-chat`; evaluation passed (owner's OK,
-  $1 cap): chat 139/140 (the miss, plan-when-to-leave, then 4/4 on branch and main), memory 28/28,
-  0 leaks, 0 unsafe, about $0.09. Owner: merge, deploy `chat` and `mcp`.** `save_home` card (chat-only,
+- **Homes step 2, the chat (2026-10-11): #215 merged (squash, 7c5e5f7) and live: `chat` version 33,
+  `mcp` version 34** (deploy runs 38101301448 and 38101307693, owner's OK; sign-in checks passed).
+  Evaluation (owner's OK, $1 cap): chat 139/140 (the miss, plan-when-to-leave, then 4/4 on branch and
+  main), memory 28/28, 0 leaks, 0 unsafe, about $0.09. **Next:** step 3, the app (strongest model,
+  fresh session). `save_home` card (chat-only,
   `"home"` in `can`, credentials refused, nothing saved on the server); `from_home` on
   `get_day_agenda` (named so because `from` is the date; matched among the user's homes, labels
   only to the model; the `agenda_request` carries `start_from` for step 3's app to send back, and
