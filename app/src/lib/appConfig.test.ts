@@ -194,6 +194,8 @@ describe('the calendar (day planner step 1)', () => {
   it('the permission is explained, and reminders are not asked for', () => {
     const options = pluginOptions('expo-calendar');
     expect(options?.calendarPermission).toMatch(/only when you ask about your day/);
+    // Adding events (D31 step 3) is said too, and only on a tap.
+    expect(options?.calendarPermission).toMatch(/adds an event only when you tap Add to calendar/);
     expect(options?.remindersPermission).toBe(false);
   });
 });

@@ -349,3 +349,41 @@ then test on the phone with the checklist.
 6. Ask for an event at a time you already have something: the card says "You have … then".
 7. Change a card's title to "garage code 4471": the card refuses, and Add to calendar is greyed.
 8. Turn off Use my calendar, ask for an event: the card says to turn it on; nothing is added.
+
+## As built: step 4 (wording, Data safety, checklist)
+
+Branch `claude/alarms-wording` (2026-10-11). **Merging publishes the privacy page, so it needs the
+owner's OK on the wording first.** One app text change ships with the build.
+
+- **The calendar permission text** (`app/app.json`, shown by Android/iOS when the permission is
+  asked): "…to answer and plan, **and adds an event only when you tap Add to calendar**. Nothing is
+  stored on Wilma's servers." `appConfig.test.ts` checks for it. Android already granted read and
+  write together, so people who allowed it before are not asked again.
+- **Settings → Calendars:** "Nothing is stored. Wilma adds an event only when you tap Add to calendar
+  on a card in the chat, and never changes or deletes one." (was "your calendar is never changed").
+  My day's "The plan is a suggestion: your calendar is not changed" stays: planning writes nothing.
+- **Privacy page** (`docs/legal/privacy.html`):
+  - The calendar paragraph: Wilma adds an event only on the **Add to calendar** tap, to a ticked
+    calendar you can change; written on the phone, nothing kept on the servers; never changes or
+    deletes an event, including its own.
+  - A new **"Alarms and reminders (Android)"** paragraph: cards, nothing without a tap; alarms go to
+    the phone's Clock (no copy kept, never changed or deleted by Wilma); reminders wait in the phone's
+    notification schedule until shown or cancelled (chat or Settings → Reminders), never on the
+    servers; password-like reminders refused (lock screen); sign-out and Delete account cancel them;
+    the request itself goes to the AI service like any chat message.
+  - Planning: "planning never changes your calendar". Notifications: the permission is also asked on
+    the first reminder.
+- **Play Data safety: no change** (`docs/phase4-play-release.md`, a new bullet): nothing new leaves
+  the phone or is kept; SET_ALARM is install-time with no form; the permission list is unchanged.
+- **Design:** D25 notes the change ("adds a single event on a tap; never edits or deletes"); D31
+  says built.
+- **Legal checklist:** an item for calendar writes and lock-screen reminders.
+- **`docs/versioncode20-phone-checklist.md`** now covers the whole build: homes, alarms and
+  reminders, calendar entries, tasks left open, Pick a day, Help.
+- 831 app tests; `expo export --platform android` bundles.
+
+**Owner:**
+1. Read the wording (the calendar paragraph and "Alarms and reminders (Android)" in the privacy
+   page, the permission text, Settings → Calendars) and say OK or what to change.
+2. Merge (squash) on your word. That publishes the page.
+3. "Build for Play" (versionCode 20), then the checklist.

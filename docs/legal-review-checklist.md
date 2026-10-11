@@ -37,6 +37,12 @@ and is a starting point, not legal advice.
 - [ ] **Calendar** (D25): read on the phone, chosen calendars only, needed lines sent to the AI
       provider, nothing stored; later Google connection under Google's Limited Use policy.
 - [ ] **Location** (D26 "Save where I am"): on-tap only, stored in the note; consent wording.
+- [ ] **Alarms, reminders and calendar entries** (D31, `docs/alarms-calendar-plan.md`): Wilma
+      adds events to the user's calendar (only on a tap, create only) and sets reminders that can
+      show on the lock screen. Check the wording (the calendar permission text, Settings → Calendars,
+      the privacy paragraphs); responsibility when an added event or a reminder is wrong (AI answers
+      can be wrong; the card shows everything before the tap); calendars shared with other people
+      (an added event is visible to them).
 - [ ] **Homes** (D36, `docs/my-places-plan.md`): home addresses and points stored with the
       account (not notes, never shared; a deleted home is gone for good, no revision); "Notice which
       home I'm at when I plan" (off until turned on) reads the location in the foreground while

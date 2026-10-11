@@ -125,6 +125,14 @@ reviewer account (`+playreview` email alias), never the owner's own sign-in or S
     request, which Google does not count as "sharing"; calendar events stay **processed
     ephemerally: Yes**. Re-check this before proactive alerts (a server asking on a schedule) and
     before purchases (Play Billing).
+  - **Alarms, reminders and calendar entries** (D31, `docs/alarms-calendar-plan.md`, from versionCode
+    20): **no change in the form.** What the user asks is chat text, already "Other user-generated
+    content" sent to the AI service for that answer. An alarm is set in the phone's own Clock app
+    (the install-time SET_ALARM permission, no prompt and no Play form); a reminder is a notification
+    scheduled on the phone; a calendar event is written to the phone's calendar on the tap. None of
+    them is sent to or kept on Wilma's servers, so nothing new is collected. *Calendar events* stays
+    **processed ephemerally: Yes** (reading is unchanged; writing happens on the device). Android
+    already granted calendar read and write together, so the permission list is unchanged.
   - **Homes** (D36, `docs/my-places-plan.md`, from versionCode 20): **no change in the form.**
     A home's name, address and point are stored with the account in `home_place` (not a note):
     the address is covered by "Other user-generated content" and the point by *Precise location*
