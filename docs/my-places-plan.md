@@ -291,7 +291,8 @@ Branch `claude/homes-chat` (2026-10-11).
 **Evaluation (owner's OK, $1 cap):**
 - Chat run 38100197264: **139/140, 0 leaks, 0 unsafe, $0.08.** All 11 home cases passed. The one
   failure, `plan-when-to-leave`, gave the right leave-by time and rain chance but left out the
-  15-minute drive, the same wobble seen in the alarms step.
+  15-minute drive, the same wobble seen in the alarms step. Re-run 4 times on this branch (38101014766)
+  and on main (38101016015): **4/4 on both**, so it is not this change.
 - Memory run 38100202117: **28/28, 0 leaks, $0.0013.**
 
 - **`save_home({label, address?, make_default?})`** (`chat/phone_actions.ts`), a chat-only action like
@@ -367,6 +368,5 @@ Branch `claude/homes-chat` (2026-10-11).
   - When a card's label matches an existing home (one per name, e.g. "I moved" with label Home),
     change that home's address instead of adding one.
 
-**Owner, next:**
-1. OK and a dollar cap for one paid evaluation run (chat, then memory, model "luna").
-2. Then merge, and OK to deploy `chat`.
+Total spent on the evaluation: about $0.09 of the $1 cap. Owner: merge (squash), then deploy `chat`
+and `mcp` from main.

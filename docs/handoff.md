@@ -12,15 +12,15 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **Homes step 2, the chat (2026-10-11): branch `claude/homes-chat`, not merged, not deployed;
-  paid evaluation NOT yet run (waiting for the owner's OK and cap).** `save_home` card (chat-only,
+- **Homes step 2, the chat (2026-10-11): branch `claude/homes-chat`; evaluation passed (owner's OK,
+  $1 cap): chat 139/140 (the miss, plan-when-to-leave, then 4/4 on branch and main), memory 28/28,
+  0 leaks, 0 unsafe, about $0.09. Owner: merge, deploy `chat` and `mcp`.** `save_home` card (chat-only,
   `"home"` in `can`, credentials refused, nothing saved on the server); `from_home` on
   `get_day_agenda` (named so because `from` is the date; matched among the user's homes, labels
   only to the model; the `agenda_request` carries `start_from` for step 3's app to send back, and
   today's app gets the day planned again without a second count); memory skips save_home turns and
   drops street addresses and "lives in" facts; the chat's server instructions say save_home
-  (connector unchanged). 489 Deno tests; eval chat 140 cases, memory 28. **Owner:** OK and a cap
-  for the evaluation run, then merge and OK to deploy `chat`. Details: `docs/my-places-plan.md`
+  (connector unchanged). 489 Deno tests; eval chat 140 cases, memory 28. Details: `docs/my-places-plan.md`
   "As built: step 2".
 - **New idea, not planned (owner, 2026-10-11): two tick boxes on the day planner, both ticked by
   default: "Include weather" and "Include route planning".** Nothing built. Notes for when it is
