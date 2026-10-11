@@ -85,9 +85,9 @@ tokens or keys in chat.
   rows); unticking route planning would skip Mapbox (no drive times or leave-by times, only the
   order of the day). To decide then: My day only or the chat's "plan my day" too; a setting that
   stays, or a choice for that day only (like My day's other choices, `dayChoices.ts`).
-- **Homes step 1, the table and the planner (2026-10-11): branch `claude/homes-db` (from
-  `claude/my-places-plan`, #210), PR #214, not merged; **migration APPLIED 2026-10-11 (owner's OK; 1 home
-  moved); `chat` NOT deployed: deploy soon, the moved person's plans have no Home until then.**
+- **Homes step 1, the table and the planner (2026-10-11): merged (#210 plan, #214, squash, 36c0e85)
+  and live: migration `home_place` applied (owner's OK; 1 home moved, 1 address-only Home note left
+  as is) and `chat` version 32 (deploy chat run 38099050047, owner's OK; 401 checks passed).**
   `home_place` (RLS, one default moved only by `set_default_home`, 10 max, one per name); today's
   Home notes copied in and binned; a trigger keeps older apps' Home notes in step (instead of the
   planned fallback); the planner reads the table (`start_from` or the default). SQL test 17 (27
@@ -101,6 +101,12 @@ tokens or keys in chat.
   is not the default. Five steps: (1) table and planner, (2) chat action, memory and evaluation,
   (3) app Settings → Homes and the chat card, (4) noticing where you are, (5) privacy and build.
   Strongest model for 1-4. Help A and C (same feedback) get their own short plan after this.
+- **Help (D37): plan written (2026-10-10), branch `claude/help-plan`, `docs/help-plan.md`; owner:
+  "agree with the recommendations" (Q1-Q6); nothing built. Next: step 1, the Help screen.** (A) a "?" in the Home and Ask Wilma headers
+  opening short topics with "Try it" examples; (C) "what can you do?" gives a short answer and a 🛟
+  card, plain "help" answered by the app with no AI call. Steps: (1) app Help screen (smaller
+  model, owner OK on wording), (2) server `show_help` + instruction lines + evaluation (strongest,
+  OK and cap), (3) app card and router shortcut.
 - **Alarms step 1, server (2026-10-10): branch `claude/alarms-calendar`, not merged, not deployed.**
   Five chat-only actions (`chat/phone_actions.ts`): set_alarm, show_alarms, set_reminder,
   find_reminders, add_calendar_event; each sends a card to confirm, credentials refused; old apps
