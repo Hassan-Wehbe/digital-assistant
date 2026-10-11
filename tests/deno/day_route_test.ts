@@ -11,7 +11,7 @@ import { IDS, type Item, World } from "../eval/world.ts";
 import { createHandler } from "../../supabase/functions/chat/chat.ts";
 import type { DayLog } from "../../supabase/functions/chat/day.ts";
 import { localTime } from "../../supabase/functions/chat/day.ts";
-import type { DriveTimes } from "../../supabase/functions/_shared/dayplan/plan.ts";
+import type { DayPlan, DriveTimes } from "../../supabase/functions/_shared/dayplan/plan.ts";
 import { mapboxDrives } from "../../supabase/functions/_shared/dayplan/mapbox.ts";
 import { nwsWeather } from "../../supabase/functions/_shared/dayplan/nws.ts";
 import { ALL_TOOLS } from "../../supabase/functions/mcp/tools/all.ts";
@@ -334,4 +334,53 @@ Deno.test("Home: measured from, never offered as a place nearby", async () => {
   const fromHome = await tool(w, "find_places", { near_place: "Home" });
   assert(!fromHome.isError, fromHome.text);
   assert(fromHome.text.includes("Aquatic Center"));
+});
+
+// ---- Homes to plan from (D36, migration home_place) ---------------------------------------------
+
+const MOMS = { lat: 28.55, lng: -81.38 };
+const HOME_ID = "00000000-0000-4000-8000-000000000301";
+const MOMS_ID = "00000000-0000-4000-8000-000000000302";
+
+Deno.test("day: the plan starts from the default home in home_place, not from a note", async () => {
+  const { w, client } = account();
+  w.homes = [
+    { id: HOME_ID, label: "Lake house", lat: 28.1, lng: -81.5, is_default: true },
+    { id: MOMS_ID, label: "Mom's", ...MOMS, is_default: false },
+  ];
+  const { post } = handler(client, fixed);
+  const plan = (await post(BODY)).json.plan as DayPlan;
+  assertEquals(plan.home, { set: true, label: "Lake house" }, "the table's default, though a Home note exists");
+});
+
+Deno.test("day: start_from plans from that home; another person's or a gone home falls back to the default", async () => {
+  const { w, client } = account();
+  w.homes = [
+    { id: HOME_ID, label: "Home", ...HOME, is_default: true },
+    { id: MOMS_ID, label: "Mom's", ...MOMS, is_default: false },
+  ];
+  const legs: string[] = [];
+  const drives: DriveTimes = {
+    leg: (from, to) => {
+      legs.push(`${from.lat},${from.lng}>${to.lat},${to.lng}`);
+      return Promise.resolve({ minutes: 15, typical_minutes: 10 });
+    },
+  };
+  const { post } = handler(client, drives);
+  const moms = (await post({ ...BODY, start_from: { home: MOMS_ID } })).json.plan as DayPlan;
+  assertEquals(moms.home, { set: true, label: "Mom's" });
+  assert(legs[0].startsWith(`${MOMS.lat},${MOMS.lng}>`), `the first drive leaves from Mom's: ${legs[0]}`);
+  // RLS hides another person's home, so the id reads nothing: the plan uses the default.
+  const other = (await post({ ...BODY, start_from: { home: "00000000-0000-4000-8000-0000000003ff" } })).json.plan as DayPlan;
+  assertEquals(other.home, { set: true, label: "Home" });
+});
+
+Deno.test("day: no home at all, or start_from that is not a home id, as before", async () => {
+  const { w, client } = account();
+  w.items = w.items.filter((i) => i.metadata?.kind !== "home");
+  const { post } = handler(client, fixed);
+  assertEquals(((await post(BODY)).json.plan as DayPlan).home, { set: false });
+  for (const bad of [{ home: "Mom's" }, { home: MOMS_ID, also: 1 }, "Mom's"]) {
+    assertEquals((await post({ ...BODY, start_from: bad })).status, 400, JSON.stringify(bad));
+  }
 });

@@ -218,3 +218,59 @@ build.
   "Try it" chips; (C) "what can you do?" in the chat, answered briefly with topic chips (an
   instruction change, so an evaluation run). Option B (trimming the first-run text) was declined.
   This gets its own short plan after this one, or alongside step 3 if the owner prefers.
+
+## As built: step 1 (database and planner)
+
+- **Migration `20261013120000_home_place.sql`:**
+  - `home_place` as planned, plus **one home per name** (so "plan from Mom's" names one home).
+  - RLS: own rows only. `anon` gets nothing.
+  - `authenticated` may insert, change the name, address and point, and delete. **The default
+    cannot be set or changed directly**: it moves only through `set_default_home(id)`, so there
+    is always exactly one. The first home saved becomes it, and deleting it passes it to the
+    oldest home left.
+  - At most 10 homes; a name is 1-60 characters; the point must be a real one.
+- **Today's Home notes:** each person's place note of kind `home` (in a searchable space, with a
+  point) is copied in as their default, and the note goes to the Recycle bin (Q2). No revision is
+  written: the note itself does not change.
+- **Changed from the plan: a database trigger instead of the planner's fallback.**
+  - Why: after the move, versionCode 19's "Where do you leave from?" would save a new Home note
+    that the planner ignored, so changing Home in that app would silently do nothing.
+  - What instead: saving such a note now updates the default home (or the home with the same
+    name) in the table, through `_home_from_note`.
+  - Result: older apps keep working fully, and the planner reads only the table.
+  - A note in a restricted space is never copied (rule 3).
+  - The trigger goes once versionCode 20 is the oldest app allowed.
+- **The planner** (`chat/day.ts readHome`) reads the home from `home_place`: the one in
+  `start_from: {"home": id}` when the app sends it, else the default. An id that is not yours (RLS)
+  or no longer there falls back to the default. It never reads Home notes now. My day, the chat's
+  "plan my day" and the morning briefing all go through it.
+- **Tests:**
+  - SQL test `tests/sql/17_home_place.sql` (27 checks) covers:
+    - two-user isolation;
+    - the default not settable directly;
+    - one default each;
+    - set_default_home only on your own homes;
+    - delete passing the default on;
+    - the limit and the name and point checks;
+    - anon refused;
+    - an older app's Home note updating the default, and never one from a restricted space;
+    - the move (the note to the bin, no revision, a second run changing nothing).
+  - Deno: 3 new in `day_route_test.ts` (the table's default over a note, `start_from` and its
+    fallback, a malformed `start_from` refused). The eval world gained a `home_place` table. 471
+    Deno tests.
+- **Checked locally:**
+  - All migrations, then all 17 SQL test files (370 checks, all pass), on a throwaway Postgres 16
+    with pgvector and stand-ins for Supabase's roles, `auth` and `storage`.
+  - The dry-run script against a database without the migration: 27/27 ok, nothing kept.
+  - The migration on a database holding an old-style Home note: the note became the default home
+    and went to the bin.
+- **Dry run for the real database:** `tests/sql/dry_runs/17_home_place_dry_run.sql`. It ends with
+  a deliberate error, so nothing is kept.
+
+**Owner, next:**
+1. OK to dry-run, then apply the migration to the project (Claude can do both through the
+   Supabase connector, or you paste the dry run in the SQL editor).
+2. Then merge, and OK to deploy `chat`.
+
+**Order matters:** apply the migration before deploying `chat`, because the new planner reads
+`home_place`.
