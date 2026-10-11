@@ -1,6 +1,6 @@
 # Handoff: state of the project and how to keep building
 
-Last updated 2026-10-11 (newest: homes step 4 on `claude/homes-notice`, and step 3, the app, merged as #216; before that: invite-only sign-up merged (#186) and live, versionCode 17 built and submitted, testers getting "Item not found" on the Play link; live `mcp` v30, `chat` v26 (places cuisine fix #188), `delete-account` deployed; see the first entry under "Where things stand"). Earlier: 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
+Last updated 2026-10-11 (newest: homes step 5 (privacy) on `claude/homes-privacy`, step 4 PR #217, and step 3, the app, merged as #216; before that: invite-only sign-up merged (#186) and live, versionCode 17 built and submitted, testers getting "Item not found" on the Play link; live `mcp` v30, `chat` v26 (places cuisine fix #188), `delete-account` deployed; see the first entry under "Where things stand"). Earlier: 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
 #102), with Expo patch updates (#98). Step 2, server, is live. Places step 5b ("places near me",
 server) **merged and live** (#104, `mcp` v13, `chat` v6; first entry below). Then step 6, the places build, which also carries the mic fix #91. Play Console:
 Data safety and other forms saved, **not yet sent for review**; see the first entry below).
@@ -12,6 +12,14 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Homes step 5, privacy and build (2026-10-11): branch `claude/homes-privacy` (on step 4,
+  #217), not merged; docs only. Needs the owner's OK on the privacy wording (merging publishes
+  it).** Privacy page: "Your homes" item, the Location paragraph covers "Notice which home I'm at"
+  (never sent or stored by Wilma), AI sees home names only, memory never keeps home addresses.
+  Play Data safety: **no change** (reasons in `docs/phase4-play-release.md`). Legal checklist
+  item; D36 updated; `docs/versioncode20-phone-checklist.md` (homes). **Then:** "build for Play"
+  (versionCode 20) once the rest of that build is merged. Details: `docs/my-places-plan.md` "As
+  built: step 5".
 - **Homes step 4, noticing where you are (2026-10-11): branch `claude/homes-notice` (on main
   after #216), not merged, no PR yet. App only; ships with versionCode 20.**
   Settings → Homes → "Notice which home I’m at when I plan" (off until turned on; asks for the

@@ -125,6 +125,14 @@ reviewer account (`+playreview` email alias), never the owner's own sign-in or S
     request, which Google does not count as "sharing"; calendar events stay **processed
     ephemerally: Yes**. Re-check this before proactive alerts (a server asking on a schedule) and
     before purchases (Play Billing).
+  - **Homes** (D36, `docs/my-places-plan.md`, from versionCode 20): **no change in the form.**
+    A home's name, address and point are stored with the account in `home_place` (not a note):
+    the address is covered by "Other user-generated content" and the point by *Precise location*
+    (collected, optional, stored, so "processed ephemerally" stays **No**), both already declared.
+    "Notice which home I'm at when I plan" (off until turned on) reads the location in the
+    foreground while planning and compares it **on the phone**; the reading never leaves the
+    device, and Google does not count data processed only on the device as collected. Only home
+    names go to the AI service (on our behalf, not "sharing"). Background location stays blocked.
   - Not collected: contacts, messages, health, financial info, web browsing,
     device IDs, analytics or crash data (the app has none of these).
   - Vault values are end-to-end encrypted, so no one but the user can read them. Google's form
