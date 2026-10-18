@@ -40,11 +40,17 @@ export interface TaskMetadata {
   planned_at?: string;
   /** Not done by the end of planned_at's day: marked done, or moved to the next day (D35). */
   day_end?: TaskDayEnd;
+  /** One of a routine's tasks (D39): the routine item's id; its schedule sets repeat and the dates. */
+  routine_id?: string;
+  /** A routine task: the first day it may be done (due_on is the last); not overdue in between. */
+  window_from?: string;
+  /** A routine task: the last day of a period it was missed in (Q6: passed by, not carried over). */
+  missed_on?: string;
 }
 
 const FIELDS = [
   "status", "priority", "due_on", "duration_min", "duration_estimated", "place_id", "address", "done_at", "planned_at",
-  "repeat", "last_done_on", "day_end",
+  "repeat", "last_done_on", "day_end", "routine_id", "window_from", "missed_on",
 ];
 
 export class TaskError extends Error {}
@@ -173,6 +179,21 @@ export function normalizeTask(input: Record<string, unknown> | null | undefined,
   const dayEnd = word(m.day_end, "day_end", TASK_DAY_ENDS);
   if (dayEnd && out.planned_at && !out.repeat) out.day_end = dayEnd;
 
+  // A routine's task (D39): the routine is checked to be the user's own by save_item / update_item,
+  // which also set repeat and the window from its schedule (routines.ts).
+  if (m.routine_id !== undefined && m.routine_id !== null && m.routine_id !== "") {
+    if (typeof m.routine_id !== "string" || !UUID.test(m.routine_id.trim())) fail("routine_id must be the id of a routine");
+    out.routine_id = (m.routine_id as string).trim().toLowerCase();
+  }
+  const windowFrom = taskDate(m.window_from, "window_from");
+  const missed = taskDate(m.missed_on, "missed_on");
+  if ((windowFrom || missed) && !out.routine_id) fail("window_from and missed_on are only for a routine's task");
+  if (windowFrom) {
+    if (out.due_on && windowFrom > out.due_on) fail("window_from must be on or before due_on");
+    out.window_from = windowFrom;
+  }
+  if (missed) out.missed_on = missed;
+
   if (status === "done") out.done_at = moment(m.done_at, "done_at") ?? now.toISOString();
   return out;
 }
@@ -240,7 +261,7 @@ export function taskText(t: TaskMetadata): string {
   const lines = [
     `Task: ${t.status === "done" ? `done${t.done_at ? ` ${t.done_at.slice(0, 10)}` : ""}` : "to do"}`,
     t.priority === "important" && "Important",
-    t.due_on && `Due: ${t.due_on}`,
+    t.window_from && t.due_on && t.window_from !== t.due_on ? `Any day from ${t.window_from} to ${t.due_on}` : t.due_on && `Due: ${t.due_on}`,
     t.duration_min && `Takes ${t.duration_estimated ? "about " : ""}${t.duration_min} min`,
     t.address && `Where: ${t.address}`,
     t.repeat && `Repeats: ${REPEAT_WORDS[t.repeat]}`,

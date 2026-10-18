@@ -6,6 +6,8 @@ import { rejectCredentials } from "../lib/credentials.ts";
 import { assertOnlyHome, HOME_KIND, isPlace, normalizePlace, PLACE_KINDS, visiblePlaces, withPlace } from "../lib/places.ts";
 import { isTask, normalizeTask, type TaskMetadata, TASKS_SPACE, tasksSpace, withTask } from "../lib/tasks.ts";
 import { withLinkLocation } from "../lib/maps_link.ts";
+import { isRoutine, normalizeRoutine, type RoutineMetadata, routineWords, withRoutine } from "../lib/routines.ts";
+import { loadRoutine, userToday } from "../lib/routine_tasks.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
 export const registerSaveItem: RegisterTool = (server, { db, accessToken, assistantName, timeZone }) => {
@@ -47,7 +49,15 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
         let place = isPlace(item_type) ? normalizePlace(metadata) : null;
         if (place?.kind === HOME_KIND) await assertOnlyHome(db);
         // A task's fields too; its place must be one of the user's own visible saved places.
-        const task: TaskMetadata | null = isTask(item_type) ? normalizeTask(metadata, new Date(), timeZone) : null;
+        let task: TaskMetadata | null = isTask(item_type) ? normalizeTask(metadata, new Date(), timeZone) : null;
+        // A routine (D39) is kept in the Tasks space; a routine's task gets the routine's schedule
+        // (the routine must be the user's own).
+        const today = userToday(undefined, timeZone);
+        const routine: RoutineMetadata | null = isRoutine(item_type) ? normalizeRoutine(metadata, today) : null;
+        if (task?.routine_id) {
+          const loaded = await loadRoutine(db, task.routine_id, today);
+          task = withRoutine(task, loaded.id, loaded.routine, today);
+        }
         const placeTitle = task?.place_id ? await taskPlaceTitle(db, task.place_id) : undefined;
         const spaces = await loadSpaces(db);
         let target: Space | undefined;
@@ -59,19 +69,23 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
             // "Tasks" before it exists: made on the first task.
             if (!task || space.trim().toLowerCase() !== TASKS_SPACE.toLowerCase()) throw e;
           }
-        } else if (!task) throw new Error("Say which space to save it in (space).");
+        } else if (!task && !routine) throw new Error("Say which space to save it in (space).");
+        if (routine && target && !isTasksSpace(target, spaces)) {
+          throw new Error(`A routine is kept in the ${TASKS_SPACE} space; save it without a space.`);
+        }
         if (!target) ({ space: target, created: createdTasksSpace } = await tasksSpace(db, spaces));
         // A Maps link with coordinates and no location: the location is read from the link (Q15).
         let locationFromLink = false;
         if (place) ({ place, filled: locationFromLink } = withLinkLocation(place));
-        const chunks = await chunkAndEmbed({ title, summary, body: withTask(withPlace(body, place), task) });
+        const searchable = routine ? `${body.trim() ? `${body}\n\n` : ""}Routine: ${routineWords(routine)}` : withTask(withPlace(body, place), task);
+        const chunks = await chunkAndEmbed({ title, summary, body: searchable });
         const { data, error } = await db.rpc("save_item", {
           p_space_id: target.id,
           p_item_type: item_type,
           p_title: title,
           p_body: body,
           p_summary: summary ?? null,
-          p_metadata: place ?? task ?? metadata ?? {},
+          p_metadata: place ?? task ?? routine ?? metadata ?? {},
           p_tags: tags ?? [],
           p_chunks: chunks,
         });
@@ -86,11 +100,18 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
           search_index: pending ? "keyword search now; meaning search within a few seconds" : "ready",
           ...(locationFromLink ? { location: "read from the Google Maps link" } : {}),
           ...(task ? { task: { ...task, ...(placeTitle ? { place: placeTitle } : {}) } } : {}),
+          ...(routine ? { routine: { ...routine, schedule: routineWords(routine) } } : {}),
           ...(createdTasksSpace ? { created_space: TASKS_SPACE } : {}),
         });
       }),
   );
 };
+
+/** The account's Tasks space: the built-in one, or (an older account) the top-level one named Tasks. */
+export function isTasksSpace(s: Space, spaces: Space[]): boolean {
+  const builtIn = spaces.find((x) => x.built_in === "tasks");
+  return builtIn ? s.id === builtIn.id : !s.parent_id && s.name.trim().toLowerCase() === TASKS_SPACE.toLowerCase();
+}
 
 /** The title of the saved place a task points at; an error when the user has no such visible place. */
 export async function taskPlaceTitle(db: Parameters<typeof visiblePlaces>[0], placeId: string): Promise<string> {

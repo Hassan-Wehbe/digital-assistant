@@ -1,6 +1,7 @@
 # Routines: weekly and monthly task groups
 
-Status: plan, 2026-10-18. **Owner's answers given the same day (Q1-Q9, below "Decided").** Design: D39 (and D25, the
+Status: plan, 2026-10-18. **Owner's answers given the same day (Q1-Q9, below "Decided").** **Step 1 built
+(2026-10-18), branch `claude/routines-server`, not applied, not deployed:** see "As built: step 1". Design: D39 (and D25, the
 day planner; D35, tasks left open at the end of their day). Mockups: the owner's private canvas
 "Wilma Home and Planners", screens 5-7. Model: the strongest for steps 1, 2 and 4 (the task model,
 the planner, the chat); a smaller one is fine for step 5.
@@ -162,3 +163,53 @@ suggestions ("You have 2 hours free after lunch; vacuuming and groceries would f
    routine", "what's left this month"; evaluation cases with password traps (rule 9).
 5. **Help, checklist, build (smaller model).** A Help topic line, the build's phone checklist,
    privacy page re-check (expected: no change), then the build.
+
+## As built: step 1 (2026-10-18)
+
+Server only; nothing in the app or the chat's wording yet, so testers see no change.
+
+- **`mcp/lib/routines.ts`** (no database): `normalizeRoutine` (repeat `weekly` | `biweekly` |
+  `monthly`; when `any_day` | `same_day` (weekly kinds, `day` 0 Sunday … 6 Saturday) | `by_day`
+  (monthly, `day` 1-31); `starts_on`, the first day, which also fixes an every-two-weeks routine's
+  weeks; `suggest`, on by default), `routineWords` ("Every Saturday", "By the 28th each month"),
+  `periodOn` / `periodAfter` (weeks Sunday to Saturday; "by the 31st" is the month's last day when
+  shorter), `withRoutine` (a task gets the routine's repeat and the period today is in, the next
+  one when it was done in this one), `routineTaskDone` (the next period, done early or late),
+  `settleRoutineTask` (missed: the period today is in, `missed_on` kept, the picked time dropped;
+  Q6).
+- **Task fields** (`mcp/lib/tasks.ts`): `routine_id`, `window_from` (on or before `due_on`) and
+  `missed_on`, the last two only on a routine's task. Search text says "Any day from … to …".
+- **`mcp/lib/routine_tasks.ts`**: `findRoutine` / `loadRoutine` (the user's own live routine, via
+  `get_item`), `loadRoutines`, `tasksOfRoutine` (searchable spaces only, at most 50),
+  `bringTasksInStep` (each task whose dates change is written through `update_item`, so a revision
+  is kept, and re-indexed), `userToday`.
+- **Tools** (same descriptions, so the model's view is unchanged):
+  - `save_item`: `item_type "routine"` is checked and kept in the Tasks space (another space is
+    refused); a task with `routine_id` must name one of the user's routines (not a note, not
+    someone else's, not one in the bin) and gets its dates from it.
+  - `update_item`: a routine's schedule change brings its tasks in step (`tasks_in_step`); a
+    routine cannot move out of Tasks; ticking a routine's task moves it to the next period; a task
+    whose routine is gone (in the bin) ticks like a plain repeating task.
+  - `find_tasks`: a routine's task shows `routine` (id and title), `window_from` and `missed_on`;
+    `due_by` counts it from the first day of its window; a missed one is shown in its new period
+    (read-only, as D35's day end; My day will write it, step 2); never "overdue" inside its window.
+- **Migration `20261019120000_routines.sql`**: table `task_not_today` (user, task, day; RLS own
+  rows; a row only for the user's own live task in a searchable space; a day from two days ago to
+  400 days ahead; rows older than two days dropped as new ones are written; authenticated may
+  read, add (task and day only) and remove, never change; anon nothing). `delete_item`,
+  `restore_item`, `purge_item` and `deleted_item_files` replaced: a routine takes its live tasks
+  into the bin at the same moment, restore brings back only those (a task binned on its own stays),
+  purge deletes them for good with their files; every other item exactly as before. Nothing uses
+  `task_not_today` until step 2.
+- Tests: Deno `tests/deno/routines_test.ts` (17: fields, every kind of period, done, missed, the
+  tools, the bin) and the fake database (`tests/eval/world.ts`) bins a routine's tasks the same
+  way; **509 Deno tests pass**. SQL test `tests/sql/19_routines.sql`, **30 checks, passed locally**
+  (Postgres 16 with a small stand-in for the Supabase tables), and the dry run rolled back there
+  with 30 "ok": true.
+- `db/schema.sql`: a "Routines" section.
+
+**Owner, in order:** (1) run the dry run `tests/sql/dry_runs/19_routines_dry_run.sql` in the
+Supabase SQL editor (a new, empty query; all 30 must say `"ok": true`); (2) OK to apply the
+migration (Claude tries the connector; if it times out again, you run the migration file in the
+SQL editor); (3) merge; (4) OK to deploy **`mcp` and `chat`** (both load these tools). Optional: one
+evaluation run with a small cap to show nothing regressed (the tool descriptions did not change).

@@ -4,6 +4,8 @@ import { addressedAs } from "../lib/assistant.ts";
 import { placeScope, visiblePlaces } from "../lib/places.ts";
 import { normalizeTask, type TaskMetadata, TASK_TYPE, taskDate } from "../lib/tasks.ts";
 import { atDayEnd } from "../lib/day_end.ts";
+import { settleRoutineTask } from "../lib/routines.ts";
+import { loadRoutines, userToday } from "../lib/routine_tasks.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
 /** At most this many tasks are read per call; plenty for one person's list. */
@@ -100,13 +102,21 @@ export const registerFindTasks: RegisterTool = (server, { db, assistantName, tim
         // Checked again here, whatever the database returned (rule 3).
         const rows = ((data ?? []) as (TaskRow & { item_type: string; deleted_at: string | null })[])
           .filter((r) => r.item_type === TASK_TYPE && !r.deleted_at && scope.has(r.space_id));
-        // A task whose day ended is shown done or moved, as the user chose (D35); read-only here,
-        // My day writes it.
+        // A task whose day ended is shown done or moved, as the user chose (D35); a routine's task
+        // missed in its period is shown in the next one (D39, Q6). Read-only here; My day writes it.
         const now = Date.now();
+        const day = userToday(today, timeZone, now);
+        const routines = rows.some((r) => r.metadata?.routine_id) ? await loadRoutines(db, day) : new Map();
         const matching = rows
-          .map((r) => ({ row: r, t: atDayEnd(fieldsOf(r.metadata), { now, tz: timeZone, today }).task }))
+          .map((r) => {
+            let t = atDayEnd(fieldsOf(r.metadata), { now, tz: timeZone, today }).task;
+            const routine = t.routine_id ? routines.get(t.routine_id) : undefined;
+            if (routine) t = settleRoutineTask(t, routine.routine, day).task;
+            return { row: r, t, routine };
+          })
           .filter(({ t }) => status === "all" || t.status === status)
-          .filter(({ t }) => !dueBy || (t.due_on ? t.due_on <= dueBy : includeUndated));
+          // A routine's task counts from the first day of its window ("any day this month").
+          .filter(({ t }) => !dueBy || ((t.window_from ?? t.due_on) ? (t.window_from ?? t.due_on)! <= dueBy : includeUndated));
 
         const rank = (t: TaskMetadata) => t.due_on ?? "9999-99-99";
         matching.sort((a, b) =>
@@ -118,7 +128,7 @@ export const registerFindTasks: RegisterTool = (server, { db, assistantName, tim
 
         const placeIds = shown.map(({ t }) => t.place_id).filter((id): id is string => !!id);
         const places = await visiblePlaces(db, placeIds);
-        const tasks = shown.map(({ row, t }) => {
+        const tasks = shown.map(({ row, t, routine }) => {
           const place = t.place_id ? places.get(t.place_id) : undefined;
           return {
             id: row.id,
@@ -135,6 +145,9 @@ export const registerFindTasks: RegisterTool = (server, { db, assistantName, tim
             ...(t.address ? { address: t.address } : {}),
             ...(t.planned_at ? { planned_at: t.planned_at } : {}),
             ...(t.repeat ? { repeat: t.repeat } : {}),
+            ...(routine ? { routine: { id: routine.id, title: routine.title } } : {}),
+            ...(t.window_from ? { window_from: t.window_from } : {}),
+            ...(t.missed_on ? { missed_on: t.missed_on } : {}),
             ...(t.last_done_on ? { last_done_on: t.last_done_on } : {}),
             ...(t.done_at ? { done_at: t.done_at } : {}),
           };

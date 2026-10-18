@@ -535,13 +535,26 @@ function rpc(w: World, name: string, p: Record<string, unknown>): Result {
     case "delete_item": {
       const i = live(p.p_item_id);
       if (!i) return err("item not found", "P0002");
-      i.deleted_at = now();
+      const at = now();
+      i.deleted_at = at;
+      // A routine takes its live tasks with it, at the same moment (20261019120000_routines.sql).
+      if (i.item_type === "routine") {
+        const tasks = w.liveItems().filter((t) => t.item_type === "task" && t.metadata.routine_id === i.id);
+        for (const t of tasks) t.deleted_at = at;
+        return ok({ item_id: i.id, title: i.title, in_recycle_bin: true, tasks: tasks.length });
+      }
       return ok({ item_id: i.id, title: i.title, in_recycle_bin: true });
     }
     case "restore_item": {
       const i = item(p.p_item_id);
       if (!i || !i.deleted_at) return err("item not found in the recycle bin", "P0002");
+      const at = i.deleted_at;
       i.deleted_at = null;
+      if (i.item_type === "routine") {
+        const tasks = w.items.filter((t) => t.item_type === "task" && t.metadata.routine_id === i.id && t.deleted_at === at);
+        for (const t of tasks) t.deleted_at = null;
+        return ok({ item_id: i.id, title: i.title, restored: true, tasks: tasks.length });
+      }
       return ok({ item_id: i.id, title: i.title, restored: true });
     }
     case "list_deleted_items":
@@ -556,6 +569,12 @@ function rpc(w: World, name: string, p: Record<string, unknown>): Result {
     case "purge_item": {
       const i = item(p.p_item_id);
       if (!i || !i.deleted_at) return err("item not found in the recycle bin", "P0002");
+      if (i.item_type === "routine") {
+        const at = i.deleted_at;
+        const gone = w.items.filter((t) => t.item_type === "task" && t.metadata.routine_id === i.id && t.deleted_at === at);
+        w.items = w.items.filter((x) => x !== i && !gone.includes(x));
+        return ok({ item_id: i.id, title: i.title, purged: true, tasks: gone.length });
+      }
       w.items = w.items.filter((x) => x !== i);
       return ok({ item_id: i.id, title: i.title, purged: true });
     }
