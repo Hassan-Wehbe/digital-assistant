@@ -6,7 +6,7 @@ routines (D39), then the date night and family day planners (D40) with a Vacatio
 the rest of D30. Design: D38. Model: the strongest for step 1 (a new table, RLS, restricted spaces);
 a smaller one is fine for step 2 (app layout) and step 3 (checklist and build).
 
-**Step 1 built (2026-10-18), branch `claude/favourite-spaces`, not applied:** see "As built: step 1".
+**Step 1 built and its migration applied (2026-10-18), PR #222:** see "As built: step 1".
 
 Mockups: the owner's private canvas "Wilma Home and Planners" (screens 1 and 2 for this plan;
 3-7 are for D39 and D40).
@@ -107,3 +107,9 @@ ends with the error "DRY RUN RESULTS (rolled back): [...]" on purpose, and all 3
 `"ok": true`; (2) say OK to apply the migration (Claude can apply it through the Supabase connector
 at your request, as for memory step 1, or you run the migration file in the SQL editor); (3) merge.
 Nothing in the app uses it until step 2, so applying it early changes nothing for testers.
+
+**Applied (2026-10-18):** the owner's dry run passed (34 "ok": true); the Supabase connector timed out
+twice without applying anything, so the owner ran the migration file in the SQL editor. Checked
+read-only afterwards: `space_favourite` exists with RLS on, `set_favourite_spaces` (security definer)
+and `my_favourite_spaces` exist, anon can neither read the table nor call either function,
+authenticated can read the table and call both but cannot insert, update or delete, 0 rows.
