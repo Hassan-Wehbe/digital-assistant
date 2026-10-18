@@ -6,7 +6,9 @@ routines (D39), then the date night and family day planners (D40) with a Vacatio
 the rest of D30. Design: D38. Model: the strongest for step 1 (a new table, RLS, restricted spaces);
 a smaller one is fine for step 2 (app layout) and step 3 (checklist and build).
 
-**Step 1 built and its migration applied (2026-10-18), PR #222:** see "As built: step 1".
+**Step 1 built and its migration applied (2026-10-18), PR #222:** see "As built: step 1". **Step 2
+built (2026-10-18), branch `claude/home-cleanup-app`, not merged; app only, ships with the build
+after versionCode 20:** see "As built: step 2".
 
 Mockups: the owner's private canvas "Wilma Home and Planners" (screens 1 and 2 for this plan;
 3-7 are for D39 and D40).
@@ -113,3 +115,50 @@ twice without applying anything, so the owner ran the migration file in the SQL 
 read-only afterwards: `space_favourite` exists with RLS on, `set_favourite_spaces` (security definer)
 and `my_favourite_spaces` exist, anon can neither read the table nor call either function,
 authenticated can read the table and call both but cannot insert, update or delete, 0 rows.
+
+## As built: step 2 (2026-10-18)
+
+App only; no server change, no evaluation, no new permission.
+
+- **Home** (`app/index.tsx`): four tiles, Chat, My day (PRO as before), Tasks, Vault. Save here is
+  now "📍 Save where I am" in the ＋ menu (same New note screen, location read only after that tap).
+  Under the cards: **Plan with Wilma** (`components/PlanRow.tsx`, `lib/planners.ts`): My day, and
+  Date night, Family day and Vacation marked SOON (dashed); a SOON tap shows one line on the phone
+  (no AI request). Then **Favourites** (or **Spaces** until one is chosen) as a 3-column grid
+  (`components/SpaceGrid.tsx`: a coloured initial and the last part of the name, no descriptions)
+  and **All spaces (N) ›**; "+ New space" shows there only when there are no spaces yet (it stays
+  on All spaces). With no favourites: the 6 opened most recently (was 5) and "Tap ☆ on a space to
+  keep it here."
+- **Favourites** (`lib/favourites.ts`): `loadFavourites` / `saveFavourites` call
+  `my_favourite_spaces` / `set_favourite_spaces` with `supabase.rpc`; a list that cannot be read is
+  null and Home falls back to recent spaces. `toggleFavourite` refuses a seventh on the phone;
+  `moveFavourite`; `canBeFavourite` (never Tasks, a restricted space or one under one).
+- **`lib/homeSpaces.ts`**: `homeSpaces(spaces, recent, favourites)` shows the favourites in their
+  order when there are any; `hiddenSpaceIds` (restricted spaces and every space whose path is
+  under one) now also keeps **spaces nested under a restricted space off Home's recent list**,
+  which before checked only the space's own flag (a small rule 3 fix found while building this).
+- **All spaces** (`app/spaces.tsx`): FAVOURITES ON HOME with Edit (↑ ↓ ✕ per row, a tap on a space
+  below adds it, at most 6), then the other spaces as chips, then LOCKED (restricted, dimmed, never
+  opened from here, as before). The list is saved from what is shown, so a favourite the server no
+  longer returns is never sent back.
+- **A space's screen** (`app/space/[id].tsx`): ☆ / ★ next to Edit, shown only once the list is read
+  and the space may be one; the server's message if it refuses ("That space cannot be a
+  favourite.").
+- **Help**: Places says "＋ → 📍 Save where I am"; Spaces adds "Tap ☆ on a space to keep it on Home
+  (up to 6)."
+- Tests: 844 app tests (13 new: `favourites.test.ts`, `planners.test.ts`, favourites in
+  `homeSpaces.test.ts`); lint and typecheck clean; `expo export --platform android` bundles.
+
+**Phone checks (with the build after versionCode 20):**
+
+1. Home: four tiles (Chat, My day, Tasks, Vault); ＋ has "📍 Save where I am" and it still asks for
+   the location only then.
+2. Plan with Wilma: My day opens My day (or the Pro card on Free); Date night, Family day and
+   Vacation each show their one line.
+3. No favourites yet: Spaces shows up to 6 recent ones in a grid, with the ☆ hint.
+4. Open a space, tap ☆: it turns ★; back on Home the header says Favourites and shows it.
+5. All spaces → Edit: move one up and down, remove one, add one from the chips; a seventh says "at
+   most 6". Tasks and anything under a locked space cannot be added; locked spaces stay at the
+   bottom.
+6. A restricted space never appears on Home, recent or favourite; nor does a space inside one.
+7. Sign out and in on a second phone (or reinstall): the favourites are still there.

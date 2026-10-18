@@ -13,6 +13,14 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Home clean-up step 2, the app (2026-10-18): branch `claude/home-cleanup-app` (from
+  `claude/favourite-spaces`, #222), not merged; app only, ships with the build after versionCode
+  20.** Four tiles (Chat, My day, Tasks, Vault), Save where I am in ＋, Plan with Wilma (My day;
+  Date night, Family day, Vacation SOON), favourite spaces in a 3-column grid (recent ones until
+  one is chosen), All spaces with Edit (↑ ↓ ✕, add), ☆ on a space. Also: spaces under a restricted
+  space no longer show on Home's recent list. 844 app tests, bundles. **Owner:** merge #221, #222,
+  then this; phone checks in `docs/home-cleanup-plan.md` "As built: step 2". **Next:** step 3
+  (checklist and build), then routines (D39, plan to write; strongest model).
 - **Home clean-up step 1, favourite spaces on the server (2026-10-18): branch
   `claude/favourite-spaces` (from `claude/home-cleanup-plan`, #221), PR #222. Migration applied
   2026-10-18 (owner's dry run passed; the Supabase connector timed out twice without applying, so
