@@ -13,6 +13,13 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Routines plan written (2026-10-18): branch `claude/routines-plan`, docs only; waiting for
+  the owner's answers Q1-Q9.** `docs/routines-plan.md`: a routine is an item (`item_type
+  routine`) in the Tasks space; its tasks are ordinary tasks with `routine_id`, kept in step by one
+  server module; a new `window_from` lets a weekly or monthly task be done any day of its period
+  without showing as overdue; My day proposes up to 3 that fit free time, worked out by code (no
+  AI cost); Add / ✕ Not today. Five steps (server, planner, app, chat, build). **Next:** the
+  owner's answers, then step 1 (strongest model).
 - **Home clean-up step 1, favourite spaces on the server (2026-10-18): branch
   `claude/favourite-spaces` (from `claude/home-cleanup-plan`, #221), PR #222. Migration applied
   2026-10-18 (owner's dry run passed; the Supabase connector timed out twice without applying, so
