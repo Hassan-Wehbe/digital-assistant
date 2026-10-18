@@ -13,6 +13,14 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **New order and three decisions (owner, 2026-10-18; docs only, branch `claude/home-cleanup-plan`).**
+  After mockups (the owner's private canvas "Wilma Home and Planners"): (1) **Home clean-up and
+  favourite spaces** (D38, `docs/home-cleanup-plan.md`): four tiles, Save here into ＋, a Plan with
+  Wilma row (Date night, Family day, Vacation as Soon), up to 6 favourites kept on the server; (2)
+  **routines**, weekly and monthly task groups that My day proposes when it sees free time, monthly
+  ones any day (D39, plan to come); (3) **date night and family day planners** with a small
+  household setting (D40, plan to come; Vacation a placeholder). Then D34 and D32. **Next:** clean-up
+  step 1, the `space_favourite` migration (strongest model); the owner runs its dry run.
 - **versionCode 20 is ready to build once alarms step 4 merges (2026-10-11).** Merged today on the
   owner's "merge all" (conflicts resolved keeping both sides): #207 and #208 (alarm, reminder and
   calendar entry cards), #209 (My day opens the day asked for, 📅 Pick a day), #211, #212 and #213
