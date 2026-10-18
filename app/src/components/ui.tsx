@@ -217,7 +217,7 @@ export function IconButton({
   );
 }
 
-/** One action tile (💬 Chat, 📍 Save here, 🔒 Vault); tiles sit in a row and share its width. */
+/** One action tile (💬 Chat, 🌅 My day, 🔒 Vault); tiles sit in a row and share its width. */
 export function Tile({
   icon,
   title,

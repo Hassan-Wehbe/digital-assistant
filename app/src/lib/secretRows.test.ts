@@ -103,10 +103,12 @@ describe('the Vault list', () => {
 
 describe('home', () => {
   // Password-only spaces (like Logins) are ordinary spaces: All spaces lists every space it is
-  // given, and Home leaves out only Tasks and restricted ones (homeSpaces.ts), never by contents.
+  // given (favourites, the others, the restricted ones), and Home leaves out only Tasks and
+  // restricted ones and those under them (homeSpaces.ts), never by contents.
   it('lists every space, whatever it holds', () => {
     expect(read('app/index.tsx')).toContain("(await wilma.listSpaces()).map((space) => ({ kind: 'space', space }))");
-    expect(read('app/spaces.tsx')).toContain('{spaces.map((sp, i) =>');
-    expect(read('lib/homeSpaces.ts')).toContain('spaces.filter((s) => !s.restricted && !isTasksSpace(s))');
+    expect(read('app/spaces.tsx')).toContain('const others = spaces.filter((s) => !s.restricted && !favIds.has(s.id));');
+    expect(read('app/spaces.tsx')).toContain('const locked = spaces.filter((s) => s.restricted);');
+    expect(read('lib/homeSpaces.ts')).toContain('spaces.filter((s) => !hidden.has(s.id) && !isTasksSpace(s))');
   });
 });

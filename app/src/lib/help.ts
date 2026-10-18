@@ -83,7 +83,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     title: 'Places & Homes',
     line: 'Places to visit, and the homes My day plans from.',
     lines: [
-      'Save a place from the chat, from Google Maps, or with 📍 Save here.',
+      'Save a place from the chat, from Google Maps, or with ＋ → 📍 Save where I am.',
       'Add what you liked and who you went with, and ask for ideas later.',
       'Homes: where your day starts. Add or change them in Settings → Homes.',
     ],
@@ -111,6 +111,7 @@ export const HELP_TOPICS: HelpTopic[] = [
     lines: [
       'Wilma picks a space for each note, or you choose one.',
       'A restricted space never shows up in searches or answers until you open it.',
+      'Tap ☆ on a space to keep it on Home (up to 6).',
     ],
     tryIt: ['Open Recipes'],
     more: { label: 'All spaces', path: '/spaces' },

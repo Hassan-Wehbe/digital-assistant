@@ -1,9 +1,10 @@
-// Spaces on Home (owner, 2026-10-09): the five opened most recently on this phone, then See all.
+// Spaces on Home (owner, 2026-10-18, D38): the favourites; until there are any, the six opened most
+// recently on this phone (owner, 2026-10-09); then All spaces.
 import { describe, expect, it } from '@jest/globals';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
-import { HOME_SPACES, homeSpaces, isTasksSpace, MAX_RECENT, parseRecent, recentKey, recentSpacesStore, rememberOpened } from './homeSpaces';
+import { favouriteSpaces, hiddenSpaceIds, HOME_SPACES, homeSpaces, isTasksSpace, MAX_RECENT, parseRecent, recentKey, recentSpacesStore, rememberOpened } from './homeSpaces';
 import type { Space } from './wilma';
 
 const sp = (id: string, path: string, restricted = false): Space => ({ id, path, description: null, restricted });
@@ -15,14 +16,15 @@ const SPACES = [
 describe('Home spaces', () => {
   it('shows the opened ones first, then fills alphabetically; never Tasks or a restricted space', () => {
     const out = homeSpaces(SPACES, ['g', 'p', 't', 'gone', 'r']);
-    expect(out.shown.map((s) => s.path)).toEqual(['Work/Gartner', 'Recipes', 'Cars', 'Home', 'Kids']);
+    expect(out.shown.map((s) => s.path)).toEqual(['Work/Gartner', 'Recipes', 'Cars', 'Home', 'Kids', 'Work']);
     expect(out.shown).toHaveLength(HOME_SPACES);
-    expect(out.total).toBe(7); // all but Tasks (restricted ones are listed under See all)
-    expect(out.more).toBe(2);
+    expect(out.favourites).toBe(false);
+    expect(out.total).toBe(7); // all but Tasks (restricted ones are listed under All spaces)
+    expect(out.more).toBe(1);
   });
 
-  it('a new phone shows the first five alphabetically; few spaces need no See all', () => {
-    expect(homeSpaces(SPACES, []).shown.map((s) => s.path)).toEqual(['Cars', 'Home', 'Kids', 'Recipes', 'Work']);
+  it('a new phone shows the first six alphabetically; few spaces need no All spaces', () => {
+    expect(homeSpaces(SPACES, []).shown.map((s) => s.path)).toEqual(['Cars', 'Home', 'Kids', 'Recipes', 'Work', 'Work/Gartner']);
     expect(homeSpaces([sp('w', 'Work'), sp('t', 'Tasks')], []).more).toBe(0);
   });
 
@@ -68,5 +70,32 @@ describe('Home spaces', () => {
     expect(read('lib/openSpace.ts')).toContain('if (userId && !s.restricted)');
     expect(read('lib/openSpace.ts')).toContain("router.push('/tasks')");
     expect(read('lib/auth.tsx')).toContain('deviceRecentSpaces.forgetOthers(keep)');
+  });
+});
+
+describe('Favourites on Home (D38)', () => {
+  const NESTED = [...SPACES, sp('pi', 'Private/Inner'), sp('pd', 'Private/Inner/Deep'), sp('pv', 'Privateer')];
+
+  it('shows the favourites in their order instead of the recent ones', () => {
+    const out = homeSpaces(SPACES, ['g', 'r'], ['k', 'w']);
+    expect(out.shown.map((s) => s.path)).toEqual(['Kids', 'Work']);
+    expect(out.favourites).toBe(true);
+    expect(out.more).toBe(5);
+  });
+
+  it('never shows Tasks, a restricted space or one under it, even if the server sent them', () => {
+    expect(homeSpaces(NESTED, [], ['t', 'p', 'pi', 'pd', 'h']).shown.map((s) => s.path)).toEqual(['Home']);
+    expect(favouriteSpaces(NESTED, ['pv', 'gone', 'pi'])).toEqual([sp('pv', 'Privateer')]);
+  });
+
+  it('falls back to the recent ones with no favourites, or when they cannot be read', () => {
+    expect(homeSpaces(SPACES, ['r'], []).favourites).toBe(false);
+    expect(homeSpaces(SPACES, ['r'], null).shown[0].path).toBe('Recipes');
+    expect(homeSpaces(SPACES, [], ['p', 't']).favourites).toBe(false); // nothing left to show
+  });
+
+  it('spaces under a restricted one are hidden by path, not by a similar name', () => {
+    expect([...hiddenSpaceIds(NESTED)].sort()).toEqual(['p', 'pd', 'pi']);
+    expect(homeSpaces(NESTED, ['pi', 'pv']).shown.map((s) => s.path)).not.toContain('Private/Inner');
   });
 });
