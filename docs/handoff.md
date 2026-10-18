@@ -20,6 +20,13 @@ tokens or keys in chat.
   without showing as overdue; My day proposes up to 3 that fit free time, worked out by code (no
   AI cost); Add / ✕ Not today. Five steps (server, planner, app, chat, build). **Next:** the
   owner's answers, then step 1 (strongest model).
+- **Home clean-up step 2, the app (2026-10-18): branch `claude/home-cleanup-app` (from
+  `claude/favourite-spaces`, #222): merged (#223, squash, 29e31d4, with the Expo SDK 57 patch
+  updates expo-doctor needed); app only, ships with the build after versionCode 20.** Four tiles (Chat, My day, Tasks, Vault), Save where I am in ＋, Plan with Wilma (My day;
+  Date night, Family day, Vacation SOON), favourite spaces in a 3-column grid (recent ones until
+  one is chosen), All spaces with Edit (↑ ↓ ✕, add), ☆ on a space. Also: spaces under a restricted
+  space no longer show on Home's recent list. 844 app tests, bundles. Phone checks in `docs/home-cleanup-plan.md` "As built: step 2". **Next:** step 3
+  (checklist and build), then routines (D39, plan to write; strongest model).
 - **Home clean-up step 1, favourite spaces on the server (2026-10-18): branch
   `claude/favourite-spaces` (from `claude/home-cleanup-plan`, #221), PR #222. Migration applied
   2026-10-18 (owner's dry run passed; the Supabase connector timed out twice without applying, so
@@ -30,7 +37,7 @@ tokens or keys in chat.
   `set_favourite_spaces`, `my_favourite_spaces`; restricted, nested-under-restricted and Tasks
   refused and never shown; RLS, read-only for users, nothing for anon). SQL test 18, 34 checks,
   passed locally; dry run `tests/sql/dry_runs/18_space_favourite_dry_run.sql`. No `mcp`/`chat`
-  change, no evaluation. **Owner:** merge #221, then #222. **Next:**
+  change, no evaluation. Merged (#222, squash, 7b3ddad). **Next:**
   step 2, the app's new Home and All spaces (a smaller model is fine). Details:
   `docs/home-cleanup-plan.md` "As built: step 1".
 - **New order and three decisions (owner, 2026-10-18; docs only, branch `claude/home-cleanup-plan`).**
