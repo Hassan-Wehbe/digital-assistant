@@ -333,3 +333,15 @@ create policy secret_log_insert on secret_access_log
 -- item_home_note (trigger on item): an older app's place note of kind "home" in a searchable space
 --   updates the default home (remove once versionCode 20 is the oldest app allowed). Today's Home
 --   notes were copied in and went to the Recycle bin.
+
+-- =========================================================
+-- Favourite spaces for Home (20261018120000_space_favourite.sql; design.md D38,
+-- docs/home-cleanup-plan.md)
+-- =========================================================
+-- space_favourite: user_id (owner, auth.uid()), space_id (cascade), position (1-6, once each),
+--   created_at. RLS: own rows only; authenticated may only read. Never a restricted space, one under
+--   a restricted space, or the built-in Tasks space.
+-- set_favourite_spaces(ids): replaces the whole list in that order (null or empty clears); refuses
+--   more than 6, repeats, and any space that is not your own and searchable, changing nothing.
+-- my_favourite_spaces(): the ids in order, only those still searchable (one restricted or moved
+--   under a restricted space later is no longer returned).
