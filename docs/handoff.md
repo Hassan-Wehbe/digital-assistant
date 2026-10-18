@@ -13,13 +13,15 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **Routines plan written (2026-10-18): branch `claude/routines-plan`, docs only; waiting for
-  the owner's answers Q1-Q9.** `docs/routines-plan.md`: a routine is an item (`item_type
+- **Routines plan written (2026-10-18): branch `claude/routines-plan` (#225), docs only; owner's
+  answers in (Q1 weekly: any day that week or the same day every week; Q4 up to 3, the rest carry
+  over; Q5 ✕ on the server, a small `task_not_today` table; Q6 a missed one is passed by; the rest
+  as recommended).** `docs/routines-plan.md`: a routine is an item (`item_type
   routine`) in the Tasks space; its tasks are ordinary tasks with `routine_id`, kept in step by one
   server module; a new `window_from` lets a weekly or monthly task be done any day of its period
   without showing as overdue; My day proposes up to 3 that fit free time, worked out by code (no
-  AI cost); Add / ✕ Not today. Five steps (server, planner, app, chat, build). **Next:** the
-  owner's answers, then step 1 (strongest model).
+  AI cost); Add / ✕ Not today. Five steps (server, planner, app, chat, build). **Next:** merge
+  #225, then step 1 (strongest model, fresh session).
 - **Home clean-up step 2, the app (2026-10-18): branch `claude/home-cleanup-app` (from
   `claude/favourite-spaces`, #222): merged (#223, squash, 29e31d4, with the Expo SDK 57 patch
   updates expo-doctor needed); app only, ships with the build after versionCode 20.** Four tiles (Chat, My day, Tasks, Vault), Save where I am in ＋, Plan with Wilma (My day;
