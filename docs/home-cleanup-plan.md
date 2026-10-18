@@ -6,6 +6,8 @@ routines (D39), then the date night and family day planners (D40) with a Vacatio
 the rest of D30. Design: D38. Model: the strongest for step 1 (a new table, RLS, restricted spaces);
 a smaller one is fine for step 2 (app layout) and step 3 (checklist and build).
 
+**Step 1 built (2026-10-18), branch `claude/favourite-spaces`, not applied:** see "As built: step 1".
+
 Mockups: the owner's private canvas "Wilma Home and Planners" (screens 1 and 2 for this plan;
 3-7 are for D39 and D40).
 
@@ -45,8 +47,8 @@ planners the owner wants (date night, family day, later vacation).
 
 - **Restricted spaces never become favourites** (rule 3: Home never hints at them). The database
   refuses a restricted space, and a space nested anywhere under a restricted one. If a favourite is
-  later restricted or moved under a restricted space, it simply stops being shown and is dropped
-  (the list is read through `searchable_space_ids()`).
+  later restricted or moved under a restricted space, it simply stops being shown (the list is
+  read through `searchable_space_ids()`), and the next save leaves it out.
 - **The built-in Tasks space is not a favourite** (the Tasks tile is the way to tasks).
 - **Every row is owned** (rule 5): RLS, own rows only; `anon` gets nothing; `authenticated` may read
   its own rows, and changes go only through one function, so a stray write can never favourite
@@ -76,3 +78,32 @@ planners the owner wants (date night, family day, later vacation).
 - Routines (weekly and monthly task groups): D39, its own plan, next.
 - The date night and family day planners: D40, after routines. Vacation stays a placeholder.
 - Pinning or favourites synced from the chat; colours or icons per space.
+
+## As built: step 1 (2026-10-18)
+
+- Migration `supabase/migrations/20261018120000_space_favourite.sql`: table `space_favourite`
+  (user, space, position 1-6; primary key user + space; one row per position; cascade with the
+  space and the account), RLS select own rows, `authenticated` gets select only, `anon` nothing.
+- `set_favourite_spaces(p_ids uuid[]) returns uuid[]`: security definer; replaces the list whole;
+  refuses (nothing changed) more than 6 ("You can have at most 6 favourite spaces. Remove one
+  first."), a repeat, an empty entry, and any space that is not in `searchable_space_ids()` or is
+  Tasks, with one message for all of them ("That space cannot be a favourite."), so it never tells
+  whether a space exists, is someone else's or is restricted. Returns the saved list.
+- `my_favourite_spaces() returns uuid[]`: security invoker, the ids in order, only those still
+  searchable and not Tasks. The app (step 2) calls both with `supabase.rpc`, as Settings → Homes
+  does with `set_default_home`; no `mcp` or `chat` change, so no deploy and no evaluation run.
+- SQL test `tests/sql/18_space_favourite.sql`, 34 checks: order, replace, six allowed, seven
+  refused, repeats, empty entries, restricted, nested under restricted, a restricted child of a
+  plain space, Tasks, a missing space, no direct insert, update or delete, B sees none of A's rows,
+  cannot favourite A's space, keeps a separate list, anon can do nothing, a favourite restricted or
+  moved under a restricted space later is hidden, deleting a space removes its row. **34/34 passed
+  locally** (Postgres 16 with a small stand-in for the Supabase auth and space tables), and the dry
+  run below rolled back there with 34 "ok": true.
+- Dry run for the owner: `tests/sql/dry_runs/18_space_favourite_dry_run.sql`.
+- `db/schema.sql`: a "Favourite spaces for Home" section.
+
+**Owner, in order:** (1) paste the whole dry-run file into the Supabase SQL editor and run it: it
+ends with the error "DRY RUN RESULTS (rolled back): [...]" on purpose, and all 34 items must say
+`"ok": true`; (2) say OK to apply the migration (Claude can apply it through the Supabase connector
+at your request, as for memory step 1, or you run the migration file in the SQL editor); (3) merge.
+Nothing in the app uses it until step 2, so applying it early changes nothing for testers.

@@ -13,6 +13,15 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Home clean-up step 1, favourite spaces on the server (2026-10-18): branch
+  `claude/favourite-spaces` (from `claude/home-cleanup-plan`, #221), not applied, not merged.**
+  Migration `20261018120000_space_favourite.sql` (table `space_favourite`, up to 6 in order,
+  `set_favourite_spaces`, `my_favourite_spaces`; restricted, nested-under-restricted and Tasks
+  refused and never shown; RLS, read-only for users, nothing for anon). SQL test 18, 34 checks,
+  passed locally; dry run `tests/sql/dry_runs/18_space_favourite_dry_run.sql`. No `mcp`/`chat`
+  change, no evaluation. **Owner:** run the dry run (34 "ok": true), OK to apply, merge. **Next:**
+  step 2, the app's new Home and All spaces (a smaller model is fine). Details:
+  `docs/home-cleanup-plan.md` "As built: step 1".
 - **New order and three decisions (owner, 2026-10-18; docs only, branch `claude/home-cleanup-plan`).**
   After mockups (the owner's private canvas "Wilma Home and Planners"): (1) **Home clean-up and
   favourite spaces** (D38, `docs/home-cleanup-plan.md`): four tiles, Save here into ＋, a Plan with
