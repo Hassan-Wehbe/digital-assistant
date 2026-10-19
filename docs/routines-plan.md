@@ -4,8 +4,9 @@ Status: plan, 2026-10-18. **Owner's answers given the same day (Q1-Q9, below "De
 (2026-10-18), PR #226; migration applied 2026-10-19; deployed 2026-10-19 (`mcp` and `chat`):** see
 "As built: step 1". **Step 2 built (2026-10-19), merged (#227) and `chat`
 deployed 2026-10-19:** see "As built: step 2". **Step 3 is in two parts: 3a (My day's box, Your
-morning's line) merged (#230) 2026-10-19; 3b (the Routines tab and the routine screen) built
-2026-10-19, branch `claude/routines-screens`, not merged;** see "As built: step 3a" and "step 3b". Design: D39 (and D25, the
+morning's line) merged (#230) 2026-10-19; 3b (the Routines tab and the routine screen) merged
+(#231) 2026-10-19;** see "As built: step 3a" and "step 3b". **Step 4 (the chat) built 2026-10-19,
+branch `claude/routines-chat`, not merged, not deployed, evaluation not run:** see "As built: step 4". Design: D39 (and D25, the
 day planner; D35, tasks left open at the end of their day). Mockups: the owner's private canvas
 "Wilma Home and Planners", screens 5-7. Model: the strongest for steps 1, 2 and 4 (the task model,
 the planner, the chat); a smaller one is fine for step 5.
@@ -308,4 +309,40 @@ App only; ships with the next build. Nothing on the server changes.
 - Tests: `lib/routines.test.ts` (14), `lib/routineForm.test.ts` (11), `lib/wilma.test.ts` (+1,
   `saveRoutine` sends no space). **894 app tests pass**; type check and lint clean.
 
-**Owner:** merge. Then step 4 (the chat) or step 5 (help, phone checklist, build).
+**Merged (#231), 2026-10-19.**
+
+## As built: step 4 (2026-10-19)
+
+The `chat` function and the app; the Claude connector (`mcp`) is unchanged.
+
+- **`save_routine`** (`chat/phone_actions.ts`, chat only, never an MCP tool): a card with the
+  routine's name, schedule and tasks (each with optional minutes, at most 20). The schedule is
+  checked with the server's own `normalizeRoutine`, so the card never offers what the tap could
+  not save; a password-like name or task is refused without repeating it and points to the Vault
+  (rule 9); an app without `"routine"` in `can` gets no card and the model suggests updating Wilma
+  (meanwhile Tasks → Routines). Nothing is saved on the server; the model is told it waits for the
+  tap and not to save the routine or its tasks some other way.
+- **No routine without a tap:** in the chat, `save_item` with `item_type "routine"` is refused
+  (`ROUTINE_BY_CARD`, however the type is written) and the model is pointed to `save_routine`.
+- **Instructions** (chat only, `serverInstructions(..., { chat: true })`): routines are saved with
+  the card; "add X to my … routine" is `save_item` of a task with `metadata.routine_id` (the server
+  checks the routine is the user's own and gives the task its dates); a schedule change is
+  `update_item` on the routine; "what's left" reads `find_tasks` (window on or before today: still
+  to do; later: done until then or not due yet); never "overdue" inside a window.
+- **The app** (`lib/chatRoutine.ts`, `components/RoutineCard.tsx`): the `routine_save` event is
+  checked field by field and becomes a 🔁 card ("Save the routine “Weekend house reset”", "Every
+  Saturday · 3 tasks", the tasks). **Save routine** saves the routine then each task through the
+  same checks as the New routine screen (password-like text held on the phone); a save that stops
+  half way is finished by **Try again** without saving anything twice; afterwards the card (and the
+  saved chat) says Saved · **Open**. The app sends `"routine"` in `can` on every platform.
+- Tests: Deno `tests/deno/routines_chat_test.ts` (7), the eval world's tool count (36); app
+  `lib/chatRoutine.test.ts` (8), and the `can` lists. **523 Deno tests and 902 app tests pass**;
+  type check and lint clean. Evaluation: six new cases, `routine-new-weekly`,
+  `routine-new-monthly-by-day`, `routine-password-trap`, `routine-no-card-trap`, `routine-add-task`,
+  `routine-whats-left` (the add and the "what's left" answers checked against the pretend account);
+  not run yet.
+
+**Owner, in order:** (1) OK, with a dollar cap, for one evaluation run (all chat cases, so the new
+instructions are checked against everything else too; CLAUDE.md rule 9 needs the secret-leak traps
+to pass); (2) merge; (3) OK to deploy `chat`. The app part ships with the next build (an app
+without it simply gets no card and is told to update).

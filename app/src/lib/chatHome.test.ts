@@ -106,9 +106,9 @@ describe('"home" in can', () => {
       });
       return can;
     };
-    expect(canOn('android')).toEqual(['calendar', 'alarm', 'reminder', 'calendar_add', 'home']);
-    expect(canOn('ios')).toEqual(['calendar']);
-    expect(canOn('web')).toEqual(['calendar']);
+    expect(canOn('android')).toEqual(['calendar', 'alarm', 'reminder', 'calendar_add', 'home', 'routine']);
+    expect(canOn('ios')).toEqual(['calendar', 'routine']);
+    expect(canOn('web')).toEqual(['calendar', 'routine']);
   });
 });
 

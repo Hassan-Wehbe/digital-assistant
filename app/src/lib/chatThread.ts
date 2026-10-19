@@ -11,6 +11,7 @@
 
 import { cancelledMessage, checkDelete, deletedMessage } from './chatDeletes';
 import type { ChatEvent, PlaceCardData } from './chatStream';
+import type { RoutineCardData } from './chatRoutine';
 import type { HomeCardData } from './homePlace';
 import type { RememberedMemory } from './memory';
 import type { AlarmCardData, EventCardData, ReminderCardData } from './phoneActions';
@@ -154,6 +155,8 @@ export type Entry =
    * "default" when it became the default. Never a point: the card finds it again on the phone.
    */
   | ({ kind: 'home'; id: string; saved?: HomeSaved } & HomeCardData)
+  /** Save a routine (D39): saved only when the user taps Save routine; `saved` is then its id (Open). */
+  | ({ kind: 'routine'; id: string; saved?: string } & RoutineCardData)
   /**
    * "You're at Mom's. Plan your day from: Home · Mom's" (homes step 4), before the chat's plan for
    * today is made. Home names and ids only: never where the phone was.
@@ -277,6 +280,8 @@ export type ChatAction =
   | { type: 'event_added'; id: string; added: EventAdded; event: EventCardData }
   /** A 🏠 card's home was saved (the tap wrote the row): the card says so from now on. */
   | { type: 'home_saved'; id: string; saved: HomeSaved }
+  /** A 🔁 card's routine was saved (the tap wrote it): the card says Saved · Open from now on. */
+  | { type: 'routine_saved'; id: string; routineId: string }
   /** At a saved home that is not the default: ask before today's plan is made (nothing sent yet). */
   | { type: 'home_ask'; date: string; at: HomeChoice; def: HomeChoice }
   /** The "You're at Mom's" card answered (the caller then sends the question again with it). */
@@ -515,6 +520,11 @@ function onEvent(state: ChatState, event: ChatEvent): ChatState {
     case 'home_save':
       // A card only: nothing is saved until the user taps it (homes, D36).
       return add(state, { kind: 'home', id, label: event.label, address: event.address, makeDefault: event.makeDefault });
+    case 'routine_save': {
+      // A card only: nothing is saved until the user taps it (routines, D39).
+      const { type: _t, ...card } = event;
+      return add(state, { kind: 'routine', id, ...card });
+    }
     case 'location_request': {
       // One card per answer, for the question it answers; nothing to ask again without one.
       const question = lastUserText(state.entries);
@@ -611,6 +621,13 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       const card = state.entries[at];
       if (!card || card.kind !== 'home_ask' || card.state !== 'pending' || !canSend(state)) return state;
       const next: Entry = { ...card, state: 'answered', chosen: action.chosen };
+      return { ...state, entries: state.entries.map((e, i) => (i === at ? next : e)) };
+    }
+    case 'routine_saved': {
+      const at = state.entries.findIndex((e) => e.id === action.id);
+      const card = state.entries[at];
+      if (!card || card.kind !== 'routine') return state;
+      const next: Entry = { ...card, saved: action.routineId };
       return { ...state, entries: state.entries.map((e, i) => (i === at ? next : e)) };
     }
     case 'home_saved': {

@@ -74,7 +74,7 @@ describe('chat client', () => {
     expect(init.signal).toBe(signal);
     const body = JSON.parse(init.body);
     expect(body.messages).toEqual([{ role: 'user', content: 'Hello' }]);
-    expect(body.can).toEqual(['calendar']);
+    expect(body.can).toEqual(['calendar', 'routine']);
     expect(Object.keys(body).sort()).toEqual(expect.arrayContaining(['can', 'messages']));
     expect(body).not.toHaveProperty('agenda');
   });

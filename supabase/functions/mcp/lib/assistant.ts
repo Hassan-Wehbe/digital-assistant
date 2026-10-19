@@ -55,6 +55,21 @@ places: save them only with save_home, as said above, never with save_item or up
 is a place with kind "home", where day plans start; there is only one, so when a place for it already exists
 (search_items with item_type "place", e.g. one named Home), give that one kind "home" with update_item
 (get_item first, all its metadata back) instead of saving another.`;
+  // Routines (D39, routines step 4): in the chat a new one is saved only from its card.
+  const routines = opts.chat
+    ? `
+Routines: a named group of tasks that comes back each week, every two weeks or each month ("make my Saturday
+chores a weekly routine: laundry, vacuum, groceries", "a monthly routine for the HVAC filter") is saved only
+with save_routine, a card the user taps; never with save_item. Its tasks are ordinary tasks: find_tasks shows
+each one's routine (id and title), its window (window_from to due_on: any day in it is fine, never call it
+overdue then) and missed_on when the last one was passed by. "Add mop the floors to my weekend routine": find the
+routine's id (find_tasks, or search_items with item_type "routine"), then save_item a task with metadata
+{"routine_id": that id} (and duration_min if they said); the server gives it the routine's dates. Changing
+the schedule ("make it every other Saturday") is update_item on the routine (get_item first; send repeat,
+when, day and suggest). "What's left this week/month?": find_tasks; a routine's task whose window_from is on or
+before today is still to do, one starting later is done until then (last_done_on says when) or not due yet.
+Ticking one done moves it to the next week or month. Deleting a routine also bins its tasks.`
+    : "";
   return `The user calls this assistant "${name}". A message that addresses ${name} ("${name}, …",
 "Hey ${name}, …", "ask ${name} …") is meant for this store: act on it with these tools, for example
 "${name}, save this recipe" → save_item, "${name}, what did I note about X?" → search_items,
@@ -134,7 +149,7 @@ and say "about N minutes" so they can correct it. For "what do I have to do (tod
 find_tasks with due_by and today (the user's local date) and start from its summary; when they ask what's on
 their day or to plan it, check find_tasks for that day too. When the user says a task is done ("I picked up the dry cleaning"), find it with
 find_tasks and call update_item with task_done true (a repeating task then moves to its next date: say which).
-A password, PIN or code never goes in a task: the vault.
+A password, PIN or code never goes in a task: the vault.${routines}
 Deleting: delete_item moves an item to the recycle bin (list_deleted_items, restore_item); purge_item
 deletes a binned item for good, with its files; delete_space deletes only an empty space. Delete only
 what the user clearly asked to delete, and confirm anything permanent first.`;

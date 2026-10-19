@@ -13,6 +13,7 @@ import {
   CALENDAR_PROBLEMS, errorButtons, HOME_ASK_STATES, HOME_SAVED, MAX_ENTRIES, MAX_TEXT, noteRef, PARTIAL_NOTE, type CalendarProblem, type ConfirmState, type Entry,
   type HomeAskState, type HomeChoice, type HomeSaved, type LocationState, type NoteRef, type PlaceRef,
 } from './chatThread';
+import { toRoutineCard, UUID } from './chatRoutine';
 import { toHomeCard } from './homePlace';
 import { toRemembered } from './memory';
 import { toAbout, toAlarmData, toEventData, toReminderData } from './phoneActions';
@@ -175,6 +176,12 @@ export function toEntry(raw: unknown): Entry | null {
       if (!card) return null;
       const saved = HOME_SAVED.includes(raw.saved as HomeSaved) ? { saved: raw.saved as HomeSaved } : {};
       return { kind: 'home', id, ...card, ...saved };
+    }
+    case 'routine': {
+      // The card's name, schedule and tasks, and the routine's id once saved.
+      const card = toRoutineCard(raw);
+      if (!card) return null;
+      return { kind: 'routine', id, ...card, ...(str(raw.saved) && UUID.test(raw.saved) ? { saved: raw.saved } : {}) };
     }
     case 'home_ask': {
       const at = homeChoice(raw.at);
