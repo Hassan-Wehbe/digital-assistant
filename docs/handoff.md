@@ -22,9 +22,14 @@ tokens or keys in chat.
   tests; eval case `plan-routine-suggestion`. **Owner:** OK and cap for an evaluation run, merge, OK
   to deploy `chat`. **Next:** step 3, the app (Routines screens, My day's box). Step 1 (#226) merged
   and **deployed 2026-10-19** (`mcp` run 39255445120, `chat` run 39255464165).
-- **Share to Wilma bug (owner, 2026-10-19):** sharing a link from Facebook or YouTube does not open
-  the Share screen with the note. Being looked into; owner asked for the share improvements too (a
-  real title, favourite spaces first, saving the link's source).
+- **Shared links (2026-10-19): merged (#228, squash, 22e6b8f); app only, ships with the next
+  build.** D41: a social link's draft names the site ("Link from YouTube", "From YouTube" in the
+  note); **Get title** reads the page's title on the phone only on tap (`lib/linkInfo.ts`; YouTube
+  via oEmbed); favourite spaces first on the Share screen. 852 app tests. **Still open: the bug**
+  that sharing from Facebook or YouTube does not open the Share screen; questions to the owner
+  (Android version, Wilma open or closed, what shows). Suspect: expo-share-intent restarts the
+  activity when Wilma is not the task's root (`handleShareIntent`), and YouTube's title comes as
+  EXTRA_SUBJECT, which the module does not pass on.
 - **Routines step 1, the server (2026-10-18): branch `claude/routines-server` (#226); migration
   applied 2026-10-19 (owner ran it in the SQL editor after the connector timed out); not merged, not
   deployed.** Routines as items (`item_type routine`, kept in Tasks) with a schedule;

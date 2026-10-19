@@ -8,6 +8,7 @@
 // and for a file from the phone's storage the "copy" is a storage path Wilma may not
 // read (no storage permission), so this keeps both and the app decides (sourceFor).
 import type { RawPick } from './picked';
+import { linkSource } from './linkInfo';
 import { isMapsLink, MAX_ADDRESS } from './places';
 
 export interface SharedFile extends RawPick {
@@ -71,17 +72,21 @@ export const TITLE_MAX = 300;
 
 /** A title and note to start from: shared text becomes the note; files start with no title. */
 export function draftFromShared(shared: Shared): { title: string; body: string } {
-  const body = shared.text?.trim() ?? '';
+  const text = shared.text?.trim() ?? '';
+  const url = /https?:\/\/[^\s]+/i.exec(text)?.[0];
+  // A link from a known site (Facebook, YouTube, ...) says so in the note, so search finds it by the
+  // site's name ("the YouTube video about bread"); linkInfo.ts.
+  const source = !shared.files.length ? linkSource(url) : null;
+  const body = source && !text.toLowerCase().includes(`from ${source.toLowerCase()}`) ? `${text}\n\nFrom ${source}` : text;
   if (shared.title) return { title: shared.title.slice(0, TITLE_MAX), body };
-  if (!body || shared.files.length) return { title: '', body };
-  const url = /https?:\/\/[^\s]+/i.exec(body)?.[0];
-  const rest = (url ? body.replace(url, '') : body).trim();
+  if (!text || shared.files.length) return { title: '', body };
+  const rest = (url ? text.replace(url, '') : text).trim();
   if (rest) {
     const line = rest.split('\n')[0].trim();
     return { title: line.length > 80 ? `${line.slice(0, 79).trimEnd()}…` : line, body };
   }
   try {
-    return { title: `Link from ${new URL(url!).hostname.replace(/^www\./, '')}`, body };
+    return { title: `Link from ${source ?? new URL(url!).hostname.replace(/^www\./, '')}`, body };
   } catch {
     return { title: '', body };
   }
