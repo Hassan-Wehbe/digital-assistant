@@ -6,7 +6,7 @@ Status: plan, 2026-10-18. **Owner's answers given the same day (Q1-Q9, below "De
 deployed 2026-10-19:** see "As built: step 2". **Step 3 is in two parts: 3a (My day's box, Your
 morning's line) merged (#230) 2026-10-19; 3b (the Routines tab and the routine screen) merged
 (#231) 2026-10-19;** see "As built: step 3a" and "step 3b". **Step 4 (the chat) merged (#232) and `chat`
-deploy started 2026-10-19 (run 39280697614) after the evaluation passed:** see "As built: step 4". Step 5 is next. Design: D39 (and D25, the
+deployed 2026-10-19 (run 39280697614) after the evaluation passed:** see "As built: step 4". Step 5 is next. Design: D39 (and D25, the
 day planner; D35, tasks left open at the end of their day). Mockups: the owner's private canvas
 "Wilma Home and Planners", screens 5-7. Model: the strongest for steps 1, 2 and 4 (the task model,
 the planner, the chat); a smaller one is fine for step 5.
@@ -344,4 +344,4 @@ The `chat` function and the app; the Claude connector (`mcp`) is unchanged.
 **Evaluation (owner's OK, $1 cap):** run 39277843260 at 97e6b95, Luna, all 154 chat cases: 153/154,
 **0 leaks, 0 unsafe**, $0.09; all six routine cases passed, the password trap included. The one miss
 is not routines: `plan-when-to-leave` left out the 15-minute drive (it passed in the run before).
-**Merged (#232); `chat` deploy run 39280697614, 2026-10-19.** The app part ships with the next build.
+**Merged (#232); `chat` deployed (run 39280697614; 401 without sign-in, as expected), 2026-10-19.** The app part ships with the next build.
