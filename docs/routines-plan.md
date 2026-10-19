@@ -4,8 +4,8 @@ Status: plan, 2026-10-18. **Owner's answers given the same day (Q1-Q9, below "De
 (2026-10-18), PR #226; migration applied 2026-10-19; deployed 2026-10-19 (`mcp` and `chat`):** see
 "As built: step 1". **Step 2 built (2026-10-19), merged (#227) and `chat`
 deployed 2026-10-19:** see "As built: step 2". **Step 3 is in two parts: 3a (My day's box, Your
-morning's line) built 2026-10-19, branch `claude/routines-app`, not merged;** see "As built: step
-3a". 3b (the Routines tab and the routine screen) is next. Design: D39 (and D25, the
+morning's line) merged (#230) 2026-10-19; 3b (the Routines tab and the routine screen) built
+2026-10-19, branch `claude/routines-screens`, not merged;** see "As built: step 3a" and "step 3b". Design: D39 (and D25, the
 day planner; D35, tasks left open at the end of their day). Mockups: the owner's private canvas
 "Wilma Home and Planners", screens 5-7. Model: the strongest for steps 1, 2 and 4 (the task model,
 the planner, the chat); a smaller one is fine for step 5.
@@ -279,4 +279,33 @@ App only; ships with the next build. Nothing on the server changes.
   today." when any do.
 - Tests: `lib/routineSuggest.test.ts` (15). **868 app tests pass**; type check and lint clean.
 
-**Owner:** merge. A phone check comes with the next build (step 5's checklist).
+**Merged (#230), 2026-10-19.**
+
+## As built: step 3b (2026-10-19)
+
+App only; ships with the next build. Nothing on the server changes.
+
+- **`lib/routines.ts`**: `toRoutine` (a routine's schedule read back, checked), `routineWords` (the
+  server's words), `periodOn` (the server's, mirrored: compared against it over every day of 2026
+  and 2027 for 51 schedules, 52,509 cases, all equal), `routineCard` (a task is done this time
+  when the server has moved it past the current period; "2 of 4 done this week", "Done for
+  October", "Missed in September: Wash car"), `repeatingAlone`, and `loadRoutines` (routines by
+  `search_items` with `item_type "routine"`, each one's schedule by `get_item`, tasks by
+  `find_tasks`, which now keeps `routine`, `window_from`, `missed_on` and `last_done_on`).
+- **`lib/routineForm.ts`**: the form (name; Repeats; When; the tasks, each with optional minutes,
+  at most 20; Suggest in My day), checked before anything is sent (password-like text held on the
+  phone, rule 9), and `routineSavePlan`: what saving adds, changes (name or minutes) and takes out
+  (to the Recycle bin).
+- **Tasks → 🔁 Routines** (`components/RoutinesTab.tsx`, a second tab beside To do): each
+  routine, its schedule and progress, its tasks with ☐ (ticking moves it to the next period), a
+  missed line, ＋ New routine, and "Repeating on their own" at the bottom.
+- **`app/routine.tsx`**: New routine / Edit routine. Save sends the routine (`saveRoutine`: no
+  space, the server keeps it in Tasks; an edit keeps its `starts_on` and the server brings its
+  tasks in step), then each task added, changed or taken out. A save that stops half way is
+  remembered, so Save again finishes it without making anything twice. Delete routine: a confirm,
+  then the routine and its tasks go to the Recycle bin together (Q8). Registered in `_layout.tsx`
+  behind sign-in.
+- Tests: `lib/routines.test.ts` (14), `lib/routineForm.test.ts` (11), `lib/wilma.test.ts` (+1,
+  `saveRoutine` sends no space). **894 app tests pass**; type check and lint clean.
+
+**Owner:** merge. Then step 4 (the chat) or step 5 (help, phone checklist, build).

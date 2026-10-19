@@ -42,6 +42,10 @@ export interface TaskMetadata {
   planned_at?: string;
   /** Only with planned_at, never on a repeating task (the server drops it otherwise). */
   day_end?: TaskDayEnd;
+  /** One of a routine's tasks (D39): the server sets repeat, window_from and due_on from it. */
+  routine_id?: string;
+  window_from?: string;
+  missed_on?: string;
 }
 
 const isDayEnd = (v: unknown): v is TaskDayEnd => (TASK_DAY_ENDS as readonly unknown[]).includes(v);
@@ -62,6 +66,11 @@ export interface TaskRow {
   planned_at?: string;
   repeat?: string;
   done_at?: string;
+  /** One of a routine's tasks: the routine, the first day of its week or month, a missed period's last day. */
+  routine?: { id: string; title: string };
+  window_from?: string;
+  missed_on?: string;
+  last_done_on?: string;
 }
 
 export function isTask(itemType: string | null | undefined): boolean {
@@ -278,6 +287,7 @@ export function toTaskRows(raw: unknown): TaskRow[] {
     if (typeof t.id !== 'string' || typeof t.title !== 'string' || !t.title) continue;
     const s = (k: string) => (typeof t[k] === 'string' && t[k] ? (t[k] as string) : undefined);
     const p = t.place as Record<string, unknown> | undefined;
+    const rt = t.routine as Record<string, unknown> | undefined;
     out.push({
       id: t.id,
       title: t.title.slice(0, 300),
@@ -293,6 +303,10 @@ export function toTaskRows(raw: unknown): TaskRow[] {
       ...(s('planned_at') ? { planned_at: s('planned_at') } : {}),
       ...(s('repeat') ? { repeat: s('repeat') } : {}),
       ...(s('done_at') ? { done_at: s('done_at') } : {}),
+      ...(rt && typeof rt.id === 'string' && typeof rt.title === 'string' && rt.title ? { routine: { id: rt.id, title: rt.title.slice(0, 300) } } : {}),
+      ...(s('window_from') && isDay(s('window_from')!) ? { window_from: s('window_from') } : {}),
+      ...(s('missed_on') && isDay(s('missed_on')!) ? { missed_on: s('missed_on') } : {}),
+      ...(s('last_done_on') && isDay(s('last_done_on')!) ? { last_done_on: s('last_done_on') } : {}),
     });
   }
   return out;

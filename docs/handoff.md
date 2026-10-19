@@ -13,8 +13,15 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **Routines step 3a, My day's box (2026-10-19): branch `claude/routines-app`, not merged; app
-  only, next build.** My day shows 🔁 From your routines (Add at the time found, Find a time for a
+- **Routines step 3b, the Routines tab and routine screen (2026-10-19): branch
+  `claude/routines-screens`, not merged; app only, next build.** Tasks has a second tab, 🔁
+  Routines (each routine's schedule, "2 of 4 done this week", its tasks with ☐, a missed line,
+  repeating tasks of no routine at the bottom); `app/routine.tsx` makes and edits a routine and its
+  tasks, and deletes it (to the Recycle bin with its tasks). The app's `periodOn` mirrors the
+  server's (52,509 cases compared, all equal). 894 app tests. **Next:** step 4 (the chat makes and
+  changes routines; strongest model; evaluation with password traps) and step 5 (help line, phone
+  checklist, build; smaller model).
+- **Routines step 3a, My day's box (2026-10-19): merged (#230); app only, next build.** My day shows 🔁 From your routines (Add at the time found, Find a time for a
   task with a place, ✕ Not today kept in `task_not_today`, Add all); Your morning adds "N routine
   tasks fit today." 868 app tests. **Next:** 3b, the Routines tab and New routine screen (the app
   saves a routine as an item, `item_type 'routine'`, in the Tasks space; the server already checks
