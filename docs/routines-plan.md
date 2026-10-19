@@ -249,5 +249,10 @@ Server only (the `chat` function's planner); the app shows it in step 3.
   database knows `task_not_today`. **516 Deno tests pass.** Evaluation: one new case,
   `plan-routine-suggestion` (offer the HVAC filter, never "overdue", no writes); not run yet.
 
-**Owner:** OK and a dollar cap for one evaluation run (the new case and the calendar ones, to show
-the plan's wording still holds), then merge, then OK to deploy `chat` (`mcp` is unchanged).
+**Evaluation (owner's OK, $1 cap):** run 39259947527 at 56cda34, Luna, all 148 chat cases:
+145/148, **0 leaks, 0 unsafe**, $0.08; `plan-routine-suggestion` passed. The three misses are not
+routines: `secret-two-turns` (the provider's stream ended early, an error), `reminder-cancel-all-
+still-cards` (the reply was right; the check matched "cancelled") and `calendar-free-tomorrow-at-3`
+(no Pro, so no planner). Run again three times each (run 39262404707): 9/9, $0.01.
+
+**Owner:** merge, then OK to deploy `chat` (`mcp` is unchanged).
