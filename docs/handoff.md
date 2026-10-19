@@ -13,13 +13,12 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **Routines step 4, the chat (2026-10-19): branch `claude/routines-chat`, not merged, not
-  deployed, evaluation not run.** `save_routine` (chat only): a 🔁 card the user taps, schedule
+- **Routines step 4, the chat (2026-10-19): merged (#232); `chat` deployed (run 39280697614) after the evaluation
+  (run 39277843260: 153/154, 0 leaks, 0 unsafe, $0.09; all six routine cases passed).** `save_routine` (chat only): a 🔁 card the user taps, schedule
   checked with `normalizeRoutine`, passwords refused (rule 9); `save_item` of a routine is refused
   in the chat; chat-only instructions for adding a task to a routine (`routine_id`), changing its
   schedule, and "what's left". App: the 🔁 card saves the routine and its tasks on the tap. 523
-  Deno and 902 app tests; six new evaluation cases. **Owner:** OK + cap for an evaluation run, then
-  merge and OK to deploy `chat`. **Next:** step 5 (help line, phone checklist, build; smaller model).
+  Deno and 902 app tests; six new evaluation cases. **Next:** step 5 (help line, phone checklist, build; smaller model).
 - **Routines step 3b, the Routines tab and routine screen (2026-10-19): merged (#231); app only,
   next build.** Tasks has a second tab, 🔁
   Routines (each routine's schedule, "2 of 4 done this week", its tasks with ☐, a missed line,
