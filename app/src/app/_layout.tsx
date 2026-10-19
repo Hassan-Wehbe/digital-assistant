@@ -42,9 +42,17 @@ function Screens() {
 
   // Something was shared to Wilma: open the share screen once per share, as soon as the
   // app is signed in (signed out, the sign-in screen comes first and says why).
-  const { seq } = useShare();
+  const { seq, askAgain } = useShare();
   const navReady = !!useRootNavigationState()?.key;
   const opened = useRef(0);
+  // Signed in with the screens ready: ask once more for a share that started the app (cold start,
+  // shareIntake.tsx), in case the first ask came too early.
+  const askedWhenReady = useRef(false);
+  useEffect(() => {
+    if (loading || !signedIn || !navReady || askedWhenReady.current) return;
+    askedWhenReady.current = true;
+    askAgain();
+  }, [loading, signedIn, navReady, askAgain]);
   useEffect(() => {
     if (loading || !signedIn || !navReady || !seq || opened.current === seq) return;
     opened.current = seq;

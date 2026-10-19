@@ -13,6 +13,15 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Share cold start (2026-10-19): branch `claude/share-cold-start`, not merged; app only, next
+  build.** Owner (Android): sharing from Facebook, YouTube or Chrome works when Wilma is open, opens
+  nothing when Wilma was closed. Fix tried (JS only): the share module keeps the starting share until
+  it is handed over once; the app now asks again 0.6 s and 2 s after start-up and once signed in with
+  the screens ready, and a failed ask never crashes. **Phone check:** close Wilma (swipe it away),
+  share a YouTube link to Wilma: the Share screen opens with the link. **If it still fails:** the
+  module may send the share before the app listens and then forget it; the next fix is a small patch
+  to expo-share-intent (keep the share until `clearShareIntent`), which needs patch-package (native;
+  strongest model).
 - **Shared links (2026-10-19): branch `claude/share-links`, not merged; app only, ships with the next
   build.** D41: a social link's draft names the site ("Link from YouTube", "From YouTube" in the
   note); **Get title** reads the page's title on the phone only on tap (`lib/linkInfo.ts`; YouTube
