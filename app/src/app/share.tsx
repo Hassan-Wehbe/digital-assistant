@@ -3,6 +3,8 @@
 // (picked.ts, saveNote.ts); the shared files are copied into the app's cache first.
 // A Google Maps share opens as a place (placeFromShared), with its name and link filled in, and
 // "Is this it?" from the phone's map lookup of its name and address (PlaceLookup; Yes only).
+// A shared link (Facebook, YouTube, ...) can get the page's own title with "Get title", read on
+// the phone only on that tap (linkInfo.ts); the favourite spaces come first in the space list (D38).
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
@@ -11,10 +13,15 @@ import { AttachmentPicker } from '@/components/AttachmentPicker';
 import { Chips, PlaceFields } from '@/components/PlaceFields';
 import { PlaceLookup } from '@/components/PlaceLookup';
 import { SpaceChips } from '@/components/SpaceChips';
-import { Button, Card, ErrorBox, KeyboardScreen, Loading, Muted, styles, useColors, useLoad } from '@/components/ui';
+import { Button, Card, ErrorBox, KeyboardScreen, Loading, Muted, styles, TextLink, useColors, useLoad } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { findCredential } from '@/lib/credentials';
 import { deviceUploadDeps, prepareShared, removeCopies } from '@/lib/deviceFiles';
+import { loadFavourites } from '@/lib/favourites';
+import { favouriteSpaces } from '@/lib/homeSpaces';
+import { fetchLinkTitle, firstUrl } from '@/lib/linkInfo';
 import { saveNote, type SaveTarget } from '@/lib/saveNote';
+import { supabase } from '@/lib/supabase';
 import { EMPTY_PLACE, placeMetadata, type PlaceForm } from '@/lib/places';
 import { draftFromShared, placeFromShared, TITLE_MAX, type Shared } from '@/lib/shared';
 import { useShare } from '@/lib/shareIntake';
@@ -53,6 +60,24 @@ function ShareForm({ shared, onDone, onCancel }: { shared: Shared; onDone: () =>
   const draft = draftFromShared(shared);
   const fromMaps = placeFromShared(shared);
   const spaces = useLoad('spaces', () => wilma.listSpaces());
+  // Favourite spaces first (D38), then the rest as before; a list that cannot be read changes nothing.
+  const favourites = useLoad('favourites:share', () => loadFavourites((fn, args) => supabase.rpc(fn, args)));
+  const firstSpaces = spaces.data ? favouriteSpaces(spaces.data, favourites.data ?? []) : [];
+  const orderedSpaces = spaces.data
+    ? [...firstSpaces, ...spaces.data.filter((s) => !firstSpaces.some((f) => f.id === s.id))]
+    : null;
+  const link = firstUrl(shared.text);
+  const [titleLookup, setTitleLookup] = useState<'idle' | 'busy' | 'none'>('idle');
+  const getTitle = async () => {
+    if (!link) return;
+    setTitleLookup('busy');
+    const found = await fetchLinkTitle(link, fetch);
+    // A title that looks like a password is never put in the note (CLAUDE.md rule 9).
+    if (found && !findCredential(found)) {
+      setTitle(found.slice(0, TITLE_MAX));
+      setTitleLookup('idle');
+    } else setTitleLookup('none');
+  };
   const [mode, setMode] = useState<Mode>('new');
   const [space, setSpace] = useState<string | undefined>();
   const [title, setTitle] = useState(fromMaps ? fromMaps.name : draft.title);
@@ -159,7 +184,7 @@ function ShareForm({ shared, onDone, onCancel }: { shared: Shared; onDone: () =>
 
         <Text style={[styles.title, { color: c.text }]}>Space</Text>
         <SpaceChips
-          spaces={spaces.data}
+          spaces={orderedSpaces}
           error={spaces.error}
           onRetry={spaces.reload}
           value={space}
@@ -193,6 +218,16 @@ function ShareForm({ shared, onDone, onCancel }: { shared: Shared; onDone: () =>
               onChangeText={setTitle}
               editable={!locked}
             />
+            {link && !isPlace && !fromMaps ? (
+              titleLookup === 'busy' ? (
+                <Muted>Getting the page’s title…</Muted>
+              ) : (
+                <View style={{ gap: 4 }}>
+                  <TextLink title="Get title from the link" onPress={() => void getTitle()} />
+                  {titleLookup === 'none' ? <Muted>That page did not give a title. Type one instead.</Muted> : null}
+                </View>
+              )
+            ) : null}
             {fromMaps ? (
               <PlaceLookup
                 name={fromMaps.name}

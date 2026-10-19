@@ -59,6 +59,12 @@ describe('draftFromShared', () => {
     expect(draftFromShared(s({ text: 'https://example.com/pasta', title: 'Pasta night' }))).toEqual({ title: 'Pasta night', body: 'https://example.com/pasta' });
   });
 
+  it('names a social link after the site and says where it came from in the note', () => {
+    expect(draftFromShared(s({ text: 'https://youtu.be/abc' }))).toEqual({ title: 'Link from YouTube', body: 'https://youtu.be/abc\n\nFrom YouTube' });
+    expect(draftFromShared(s({ text: 'https://m.facebook.com/x', title: 'A post' }))).toEqual({ title: 'A post', body: 'https://m.facebook.com/x\n\nFrom Facebook' });
+    expect(draftFromShared(s({ text: 'Seen from YouTube https://youtu.be/abc' })).body).toBe('Seen from YouTube https://youtu.be/abc');
+  });
+
   it('names a bare link after its site', () => {
     expect(draftFromShared(s({ text: 'https://www.example.com/a/b?c=1' }))).toEqual({ title: 'Link from example.com', body: 'https://www.example.com/a/b?c=1' });
   });
