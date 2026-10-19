@@ -20,6 +20,10 @@
 // Homes). With Settings → Homes → "Notice which home I'm at" on, opening today's plan reads the
 // location once and, at a saved home that is not the default, asks "You're at Mom's. Plan your day
 // from: Home · Mom's" (homeNotice.ts); only the picked home's id is sent.
+//
+// From your routines (routines step 3, D39): up to 3 routine tasks the planner fitted into free
+// time (routineSuggest.ts). Add puts one at its time, as a Find a time pick does; ✕ is Not today,
+// kept on the server for this day (task_not_today); then the plan again, so a waiting one comes in.
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
@@ -40,7 +44,7 @@ import {
   answerPlace, chooseHome, choicesFor, EMPTY_MEMORY, forgetPlace, homeFor, isDropOff, rememberFound, resetChoices, separate, takeBoth, textKey, toggleDropOff, toggleNotDriving,
   type DayMemory, type EventPlace,
 } from '@/lib/dayChoices';
-import type { DayEventRow, DayPlan, DayRow, NotPlacedTask, TaskOption } from '@/lib/dayPlan';
+import type { DayEventRow, DayPlan, DayRow, NotPlacedTask, RoutineSuggestion, TaskOption } from '@/lib/dayPlan';
 import {
   alertText, clock, dayChips, dayNotes, dayTitle, directionsLink, driveText, eventLine, freeText, minutesText, overlapText,
   leftOpenHeading, leftOpenWhen, rainText, rowTime, splitNotPlaced, MAX_DAYS_AHEAD, openingDay, titles, todayAndTomorrow,
@@ -53,6 +57,7 @@ import { deviceGeocoder, deviceLocation } from '@/lib/location';
 import { LOOKS_LIKE_SECRET, editError } from '@/lib/noteEdit';
 import { scheduleForPlan } from '@/lib/notifications';
 import { loadNotice, noticeHome, noticeText, type Noticed } from '@/lib/homeNotice';
+import { addable, dismissForDay, moreText, notSuggested, suggestionAction, suggestionDetail, type NotTodayDb } from '@/lib/routineSuggest';
 import { supabase } from '@/lib/supabase';
 import { needsPro } from '@/lib/pro';
 import { addDays, addToDay, EMPTY_TASK, localParts, plannedAt, shortDay, taskMetadata, type TaskDayEnd, type TaskMetadata, withTime } from '@/lib/tasks';
@@ -104,6 +109,9 @@ export default function MyDay() {
   // Left open (D35): the task a button is working on, and what went wrong.
   const [leftBusy, setLeftBusy] = useState<string | null>(null);
   const [leftError, setLeftError] = useState<string | null>(null);
+  // From your routines: the suggestion being saved ('all' for Add all), and what went wrong.
+  const [suggestBusy, setSuggestBusy] = useState<string | null>(null);
+  const [suggestError, setSuggestError] = useState<string | null>(null);
 
   // The day's events as read (with keys), their places, and the zone: reused when only a choice changes.
   const raw = useRef<DayEvent[] | null>(null);
@@ -385,6 +393,44 @@ export default function MyDay() {
     }
   };
 
+  /**
+   * From your routines → Add (or Add all): each put at the time the planner found, as a Find a time
+   * pick is (planned_at; the routine keeps its week or month). Then the plan again: a waiting one
+   * takes the place of each added (Q4).
+   */
+  const addSuggestions = async (list: RoutineSuggestion[]) => {
+    if (!list.length) return;
+    setSuggestBusy(list.length > 1 ? 'all' : list[0].task_id);
+    setSuggestError(null);
+    const done: string[] = [];
+    try {
+      for (const sg of list) {
+        const at = sg.start ? plannedAt(sg.start) : null;
+        if (!at || !sg.start) continue;
+        const item = await wilma.getItem(sg.task_id);
+        await wilma.updateItem(sg.task_id, { metadata: withTime((item.metadata ?? {}) as unknown as TaskMetadata, at, null) });
+        done.push(`${sg.title} at ${clock(sg.start)}`);
+      }
+    } catch (e) {
+      setSuggestError(editError(e instanceof Error ? e.message : String(e)));
+    } finally {
+      if (done.length) setAdded(`✓ ${done.join(', ')}.`);
+      setSuggestBusy(null);
+      void load(false);
+    }
+  };
+
+  /** From your routines → ✕: not today, kept on the server for this day only (Q5). */
+  const dismissSuggestion = async (sg: RoutineSuggestion) => {
+    setSuggestBusy(sg.task_id);
+    setSuggestError(null);
+    const out = await dismissForDay(supabase as unknown as NotTodayDb, sg.task_id, date);
+    if (!alive.current) return;
+    setSuggestBusy(null);
+    if ('error' in out) setSuggestError(out.error);
+    else void load(false);
+  };
+
   /** Not today: a task due this day moves to the next one; it stays in Tasks either way. */
   const notToday = async () => {
     const task = sheetTask;
@@ -637,7 +683,11 @@ export default function MyDay() {
   }
   else if (plan) {
     const chips = dayChips(plan);
-    const { leftOpen, notPlaced } = splitNotPlaced(plan);
+    const split = splitNotPlaced(plan);
+    const leftOpen = split.leftOpen;
+    const notPlaced = notSuggested(split.notPlaced, plan);
+    const suggested = plan.suggestions;
+    const canAddAll = addable(plan).length > 1;
     content = (
       <View style={{ gap: space.m }}>
         {homeCard}
@@ -680,6 +730,40 @@ export default function MyDay() {
             {leftError ? <Text style={{ color: c.danger, fontSize: 14 }}>{leftError}</Text> : null}
           </View>
         ) : null}
+        {suggested ? (
+          <View style={[box(c.tint), { gap: space.s, paddingVertical: space.s }]}>
+            <Text style={{ color: c.text, fontSize: 14, fontWeight: '600' }}>🔁 From your routines</Text>
+            {suggested.items.map((sg) => (
+              <View key={sg.task_id} style={{ flexDirection: 'row', alignItems: 'center', gap: space.s }}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={{ color: c.text, fontSize: 14, fontWeight: '600' }}>{sg.title}</Text>
+                  <Text style={{ color: c.muted, fontSize: 13 }}>{suggestionDetail(sg)}</Text>
+                </View>
+                {suggestBusy === sg.task_id || suggestBusy === 'all' ? (
+                  <Muted>Saving…</Muted>
+                ) : suggestBusy || sheet ? null : (
+                  <>
+                    <TextLink
+                      title={suggestionAction(sg)}
+                      onPress={() => void (sg.start ? addSuggestions([sg]) : findTimeFor(sg.task_id, sg.title))}
+                    />
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Not today: ${sg.title}`}
+                      hitSlop={10}
+                      onPress={() => void dismissSuggestion(sg)}
+                      style={({ pressed }) => [{ paddingHorizontal: space.xs }, pressed && { opacity: 0.6 }]}>
+                      <Text style={{ color: c.muted, fontSize: 16 }}>✕</Text>
+                    </Pressable>
+                  </>
+                )}
+              </View>
+            ))}
+            {moreText(suggested.more) ? <Muted>{moreText(suggested.more)}</Muted> : null}
+            {canAddAll && !suggestBusy && !sheet ? <TextLink title="Add all" onPress={() => void addSuggestions(addable(plan))} /> : null}
+            {suggestError ? <Text style={{ color: c.danger, fontSize: 14 }}>{suggestError}</Text> : null}
+          </View>
+        ) : null}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.xs }}>
           {chips.map((ch) => (
             <Text key={ch.text} style={chipStyle(c, ch.tone)}>{ch.text}</Text>
@@ -696,7 +780,7 @@ export default function MyDay() {
             {notPlaced.map((task) => (
               <View key={task.id} style={{ flexDirection: 'row', alignItems: 'center', gap: space.s }}>
                 <Text style={{ color: c.text, fontSize: 14, flex: 1 }}>
-                  {`☐ ${task.title}${task.duration_min ? ` · ${minutesText(task.duration_min)}` : ''}${task.overdue ? ' · overdue' : ''}`}
+                  {`☐ ${task.title}${task.duration_min ? ` · ${minutesText(task.duration_min)}` : ''}${task.routine ? ` · ${task.routine}` : task.overdue ? ' · overdue' : ''}`}
                 </Text>
                 {!sheet ? <TextLink title="Find a time" onPress={() => void findTimeFor(task.id, task.title)} /> : null}
               </View>
@@ -720,6 +804,7 @@ export default function MyDay() {
     setDetail(null);
     setAsking(null);
     setAdded(null);
+    setSuggestError(null);
     setHomesOpen(false);
     setNoticed(null);
     closeSheet();

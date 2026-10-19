@@ -8,6 +8,7 @@
 import type { BriefingSettings } from './briefingSettings';
 import type { DayDriveRow, DayPlan } from './dayPlan';
 import { clock, titles, todayAndTomorrow } from './dayView';
+import { routineCountLine } from './routineSuggest';
 
 /** One notification to schedule. `id` starts with "wilma.<date>." so a day's set can be replaced. */
 export interface DayNote {
@@ -87,6 +88,9 @@ export function summaryOf(plan: DayPlan): string {
   if (alert?.kind === 'alert') parts.push(`⚠ ${alert.event}.`);
   const rain = plan.rows.find((r) => r.kind === 'rain');
   if (rain?.kind === 'rain') parts.push(`Rain likely at ${clock(rain.start)} at ${rain.place}.`);
+  // Routines Q3: a count only, never which tasks.
+  const routines = routineCountLine(plan);
+  if (routines) parts.push(routines);
   return parts.join(' ');
 }
 
