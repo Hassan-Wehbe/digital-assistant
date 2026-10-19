@@ -129,7 +129,7 @@ async function readNotToday(db: SupabaseClient, date: string): Promise<Set<strin
  * again). Never a place note: older apps' Home notes are copied into the table by the database
  * (migration home_place). Null when the person has no home.
  */
-async function readHome(db: SupabaseClient, startFrom?: string): Promise<PlanPlace | null> {
+export async function readHome(db: SupabaseClient, startFrom?: string): Promise<PlanPlace | null> {
   const read = async (column: "id" | "is_default", value: string | boolean) => {
     const { data, error } = await db.from("home_place").select("id, label, lat, lng, is_default").eq(column, value).limit(1);
     if (error) throw new Error(`db:${error.code ?? "home"}`);
@@ -192,7 +192,7 @@ interface PlanRequest {
 /** Pro, and under today's fair-use limit (counted only when allowed): use_day_plan(), migration day_plan. */
 type Gate = { allowed: true; used?: number; limit?: number } | { allowed: false; reason: "pro_required" | "fair_use"; used?: number; limit?: number };
 
-async function gate(db: SupabaseClient): Promise<Gate | null> {
+export async function gate(db: SupabaseClient): Promise<Gate | null> {
   const { data, error } = await db.rpc("use_day_plan");
   if (error || !data) return null;
   const g = data as { allowed: boolean; reason?: string; used?: number; limit?: number };
