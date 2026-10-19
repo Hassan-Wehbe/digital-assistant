@@ -358,3 +358,13 @@ create policy secret_log_insert on secret_access_log
 --   task in a searchable space; a day near today; old rows dropped on write. Users read, add, remove.
 -- delete_item / restore_item / purge_item / deleted_item_files: a routine takes its tasks with it
 --   (binned at the same moment; only those come back or are purged with it).
+
+-- =========================================================
+-- Household (20261020120000_household.sql; design.md D40, docs/planners-plan.md)
+-- =========================================================
+-- household_member: id, user_id (owner, auth.uid(), cascade with the account), label (1-40, trimmed,
+--   once per name), kind adult | child, birth_year (a child only, 1900 to this year), position
+--   (new ones last), created_at, updated_at. At most 10 per account. Who is in the family, for
+--   Family day; never an item, never searched or shared; the planner sends the AI roles and ages,
+--   never a label. RLS own rows; users read, add (label, kind, birth_year), change (those and
+--   position) and remove; never the owner; anon nothing.

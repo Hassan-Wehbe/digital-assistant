@@ -1,6 +1,7 @@
 # Date night and family day planners
 
-Status: plan, 2026-10-19. **Owner's answers given the same day: all as recommended (Q1-Q10).** Design: D40 (and
+Status: plan, 2026-10-19. **Owner's answers given the same day: all as recommended (Q1-Q10).** **Step 1
+built (2026-10-19), branch `claude/household`; migration applied 2026-10-19:** see "As built: step 1". Design: D40 (and
 D25, the day planner; D26, places; D31, calendar entries; D38, the Plan with Wilma row). Mockups:
 the owner's private canvas "Wilma Home and Planners", screens "Date night" and "Family day".
 Model: the strongest for steps 1-4 (a new table holding details about children, the AI request,
@@ -172,3 +173,33 @@ plans (step 4), shown as the same cards.
 5. **Help, privacy, checklist, build (smaller model).** Help topic lines, the privacy page's
    household line, the legal checklist item for children's details, Play Data safety check, the
    phone checklist, then the build.
+
+## As built: step 1 (2026-10-19)
+
+- **Migration `20261020120000_household.sql`:** table `household_member` (label 1-40, trimmed and
+  once per name; kind adult or child; a birth year for a child only, from 1900 to this year; at
+  most 10 per account; new people placed last; the owner never changed; deleted with the account).
+  RLS own rows; authenticated may read, add (label, kind, birth year), change (those and position)
+  and remove; anon nothing. **SQL test `tests/sql/20_household.sql`: 25 checks, passed locally**
+  (Postgres 16 with the small stand-in for the Supabase tables); the dry run
+  `tests/sql/dry_runs/20_household_dry_run.sql` rolled back there with 25 "ok": true and left
+  nothing behind.
+- **The app:** `lib/household.ts` (rows read field by field, every field checked before anything is
+  sent, password-like labels held on the phone, the database's refusals in plain words, ↑ ↓ that
+  never leave two people on one position, a child's age from the birth year, and the Who words,
+  "2 adults", "2 kids (6, 9)", which never carry a name). **Settings → Household**
+  (`app/household.tsx`): the list, Add someone, tap to change, Remove (asked first, gone for good),
+  ↑ ↓; registered behind sign-in. Family day itself comes in step 3.
+- Tests: `lib/household.test.ts` (11). **913 app tests pass**; type check and lint clean.
+- `db/schema.sql`: a "Household" section.
+
+**Owner, in order:** (1) run the dry run `tests/sql/dry_runs/20_household_dry_run.sql` in the
+Supabase SQL editor (a new, empty query; it ends with an error on purpose, whose message lists 25
+checks that must all say `"ok": true`; nothing is kept); (2) OK to apply the migration (Claude tries
+the connector; if it times out, you run the migration file in the SQL editor); (3) merge. Nothing
+to deploy: no function changes. The app part ships with the next build.
+
+**Applied (2026-10-19):** the owner's dry run passed (25 "ok": true); the owner said OK and the
+Supabase connector applied it this time. Checked read-only afterwards: RLS on, 1 policy, 1 trigger;
+anon can neither read nor add; authenticated can read, delete and add a label but never write the
+owner (insert or update); anon cannot run the trigger function; 0 rows.
