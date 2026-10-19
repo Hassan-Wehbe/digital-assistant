@@ -6,7 +6,8 @@ Status: plan, 2026-10-18. **Owner's answers given the same day (Q1-Q9, below "De
 deployed 2026-10-19:** see "As built: step 2". **Step 3 is in two parts: 3a (My day's box, Your
 morning's line) merged (#230) 2026-10-19; 3b (the Routines tab and the routine screen) merged
 (#231) 2026-10-19;** see "As built: step 3a" and "step 3b". **Step 4 (the chat) merged (#232) and `chat`
-deployed 2026-10-19 (run 39280697614) after the evaluation passed:** see "As built: step 4". Step 5 is next. Design: D39 (and D25, the
+deployed 2026-10-19 (run 39280697614) after the evaluation passed:** see "As built: step 4". **Step 5 (help, checklist, privacy) built 2026-10-19, branch
+`claude/routines-help-build`, not merged; then the build:** see "As built: step 5". Design: D39 (and D25, the
 day planner; D35, tasks left open at the end of their day). Mockups: the owner's private canvas
 "Wilma Home and Planners", screens 5-7. Model: the strongest for steps 1, 2 and 4 (the task model,
 the planner, the chat); a smaller one is fine for step 5.
@@ -345,3 +346,21 @@ The `chat` function and the app; the Claude connector (`mcp`) is unchanged.
 **0 leaks, 0 unsafe**, $0.09; all six routine cases passed, the password trap included. The one miss
 is not routines: `plan-when-to-leave` left out the 15-minute drive (it passed in the run before).
 **Merged (#232); `chat` deployed (run 39280697614; 401 without sign-in, as expected), 2026-10-19.** The app part ships with the next build.
+## As built: step 5 (2026-10-19)
+
+- **Help** (`app/src/lib/help.ts`): My day's topic gets a fourth line about routines ("Routines
+  (Tasks → 🔁 Routines): weekly or monthly chores she offers when you have free time.") and a Try it
+  ("Make my Saturday chores a weekly routine: laundry, vacuum").
+- **Privacy page re-checked: one sentence added** (the plan expected none): routines are saved like
+  notes, and two small things are now kept with the account, which spaces are favourites (D38) and
+  the "Not today" marks (a task and a date, dropped after a few days). "Last updated 19 October
+  2026". Play Data safety: no change (the same user content and app settings, kept with the account,
+  never shared). **The owner checks the wording.**
+- **Legal checklist:** one item for Get title on shared links (D41: YouTube's oEmbed and sites'
+  terms). Routines add nothing new for the lawyer.
+- **`docs/versioncode21-phone-checklist.md`**: the whole next build (Home clean-up, shared links and
+  the cold-start fix, routines 3a, 3b and 4, Help).
+
+**Owner, in order:** (1) check the privacy sentence; merge; (2) OK to build ("preview" for an .apk
+on your phone, or "production" for Play testers; production also submits to Google Play); (3) the
+phone checklist.
