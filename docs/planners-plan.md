@@ -5,8 +5,10 @@ built and merged (#236); migration applied 2026-10-19:** see "As built: step 1".
 merged (#237) and `chat` deployed (run 39285813529) 2026-10-19:** see "As built: step 2". **Step 3
 merged (#238) 2026-10-19; app only, next build:** see "As built: step 3". **Step 4 merged
 (#239) and `chat` deployed (run 39293348391) 2026-10-19, on the owner's word without an evaluation
-run (one is still owed, below):** see "As built: step 4". **Step 5 (help, privacy, checklist) built
-2026-10-19, not merged; then the build:** see "As built: step 5". Design: D40 (and
+run; **the evaluation then passed (run 39294565911: 0 leaks, 0 unsafe, all five outing cases)**:**
+see "As built: step 4". **Step 5 (help, privacy, checklist) merged (#240)
+and versionCode 22 built and submitted to Play internal testing (build d79d78ff), 2026-10-19:** see
+"As built: step 5". Design: D40 (and
 D25, the day planner; D26, places; D31, calendar entries; D38, the Plan with Wilma row). Mockups:
 the owner's private canvas "Wilma Home and Planners", screens "Date night" and "Family day".
 Model: the strongest for steps 1-4 (a new table holding details about children, the AI request,
@@ -337,3 +339,12 @@ testers.
 **Owner, in order:** (1) check the privacy wording; merge; (2) OK to build ("preview" for an .apk,
 or "production" for Play testers; production also submits to Google Play); (3) the phone checklist
 (after versionCode 21's, if not done yet); (4) when convenient, a cap for the owed evaluation run.
+
+**Evaluation (owner's OK, $1 cap), after the deploy:** run 39294565911 at 3b0519a (the deployed
+code), Luna, all 159 chat cases: 157/159, **0 leaks, 0 unsafe**, $0.10. **All five outing cases
+passed** (date night, family day from the household, restricted trap, password trap, not Pro). The
+two misses are not the planners: `plan-when-to-leave` left out the 15-minute drive (missed in the
+run before too), and `reminder-cancel-all-still-cards` was graded a fail although the reply ("Nothing
+has been cancelled yet") is right: the grader's `noDoneClaim` (`tests/eval/grade.ts`) matches
+"has been cancelled" even after "Nothing" (a small grader fix, not done here). **Merged (#240); versionCode 22 built and submitted to Play internal testing (run
+39294364071, build d79d78ff), 2026-10-19.** Next: the owner's phone checklists (21, then 22).

@@ -13,13 +13,15 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **D40 planners step 5, help, privacy, checklist (2026-10-19): branch `claude/planners-help`, not
-  merged.** Help's Places & Homes topic (planners line, two Try its); the privacy page's household
+- **D40 planners done (2026-10-19): step 5 merged (#240); versionCode 22 built and submitted to
+  Play internal testing; the owed evaluation passed (run 39294565911: 157/159, 0 leaks, 0 unsafe,
+  all five outing cases; the two misses are older: `plan-when-to-leave`, and a grader false fail on
+  `reminder-cancel-all-still-cards`).** **Owner:** phone checklists 21, then 22. Vacation stays Soon.
+- **D40 planners step 5, help, privacy, checklist (2026-10-19): merged (#240).** Help's Places & Homes topic (planners line, two Try its); the privacy page's household
   line, Date night and family day paragraph, Mapbox/weather wording and Children section (owner
   checks the wording); Data safety unchanged; a legal item for children's details;
   `docs/versioncode22-phone-checklist.md`. **Owner:** check the wording, merge, OK to build, the
-  phone checklist (versionCode 21's first). **Still owed:** a chat evaluation run for `plan_outing`
-  (owner's cap).
+  phone checklist (versionCode 21's first).
 - **D40 planners step 4, the chat (2026-10-19): merged (#239); `chat` deployed (run 39293348391)
   on the owner's word without the evaluation run (still owed, see step 5).** `plan_outing` (chat only; no name field; household as ages read
   on the server; the re-sent calendar for that day) on the same core as the screens; the plan card
