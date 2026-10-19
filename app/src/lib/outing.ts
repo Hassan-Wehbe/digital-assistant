@@ -1,8 +1,10 @@
 // Date night and family day (planners step 3, docs/planners-plan.md; design D40): the plan the
 // `chat` function's outing route answers ({"mode":"outing"}; supabase/functions/chat/outing.ts),
 // checked here field by field, the client that asks for it, and what the screens need from it:
-// the default day, who is coming as roles and ages only (Q4: the household's names never leave
-// the phone), and one calendar event for the whole plan with its steps in the notes (Q6).
+// the days to pick from, the kinds of date and their times, who is coming as roles and ages only
+// (Q4: the household's names never leave the phone), the busy times it was planned around (the
+// calendar's events are never steps of a plan, owner 2026-10-19), and one calendar event for the
+// whole plan with its steps in the notes (Q6).
 //
 // The plan is kept only in memory while the screen is open: Mapbox's terms do not allow storing
 // its Directions results (as My day). Another idea is another plan, counted again (Q7).
@@ -11,6 +13,20 @@ import type { EventCardData } from './phoneActions';
 import { WilmaError } from './wilma';
 
 export type OutingKind = 'date' | 'family';
+
+/** What kind of date (owner, 2026-10-19), as the server takes it. */
+export type Occasion = 'dinner' | 'lunch' | 'coffee' | 'drinks' | 'activity';
+
+/** Each kind of date: its chip, its start times to pick from, the usual one (as the server's). */
+export const OCCASIONS: { value: Occasion; label: string; title: string; times: string[]; start: string }[] = [
+  { value: 'dinner', label: 'Dinner', title: 'Date night', times: ['18:00', '19:00', '20:00'], start: '19:00' },
+  { value: 'lunch', label: 'Lunch', title: 'Lunch date', times: ['11:30', '12:00', '13:00'], start: '12:00' },
+  { value: 'coffee', label: 'Coffee', title: 'Coffee date', times: ['08:00', '10:00', '15:00'], start: '10:00' },
+  { value: 'drinks', label: 'Drinks', title: 'Drinks', times: ['19:00', '20:00', '21:00'], start: '20:00' },
+  { value: 'activity', label: 'Something to do', title: 'A date out', times: ['10:00', '14:00', '17:00'], start: '14:00' },
+];
+
+export const occasionOf = (o: Occasion) => OCCASIONS.find((x) => x.value === o)!;
 
 export interface OutingPlace {
   id: string;
@@ -29,13 +45,13 @@ export interface OutingStep {
   end: string;
   line: string;
   place?: OutingPlace;
-  event?: { key: string; title: string };
   home?: true;
   drive_min?: number;
 }
 
 export interface OutingPlan {
   kind: OutingKind;
+  occasion?: Occasion;
   date: string;
   title: string;
   from: string;
@@ -43,6 +59,8 @@ export interface OutingPlan {
   steps: OutingStep[];
   back_home_min?: number;
   alternative?: { place: OutingPlace; line: string; minutes?: number };
+  /** The calendar's busy times it was planned around (times only). */
+  around: { start: string; end: string }[];
   rain: { at: string; rain_pct: number }[];
   credits: string[];
 }
@@ -61,6 +79,7 @@ export interface OutingBody {
   now?: string;
   start?: string;
   end?: string;
+  occasion?: Occasion;
   budget?: 1 | 2 | 3;
   mood?: 'favourite' | 'new';
   setting?: 'outdoor' | 'indoor' | 'either';
@@ -100,9 +119,6 @@ function toStep(raw: unknown): OutingStep | null {
   const drive = mins(raw.drive_min) ? { drive_min: raw.drive_min } : {};
   const place = toPlace(raw.place);
   if (place) return { start: raw.start, end: raw.end, line, place, ...drive };
-  if (isObject(raw.event) && text(raw.event.key, 200) && text(raw.event.title)) {
-    return { start: raw.start, end: raw.end, line, event: { key: raw.event.key, title: raw.event.title }, ...drive };
-  }
   if (raw.home === true) return { start: raw.start, end: raw.end, line, home: true, ...drive };
   return null;
 }
@@ -113,8 +129,10 @@ export function toOutingPlan(raw: unknown): OutingPlan | null {
   const steps = (Array.isArray(raw.steps) ? raw.steps : []).slice(0, 6).map(toStep).filter((s): s is OutingStep => s !== null);
   if (!steps.some((s) => s.place)) return null;
   const alt = isObject(raw.alternative) ? toPlace(raw.alternative.place) : null;
+  const occasion = raw.kind === 'date' ? OCCASIONS.find((o) => o.value === raw.occasion) : undefined;
   return {
-    kind: raw.kind, date: raw.date, title: text(raw.title, 80) ? raw.title : raw.kind === 'date' ? 'Date night' : 'Family day',
+    kind: raw.kind, ...(occasion ? { occasion: occasion.value } : {}), date: raw.date,
+    title: text(raw.title, 80) ? raw.title : raw.kind === 'date' ? (occasion?.title ?? 'Date night') : 'Family day',
     from: text(raw.from, 60) ? raw.from : 'Home',
     ...(typeof raw.leave_at === 'string' && HHMM.test(raw.leave_at) ? { leave_at: raw.leave_at } : {}),
     steps,
@@ -122,6 +140,9 @@ export function toOutingPlan(raw: unknown): OutingPlan | null {
     ...(alt && isObject(raw.alternative)
       ? { alternative: { place: alt, line: typeof raw.alternative.line === 'string' ? raw.alternative.line.slice(0, 200) : '', ...(mins(raw.alternative.minutes) ? { minutes: raw.alternative.minutes } : {}) } }
       : {}),
+    around: (Array.isArray(raw.around) ? raw.around : [])
+      .filter((b): b is { start: string; end: string } => isObject(b) && typeof b.start === 'string' && HHMM.test(b.start) && typeof b.end === 'string' && HHMM.test(b.end))
+      .slice(0, 10).map((b) => ({ start: b.start, end: b.end })),
     rain: (Array.isArray(raw.rain) ? raw.rain : [])
       .filter((h): h is { at: string; rain_pct: number } => isObject(h) && typeof h.at === 'string' && LOCAL.test(h.at) && typeof h.rain_pct === 'number' && h.rain_pct >= 0 && h.rain_pct <= 100)
       .slice(0, 24).map((h) => ({ at: h.at, rain_pct: h.rain_pct })),
@@ -194,6 +215,9 @@ export type OutingClient = ReturnType<typeof outingClient>;
 const addDays = (day: string, n: number) => new Date(Date.parse(`${day}T12:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 const weekday = (day: string) => new Date(`${day}T12:00:00Z`).getUTCDay();
 
+/** The next `n` days from `today`, today included (the day chips; any later day from the picker). */
+export const nextDays = (today: string, n = 7): string[] => Array.from({ length: n }, (_, i) => addDays(today, i));
+
 /** The next given weekday (0 Sunday … 6 Saturday) from `today`, today included. */
 export function nextWeekday(today: string, day: number): string {
   return addDays(today, (day - weekday(today) + 7) % 7);
@@ -220,7 +244,6 @@ export function stepDetail(s: OutingStep): string {
     if (s.place.cuisine?.length) parts.push(s.place.cuisine.join(', '));
     if (s.place.price_level) parts.push('$'.repeat(s.place.price_level));
   }
-  if (s.event) parts.push('From your calendar');
   if (s.drive_min !== undefined) parts.push(`${s.drive_min} min drive`);
   return parts.join(' · ');
 }
@@ -233,10 +256,18 @@ export function rainLine(plan: OutingPlan): string | null {
   return `Rain likely around ${clock(top.at.slice(11, 16))} (${top.rain_pct}%).`;
 }
 
+/** "Planned around your calendar (busy 11:00 am–12:00 pm)." when it had busy times; null otherwise. */
+export function aroundLine(plan: OutingPlan): string | null {
+  if (!plan.around.length) return null;
+  const shown = plan.around.slice(0, 3).map((b) => `${clock(b.start)}–${clock(b.end)}`).join(', ');
+  const more = plan.around.length > 3 ? ` and ${plan.around.length - 3} more` : '';
+  return `Planned around your calendar (busy ${shown}${more}).`;
+}
+
 /** What the screen says when there is no plan. */
 export const EMPTY_TEXT: Record<'no_home' | 'no_places' | 'no_plan', string> = {
   no_home: 'Set where you leave from first (Settings → Homes), so the drives can be worked out.',
-  no_places: 'Wilma plans from places you saved. Save a few (restaurants, parks, things to do) and mark the right ones “date night” or “kids”.',
+  no_places: 'Wilma plans from places you saved. Save a few (restaurants, cafés, bars, parks, things to do) and mark the right ones “date night” or “kids”.',
   no_plan: 'Wilma couldn’t make a plan from your places this time. Try Another idea, or change the choices.',
 };
 
@@ -256,7 +287,7 @@ export function planEvent(plan: OutingPlan): EventCardData {
   const firstPlace = plan.steps.find((s) => s.place)?.place;
   const notes = [
     ...(plan.leave_at ? [`${clock(plan.leave_at)} Leave ${plan.from}`] : []),
-    ...plan.steps.map((s) => `${clock(s.start)} ${s.place?.title ?? s.event?.title ?? 'Home'}${s.line ? `: ${s.line}` : ''}`),
+    ...plan.steps.map((s) => `${clock(s.start)} ${s.place?.title ?? 'Home'}${s.line ? `: ${s.line}` : ''}`),
     'Planned with Wilma.',
   ].join('\n');
   return {

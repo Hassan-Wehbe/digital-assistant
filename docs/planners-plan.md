@@ -4,11 +4,12 @@ Status: plan, 2026-10-19. **Owner's answers given the same day: all as recommend
 built and merged (#236); migration applied 2026-10-19:** see "As built: step 1". **Step 2 built,
 merged (#237) and `chat` deployed (run 39285813529) 2026-10-19:** see "As built: step 2". **Step 3
 merged (#238) 2026-10-19; app only, next build:** see "As built: step 3". **Step 4 merged
-(#239) and `chat` deployed (run 39293348391) 2026-10-19, on the owner's word without an evaluation
-run; **the evaluation then passed (run 39294565911: 0 leaks, 0 unsafe, all five outing cases)**:**
-see "As built: step 4". **Step 5 (help, privacy, checklist) merged (#240)
-and versionCode 22 built and submitted to Play internal testing (build d79d78ff), 2026-10-19:** see
-"As built: step 5". Design: D40 (and
+(#239) and `chat` deployed (run 39293348391) 2026-10-19, on the owner's word before the evaluation
+run, which then passed (run 39294565911: 0 leaks, 0 unsafe, all five outing cases):** see "As built:
+step 4". **Step 5 (help, privacy, checklist) merged (#240) and versionCode 22 built and submitted to
+Play internal testing (build d79d78ff), 2026-10-19:** see "As built: step 5". **Owner's changes after
+trying it (2026-10-19), built the same day, branch `claude/planners-feedback`, not merged, not
+deployed:** see "Changes after versionCode 22". Design: D40 (and
 D25, the day planner; D26, places; D31, calendar entries; D38, the Plan with Wilma row). Mockups:
 the owner's private canvas "Wilma Home and Planners", screens "Date night" and "Family day".
 Model: the strongest for steps 1-4 (a new table holding details about children, the AI request,
@@ -348,3 +349,40 @@ run before too), and `reminder-cancel-all-still-cards` was graded a fail althoug
 has been cancelled yet") is right: the grader's `noDoneClaim` (`tests/eval/grade.ts`) matches
 "has been cancelled" even after "Nothing" (a small grader fix, not done here). **Merged (#240); versionCode 22 built and submitted to Play internal testing (run
 39294364071, build d79d78ff), 2026-10-19.** Next: the owner's phone checklists (21, then 22).
+
+## Changes after versionCode 22 (owner, 2026-10-19)
+
+The owner tried the planners and asked for three changes ("1-3 as recommended"):
+
+1. **The calendar is planned around, never proposed.** Before, an event in the window was kept as a
+   step of the plan ("From your calendar, kept as it is"), which looked like Wilma suggesting it.
+   Now the model gets only the **busy times** ("Busy times: 11:00-12:00"), never an event's title,
+   is told never to make them steps, and `checkAnswer` drops any event step it gives. The plan
+   carries `around` (the busy times, "HH:MM" only), and the card says "Planned around your
+   calendar (busy 11:00 am–12:00 pm)." The screens have **Fit around my calendar** (on by default;
+   off: the calendar is not read and nothing is sent). A privacy gain: event titles no longer reach
+   the AI for a plan (the privacy page now says so).
+2. **Any day.** The screens offer the next seven days as chips (Today, Tomorrow, Wed …) and
+   📅 Pick a later day (Android). The chat already took any date.
+3. **Kinds of date.** `occasion`: Dinner (as before, 7 pm, three hours, a restaurant then a walk or
+   a drink), Lunch (12, two hours, a restaurant or café), Coffee (10, an hour and a half, a café),
+   Drinks (8 pm, two and a half hours, bars) and Something to do (2 pm, four hours, a place to
+   visit then food nearby). Each has its own start times on the screen; the start given wins. When
+   no place fits the mood (no café "want to go"), the best place of that kind is used rather than
+   no plan, and the model is told not to claim it matches. The screen's title is now "Plan a date".
+   `plan_outing` takes `occasion` ("a coffee date Tuesday at 10").
+
+- Server: `outing_plan.ts` (`OCCASIONS`, `OCCASION_WORDS`, the short list by kind, busy times
+  only, no event steps), `outing.ts` (`occasion` in the body and the tool, `OCCASION_TIMES` and
+  `windowOf`, `around` in the plan; event steps gone), the chat's instructions. Older apps (21, 22)
+  keep working: no `occasion` means dinner, and they ignore `around`.
+- App: `lib/outing.ts` (`OCCASIONS`, `nextDays`, `aroundLine`; event steps dropped when read),
+  `app/outing.tsx` (Kind, seven days, the calendar switch), the card's around line.
+- Tests: Deno `outing_test.ts` (the kinds of date, busy times without titles, an event step
+  dropped, the windows): **538 Deno tests**; app `outing.test.ts` (+3): **928 app tests**; the
+  bundle builds. Evaluation: a new case `outing-coffee-date`.
+- Privacy page: a date of any kind; busy times, never titles; the switch.
+
+**Owner, in order:** (1) OK + cap for an evaluation run (the chat's instructions and tool changed);
+(2) merge; (3) OK to deploy `chat`; (4) OK to build (versionCode 23), then
+`docs/versioncode23-phone-checklist.md`.

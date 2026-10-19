@@ -1,8 +1,8 @@
 // A Date night or Family day plan (D40, docs/planners-plan.md steps 3 and 4): the plan card on the
 // Date night / Family day screen (app/outing.tsx) and in the chat (plan_outing). Its steps with
 // times and drives, the weather, Add to calendar (one event with the steps in its notes, Q6; only on
-// the tap, through the same checks and calendar as the 📅 card), Open in Maps, and the alternative
-// (Use this one). The plan is only in memory: the chat never saves it (chatStore keeps no outing).
+// the tap, through the same checks and calendar as the 📅 card), Open in Maps, the alternative
+// (Use this one), and the busy times it went around (the calendar's events are never steps). The plan is only in memory: the chat never saves it (chatStore keeps no outing).
 import { useState } from 'react';
 import { Linking, Text, View } from 'react-native';
 
@@ -11,7 +11,7 @@ import { useAuth } from '@/lib/auth';
 import { addEvent, defaultTarget, deviceCalendar } from '@/lib/calendar';
 import { loadChoice } from '@/lib/calendarSettings';
 import { deviceSettingsStore } from '@/lib/deviceStorage';
-import { clock, planEvent, rainLine, stepDetail, withAlternative, type OutingPlan } from '@/lib/outing';
+import { aroundLine, clock, planEvent, rainLine, stepDetail, withAlternative, type OutingPlan } from '@/lib/outing';
 import { mapsLink } from '@/lib/places';
 import { shortDay } from '@/lib/tasks';
 
@@ -42,6 +42,7 @@ export function OutingPlanCard({ plan: first, today }: { plan: OutingPlan; today
   const firstPlace = plan.steps.find((s) => s.place)?.place;
   const maps = firstPlace ? firstPlace.maps_url ?? mapsLink({ lat: firstPlace.lat, lng: firstPlace.lng }) : null;
   const weather = rainLine(plan);
+  const around = aroundLine(plan);
   return (
     <View style={{ gap: space.m }}>
       <Card style={{ gap: space.s }}>
@@ -55,7 +56,7 @@ export function OutingPlanCard({ plan: first, today }: { plan: OutingPlan; today
           <View key={`${i}-${s.start}`} style={{ flexDirection: 'row', gap: space.m }}>
             <Text style={{ width: 64, color: c.accent, fontSize: 14, fontWeight: '600' }}>{clock(s.start)}</Text>
             <View style={{ flex: 1, gap: 2 }}>
-              <Text style={{ color: c.text, fontSize: 15, fontWeight: '600' }}>{s.place?.title ?? s.event?.title ?? 'Home'}</Text>
+              <Text style={{ color: c.text, fontSize: 15, fontWeight: '600' }}>{s.place?.title ?? 'Home'}</Text>
               {stepDetail(s) ? <Muted>{stepDetail(s)}</Muted> : null}
               {s.line ? <Text style={{ color: c.text, fontSize: 14 }}>{s.line}</Text> : null}
             </View>
@@ -63,6 +64,7 @@ export function OutingPlanCard({ plan: first, today }: { plan: OutingPlan; today
         ))}
         {plan.back_home_min !== undefined ? <Muted>{`Home again: ${plan.back_home_min} min drive`}</Muted> : null}
         {weather ? <Text style={{ color: c.rain, fontSize: 13 }}>{weather}</Text> : null}
+        {around ? <Muted>{around}</Muted> : null}
         {added ? <Text style={{ color: c.good, fontSize: 14 }}>{`✓ ${added}`}</Text> : null}
         {problem ? <Text style={{ color: c.danger, fontSize: 14 }}>{problem}</Text> : null}
         <View style={{ flexDirection: 'row', gap: space.s, flexWrap: 'wrap' }}>

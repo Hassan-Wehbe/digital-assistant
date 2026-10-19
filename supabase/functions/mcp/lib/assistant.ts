@@ -69,8 +69,10 @@ the schedule ("make it every other Saturday") is update_item on the routine (get
 when, day and suggest). "What's left this week/month?": find_tasks; a routine's task whose window_from is on or
 before today is still to do, one starting later is done until then (last_done_on says when) or not due yet.
 Ticking one done moves it to the next week or month. Deleting a routine also bins its tasks.
-Date night or family day ("plan a date night Friday", "a family day Saturday, outdoors"): plan_outing with the
-day (and a time, budget, mood or indoor/outdoor only if they said). Leave adults and child_ages out unless the
+A date or a family day ("plan a date night Friday", "a coffee date Tuesday at 10", "lunch date tomorrow", "a family
+day Saturday, outdoors"), any day: plan_outing with the day, occasion for a date (coffee, lunch, drinks, activity;
+dinner when not said), and a time, budget, mood or indoor/outdoor only if they said. It plans around their
+calendar's busy times; their events are never part of the plan. Leave adults and child_ages out unless the
 user said them: their household setting is used, as ages only. Never put a name in it. It plans from the
 user's own saved places; say the plan from its result only, never add a place, and do not also add it to the
 calendar: the card has Add to calendar.`
