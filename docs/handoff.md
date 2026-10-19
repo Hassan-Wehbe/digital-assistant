@@ -13,6 +13,18 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Routines step 2, the planner (2026-10-19): branch `claude/routines-planner`, not merged, not
+  deployed; evaluation not run.** My day and "plan my day" get "From your routines": up to 3
+  routine tasks fitted into free time by code (quarter hours, no overlaps, 30 min when no duration,
+  a task with a place gets Find a time), the rest counted; a routine's task is never overdue in its
+  window; Not today (`task_not_today`) keeps it out of that day's suggestions; a missed one is moved
+  on and written. The model gets the suggestions with a note never to add them itself. 516 Deno
+  tests; eval case `plan-routine-suggestion`. **Owner:** OK and cap for an evaluation run, merge, OK
+  to deploy `chat`. **Next:** step 3, the app (Routines screens, My day's box). Step 1 (#226) merged
+  and **deployed 2026-10-19** (`mcp` run 39255445120, `chat` run 39255464165).
+- **Share to Wilma bug (owner, 2026-10-19):** sharing a link from Facebook or YouTube does not open
+  the Share screen with the note. Being looked into; owner asked for the share improvements too (a
+  real title, favourite spaces first, saving the link's source).
 - **Routines step 1, the server (2026-10-18): branch `claude/routines-server` (#226); migration
   applied 2026-10-19 (owner ran it in the SQL editor after the connector timed out); not merged, not
   deployed.** Routines as items (`item_type routine`, kept in Tasks) with a schedule;

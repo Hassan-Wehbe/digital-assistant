@@ -1,7 +1,9 @@
 # Routines: weekly and monthly task groups
 
 Status: plan, 2026-10-18. **Owner's answers given the same day (Q1-Q9, below "Decided").** **Step 1 built
-(2026-10-18), PR #226; migration applied 2026-10-19; not deployed:** see "As built: step 1". Design: D39 (and D25, the
+(2026-10-18), PR #226; migration applied 2026-10-19; deployed 2026-10-19 (`mcp` and `chat`):** see
+"As built: step 1". **Step 2 built (2026-10-19), branch `claude/routines-planner`, not merged, not
+deployed:** see "As built: step 2". Design: D39 (and D25, the
 day planner; D35, tasks left open at the end of their day). Mockups: the owner's private canvas
 "Wilma Home and Planners", screens 5-7. Model: the strongest for steps 1, 2 and 4 (the task model,
 the planner, the chat); a smaller one is fine for step 5.
@@ -219,3 +221,33 @@ without applying anything, so the owner ran the migration file in the SQL editor
 afterwards: `task_not_today` with RLS on, 3 policies and its trigger; anon cannot read it;
 authenticated can read, add (task and day only, not the owner) and remove, not change; the four bin
 functions know routines; anon cannot call `delete_item`; 0 rows.
+
+## As built: step 2 (2026-10-19)
+
+Server only (the `chat` function's planner); the app shows it in step 3.
+
+- **`_shared/dayplan/plan.ts`**: `PlanTask` gains `routine` (the routine's title) and `suggest`; the
+  plan gains `suggestions: { items, more }` from `routineSuggestions` (pure code, tested): routine
+  tasks offered, nearest last day first (then important, routine, title), each fitted into the
+  earliest free gap on a quarter hour, never overlapping one another; a task with a place gets no
+  time (the app offers Find a time, which knows drives); no duration means 30 min, marked
+  `duration_assumed` (Q7); at most `MAX_SUGGESTIONS` = 3, the rest counted in `more` and offered when
+  one is added or dismissed (Q4). `tasks_not_placed` rows carry `routine`.
+- **`chat/day.ts`** (`makePlan`, used by My day and the chat's "plan my day"): loads the user's
+  routines (searchable spaces only) and that day's `task_not_today` rows (RLS, own rows; a failed
+  read offers them all); a routine's task is in the day while its window holds the day (a later
+  day in another period: that period), shown with that period's last day, so never overdue; a
+  missed one is moved on and written with a revision (Q6), sharing the per-plan write limit with
+  D35's day end; offered (`suggest`) only while in its window, the routine's Suggest is on, not
+  dismissed for that day and not already given a time. The log line counts `suggestions`.
+- **`chat/agenda.ts` `planForModel`**: `routine_suggestions` (title, routine, minutes, `fits_at` /
+  `until` or `needs_a_drive`, `do_by`), `more_routine_tasks_waiting`, and a note: offer them in a
+  short sentence, never add them or change a task, never call one overdue; `tasks_not_placed` rows
+  carry their routine.
+- Tests: `tests/deno/routines_planner_test.ts` (7: the suggestion rules, My day on the pretend
+  account with a routine, Not today, a placed task, a later month, the model's view); the fake
+  database knows `task_not_today`. **516 Deno tests pass.** Evaluation: one new case,
+  `plan-routine-suggestion` (offer the HVAC filter, never "overdue", no writes); not run yet.
+
+**Owner:** OK and a dollar cap for one evaluation run (the new case and the calendar ones, to show
+the plan's wording still holds), then merge, then OK to deploy `chat` (`mcp` is unchanged).
