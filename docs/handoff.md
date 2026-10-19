@@ -13,15 +13,16 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **Routines step 1, the server (2026-10-18): branch `claude/routines-server`, not applied, not
-  merged, not deployed.** Routines as items (`item_type routine`, kept in Tasks) with a schedule;
+- **Routines step 1, the server (2026-10-18): branch `claude/routines-server` (#226); migration
+  applied 2026-10-19 (owner ran it in the SQL editor after the connector timed out); not merged, not
+  deployed.** Routines as items (`item_type routine`, kept in Tasks) with a schedule;
   their tasks get `routine_id`, `window_from` and `due_on` from it (`mcp/lib/routines.ts`,
   `routine_tasks.ts`); `save_item`, `update_item` (schedule change brings tasks in step, done moves
   to the next period) and `find_tasks` (routine, window, missed; never overdue inside its window)
   know about them; tool descriptions unchanged. Migration `20261019120000_routines.sql`:
   `task_not_today` (Q5) and the bin taking a routine's tasks with it (Q8). 509 Deno tests; SQL test
   19, 30 checks, passed locally; dry run `tests/sql/dry_runs/19_routines_dry_run.sql`. **Owner:**
-  dry run, OK to apply, merge, OK to deploy `mcp` and `chat`. **Next:** step 2, the planner
+  merge, OK to deploy `mcp` and `chat`. **Next:** step 2, the planner
   (strongest model). Details: `docs/routines-plan.md` "As built: step 1".
 - **Routines plan written (2026-10-18): branch `claude/routines-plan` (#225), docs only; owner's
   answers in (Q1 weekly: any day that week or the same day every week; Q4 up to 3, the rest carry

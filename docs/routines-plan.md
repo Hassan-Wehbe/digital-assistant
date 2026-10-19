@@ -1,7 +1,7 @@
 # Routines: weekly and monthly task groups
 
 Status: plan, 2026-10-18. **Owner's answers given the same day (Q1-Q9, below "Decided").** **Step 1 built
-(2026-10-18), branch `claude/routines-server`, not applied, not deployed:** see "As built: step 1". Design: D39 (and D25, the
+(2026-10-18), PR #226; migration applied 2026-10-19; not deployed:** see "As built: step 1". Design: D39 (and D25, the
 day planner; D35, tasks left open at the end of their day). Mockups: the owner's private canvas
 "Wilma Home and Planners", screens 5-7. Model: the strongest for steps 1, 2 and 4 (the task model,
 the planner, the chat); a smaller one is fine for step 5.
@@ -213,3 +213,9 @@ Supabase SQL editor (a new, empty query; all 30 must say `"ok": true`); (2) OK t
 migration (Claude tries the connector; if it times out again, you run the migration file in the
 SQL editor); (3) merge; (4) OK to deploy **`mcp` and `chat`** (both load these tools). Optional: one
 evaluation run with a small cap to show nothing regressed (the tool descriptions did not change).
+
+**Applied (2026-10-19):** the owner's dry run passed (30 "ok": true); the Supabase connector timed out
+without applying anything, so the owner ran the migration file in the SQL editor. Checked read-only
+afterwards: `task_not_today` with RLS on, 3 policies and its trigger; anon cannot read it;
+authenticated can read, add (task and day only, not the owner) and remove, not change; the four bin
+functions know routines; anon cannot call `delete_item`; 0 rows.
