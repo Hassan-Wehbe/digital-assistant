@@ -5,21 +5,38 @@
 // The model only ever sees facts about places from this short list (title, kind, cuisine, price,
 // rating, last visit, occasions, minutes away), the free hours, the weather, the budget or mood,
 // and for a family day roles and ages ("2 adults, children aged 6 and 9"), never a name (Q4): the
-// request has no field for one. It must answer with JSON naming short-list places by number; any
-// place it invents, any time outside the free hours or over a calendar event, any line that looks
-// like a credential (rule 9) is dropped here. A plan with no place left is no plan.
+// request has no field for one. Of the calendar it sees only the busy times, never an event's title,
+// and an event is never a step of the plan (owner, 2026-10-19: the plan goes around the calendar, it
+// does not propose it). It must answer with JSON naming short-list places by number; any place it
+// invents, any time outside the free hours or over a busy time, any line that looks like a credential
+// (rule 9) is dropped here. A plan with no place left is no plan.
 import { findCredential } from "../mcp/lib/credentials.ts";
 import type { Point } from "../_shared/dayplan/plan.ts";
 
 export type OutingKind = "date" | "family";
 
+/** What kind of date (owner, 2026-10-19: a coffee date, a lunch date …); dinner when not said. */
+export const OCCASIONS = ["dinner", "lunch", "coffee", "drinks", "activity"] as const;
+export type Occasion = (typeof OCCASIONS)[number];
+
+/** Its words in the prompt and its title when the model gives none. */
+export const OCCASION_WORDS: Record<Occasion, { plan: string; title: string; how: string }> = {
+  dinner: { plan: "date night", title: "Date night", how: "dinner, then perhaps a walk or a drink nearby" },
+  lunch: { plan: "lunch date", title: "Lunch date", how: "one place for lunch, about an hour to an hour and a half" },
+  coffee: { plan: "coffee date", title: "Coffee date", how: "one café, about an hour" },
+  drinks: { plan: "drinks date", title: "Drinks", how: "a bar, perhaps a second one nearby" },
+  activity: { plan: "date out", title: "A date out", how: "one thing to do or see, then food or a drink nearby if it fits" },
+};
+
 export interface OutingAsk {
   kind: OutingKind;
   date: string;
-  /** Local "HH:MM" window: date night from start for three hours by default; family day 9 to 6 (Q9). */
+  /** Local "HH:MM" window (outing.ts windowOf): by the kind of date; family day 9 to 6 (Q9). */
   start: string;
   end: string;
-  /** Date night: 1-3 (matched to a place's price level 1-4: 3 means any). */
+  /** A date: what kind (dinner when not said). */
+  occasion?: Occasion;
+  /** A date: 1-3 (matched to a place's price level 1-4: 3 means any). */
   budget?: number;
   /** Date night: a favourite (been, rated well, not lately) or somewhere new (want to go) (Q8). */
   mood?: "favourite" | "new";
@@ -115,22 +132,37 @@ export function shortlist(rows: PlaceRow[], ask: OutingAsk, home: Point, today: 
   let picked: Candidate[];
   if (ask.kind === "date") {
     const budget = ask.budget ?? 3;
-    const fits = all.filter((c) =>
-      (FOOD.has(c.kind) || c.kind === "to-visit" || c.occasions.includes("date_night")) &&
-      (budget >= 3 || c.price_level === undefined || c.price_level <= budget)
-    );
+    const occasion = ask.occasion ?? "dinner";
+    const inBudget = (c: Candidate) => budget >= 3 || c.price_level === undefined || c.price_level <= budget;
+    // The main stop's kinds, by the kind of date.
+    const main: Record<Occasion, (c: Candidate) => boolean> = {
+      dinner: (c) => FOOD.has(c.kind) || c.kind === "to-visit" || c.occasions.includes("date_night"),
+      lunch: (c) => c.kind === "restaurant" || c.kind === "cafe",
+      coffee: (c) => c.kind === "cafe",
+      drinks: (c) => c.kind === "bar",
+      activity: (c) => c.kind === "to-visit" || (!FOOD.has(c.kind) && c.occasions.includes("date_night")),
+    };
+    const fits = all.filter((c) => main[occasion](c) && inBudget(c));
     const mood = ask.mood ?? "favourite";
     const favourite = (c: Candidate) =>
       c.status === "been" && (c.occasions.includes("date_night") || (c.rating ?? 0) >= 4) &&
       (!c.last_visit || daysBetween(c.last_visit, today) >= 30);
     const fresh = (c: Candidate) => c.status === "want";
+    const best = { dinner: "restaurant", lunch: "restaurant", coffee: "cafe", drinks: "bar", activity: "to-visit" }[occasion];
     const score = (c: Candidate) =>
-      (c.occasions.includes("date_night") ? 20 : 0) + (c.rating ?? 0) * 3 + (c.kind === "restaurant" ? 4 : 0) - c.km / 5;
-    picked = fits.filter(mood === "favourite" ? favourite : fresh).sort((a, b) => score(b) - score(a));
-    // A walk or a drink after dinner: a couple of nearby date-night or to-visit places of either kind.
-    const extras = fits.filter((c) => !picked.includes(c) && c.kind !== "restaurant" && (c.occasions.includes("date_night") || c.kind === "to-visit"))
-      .sort((a, b) => a.km - b.km).slice(0, 2);
-    picked = [...picked.slice(0, MAX_CANDIDATES - extras.length), ...extras];
+      (c.occasions.includes("date_night") ? 20 : 0) + (c.rating ?? 0) * 3 + (c.kind === best ? 4 : 0) - c.km / 5;
+    const byMood = fits.filter(mood === "favourite" ? favourite : fresh);
+    // None for the mood (a coffee date among few saved cafés): the best of the kind instead.
+    picked = (byMood.length ? byMood : fits).sort((a, b) => score(b) - score(a));
+    // A second stop: after dinner, a walk or a drink (date-night or to-visit places); after an
+    // activity, somewhere to eat or drink; after drinks, another bar is already in the list.
+    const extras = occasion === "dinner"
+      ? fits.filter((c) => !picked.includes(c) && c.kind !== "restaurant" && (c.occasions.includes("date_night") || c.kind === "to-visit"))
+      : occasion === "activity"
+      ? all.filter((c) => FOOD.has(c.kind) && inBudget(c))
+      : [];
+    const second = extras.filter((c) => !picked.includes(c)).sort((a, b) => a.km - b.km).slice(0, occasion === "activity" ? 3 : 2);
+    picked = [...picked.slice(0, MAX_CANDIDATES - second.length), ...second];
   } else {
     const kids = (c: Candidate) => c.occasions.includes("kids");
     const things = all.filter((c) => !FOOD.has(c.kind) && (kids(c) || c.kind === "to-visit"))
@@ -144,10 +176,9 @@ export function shortlist(rows: PlaceRow[], ask: OutingAsk, home: Point, today: 
   return (fresh.length >= 2 ? fresh : picked).slice(0, MAX_CANDIDATES);
 }
 
-/** A calendar event the plan must keep (busy in the window). */
+/** A busy time from the calendar, in the window: only its times reach the model, never its title. */
 export interface Busy {
-  key: string;
-  title: string;
+  /** Local "YYYY-MM-DDTHH:MM". */
   start: string;
   end: string;
 }
@@ -173,11 +204,12 @@ themselves. You answer with JSON only, no other text:
 {"title": "...", "steps": [{"place": 1, "start": "HH:MM", "minutes": 90, "line": "..."}], "alternative": {"place": 2, "line": "..."}}
 Rules:
 - Use only the numbered places you are given ("place": its number). Never invent a place.
-- A calendar event the user already has stays as it is: include it as {"event": "<its key>", "start", "minutes"} at its time if it falls in the window; plan around it.
+- Busy times are already taken on the user's calendar: plan nothing then, and never add them as steps.
 - For a family day you may add {"home": true, "start", "minutes", "line"} for time at home (rest, rain).
-- Steps in time order, inside the window, never overlapping each other or an event; leave room for the drives (minutes away are given).
-- A date night: usually dinner, then perhaps a walk or a drink nearby. A family day: things that suit the children's ages, a lunch, outdoor things in the dry hours.
-- title: at most ${MAX_TITLE} characters ("Dinner and a walk"). line: one short, warm sentence, at most ${MAX_LINE} characters, from the facts given only.
+- Steps in time order, inside the window, never overlapping each other or a busy time; leave room for the drives (minutes away are given).
+- A date: what the kind of date asks for (you are told). A family day: things that suit the children's ages, a lunch, outdoor things in the dry hours.
+- If no place matches the mood, use the best fit and do not claim it matches.
+- title: at most ${MAX_TITLE} characters ("Dinner and a walk", "Coffee at Kalei"). line: one short, warm sentence, at most ${MAX_LINE} characters, from the facts given only.
 - alternative: one other place from the list, if one fits.`;
 
 /** What the model is told: facts only, numbered places, no ids, no names. */
@@ -194,12 +226,13 @@ export function outingPrompt(ask: OutingAsk, cands: Candidate[], busy: Busy[], r
   const rainLine = rain.length
     ? rain.filter((h) => h.at.slice(11, 16) >= ask.start && h.at.slice(11, 16) <= ask.end).map((h) => `${hm(h.at)} ${h.rain_pct}%`).join(", ")
     : "unknown";
+  const occasion = OCCASION_WORDS[ask.occasion ?? "dinner"];
   return [
-    `Plan a ${ask.kind === "date" ? "date night" : "family day"} on ${ask.date} (today is ${today}), between ${ask.start} and ${ask.end}.`,
+    `Plan a ${ask.kind === "date" ? occasion.plan : "family day"} on ${ask.date} (today is ${today}), between ${ask.start} and ${ask.end}.`,
     ask.kind === "date"
-      ? `Budget: ${"$".repeat(ask.budget ?? 3)}${(ask.budget ?? 3) >= 3 ? " or more" : ""}. Mood: ${ask.mood === "new" ? "somewhere new they want to try" : "a favourite they have not been to lately"}.`
+      ? `Kind of date: ${occasion.how}. Budget: ${"$".repeat(ask.budget ?? 3)}${(ask.budget ?? 3) >= 3 ? " or more" : ""}. Mood: ${ask.mood === "new" ? "somewhere new they want to try" : "a favourite they have not been to lately"}.`
       : `Who: ${whoWords(ask.who)}. Setting: ${ask.setting ?? "either"} (judge indoor or outdoor from what each place is).`,
-    `Calendar events in the window: ${busy.length ? busy.map((b) => `${b.key}: "${b.title}" ${hm(b.start)}-${hm(b.end)}`).join("; ") : "none"}.`,
+    `Busy times: ${busy.length ? busy.map((b) => `${hm(b.start)}-${hm(b.end)}`).join(", ") : "none"}.`,
     `Chance of rain by hour: ${rainLine}.`,
     "Places:",
     ...lines,
@@ -211,7 +244,6 @@ export interface DraftStep {
   end: string;
   line: string;
   place?: Candidate;
-  event?: Busy;
   home?: true;
 }
 
@@ -246,9 +278,9 @@ function firstJson(text: string): Record<string, unknown> | null {
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /**
- * The model's answer, checked: places only from the short list (by number), events only from the
- * calendar, times inside the window and in order, nothing overlapping, at most MAX_STEPS. Anything
- * else is dropped; null when no place is left.
+ * The model's answer, checked: places only from the short list (by number), times inside the window
+ * and in order, nothing overlapping a busy time, at most MAX_STEPS. Anything else is dropped (a
+ * calendar event offered as a step too); null when no place is left.
  */
 export function checkAnswer(text: string, ask: OutingAsk, cands: Candidate[], busy: Busy[]): Draft | null {
   const raw = firstJson(text);
@@ -264,19 +296,14 @@ export function checkAnswer(text: string, ask: OutingAsk, cands: Candidate[], bu
     const r = (typeof s === "object" && s !== null ? s : {}) as Record<string, unknown>;
     const start = typeof r.start === "string" && HHMM.test(r.start) ? toMin(r.start) : NaN;
     const minutes = typeof r.minutes === "number" && Number.isInteger(r.minutes) ? r.minutes : NaN;
-    const event = typeof r.event === "string" ? busyMin.find((x) => x.b.key === r.event) : undefined;
     const placeNo = typeof r.place === "number" && Number.isInteger(r.place) ? r.place : NaN;
     const place = Number.isFinite(placeNo) ? cands[placeNo - 1] : undefined;
     const home = r.home === true && ask.kind === "family";
     let ok = Number.isFinite(start) && Number.isFinite(minutes) && minutes >= 15 && minutes <= 300;
-    // An event keeps its own time; anything else must fit the window, after the last step, and
-    // never over an event.
-    let s0 = start;
-    let e0 = start + minutes;
-    if (ok && event) {
-      s0 = event.s;
-      e0 = event.e;
-    } else if (ok && (place || home)) {
+    // A place or home must fit the window, after the last step, and never over a busy time.
+    const s0 = start;
+    const e0 = start + minutes;
+    if (ok && (place || home)) {
       ok = s0 >= from && e0 <= to && !busyMin.some((x) => s0 < x.e && x.s < e0);
     } else ok = false;
     if (ok) ok = s0 >= last;
@@ -289,14 +316,14 @@ export function checkAnswer(text: string, ask: OutingAsk, cands: Candidate[], bu
     last = e0;
     steps.push({
       start: toTime(s0), end: toTime(e0),
-      line: event ? "From your calendar, kept as it is." : cleanLine(r.line),
-      ...(place ? { place } : event ? { event: event.b } : { home: true as const }),
+      line: cleanLine(r.line),
+      ...(place ? { place } : { home: true as const }),
     });
   }
   if (!steps.some((s) => s.place)) return null;
   const alt = (typeof raw.alternative === "object" && raw.alternative !== null ? raw.alternative : {}) as Record<string, unknown>;
   const altPlace = typeof alt.place === "number" ? cands[alt.place - 1] : undefined;
-  const title = cleanLine(raw.title, MAX_TITLE) || (ask.kind === "date" ? "Date night" : "Family day");
+  const title = cleanLine(raw.title, MAX_TITLE) || (ask.kind === "date" ? OCCASION_WORDS[ask.occasion ?? "dinner"].title : "Family day");
   return {
     title,
     steps,

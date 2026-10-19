@@ -1,6 +1,7 @@
 // Date night and family day (docs/planners-plan.md step 2, D40): the short list (code, searchable
 // spaces only), what the model is told (numbered places, roles and ages, never a name or an id),
-// the checks on its answer (no invented place, nothing over a calendar event, nothing outside the
+// the checks on its answer (no invented place, nothing over a busy time, never a calendar event as a
+// step, only busy times reach the model, the kinds of date, nothing outside the
 // window, no credential-like line), and the route end to end on the evaluation's pretend account
 // with a scripted model and fake drive times: Pro, the AI allowance, counted once, never stored.
 import { assert, assertEquals, assertFalse } from "jsr:@std/assert@1";
@@ -25,10 +26,12 @@ const ROWS: PlaceRow[] = [
   row("id-park", "Waterfront walk", { kind: "to-visit", status: "want" }),
   row("id-zoo", "Petting farm", { kind: "to-visit", status: "been", occasions: ["kids"] }),
   row("id-kidfood", "Pizza place", { kind: "restaurant", status: "been", rating: 4, price_level: 1, occasions: ["kids"] }),
+  row("id-cafe", "Corner café", { kind: "cafe", status: "been", rating: 4, visited_on: "2026-08-01", price_level: 1 }),
   row("id-far", "Far away", { kind: "restaurant", status: "been", rating: 5, lat: 34.9, lng: 36.5 }),
   row("id-home", "Home", { kind: "home", status: "been" }),
   { id: "id-nopoint", title: "No location", metadata: { kind: "restaurant", status: "been", rating: 5 } },
 ];
+const SOCCER: Busy = { start: "2026-10-24T11:00", end: "2026-10-24T12:00" };
 const DATE: OutingAsk = { kind: "date", date: "2026-10-23", start: "19:00", end: "22:00", budget: 2, mood: "favourite" };
 const FAMILY: OutingAsk = { kind: "family", date: "2026-10-24", start: "09:00", end: "18:00", setting: "either", who: { adults: 2, child_ages: [9, 6] } };
 
@@ -64,25 +67,44 @@ Deno.test("short list: Another idea leaves out the places just shown, when other
   assert(first.length > again.length - 1);
 });
 
+Deno.test("short list: the kind of date picks the kind of place (coffee, lunch, drinks, activity)", () => {
+  const ids = (occasion: OutingAsk["occasion"], extra: Partial<OutingAsk> = {}) =>
+    shortlist(ROWS, { ...DATE, budget: 3, occasion, ...extra }, HOME, TODAY).map((c) => c.id);
+  assertEquals(ids("coffee"), ["id-cafe"]);
+  const lunch = ids("lunch");
+  assert(lunch.includes("id-fav") && lunch.includes("id-cafe"), lunch.join());
+  for (const no of ["id-dn", "id-park"]) assertFalse(lunch.includes(no), no);
+  assertEquals(ids("drinks"), ["id-dn"]);
+  const activity = ids("activity", { mood: "new" });
+  assertEquals(activity[0], "id-park", "a place to visit first");
+  assert(activity.some((id) => id === "id-cafe" || id === "id-fav"), "somewhere to eat after");
+  // No café you want to try: the best café instead of nothing.
+  assertEquals(ids("coffee", { mood: "new" }), ["id-cafe"]);
+});
+
 // ---- What the model is told ----------------------------------------------------------------
 
-Deno.test("prompt: numbered places and facts, roles and ages, never an id", () => {
+Deno.test("prompt: numbered places and facts, roles and ages, busy times without titles, never an id", () => {
   const cands = shortlist(ROWS, FAMILY, HOME, TODAY);
-  const p = outingPrompt(FAMILY, cands, [], [{ at: "2026-10-24T14:00", rain_pct: 70 }], TODAY);
+  const p = outingPrompt(FAMILY, cands, [SOCCER], [{ at: "2026-10-24T14:00", rain_pct: 70 }], TODAY);
   assert(p.includes("1. Petting farm"), p);
+  assert(p.includes("Busy times: 11:00-12:00."), p);
   assert(p.includes("2 adults, children aged 6 and 9"));
   assert(p.includes("14:00 70%"));
   for (const c of cands) assertFalse(p.includes(c.id), "no ids");
   assertEquals(whoWords({ adults: 1, child_ages: [4] }), "1 adult, a child aged 4");
   assertEquals(whoWords(undefined), "not said");
+  const coffee = outingPrompt({ ...DATE, occasion: "coffee" }, cands, [], [], TODAY);
+  assert(coffee.startsWith("Plan a coffee date on 2026-10-23"), coffee);
+  assert(coffee.includes("one café"));
+  assert(coffee.includes("Busy times: none."));
 });
 
 // ---- The checks on the answer --------------------------------------------------------------
 
 const CANDS: Candidate[] = shortlist(ROWS, FAMILY, HOME, TODAY);
-const SOCCER: Busy = { key: "e1", title: "Soccer practice", start: "2026-10-24T11:00", end: "2026-10-24T12:00" };
 
-Deno.test("answer: places only from the list, events kept at their own time, nothing over them", () => {
+Deno.test("answer: places only from the list, nothing over a busy time, a calendar event never a step", () => {
   const answer = JSON.stringify({
     title: "Farm and pizza",
     steps: [
@@ -97,11 +119,11 @@ Deno.test("answer: places only from the list, events kept at their own time, not
     alternative: { place: 2, line: "Or the walk." },
   });
   const d = checkAnswer(`Here: ${answer}`, FAMILY, CANDS, [SOCCER])!;
-  assertEquals(d.steps.map((s) => [s.start, s.end, s.place?.id ?? s.event?.key ?? "home"]), [
-    ["09:30", "11:00", CANDS[0].id], ["11:00", "12:00", "e1"], ["12:30", "13:30", CANDS[2].id], ["15:00", "17:00", "home"],
+  assertEquals(d.steps.map((s) => [s.start, s.end, s.place?.id ?? "home"]), [
+    ["09:30", "11:00", CANDS[0].id], ["12:30", "13:30", CANDS[2].id], ["15:00", "17:00", "home"],
   ]);
-  assertEquals(d.dropped, 3);
-  assertEquals(d.steps[1].line, "From your calendar, kept as it is.");
+  assertEquals(d.dropped, 4, "the event, the invented place, the one over the busy time, the repeat");
+  assertFalse(d.steps.some((s) => "event" in s));
   assertEquals(d.alternative?.place.id, CANDS[1].id);
   assertEquals(d.title, "Farm and pizza");
 });
@@ -118,7 +140,7 @@ Deno.test("answer: outside the window, a credential-like line, too many steps, n
   const many = Array.from({ length: 10 }, (_, i) => ({ home: true, start: `${String(9 + i % 9).padStart(2, "0")}:00`, minutes: 30, line: "h" }));
   const lots = checkAnswer(steps([{ place: 1, start: "09:00", minutes: 30, line: "p" }, ...many]), FAMILY, CANDS, [])!;
   assert(lots.steps.length <= MAX_STEPS);
-  // Only home or events: no plan. Not JSON: no plan. Home only on a family day.
+  // Only home: no plan. Not JSON: no plan. Home only on a family day.
   assertEquals(checkAnswer(steps([{ home: true, start: "10:00", minutes: 60, line: "h" }]), FAMILY, CANDS, []), null);
   assertEquals(checkAnswer("Sorry, I can't.", FAMILY, CANDS, []), null);
   assertEquals(checkAnswer(steps([{ home: true, start: "19:30", minutes: 60 }, { place: 1, start: "20:00", minutes: 60 }]), DATE, CANDS, [])!.steps.length, 1);
@@ -248,8 +270,11 @@ Deno.test("route: not Pro, no home, nothing saved, AI allowance used, an answer 
   assert(odd.account.rpcs.includes("record_ai_usage"), "the request was made, so it is counted");
 });
 
-Deno.test("route: the window: date night three hours from 7 pm, family day 9 to 6, at least an hour", () => {
+Deno.test("route: the window: by the kind of date, family day 9 to 6, at least an hour", () => {
   assertEquals(windowOf({ kind: "date" }), { start: "19:00", end: "22:00" });
+  assertEquals(windowOf({ kind: "date", occasion: "coffee" }), { start: "10:00", end: "11:30" });
+  assertEquals(windowOf({ kind: "date", occasion: "lunch", start: "12:30" }), { start: "12:30", end: "14:30" });
+  assertEquals(windowOf({ kind: "date", occasion: "activity" }), { start: "14:00", end: "18:00" });
   assertEquals(windowOf({ kind: "date", start: "22:30" }), { start: "22:30", end: "23:59" });
   assertEquals(windowOf({ kind: "family" }), { start: "09:00", end: "18:00" });
   assertEquals(windowOf({ kind: "family", start: "10:00", end: "10:30" }), null);
@@ -291,7 +316,7 @@ Deno.test("plan_outing: the household goes as ages only; a name field is refused
   assertEquals(old.events, []);
 });
 
-Deno.test("plan_outing: the day's calendar from the chat is used for that day only", async () => {
+Deno.test("plan_outing: the day's calendar from the chat is used for that day only, as busy times", async () => {
   const s = setup(ANSWER);
   const events = {
     date: "2026-10-23",
@@ -299,8 +324,13 @@ Deno.test("plan_outing: the day's calendar from the chat is used for that day on
   };
   const ctx = { db: s.account.client(), userId: "u", tz: "Asia/Beirut", can: true, events };
   const out = await outingForChat(s.deps, ctx, { kind: "date", date: "2026-10-23" });
-  assertEquals(JSON.parse(out.text).calendar_checked, true);
-  assert(JSON.stringify(s.prompts.at(-1)!.messages).includes("Parents evening"));
+  const told = JSON.parse(out.text);
+  assertEquals(told.calendar_checked, true);
+  assertEquals(told.planned_around_busy_times, ["19:00-20:00"]);
+  const said = JSON.stringify(s.prompts.at(-1)!.messages);
+  assert(said.includes("Busy times: 19:00-20:00"), said);
+  assertFalse(said.includes("Parents evening"), "never an event's title");
+  assertEquals((out.events[0] as { plan: OutingPlan }).plan.around, [{ start: "19:00", end: "20:00" }]);
   const other = setup(ANSWER);
   const out2 = await outingForChat(other.deps, { ...ctx, db: other.account.client() }, { kind: "date", date: "2026-10-30" });
   assertEquals(JSON.parse(out2.text).calendar_checked, false);
