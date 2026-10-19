@@ -13,6 +13,10 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **D42 Discover nearby, the plan (2026-10-19): `docs/discover-nearby-plan.md`, merged (#243);
+  answers all as recommended (Google Places).** **Owner:** step 0, the Google Cloud key as the
+  Supabase secret `GOOGLE_PLACES_KEY` and a $10 budget alert (steps written in the plan), then say
+  "the Places key is set". **Next (strongest model):** check Google's policies, then step 1.
 - **D40 planners, the owner's changes after trying versionCode 22 (2026-10-19): branch
   `claude/planners-feedback`, not merged, not deployed.** The calendar is only planned around (busy
   times, never titles, never steps; a Fit around my calendar switch), any of the next seven days,

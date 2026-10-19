@@ -1,7 +1,8 @@
 # Discover nearby: restaurants, cafés, things to do and cinemas from a places service
 
-Status: plan, 2026-10-19, **waiting on the owner's answers (Q1-Q9)**. Design: D42 (to be added
-when the owner answers; builds on D26, places, and D40, the planners). Model: the strongest for
+Status: plan, 2026-10-19. **Owner's answers given the same day: all as recommended (Q1-Q9).** Next:
+step 0 (the owner's Google Cloud key; see "Step 0, for the owner"). Design: D42 (builds on D26,
+places, and D40, the planners). Model: the strongest for
 steps 1 and 3 (a new outside service, what the AI sees, the chat); a smaller one for steps 2 and 5.
 
 ## Why
@@ -83,6 +84,15 @@ habit of not storing what a service returns (Mapbox drive times already work tha
 - **Terms:** Google's attribution, its storage rule, and whether its content may go to another AI
   provider: checked before step 3 and before step 4.
 
+## Answers (owner, 2026-10-19): all as recommended
+
+Q1 Google Places. Q2 a Discover nearby screen and the chat. Q3 near home by default, Near me on a
+tap. Q4 Restaurants, Cafés, Bars, Things to do, For kids, Cinemas. Q5 showtimes by link only. Q6
+on Save keep only Google's place ID and a Maps link, the name the user confirms, the address from
+the phone's map lookup. Q7 the AI sees only how many and what kinds; the card shows the rest. Q8
+Pro only, 20 searches a day per user, a $10 monthly budget alert. Q9 the planners later, after the
+legal check.
+
 ## Questions (recommendation first)
 
 - **Q1. Which service:** **Google Places** (rec.: ratings, price, hours, cinemas, worldwide; free
@@ -125,6 +135,30 @@ habit of not storing what a service returns (Mapbox drive times already work tha
    "Somewhere new".
 5. **Help, privacy, checklist, build (smaller model).** Help lines, the privacy page (Google as a
    provider), the legal item, Play Data safety, the phone checklist, then the build.
+
+## Step 0, for the owner
+
+Do these yourself; Claude never sees the key. About 15 minutes.
+
+1. Go to **console.cloud.google.com** and sign in with your Google account. Create a project
+   (top bar → project picker → **New project**), name it "Wilma".
+2. **Billing:** Google asks for a billing account (a card) even for the free allowance. Link one to
+   the project.
+3. **APIs & Services → Library**: search **"Places API (New)"** and press **Enable**. (Not the
+   older "Places API".)
+4. **APIs & Services → Credentials → Create credentials → API key.** Then **Edit** the key:
+   - **API restrictions:** Restrict key → tick only **Places API (New)**.
+   - **Application restrictions:** None (the key is used only by Wilma's server, never in the app).
+   - Save. Copy the key; it is shown on that page whenever you need it again.
+5. **Supabase:** your project → **Edge Functions → Secrets → Add new secret**: name
+   `GOOGLE_PLACES_KEY`, value: the key. Save. Do **not** paste the key into this chat, an issue, or
+   a file in the repo (if it ever is, delete it in Google Cloud and make a new one).
+6. **Budget alert:** Google Cloud → **Billing → Budgets & alerts → Create budget**: the Wilma
+   project, **$10 a month**, alerts at 50%, 90% and 100% to your email. (An alert does not stop
+   spending by itself; the 20-a-day cap in step 1 does that.)
+7. Tell Claude "the Places key is set". Claude then checks Google's Places API Policies and
+   attribution rules (or asks you to paste their text if the pages stay blocked), records them here,
+   adds the lawyer's item, and starts step 1.
 
 ## Sources (checked 2026-10-19)
 
