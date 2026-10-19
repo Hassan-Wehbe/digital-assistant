@@ -129,6 +129,26 @@ function proWithHomes(w: World) {
     { id: "00000000-0000-4000-8000-000000000302", label: "Mom's", address: "4 Elm Rd, Oviedo FL", lat: 28.55, lng: -81.38, is_default: false },
   ];
 }
+/**
+ * A Pro user with Home and a monthly routine (D39) whose task, "Change the HVAC filter", may be done
+ * any day this month (tomorrow included): the planner offers it in free time (routines step 2).
+ */
+function proWithRoutine(w: World) {
+  proWithHome(w);
+  const day = localDay(1);
+  const first = `${day.slice(0, 8)}01`;
+  const [y, m] = [Number(day.slice(0, 4)), Number(day.slice(5, 7))];
+  const last = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+  const routine = "00000000-0000-4000-8000-0000000000f2";
+  const base = { summary: null, body_markdown: "", tags: [], created_at: "2026-09-01T12:00:00Z", updated_at: "2026-09-01T12:00:00Z", deleted_at: null, revisions: 0 };
+  w.items.push(
+    { ...base, id: routine, space_id: IDS.home, title: "Home checks", item_type: "routine", metadata: { repeat: "monthly", when: "any_day", starts_on: "2026-09-01", suggest: true } },
+    {
+      ...base, id: "00000000-0000-4000-8000-0000000000f3", space_id: IDS.home, title: "Change the HVAC filter", item_type: "task",
+      metadata: { status: "open", priority: "normal", repeat: "monthly", routine_id: routine, window_from: first, due_on: last, duration_min: 20 },
+    },
+  );
+}
 /** "4:10", "16:10" or "4.10" in the reply. */
 const LEAVE_AT = /\b(4|16)[:.]10\b/;
 
@@ -1132,6 +1152,21 @@ export const CASES: EvalCase[] = [
       called("find_places", (a) => Math.abs(Number(a.lat) - 33.8951) < 0.0005, "from the shared location"),
       replyLacks(/33\.89|35\.51/, "repeat the shared coordinates"),
       noWrites(),
+    ],
+  },
+  // ---- Routines in the plan (docs/routines-plan.md step 2) --------------------------------------
+  {
+    id: "plan-routine-suggestion",
+    category: "calendar",
+    calendar: PLAN_CALENDAR,
+    planner: PLANNER,
+    setup: proWithRoutine,
+    turns: ["Plan my day for tomorrow"],
+    checks: [
+      called("get_day_agenda", (a) => a.from === localDay(1) && (a.to ?? a.from) === localDay(1), "for tomorrow only"),
+      replyHas(/HVAC|filter/i, "offer the routine task that fits the free time"),
+      replyLacks(/overdue|late|behind/i, "call a routine task in its month overdue"),
+      noWrites("offering a routine task changes nothing; the user adds it in My day"),
     ],
   },
   // ---- Tasks (docs/phase6-day-planner-step2-plan.md, step 1) -----------------------------------
