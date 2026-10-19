@@ -1,8 +1,10 @@
 # Date night and family day planners
 
 Status: plan, 2026-10-19. **Owner's answers given the same day: all as recommended (Q1-Q10).** **Step 1
-built and merged (#236); migration applied 2026-10-19:** see "As built: step 1". **Step 2 built
-(2026-10-19), branch `claude/outing-route`, not merged, not deployed:** see "As built: step 2". Design: D40 (and
+built and merged (#236); migration applied 2026-10-19:** see "As built: step 1". **Step 2 built,
+merged (#237) and `chat` deployed (run 39285813529) 2026-10-19:** see "As built: step 2". **Step 3
+built (2026-10-19), branch `claude/planner-screens`, not merged; app only, next build:** see "As
+built: step 3". Design: D40 (and
 D25, the day planner; D26, places; D31, calendar entries; D38, the Plan with Wilma row). Mockups:
 the owner's private canvas "Wilma Home and Planners", screens "Date night" and "Family day".
 Model: the strongest for steps 1-4 (a new table holding details about children, the AI request,
@@ -236,5 +238,34 @@ The `chat` function only; nothing in the app yet (step 3), so nothing calls it u
   to this prompt are first evaluated in step 4 (`plan_outing` in the chat), with traps, before any
   build carries the planners.
 
-**Owner:** merge, then OK to deploy `chat` (harmless until the app's screens come in step 3: no
-app calls it yet).
+**Merged (#237) and `chat` deployed (run 39285813529), 2026-10-19.**
+
+## As built: step 3 (2026-10-19)
+
+App only; ships with the next build.
+
+- **`app/outing.tsx`** (`/outing?kind=date` or `family`), from the mockups. Date night: When (this
+  Friday or Saturday, or 📅 another day on Android; 6, 7 or 8 pm), Budget ($ · $$ · $$$), Mood (A
+  favourite · Somewhere new). Family day: Day (Saturday, Sunday, or another), Who (adults, and the
+  children's ages, filled from Settings → Household and changeable for this plan; only ages are
+  sent, never names, Q4; a child without a birth year is not counted until an age is added here),
+  Kind (Outdoors · Indoors · Either). **Plan it** reads the day's calendar on the phone as My day
+  does (or says it isn't read) and asks the outing route. The plan card: the title, leave time,
+  each step with its time, what it is and its drive, home again, the rain line, **Add to calendar**
+  (one event from the first step to the last, at the first place, the steps in its notes, Q6; only
+  on the tap, through the same checks and calendar as the 📅 card), **Open in Maps**, the
+  alternative with **Use this one**, **Another idea** (a new plan without the places shown, counted,
+  Q7), Change the choices. Without Pro: the Pro card. Registered behind sign-in.
+- **`lib/outing.ts`**: the plan read field by field (a step without a known place, event or home is
+  dropped; no place at all is no plan), the client (the token, one refresh on 401, signed out when
+  that fails), the coming weekday, `whoFrom` (household → roles and ages), the step and rain words,
+  `planEvent`, `withAlternative`, `avoidOf`, and the plain texts for no home, no places, no plan,
+  the limits and the connection. `auth.tsx` gives the screens the client.
+- **Calendar notes:** the event card's data, the phone event and `createEvent` gain `notes` (at
+  most 2000 characters; password-like notes refused, rule 9). The chat's 📅 card never sets notes.
+- **Home's Plan with Wilma row:** Date night and Family day open the screen; Vacation stays Soon.
+- Tests: `lib/outing.test.ts` (10), the planners test updated. **923 app tests pass**; type check
+  and lint clean; the Android bundle builds.
+
+**Owner:** merge. The phone checks come with step 5's checklist (after step 4, the chat and its
+evaluation, which comes before any build carries the planners).

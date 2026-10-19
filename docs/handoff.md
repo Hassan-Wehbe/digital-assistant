@@ -13,12 +13,18 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **D40 planners step 2, the planner route (2026-10-19): branch `claude/outing-route`, not merged,
-  not deployed.** `{"mode":"outing"}` in `chat`: code short-lists saved places (searchable spaces
+- **D40 planners step 3, the screens (2026-10-19): branch `claude/planner-screens`, not merged;
+  app only.** `app/outing.tsx` (Date night and Family day from the mockups; Plan it, the plan card,
+  Add to calendar as one event with notes, Open in Maps, Use this one, Another idea), `lib/outing.ts`,
+  calendar events gain notes; Home's row opens both (Vacation stays Soon). 923 app tests; bundles.
+  **Owner:** merge. **Next:** step 4, the chat's `plan_outing` and the evaluation (strongest model),
+  then step 5 (help, privacy, checklist, build).
+- **D40 planners step 2, the planner route (2026-10-19): merged (#237); `chat` deployed (run
+  39285813529).** `{"mode":"outing"}` in `chat`: code short-lists saved places (searchable spaces
   only), drive times and rain, one AI request answering JSON that code checks (places only from
   the list, around calendar events, inside the window); roles and ages only, the body refuses
   anything else; counted as a plan and an AI request. 534 Deno tests. Evaluation moved to step 4
-  (no chat change here). **Owner:** merge, OK to deploy `chat`. **Next:** step 3, the app screens.
+  (no chat change here). **Next:** step 3, the app screens.
 - **D40 planners step 1, the household (2026-10-19): branch `claude/household`; migration applied
   2026-10-19 (owner's dry run passed; the connector applied it; checked read-only).** Migration `20261020120000_household.sql` (`household_member`: label, adult/child, a
   child's birth year; at most 10; RLS own rows; anon nothing); SQL test 20 (25 checks, passed

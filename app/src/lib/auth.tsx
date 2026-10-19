@@ -9,6 +9,7 @@ import { dayClient, type DayClient } from './dayPlan';
 import { deviceNotifier } from './deviceNotifier';
 import { deviceChatStore, deviceDayMemory, deviceRecentSpaces } from './deviceStorage';
 import { forgetOtherAccounts } from './notifications';
+import { outingClient, type OutingClient } from './outing';
 import { changePassword as changePasswordFlow } from './password';
 import { sessionToken } from './sessionToken';
 import { supabase } from './supabase';
@@ -25,6 +26,8 @@ interface AuthState {
   chat: ChatClient;
   /** My day's plans (the chat function's day route; no model call). */
   day: DayClient;
+  /** Date night and Family day (the chat function's outing route; one model call per plan, D40). */
+  outing: OutingClient;
   signIn(email: string, password: string): Promise<string | null>;
   signOut(): Promise<void>;
   /** New sign-in password; the current one is checked first. */
@@ -55,6 +58,7 @@ const refresh = async () => {
 const wilma = wilmaClient({ url: MCP_URL, token, refresh });
 const chat = chatClient({ url: CHAT_URL, token, refresh });
 const day = dayClient({ url: CHAT_URL, token, refresh });
+const outing = outingClient({ url: CHAT_URL, token, refresh });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -106,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       wilma,
       chat,
       day,
+      outing,
       async signIn(email, password) {
         const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (!error) return null;

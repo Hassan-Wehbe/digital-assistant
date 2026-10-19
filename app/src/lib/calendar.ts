@@ -44,6 +44,7 @@ export interface NewPhoneEvent {
   endDate: Date;
   allDay: boolean;
   location?: string;
+  notes?: string;
   /** "UTC" for an all-day event on Android, which stores those at midnight UTC. */
   timeZone?: string;
 }
@@ -282,7 +283,8 @@ export function defaultTarget(calendars: PhoneCalendar[], choice: CalendarChoice
  */
 export function toPhoneEvent(e: EventCardData, allDayInUtc: boolean): NewPhoneEvent | null {
   const place = e.location?.trim();
-  const base = { title: e.title.trim(), allDay: e.allDay, ...(place ? { location: place } : {}) };
+  const notes = e.notes?.trim();
+  const base = { title: e.title.trim(), allDay: e.allDay, ...(place ? { location: place } : {}), ...(notes ? { notes } : {}) };
   if (!e.allDay) {
     const start = localTime(e.start);
     const end = localTime(e.end);
@@ -389,6 +391,7 @@ export const deviceCalendar: CalendarDeps = {
       endDate: e.endDate,
       allDay: e.allDay,
       ...(e.location ? { location: e.location } : {}),
+      ...(e.notes ? { notes: e.notes } : {}),
       ...(e.timeZone ? { timeZone: e.timeZone } : {}),
     });
     return String(created.id);

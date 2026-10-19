@@ -1,5 +1,6 @@
-// Home's "Plan with Wilma" row (D38): My day, and the planners still to come (D40) marked SOON. A
-// SOON button answers on the phone with one line; it makes no AI request.
+// Home's "Plan with Wilma" row (D38): My day, Date night and Family day (D40, app/outing.tsx), and
+// Vacation marked SOON. A SOON button answers on the phone with one line; it makes no AI request.
+import { router } from 'expo-router';
 import { Alert, Pressable, Text, View } from 'react-native';
 
 import { PLANNERS, type Planner } from '@/lib/planners';
@@ -8,7 +9,8 @@ import { Badge, space, styles, useColors } from './ui';
 
 export function PlanRow({ onMyDay, myDayBadge }: { onMyDay: () => void; myDayBadge?: string }) {
   const c = useColors();
-  const press = (p: Planner) => (p.id === 'day' ? onMyDay() : Alert.alert(p.title, p.soon ?? ''));
+  const press = (p: Planner) =>
+    p.soon ? Alert.alert(p.title, p.soon) : p.id === 'day' ? onMyDay() : router.push({ pathname: '/outing', params: { kind: p.id } });
   return (
     <View style={{ gap: space.s }}>
       <Text style={[styles.title, { color: c.text }]}>Plan with Wilma</Text>
