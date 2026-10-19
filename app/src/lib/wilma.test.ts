@@ -116,7 +116,7 @@ describe('wilma client', () => {
     ]);
     expect(Object.keys(setup([]).client).sort()).toEqual(
       ['addVisit', 'attachmentLink', 'createSpace', 'deleteAttachment', 'deleteItem', 'deleteSecret', 'deleteSpace', 'findSecrets', 'findTasks', 'getItem', 'listSpaces',
-        'newValueLink', 'purgeItem', 'recycleBin', 'restoreItem', 'revealLink', 'saveItem', 'saveSecret', 'saveTask', 'search', 'taskDone', 'updateItem',
+        'newValueLink', 'purgeItem', 'recycleBin', 'restoreItem', 'revealLink', 'saveItem', 'saveRoutine', 'saveSecret', 'saveTask', 'search', 'taskDone', 'updateItem',
         'updateSecret', 'updateSpace', 'uploadLink'],
     );
   });
@@ -138,6 +138,15 @@ describe('wilma client', () => {
       { name: 'save_item', arguments: { title: 'Call the insurance', body: '', item_type: 'task', metadata: { status: 'open', priority: 'normal', duration_min: 15 } } },
       { name: 'update_item', arguments: { item_id: 't1', task_done: true, today: '2026-10-09' } },
     ]);
+  });
+
+  it('saves a routine with no space: the server keeps it in Tasks', async () => {
+    const { client, fetch } = setup([reply(200, toolResult({ id: 'r1', space: 'Tasks' }))]);
+    expect((await client.saveRoutine({ title: 'Weekend reset', metadata: { repeat: 'weekly', when: 'same_day', day: 6, suggest: true } })).id).toBe('r1');
+    expect(JSON.parse(fetch.mock.calls[0][1].body as string).params).toEqual({
+      name: 'save_item',
+      arguments: { title: 'Weekend reset', body: '', item_type: 'routine', metadata: { repeat: 'weekly', when: 'same_day', day: 6, suggest: true } },
+    });
   });
 
   it('creates a space with only the fields given', async () => {

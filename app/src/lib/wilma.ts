@@ -5,6 +5,7 @@
 // stateless and answers with JSON.
 
 import type { NewVisit, PlaceMetadata } from './places';
+import type { RoutineMetadata } from './routines';
 import { toTaskRows, type TaskMetadata } from './tasks';
 
 /**
@@ -126,8 +127,8 @@ export interface NoteChanges {
   space?: string;
   /** "place" turns a note into a place (with metadata). */
   item_type?: string;
-  /** Replaces all of the item's metadata (a place's, or a task's: tasks.ts). */
-  metadata?: PlaceMetadata | TaskMetadata;
+  /** Replaces all of the item's metadata (a place's, a task's: tasks.ts, or a routine's schedule: routines.ts). */
+  metadata?: PlaceMetadata | TaskMetadata | Omit<RoutineMetadata, 'starts_on'>;
 }
 
 export interface UploadLink {
@@ -271,6 +272,9 @@ export function wilmaClient({ url, token, refresh, fetch: f = fetch }: ClientOpt
       toTaskRows(await call<unknown>('find_tasks', { limit: 100, ...opts })),
     saveTask: (task: { title: string; body?: string; metadata: TaskMetadata; space?: string }) =>
       call<{ id: string; space: string }>('save_item', { title: task.title, body: task.body ?? '', item_type: 'task', metadata: task.metadata, ...(task.space ? { space: task.space } : {}) }),
+    /** A routine (D39): always kept in the Tasks space, so no space is sent; the server checks the schedule. */
+    saveRoutine: (routine: { title: string; metadata: Omit<RoutineMetadata, 'starts_on'> }) =>
+      call<{ id: string; space: string }>('save_item', { title: routine.title, body: '', item_type: 'routine', metadata: routine.metadata }),
     /** Done (a repeating task moves to its next date after `today`, the phone's date), or open again. */
     taskDone: (id: string, done: boolean, today: string) => call<{ id: string; updated: boolean }>('update_item', { item_id: id, task_done: done, today }),
     /** "We went again": a visit goes first and the place counts as been (the server checks it). */

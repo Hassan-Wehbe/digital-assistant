@@ -1,10 +1,12 @@
 // Tasks (day planner step 2, step 5; mockups section 4): today (overdue first), this week, later,
 // and done. ☐ marks a task done (a repeating one moves to its next date, from the phone's date);
 // tap a task to open it. Tasks in restricted spaces are never listed (find_tasks, rule 3).
-import { router, Stack } from 'expo-router';
+// Routines (routines step 3b, D39): the second tab, RoutinesTab.tsx.
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 
+import { RoutinesTab } from '@/components/RoutinesTab';
 import { ErrorBox, GroupList, Loading, Muted, space, styles, TextLink, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { todayAndTomorrow } from '@/lib/dayView';
@@ -14,6 +16,8 @@ export default function Tasks() {
   const c = useColors();
   const { wilma } = useAuth();
   const [today] = useState(() => todayAndTomorrow(new Date()).today);
+  const params = useLocalSearchParams<{ tab?: string }>();
+  const [tab, setTab] = useState<'todo' | 'routines'>(params.tab === 'routines' ? 'routines' : 'todo');
   const { data, error, loading, reload } = useLoad(`tasks:${today}`, () => wilma.findTasks({ status: 'all', today }));
   useReloadOnReturn(reload);
   const [busy, setBusy] = useState<string | null>(null);
@@ -65,7 +69,31 @@ export default function Tasks() {
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Tasks', headerRight: () => <TextLink title="＋ New" onPress={() => router.push('/task')} /> }} />
+      <Stack.Screen
+        options={{ title: 'Tasks', headerRight: () => <TextLink title="＋ New" onPress={() => router.push(tab === 'routines' ? '/routine' : '/task')} /> }}
+      />
+      <View style={{ flexDirection: 'row', gap: space.s, padding: space.m, backgroundColor: c.card, borderBottomWidth: 1, borderBottomColor: c.line }}>
+        {(
+          [
+            { value: 'todo', label: 'To do' },
+            { value: 'routines', label: '🔁 Routines' },
+          ] as const
+        ).map((t) => (
+          <Pressable
+            key={t.value}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: tab === t.value }}
+            onPress={() => setTab(t.value)}
+            style={{ borderRadius: 999, paddingVertical: space.xs, paddingHorizontal: space.m, backgroundColor: tab === t.value ? c.accent : c.tint }}>
+            <Text style={{ color: tab === t.value ? '#ffffff' : c.accent, fontSize: 14, fontWeight: '600' }}>{t.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+      {tab === 'routines' ? (
+        <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={styles.list}>
+          <RoutinesTab today={today} />
+        </ScrollView>
+      ) : (
       <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={loading && !!data} onRefresh={reload} />}>
         {error ? <ErrorBox message={error} onRetry={reload} /> : null}
         {problem ? <Text style={{ color: c.danger, fontSize: 15 }}>{problem}</Text> : null}
@@ -82,6 +110,7 @@ export default function Tasks() {
           </>
         )}
       </ScrollView>
+      )}
     </>
   );
 }
