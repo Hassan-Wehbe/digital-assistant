@@ -1,7 +1,7 @@
 # Date night and family day planners
 
 Status: plan, 2026-10-19. **Owner's answers given the same day: all as recommended (Q1-Q10).** **Step 1
-built (2026-10-19), branch `claude/household`, migration not applied yet:** see "As built: step 1". Design: D40 (and
+built (2026-10-19), branch `claude/household`; migration applied 2026-10-19:** see "As built: step 1". Design: D40 (and
 D25, the day planner; D26, places; D31, calendar entries; D38, the Plan with Wilma row). Mockups:
 the owner's private canvas "Wilma Home and Planners", screens "Date night" and "Family day".
 Model: the strongest for steps 1-4 (a new table holding details about children, the AI request,
@@ -198,3 +198,8 @@ Supabase SQL editor (a new, empty query; it ends with an error on purpose, whose
 checks that must all say `"ok": true`; nothing is kept); (2) OK to apply the migration (Claude tries
 the connector; if it times out, you run the migration file in the SQL editor); (3) merge. Nothing
 to deploy: no function changes. The app part ships with the next build.
+
+**Applied (2026-10-19):** the owner's dry run passed (25 "ok": true); the owner said OK and the
+Supabase connector applied it this time. Checked read-only afterwards: RLS on, 1 policy, 1 trigger;
+anon can neither read nor add; authenticated can read, delete and add a label but never write the
+owner (insert or update); anon cannot run the trigger function; 0 rows.
