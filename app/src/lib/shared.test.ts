@@ -1,4 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 
 import { draftFromShared, nothingUsable, parseShared, placeFromShared, sourceFor, type Shared } from './shared';
 
@@ -132,5 +134,15 @@ describe('placeFromShared (Share in Google Maps -> Wilma)', () => {
     expect(placeFromShared(s({ text: 'lunch tomorrow?' }))).toBeNull();
     expect(placeFromShared(s({ text: null }))).toBeNull();
     expect(placeFromShared(s({ text: 'https://maps.app.goo.gl/AbC123', files: [{ uri: 'content://x', copy: null }] }))).toBeNull();
+  });
+});
+
+describe('cold start (owner, 2026-10-19: a share with Wilma closed opened nothing)', () => {
+  it('asks the share module again after start-up and once signed in, never crashing on a failed ask', () => {
+    const intake = readFileSync(resolve(__dirname, 'shareIntake.tsx'), 'utf8');
+    expect(intake).toContain('ASK_AGAIN_MS.map((ms) => setTimeout(refresh, ms))');
+    expect(intake).toContain(".catch(() => {})");
+    const layout = readFileSync(resolve(__dirname, '..', 'app/_layout.tsx'), 'utf8');
+    expect(layout).toContain('askAgain();');
   });
 });

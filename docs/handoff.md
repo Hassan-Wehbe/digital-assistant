@@ -13,13 +13,22 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **Routines step 2, the planner (2026-10-19): branch `claude/routines-planner`, not merged, not
-  deployed. Evaluation passed (run 39259947527: 145/148, 0 leaks, $0.08; the 3 misses re-ran 9/9).** My day and "plan my day" get "From your routines": up to 3
+- **Share cold start (2026-10-19): merged (#229); app only, next
+  build.** Owner (Android): sharing from Facebook, YouTube or Chrome works when Wilma is open, opens
+  nothing when Wilma was closed. Fix tried (JS only): the share module keeps the starting share until
+  it is handed over once; the app now asks again 0.6 s and 2 s after start-up and once signed in with
+  the screens ready, and a failed ask never crashes. **Phone check:** close Wilma (swipe it away),
+  share a YouTube link to Wilma: the Share screen opens with the link. **If it still fails:** the
+  module may send the share before the app listens and then forget it; the next fix is a small patch
+  to expo-share-intent (keep the share until `clearShareIntent`), which needs patch-package (native;
+  strongest model).
+- **Routines step 2, the planner (2026-10-19): merged (#227, 22fed4f); `chat` deploy
+  approved. Evaluation passed (run 39259947527: 145/148, 0 leaks, $0.08; the 3 misses re-ran 9/9).** My day and "plan my day" get "From your routines": up to 3
   routine tasks fitted into free time by code (quarter hours, no overlaps, 30 min when no duration,
   a task with a place gets Find a time), the rest counted; a routine's task is never overdue in its
   window; Not today (`task_not_today`) keeps it out of that day's suggestions; a missed one is moved
   on and written. The model gets the suggestions with a note never to add them itself. 516 Deno
-  tests; eval case `plan-routine-suggestion`. **Owner:** merge, OK to deploy `chat`. **Next:** step 3, the app (Routines screens, My day's box). Step 1 (#226) merged
+  tests; eval case `plan-routine-suggestion`. **Next:** step 3, the app (Routines screens, My day's box). Step 1 (#226) merged
   and **deployed 2026-10-19** (`mcp` run 39255445120, `chat` run 39255464165).
 - **Shared links (2026-10-19): merged (#228, squash, 22e6b8f); app only, ships with the next
   build.** D41: a social link's draft names the site ("Link from YouTube", "From YouTube" in the

@@ -2,6 +2,13 @@
 // cancelled. Built on expo-share-intent's native module rather than its hook, because the
 // hook drops Android's content:// links (see shared.ts) and forgets the share whenever
 // the app goes to the background (a password manager during sign-in is enough).
+//
+// Cold start (owner, 2026-10-19: sharing from Facebook, YouTube or Chrome with Wilma closed opened
+// nothing; with Wilma open it worked): the share module keeps the share that started the app until
+// it has handed it over once, and the first ask can come before the module is ready (it then fails
+// quietly and keeps the share). So the app asks again a little later, and once more when it is
+// signed in and can show the share screen (`askAgain`). Asking when nothing is waiting does nothing;
+// once handed over, the module forgets it, so a share never arrives twice.
 import { useLinkingURL } from 'expo-linking';
 import { getScheme, getShareExtensionKey, ShareIntentModule } from 'expo-share-intent';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -18,9 +25,14 @@ interface ShareState {
   seq: number;
   /** Forget the waiting share (after saving or cancelling). */
   clear(): void;
+  /** Ask the share module again for a share that started the app (signed in, the screens ready). */
+  askAgain(): void;
 }
 
-const ShareContext = createContext<ShareState>({ pending: null, error: null, seq: 0, clear: () => {} });
+const ShareContext = createContext<ShareState>({ pending: null, error: null, seq: 0, clear: () => {}, askAgain: () => {} });
+
+/** After start-up, the share module is asked again after these delays (ms), in case it was not ready. */
+export const ASK_AGAIN_MS = [600, 2000];
 
 export function ShareProvider({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState<ShareState['pending']>(null);
@@ -34,7 +46,8 @@ export function ShareProvider({ children }: { children: ReactNode }) {
   // "wilma://dataUrl=..." (iOS sharing is switched off in app.json until phase B).
   const refresh = useCallback(() => {
     if (!ShareIntentModule) return;
-    if (Platform.OS === 'android') ShareIntentModule.getShareIntent('');
+    // A failed ask (the module not ready yet) is asked again; it must never crash the app.
+    if (Platform.OS === 'android') void Promise.resolve(ShareIntentModule.getShareIntent('')).catch(() => {});
     else if (url?.startsWith(`${getScheme()}://dataUrl=`)) ShareIntentModule.getShareIntent(url);
   }, [url]);
 
@@ -70,13 +83,22 @@ export function ShareProvider({ children }: { children: ReactNode }) {
     return () => sub.remove();
   }, [refresh]);
 
+  // Cold start: ask again a little later (see the top of this file).
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const timers = ASK_AGAIN_MS.map((ms) => setTimeout(refresh, ms));
+    return () => timers.forEach(clearTimeout);
+    // Once per start of the app.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const clear = useCallback(() => {
     ShareIntentModule?.clearShareIntent(getShareExtensionKey());
     setPending(null);
     setError(null);
   }, []);
 
-  const value = useMemo(() => ({ pending, error, seq, clear }), [pending, error, seq, clear]);
+  const value = useMemo(() => ({ pending, error, seq, clear, askAgain: refresh }), [pending, error, seq, clear, refresh]);
   return <ShareContext.Provider value={value}>{children}</ShareContext.Provider>;
 }
 
