@@ -18,7 +18,7 @@ tokens or keys in chat.
   (searchable spaces only), Mapbox drive times and NWS weather, one AI request returns a strict JSON
   plan that code checks (no invented places); a small `household_member` table (labels, birth year
   for children; the AI hears roles and ages only); Add to calendar as one event with notes. Five
-  steps. **Owner:** answer Q1-Q10. **Also:** the production build after versionCode 20 was started
+  steps. **Owner's answers: all as recommended (2026-10-19).** **Also:** the production build after versionCode 20 was started
   2026-10-19 (app-build run 39281894221); phone checks in `docs/versioncode21-phone-checklist.md`.
 - **Routines step 5, help and the build (2026-10-19): branch `claude/routines-help-build`, not
   merged; app and privacy page only.** Help's My day topic mentions routines; the privacy page adds

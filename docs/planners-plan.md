@@ -1,6 +1,6 @@
 # Date night and family day planners
 
-Status: plan, 2026-10-19, **waiting for the owner's answers (Q1-Q10, below)**. Design: D40 (and
+Status: plan, 2026-10-19. **Owner's answers given the same day: all as recommended (Q1-Q10).** Design: D40 (and
 D25, the day planner; D26, places; D31, calendar entries; D38, the Plan with Wilma row). Mockups:
 the owner's private canvas "Wilma Home and Planners", screens "Date night" and "Family day".
 Model: the strongest for steps 1-4 (a new table holding details about children, the AI request,
@@ -29,6 +29,14 @@ that turns a short list of places into a timed plan.
 - **Pro**, like My day: one AI request and a few Mapbox calls per plan.
 - The household setting goes to the AI **only while planning**, never to Mapbox; the privacy page
   gets a line before that build.
+
+## Answers (owner, 2026-10-19): all as recommended
+
+Q1 code short-lists, one AI request orders and words it, code checks it; Q2 a screen for each, plus
+the chat in step 4; Q3 a child's birth year; Q4 the AI hears roles and ages only, never names; Q5
+Wilma judges indoor or outdoor (a place mark can come later); Q6 one calendar event with the steps
+in its notes; Q7 Another idea counts as another plan; Q8 moods A favourite and Somewhere new; Q9
+9 am to 6 pm around the calendar, changeable; Q10 everyone with Pro, the household optional.
 
 ## What exists today
 
