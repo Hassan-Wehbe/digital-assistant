@@ -4,7 +4,8 @@
 //
 // Request:  POST, Authorization: Bearer <the user's access token>,
 //           {"mode":"outing", "kind":"date"|"family", "date":"2026-10-23", "tz":"America/New_York",
-//            "start"?:"19:00", "end"?:"22:00", "budget"?:1-3, "mood"?:"favourite"|"new",
+//            "start"?:"19:00", "end"?:"22:00", "occasion"?:"dinner"|"lunch"|"coffee"|"drinks"|"activity",
+//            "budget"?:1-3, "mood"?:"favourite"|"new",
 //            "setting"?:"outdoor"|"indoor"|"either", "who"?:{"adults":2,"child_ages":[6,9]},
 //            "events":[...as My day...], "start_from"?:{"home":id}, "avoid"?:[place ids]}
 //           `who` holds roles and ages only: the app works them out from the household and never
@@ -16,7 +17,9 @@
 // How (outing_plan.ts): code short-lists the user's saved places from searchable spaces only (rule
 // 3), drive times from home (Mapbox) and the hourly rain there (NWS) are added, one AI request turns
 // the numbered short list into a timed plan, and code checks it: places only from the list, times
-// in the free hours, never over a calendar event. Then the real drives for the chosen order. Only
+// in the free hours, never over a busy time. The calendar gives busy times only: the model never sees
+// an event's title and an event is never a step (owner, 2026-10-19); the plan says which times it went
+// around. Then the real drives for the chosen order. Only
 // points and times go to Mapbox and NWS; the plan is never stored (Mapbox's terms). The log line
 // holds counts and codes only.
 import { z } from "zod";
@@ -27,7 +30,8 @@ import { PLACE_TYPE, placeScope } from "../mcp/lib/places.ts";
 import { DAY, eventSchema, isTimeZone, LOCAL_TIME, MAX_AGENDA_EVENTS } from "./agenda.ts";
 import { type DayDeps, gate, localTime, readHome } from "./day.ts";
 import {
-  type Busy, type Candidate, checkAnswer, type DraftStep, type OutingAsk, OUTING_SYSTEM, outingPrompt, type PlaceRow, shortlist, toMin, toTime,
+  type Busy, type Candidate, checkAnswer, type DraftStep, type Occasion, OCCASIONS, type OutingAsk, OUTING_SYSTEM, outingPrompt, type PlaceRow,
+  shortlist, toMin, toTime,
 } from "./outing_plan.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -45,6 +49,7 @@ export const outingBody = z.object({
   now: z.string().regex(LOCAL_TIME).optional(),
   start: z.string().regex(HHMM).optional(),
   end: z.string().regex(HHMM).optional(),
+  occasion: z.enum(OCCASIONS).optional(),
   budget: z.number().int().min(1).max(3).optional(),
   mood: z.enum(["favourite", "new"]).optional(),
   setting: z.enum(["outdoor", "indoor", "either"]).optional(),
@@ -98,7 +103,6 @@ export interface OutingStep {
   end: string;
   line: string;
   place?: PlaceRef;
-  event?: { key: string; title: string };
   home?: true;
   /** Minutes driving to this step from the one before (or from home). */
   drive_min?: number;
@@ -106,6 +110,8 @@ export interface OutingStep {
 
 export interface OutingPlan {
   kind: "date" | "family";
+  /** A date: what kind. */
+  occasion?: Occasion;
   date: string;
   title: string;
   /** The home it starts from (its name only). */
@@ -116,6 +122,8 @@ export interface OutingPlan {
   /** Minutes back home from the last stop. */
   back_home_min?: number;
   alternative?: { place: PlaceRef; line: string; minutes?: number };
+  /** The busy times from the calendar it was planned around ("HH:MM"; never a title). */
+  around: { start: string; end: string }[];
   /** Hourly rain in the window, at home. */
   rain: { at: string; rain_pct: number }[];
   credits: string[];
@@ -145,10 +153,20 @@ async function readPlaces(db: SupabaseClient): Promise<PlaceRow[]> {
     .map((r) => ({ id: r.id, title: r.title, metadata: r.metadata }));
 }
 
-/** The window: date night from 7 pm (or the start given) for three hours; family day 9 to 6 (Q9). */
-export function windowOf(body: Pick<OutingBody, "kind" | "start" | "end">): { start: string; end: string } | null {
-  const start = body.start ?? (body.kind === "date" ? "19:00" : "09:00");
-  const end = body.end ?? (body.kind === "date" ? toTime(Math.min(toMin(start) + 180, 23 * 60 + 59)) : "18:00");
+/** A date's usual start and length, by its kind (the start given wins). */
+export const OCCASION_TIMES: Record<Occasion, { start: string; minutes: number }> = {
+  dinner: { start: "19:00", minutes: 180 },
+  lunch: { start: "12:00", minutes: 120 },
+  coffee: { start: "10:00", minutes: 90 },
+  drinks: { start: "20:00", minutes: 150 },
+  activity: { start: "14:00", minutes: 240 },
+};
+
+/** The window: a date from its start for its kind's length; family day 9 to 6 (Q9). At least an hour. */
+export function windowOf(body: Pick<OutingBody, "kind" | "start" | "end" | "occasion">): { start: string; end: string } | null {
+  const usual = OCCASION_TIMES[body.occasion ?? "dinner"];
+  const start = body.start ?? (body.kind === "date" ? usual.start : "09:00");
+  const end = body.end ?? (body.kind === "date" ? toTime(Math.min(toMin(start) + usual.minutes, 23 * 60 + 59)) : "18:00");
   return toMin(end) - toMin(start) >= 60 ? { start, end } : null;
 }
 
@@ -171,7 +189,9 @@ export async function runOuting(
   log.kind = body.kind;
   const ask: OutingAsk = {
     kind: body.kind, date: body.date, start: window.start, end: window.end,
-    ...(body.kind === "date" ? { budget: body.budget ?? 3, mood: body.mood ?? "favourite" } : { setting: body.setting ?? "either", ...(body.who ? { who: body.who } : {}) }),
+    ...(body.kind === "date"
+      ? { occasion: body.occasion ?? "dinner", budget: body.budget ?? 3, mood: body.mood ?? "favourite" }
+      : { setting: body.setting ?? "either", ...(body.who ? { who: body.who } : {}) }),
     ...(body.avoid ? { avoid: body.avoid } : {}),
   };
   const now = deps.now?.() ?? Date.now();
@@ -221,13 +241,14 @@ export async function runOuting(
       ? w.hourly.filter((h) => h.at.startsWith(body.date) && h.at.slice(11, 13) >= window.start.slice(0, 2) && h.at.slice(11, 16) <= window.end)
       : [];
 
-    // The calendar's own events in the window stay as they are.
+    // The calendar's busy times in the window: planned around, times only (never a title).
     const from = toMin(window.start);
     const to = toMin(window.end);
     const busy: Busy[] = body.events
       .filter((e) => !e.all_day && !e.free && !e.declined && e.start.startsWith(body.date))
       .filter((e) => toMin(e.start.slice(11, 16)) < to && toMin(e.end.slice(11, 16)) > from)
-      .map((e) => ({ key: e.key, title: e.busy_only ? "Busy" : e.title.slice(0, 100), start: e.start, end: e.end }));
+      .map((e) => ({ start: e.start, end: e.end.startsWith(body.date) ? e.end : `${body.date}T23:59` }))
+      .sort((a, b) => a.start.localeCompare(b.start));
 
     // One AI request: the numbered short list, the free hours, the weather; JSON back.
     const timeout = new AbortController();
@@ -270,12 +291,7 @@ export async function runOuting(
     log.steps = draft.steps.length;
 
     // The real drives for the chosen order: home → each stop with a place → … → home.
-    const pointOf = (s: DraftStep): Point | null => {
-      if (s.place) return s.place.point;
-      if (s.home) return homePoint;
-      const e = s.event ? body.events.find((x) => x.key === s.event!.key) : undefined;
-      return e?.point ? { lat: e.point.lat, lng: e.point.lng } : null;
-    };
+    const pointOf = (s: DraftStep): Point | null => (s.place ? s.place.point : s.home ? homePoint : null);
     const steps: OutingStep[] = [];
     let prev: Point = homePoint;
     let leaveAt: string | undefined;
@@ -290,7 +306,7 @@ export async function runOuting(
       if (i === 0 && drive !== undefined) leaveAt = toTime(Math.max(0, toMin(s.start) - drive));
       steps.push({
         start: s.start, end: s.end, line: s.line,
-        ...(s.place ? { place: ref(s.place) } : s.event ? { event: { key: s.event.key, title: s.event.title } } : { home: true as const }),
+        ...(s.place ? { place: ref(s.place) } : { home: true as const }),
         ...(drive !== undefined ? { drive_min: drive } : {}),
       });
       if (p) prev = p;
@@ -302,13 +318,14 @@ export async function runOuting(
     }
 
     const plan: OutingPlan = {
-      kind: body.kind, date: body.date, title: draft.title, from: home.label,
+      kind: body.kind, ...(body.kind === "date" ? { occasion: ask.occasion } : {}), date: body.date, title: draft.title, from: home.label,
       ...(leaveAt ? { leave_at: leaveAt } : {}),
       steps,
       ...(backHome !== undefined ? { back_home_min: backHome } : {}),
       ...(draft.alternative
         ? { alternative: { place: ref(draft.alternative.place), line: draft.alternative.line, ...(draft.alternative.place.minutes !== undefined ? { minutes: draft.alternative.place.minutes } : {}) } }
         : {}),
+      around: busy.slice(0, 10).map((b) => ({ start: b.start.slice(11, 16), end: b.end.slice(11, 16) })),
       rain: rain.map((h) => ({ at: h.at, rain_pct: h.rain_pct })),
       credits: [...(drives ? ["Drive times © Mapbox"] : []), ...(rain.length ? ["Weather: US National Weather Service"] : [])],
     };
@@ -360,8 +377,9 @@ export const CAN_OUTING = "outing";
 export const PLAN_OUTING_SPEC = {
   name: PLAN_OUTING,
   description:
-    "Chat app only. Plans a date night or a family day from the user's own saved places, with drive times from " +
-    "home and the weather (\"plan a date night Friday\", \"a family day Saturday, outdoors\"). Pro, like My day; " +
+    "Chat app only. Plans a date (dinner, lunch, coffee, drinks or an activity, any day) or a family day from the " +
+    "user's own saved places, around their calendar's busy times, with drive times from home and the weather " +
+    "(\"plan a date night Friday\", \"a coffee date Tuesday at 10\", \"a family day Saturday, outdoors\"). Pro, like My day; " +
     "one plan each call (counted). The app shows the plan as a card with Add to calendar; nothing is added or " +
     "saved by you. Never put a name in it: for a family day give adults and the children's ages if the user said " +
     "them, else leave them out and the user's household setting is used (ages only).",
@@ -370,10 +388,11 @@ export const PLAN_OUTING_SPEC = {
     properties: {
       kind: { type: "string", enum: ["date", "family"] },
       date: { type: "string", description: "YYYY-MM-DD, from today's date when they say \"Friday\" or \"tomorrow\"" },
-      start: { type: "string", description: "HH:MM, only if they said a time (date night: default 19:00; family day: 09:00)" },
+      occasion: { type: "string", enum: [...OCCASIONS], description: "A date: what kind (default dinner): \"coffee date\" coffee, \"lunch date\" lunch" },
+      start: { type: "string", description: "HH:MM, only if they said a time (by default: dinner 19:00, lunch 12:00, coffee 10:00, drinks 20:00, activity 14:00; family day 09:00)" },
       end: { type: "string", description: "HH:MM, only if they said when it ends" },
-      budget: { type: "integer", minimum: 1, maximum: 3, description: "Date night: 1 cheap … 3 any (default 3)" },
-      mood: { type: "string", enum: ["favourite", "new"], description: "Date night: a favourite, or somewhere new they want to try" },
+      budget: { type: "integer", minimum: 1, maximum: 3, description: "A date: 1 cheap … 3 any (default 3)" },
+      mood: { type: "string", enum: ["favourite", "new"], description: "A date: a favourite, or somewhere new they want to try" },
       setting: { type: "string", enum: ["outdoor", "indoor", "either"], description: "Family day" },
       adults: { type: "integer", minimum: 0, maximum: 10, description: "Family day: only if the user said" },
       child_ages: { type: "array", items: { type: "integer", minimum: 0, maximum: 17 }, maxItems: 10, description: "Family day: only if the user said" },
@@ -398,6 +417,7 @@ const chatInput = z.object({
   date: z.string().regex(DAY),
   start: z.string().regex(HHMM).optional(),
   end: z.string().regex(HHMM).optional(),
+  occasion: z.enum(OCCASIONS).optional(),
   budget: z.number().int().min(1).max(3).optional(),
   mood: z.enum(["favourite", "new"]).optional(),
   setting: z.enum(["outdoor", "indoor", "either"]).optional(),
@@ -443,7 +463,9 @@ export async function outingForChat(
   const body: OutingBody = {
     mode: "outing", kind: a.kind, date: a.date, tz,
     ...(a.start ? { start: a.start } : {}), ...(a.end ? { end: a.end } : {}),
-    ...(a.kind === "date" ? { budget: a.budget ?? 3, mood: a.mood ?? "favourite" } : { setting: a.setting ?? "either", ...(who ? { who } : {}) }),
+    ...(a.kind === "date"
+      ? { occasion: a.occasion ?? "dinner", budget: a.budget ?? 3, mood: a.mood ?? "favourite" }
+      : { setting: a.setting ?? "either", ...(who ? { who } : {}) }),
     events: calendarChecked ? ctx.events!.list : [],
   };
   const window = windowOf(body);
@@ -458,17 +480,20 @@ export async function outingForChat(
       status: "shown",
       title: p.title, date: p.date, from: p.from, ...(p.leave_at ? { leave_at: p.leave_at } : {}),
       steps: p.steps.map((s) => ({
-        time: `${s.start}-${s.end}`, what: s.place?.title ?? s.event?.title ?? "home", ...(s.line ? { line: s.line } : {}),
+        time: `${s.start}-${s.end}`, what: s.place?.title ?? "home", ...(s.line ? { line: s.line } : {}),
         ...(s.drive_min !== undefined ? { drive_min: s.drive_min } : {}),
       })),
       ...(p.alternative ? { alternative: p.alternative.place.title } : {}),
       ...(p.rain.some((h) => h.rain_pct >= 50) ? { rain_likely: true } : {}),
       calendar_checked: calendarChecked,
+      ...(p.around.length ? { planned_around_busy_times: p.around.map((b) => `${b.start}-${b.end}`) } : {}),
       message: (ctx.can
         ? "The app shows this plan as a card with Add to calendar and Open in Maps. Say it in two or three short sentences from these facts only; "
         : "This app cannot show the plan card: give the plan in a few short lines from these facts only; ") +
         "never add a place or a time. Nothing was added to the calendar or saved." +
-        (calendarChecked ? "" : " Their calendar was not checked for that day: say they can use Date night or Family day on Home to plan around it."),
+        (calendarChecked
+          ? " It was planned around their calendar's busy times; their events are not part of the plan."
+          : " Their calendar was not checked for that day: say they can use Date night or Family day on Home to plan around it."),
     };
     return finish(false, JSON.stringify(facts), ctx.can ? [{ type: "outing_plan", plan: p }] : []);
   }

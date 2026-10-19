@@ -7,8 +7,8 @@ import { describe, expect, it } from '@jest/globals';
 import { toPhoneEvent } from './calendar';
 import type { Member } from './household';
 import {
-  avoidOf, clock, nextWeekday, outingClient, planEvent, rainLine, stepDetail, toOutingAnswer, toOutingPlan, whoFrom, withAlternative,
-  type JsonFetch, type OutingBody,
+  aroundLine, avoidOf, clock, nextDays, nextWeekday, OCCASIONS, outingClient, planEvent, rainLine, stepDetail, toOutingAnswer, toOutingPlan,
+  whoFrom, withAlternative, type JsonFetch, type OutingBody,
 } from './outing';
 import { eventProblem } from './phoneActions';
 import { WilmaError } from './wilma';
@@ -52,6 +52,21 @@ describe('the plan from the server', () => {
     expect(toOutingPlan({ ...PLAN, steps: [{ ...PLAN.steps[0], place: { ...PLACE, lat: 999 } }] })).toBeNull();
   });
 
+  it('reads the kind of date and the busy times it went around; a calendar event is never a step', () => {
+    const p = toOutingPlan({
+      ...PLAN, occasion: 'coffee', title: '',
+      around: [{ start: '11:00', end: '12:00' }, { start: 'noon', end: '13:00' }, 'x'],
+      steps: [PLAN.steps[0], { start: '21:00', end: '22:00', line: 'x', event: { key: 'e1', title: 'Gym' } }],
+    })!;
+    expect(p.occasion).toBe('coffee');
+    expect(p.title).toBe('Coffee date');
+    expect(p.around).toEqual([{ start: '11:00', end: '12:00' }]);
+    expect(p.steps).toHaveLength(1);
+    expect(JSON.stringify(p)).not.toContain('Gym');
+    expect(toOutingPlan({ ...PLAN, kind: 'family', occasion: 'coffee' })).not.toHaveProperty('occasion');
+    expect(toOutingPlan(PLAN)!.around).toEqual([]);
+  });
+
   it('reads each answer the route can give', () => {
     expect(toOutingAnswer(200, { plan: PLAN, usage: { used: 3, limit: 30 } })).toMatchObject({ usage: { used: 3, limit: 30 } });
     expect(toOutingAnswer(200, { plan: null, reason: 'no_places' })).toEqual({ empty: 'no_places' });
@@ -89,6 +104,20 @@ describe('what the screens need', () => {
     expect(nextWeekday('2026-10-19', 5)).toBe('2026-10-23');
     expect(nextWeekday('2026-10-23', 5)).toBe('2026-10-23');
     expect(nextWeekday('2026-10-25', 6)).toBe('2026-10-31');
+  });
+
+  it('offers the next seven days, today first, and each kind of date its own times', () => {
+    expect(nextDays('2026-10-19')).toEqual(['2026-10-19', '2026-10-20', '2026-10-21', '2026-10-22', '2026-10-23', '2026-10-24', '2026-10-25']);
+    expect(OCCASIONS.map((o) => o.value)).toEqual(['dinner', 'lunch', 'coffee', 'drinks', 'activity']);
+    for (const o of OCCASIONS) expect(o.times).toContain(o.start);
+  });
+
+  it('says which busy times it planned around, without a title', () => {
+    const p = toOutingPlan(PLAN)!;
+    expect(aroundLine(p)).toBeNull();
+    expect(aroundLine({ ...p, around: [{ start: '18:00', end: '19:00' }] })).toBe('Planned around your calendar (busy 6:00 pm–7:00 pm).');
+    const many = ['09', '10', '11', '12'].map((h) => ({ start: `${h}:00`, end: `${h}:30` }));
+    expect(aroundLine({ ...p, around: many })).toMatch(/and 1 more\)\.$/);
   });
 
   it('turns the household into roles and ages, never names (Q4)', () => {

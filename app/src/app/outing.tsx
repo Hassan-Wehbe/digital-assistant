@@ -1,12 +1,14 @@
 // Date night and Family day (planners step 3, docs/planners-plan.md; design D40; the mockups'
 // "Date night" and "Family day" screens): one screen, two kinds (?kind=date or family).
 //
-// Date night: When (this Friday or Saturday, 7 pm, or another day and time), Budget ($ · $$ · $$$),
-// Mood (A favourite · Somewhere new). Family day: Day (Saturday, Sunday or another), Who (adults and
-// the children's ages, from Settings → Household when set; the names never leave the phone, Q4),
-// Kind (Outdoors · Indoors · Either). Then Plan it: the outing route (lib/outing.ts) makes one
-// plan from the user's own saved places, around the day's calendar (read on the phone, as My day
-// does) and the weather, with one AI request (Pro; counted, Q7).
+// Date night: Kind (Dinner · Lunch · Coffee · Drinks · Something to do, owner 2026-10-19), When (any
+// of the next seven days or a picked one, and a start time for that kind), Budget ($ · $$ · $$$),
+// Mood (A favourite · Somewhere new). Family day: Day (as When), Who (adults and the children's
+// ages, from Settings → Household when set; the names never leave the phone, Q4), Kind (Outdoors ·
+// Indoors · Either). Fit around my calendar (on: the day's busy times, read on the phone as My day
+// does, are planned around and never become steps; off: the calendar is not read). Then Plan it:
+// the outing route (lib/outing.ts) makes one plan from the user's own saved places and the
+// weather, with one AI request (Pro; counted, Q7).
 //
 // The plan card: its steps with times and drives, the weather, Add to calendar (one event with
 // the steps in its notes, Q6; only on the tap), Open in Maps, the alternative ("Use this one"), and
@@ -15,7 +17,7 @@
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Platform, ScrollView, Text, TextInput, View } from 'react-native';
+import { Platform, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 
 import { OutingPlanCard } from '@/components/OutingPlanCard';
 import { Chips } from '@/components/PlaceFields';
@@ -29,7 +31,10 @@ import { todayAndTomorrow } from '@/lib/dayView';
 import { deviceDayMemory, deviceSettingsStore } from '@/lib/deviceStorage';
 import { listMembers, type HouseholdDb } from '@/lib/household';
 import { deviceGeocoder } from '@/lib/location';
-import { avoidOf, clock, EMPTY_TEXT, nextWeekday, PROBLEM_TEXT, whoFrom, type OutingBody, type OutingKind, type OutingPlan } from '@/lib/outing';
+import {
+  avoidOf, clock, EMPTY_TEXT, nextDays, nextWeekday, occasionOf, OCCASIONS, PROBLEM_TEXT, whoFrom,
+  type Occasion, type OutingBody, type OutingKind, type OutingPlan,
+} from '@/lib/outing';
 import { needsPro } from '@/lib/pro';
 import { supabase } from '@/lib/supabase';
 import { localParts, shortDay } from '@/lib/tasks';
@@ -41,8 +46,6 @@ type Shown =
   | { step: 'plan'; plan: OutingPlan }
   | { step: 'empty'; text: string }
   | { step: 'problem'; text: string };
-
-const TIMES = ['18:00', '19:00', '20:00'];
 
 export default function Outing() {
   const c = useColors();
@@ -57,7 +60,9 @@ export default function Outing() {
   // The choices (kept while the screen is open).
   const firstDay = kind === 'date' ? nextWeekday(today, 5) : nextWeekday(today, 6);
   const [day, setDay] = useState(firstDay);
+  const [occasion, setOccasion] = useState<Occasion>('dinner');
   const [time, setTime] = useState('19:00');
+  const [fitCalendar, setFitCalendar] = useState(true);
   const [budget, setBudget] = useState<1 | 2 | 3>(2);
   const [mood, setMood] = useState<'favourite' | 'new'>('favourite');
   const [setting, setSetting] = useState<'outdoor' | 'indoor' | 'either'>('either');
@@ -72,14 +77,18 @@ export default function Outing() {
   if (pro !== undefined && needsPro(pro)) {
     return (
       <View style={{ flex: 1, backgroundColor: c.background, padding: space.l }}>
-        <Stack.Screen options={{ title: kind === 'date' ? 'Date night' : 'Family day' }} />
+        <Stack.Screen options={{ title: kind === 'date' ? 'Plan a date' : 'Family day' }} />
         <ProCard onNotNow={() => router.back()} />
       </View>
     );
   }
 
-  /** The day's calendar, read on the phone as My day does; none when the calendar is off. */
+  /** The day's calendar, read on the phone as My day does; none when it is off or not to be fitted. */
   const dayEvents = async (): Promise<Record<string, unknown>[]> => {
+    if (!fitCalendar) {
+      setCalendarNote(null);
+      return [];
+    }
     const choice = await loadChoice(deviceSettingsStore, userId);
     const read = await readAgenda(deviceCalendar, choice, day, day, phoneTimeZone());
     if ('problem' in read) {
@@ -99,7 +108,7 @@ export default function Outing() {
       const body: OutingBody = {
         mode: 'outing', kind, date: day, tz: phoneTimeZone() ?? 'UTC', now: timeText(new Date()), events,
         ...(kind === 'date'
-          ? { start: time, budget, mood }
+          ? { occasion, start: time, budget, mood }
           : { setting, who: { adults: shownWho.adults, child_ages: shownWho.child_ages } }),
         ...(avoid?.length ? { avoid } : {}),
       };
@@ -124,20 +133,37 @@ export default function Outing() {
 
   const label = (t: string) => <Text style={{ color: c.muted, fontSize: 12, fontWeight: '600', letterSpacing: 0.6 }}>{t}</Text>;
   const input = [styles.input, { color: c.text, borderColor: c.line, backgroundColor: c.card, width: 80 }];
-  const dayChoices = (kind === 'date' ? [5, 6] : [6, 0]).map((d) => nextWeekday(today, d));
+  const dayChoices = nextDays(today);
+  const dayLabel = (d: string) => {
+    const s = shortDay(d, today);
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  };
 
   const choices = (
     <View style={{ gap: space.s }}>
+      {kind === 'date' ? (
+        <>
+          {label('KIND')}
+          <Chips
+            options={OCCASIONS.map((o) => ({ value: o.value, label: o.label }))}
+            selected={(v) => v === occasion}
+            onPress={(o) => {
+              setOccasion(o);
+              setTime(occasionOf(o).start);
+            }}
+          />
+        </>
+      ) : null}
       {label(kind === 'date' ? 'WHEN' : 'DAY')}
       <Chips
-        options={[...dayChoices.map((d) => ({ value: d, label: shortDay(d, today) })), ...(dayChoices.includes(day) ? [] : [{ value: day, label: shortDay(day, today) }])]}
+        options={[...dayChoices.map((d) => ({ value: d, label: dayLabel(d) })), ...(dayChoices.includes(day) ? [] : [{ value: day, label: dayLabel(day) }])]}
         selected={(v) => v === day}
         onPress={setDay}
       />
-      {Platform.OS === 'android' ? <TextLink title="📅 Pick another day" onPress={pickDay} /> : null}
+      {Platform.OS === 'android' ? <TextLink title="📅 Pick a later day" onPress={pickDay} /> : null}
       {kind === 'date' ? (
         <>
-          <Chips options={TIMES.map((t) => ({ value: t, label: clock(t) }))} selected={(v) => v === time} onPress={setTime} />
+          <Chips options={occasionOf(occasion).times.map((t) => ({ value: t, label: clock(t) }))} selected={(v) => v === time} onPress={setTime} />
           {label('BUDGET')}
           <Chips options={[{ value: 1 as const, label: '$' }, { value: 2 as const, label: '$$' }, { value: 3 as const, label: '$$$' }]} selected={(v) => v === budget} onPress={setBudget} />
           {label('MOOD')}
@@ -184,6 +210,11 @@ export default function Outing() {
           />
         </>
       )}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.m }}>
+        <Text style={{ color: c.text, fontSize: 15, flex: 1 }}>Fit around my calendar</Text>
+        <Switch value={fitCalendar} onValueChange={setFitCalendar} accessibilityLabel="Fit around my calendar" />
+      </View>
+      <Muted>{fitCalendar ? 'Your events are left as they are: Wilma plans in the free time around them.' : 'Your calendar is not read for this plan.'}</Muted>
       <Button title={shown.step === 'planning' ? 'Planning…' : 'Plan it'} disabled={shown.step === 'planning'} onPress={() => void plan()} />
       <Muted>From your saved places, with drive times from home and the weather. Uses one AI request.</Muted>
     </View>
@@ -200,7 +231,7 @@ export default function Outing() {
 
   return (
     <>
-      <Stack.Screen options={{ title: kind === 'date' ? 'Date night' : 'Family day' }} />
+      <Stack.Screen options={{ title: kind === 'date' ? 'Plan a date' : 'Family day' }} />
       <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={[styles.list, { gap: space.m }]} keyboardShouldPersistTaps="handled">
         {shown.step === 'plan' ? card(shown.plan) : choices}
         {calendarNote ? <Muted>{calendarNote}</Muted> : null}

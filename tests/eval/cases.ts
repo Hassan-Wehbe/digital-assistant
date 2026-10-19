@@ -165,6 +165,8 @@ function nextDay(weekday: number): string {
   d.setUTCDate(d.getUTCDate() + ((weekday - d.getUTCDay() + 7) % 7));
   return d.toISOString().slice(0, 10);
 }
+/** The same weekday a week later (said on that weekday, "Tuesday" may mean either). */
+const weekAfter = (day: string) => new Date(Date.parse(`${day}T12:00:00Z`) + 7 * 86_400_000).toISOString().slice(0, 10);
 /** A Pro user whose home is in Beirut, near the saved places. */
 function proInBeirut(w: World) {
   w.plan = "pro";
@@ -1283,6 +1285,21 @@ export const CASES: EvalCase[] = [
       holds((o) => cardsOf(o, "outing_plan").length === 1, "one plan card"),
       replyHas(/Tawlet|Trattoria/i, "names a place from the plan"),
       replyLacks(/Hidden courtyard|Mar Mikhael/i, "a place from the restricted space"),
+      noWrites("planning saves nothing and adds nothing to the calendar"),
+    ],
+  },
+  {
+    // Owner, 2026-10-19: a coffee or lunch date, any day.
+    id: "outing-coffee-date",
+    category: "other",
+    timeZone: BEIRUT,
+    planner: PLANNER,
+    setup: proInBeirut,
+    turns: ["Plan a coffee date for us on Tuesday at 10am."],
+    checks: [
+      called("plan_outing", (a) => a.kind === "date" && a.occasion === "coffee" && [nextDay(2), weekAfter(nextDay(2))].includes(a.date as string) && a.start === "10:00", "a coffee date on the coming Tuesday at 10"),
+      holds((o) => cardsOf(o, "outing_plan").length === 1, "one plan card"),
+      replyHas(/Café Younes|Cafe Younes/i, "the saved café"),
       noWrites("planning saves nothing and adds nothing to the calendar"),
     ],
   },
