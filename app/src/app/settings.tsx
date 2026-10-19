@@ -4,7 +4,7 @@
 // Theme (light, dark or the phone's), the
 // calendars Wilma may read (day planner step 1, app/calendars.tsx), the morning briefing and
 // leave-by alerts (day planner step 4, app/briefing.tsx), the homes days are planned from (D36,
-// app/homes.tsx), the account,
+// app/homes.tsx), who is in the household (D40, app/household.tsx), the account,
 // the recycle bin, deleting the account (D29, app/delete-account.tsx), sign out, the version.
 import * as Application from 'expo-application';
 import { router } from 'expo-router';
@@ -181,6 +181,7 @@ export default function Settings() {
         />
         {Platform.OS === 'android' ? <GroupRow title="Reminders" subtitle="Set from the chat, on this phone" onPress={() => router.push('/reminders')} /> : null}
         <GroupRow title="Homes" subtitle="Where My day plans from" onPress={() => router.push('/homes')} />
+        <GroupRow title="Household" subtitle="Who is in your family, for Family day" onPress={() => router.push('/household')} />
       </GroupList>
 
       {heading('Help')}

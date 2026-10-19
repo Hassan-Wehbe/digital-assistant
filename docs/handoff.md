@@ -13,6 +13,12 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **D40 planners step 1, the household (2026-10-19): branch `claude/household`, migration not
+  applied.** Migration `20261020120000_household.sql` (`household_member`: label, adult/child, a
+  child's birth year; at most 10; RLS own rows; anon nothing); SQL test 20 (25 checks, passed
+  locally) and its dry run; app Settings → Household (`lib/household.ts`, `app/household.tsx`); 913
+  app tests. **Owner:** dry run, OK to apply, merge. **Next:** step 2, the planner route
+  (strongest model; an evaluation run).
 - **D40 planners, the plan (2026-10-19): `docs/planners-plan.md`, branch `claude/planners-plan`
   (docs only).** Date night and Family day screens as in the mockups; code short-lists saved places
   (searchable spaces only), Mapbox drive times and NWS weather, one AI request returns a strict JSON
