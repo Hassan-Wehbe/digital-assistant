@@ -208,7 +208,22 @@ export function planForModel(plan: DayPlan, titles: Map<string, string>): Record
     tasks_not_placed: plan.tasks_not_placed.map((t) => ({
       title: screened(t.title), priority: t.priority, ...(t.duration_min ? { duration_min: t.duration_min } : {}),
       ...(t.due_on ? { due_on: t.due_on } : {}), ...(t.overdue ? { overdue: true } : {}),
+      ...(t.routine ? { routine: screened(t.routine) } : {}),
     })),
+    ...(plan.suggestions
+      ? {
+        routine_suggestions: plan.suggestions.items.map((s) => ({
+          title: screened(s.title), routine: screened(s.routine), minutes: s.duration_min,
+          ...(s.duration_assumed ? { minutes_assumed: true } : {}),
+          ...(s.start ? { fits_at: s.start, until: s.end } : { needs_a_drive: "Find a time in My day works out the drive" }),
+          ...(s.due_on ? { do_by: s.due_on } : {}),
+        })),
+        ...(plan.suggestions.more ? { more_routine_tasks_waiting: plan.suggestions.more } : {}),
+        routine_suggestions_note: "Routine tasks (weekly or monthly) that fit the free time, worked out by code. Offer " +
+          "them in a short sentence (\"vacuuming fits at 9:45\"); never add them to the day or change a task yourself: " +
+          "the user adds them in My day (Open my day). Never call one overdue.",
+      }
+      : {}),
   };
 }
 

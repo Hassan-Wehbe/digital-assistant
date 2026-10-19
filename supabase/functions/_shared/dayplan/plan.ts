@@ -49,6 +49,10 @@ export function mealHours(title: string): { from: number; to: number } | null {
   const m = MEAL_HOURS.find((h) => h.word.test(title));
   return m ? { from: m.from, to: m.to } : null;
 }
+/** Routine tasks offered at once in "From your routines" (routines Q4); the rest wait their turn. */
+export const MAX_SUGGESTIONS = 3;
+/** A routine task with no duration is fitted as this long (routines Q7). */
+export const ROUTINE_DEFAULT_MIN = 30;
 /** A rain row from this chance of rain (Q2). */
 export const RAIN_MIN_PCT = 50;
 /** Hours of rain looked at around an event: from this long before it starts to its end. */
@@ -94,6 +98,10 @@ export interface PlanTask {
   left_from?: string;
   planned_time?: string;
   place?: PlanPlace | null;
+  /** One of a routine's tasks (D39): the routine's title. */
+  routine?: string;
+  /** Offer it in "From your routines": in its window today, the routine's Suggest on, not dismissed today. */
+  suggest?: true;
 }
 
 export interface Leg {
@@ -164,6 +172,20 @@ export interface TaskOption {
   was_leave_at?: string;
 }
 
+export interface Suggestion {
+  task_id: string;
+  title: string;
+  routine: string;
+  duration_min: number;
+  /** No duration was given: fitted as ROUTINE_DEFAULT_MIN ("about 30 min"). */
+  duration_assumed?: true;
+  /** The last day of its week or month. */
+  due_on?: string;
+  /** Where it fits, local time; absent for a task with a place (Find a time). */
+  start?: string;
+  end?: string;
+}
+
 export interface DayPlan {
   date: string;
   time_zone: string;
@@ -181,7 +203,15 @@ export interface DayPlan {
     id: string; title: string; priority: string; duration_min?: number; due_on?: string; overdue?: true; repeat?: string;
     /** Left open on an earlier day (D35): the app asks Add to today · Done · Remove. Not sent to the model. */
     left_from?: string; planned_time?: string;
+    /** One of a routine's tasks: the routine's title. */
+    routine?: string;
   }[];
+  /**
+   * "From your routines" (D39): up to MAX_SUGGESTIONS routine tasks, each fitted into free time by
+   * code (a task with a place has no time here: the app offers Find a time, which knows drives);
+   * `more` counts the others waiting their turn. Absent when there are none.
+   */
+  suggestions?: { items: Suggestion[]; more: number };
   options?: { task_id: string; options: TaskOption[]; note?: string };
 }
 
@@ -404,6 +434,7 @@ export async function planDay(input: PlanInput): Promise<DayPlan> {
         ...(t.repeat ? { repeat: t.repeat } : {}),
         ...(t.left_from ? { left_from: t.left_from } : {}),
         ...(t.left_from && t.planned_time ? { planned_time: t.planned_time } : {}),
+        ...(t.routine ? { routine: t.routine } : {}),
       });
     }
   }
@@ -432,6 +463,9 @@ export async function planDay(input: PlanInput): Promise<DayPlan> {
     ],
     rows, all_day, tasks_not_placed,
   };
+
+  const suggestions = routineSuggestions(input.tasks, new Set(tasks_not_placed.map((t) => t.id)), gaps, at);
+  if (suggestions) plan.suggestions = suggestions;
 
   if (input.optionsFor) {
     const task = input.tasks.find((t) => t.id === input.optionsFor);
@@ -519,6 +553,47 @@ async function weatherRows(
 
 function typical(l: Leg): { typical_minutes?: number } {
   return l.typical_minutes !== undefined && l.typical_minutes !== l.minutes ? { typical_minutes: l.typical_minutes } : {};
+}
+
+/**
+ * "From your routines" (D39, routines Q4 and Q7): the routine tasks to offer, nearest last day first
+ * (then important ones, then by routine and title), each in the earliest free time that holds it, on
+ * a quarter hour, never two in the same minutes. A task with a place gets no time (its drive is
+ * worked out by Find a time). At most MAX_SUGGESTIONS; a task that fits nowhere today is counted in
+ * `more` with the rest. Null when there is nothing to offer.
+ */
+export function routineSuggestions(
+  tasks: PlanTask[], notPlaced: Set<string>, gaps: [number, number][], at: (min: number) => string,
+): { items: Suggestion[]; more: number } | null {
+  const offered = tasks
+    .filter((t) => t.suggest && t.routine && notPlaced.has(t.id))
+    .sort((a, b) =>
+      (a.due_on ?? "9999").localeCompare(b.due_on ?? "9999") ||
+      (a.priority === b.priority ? 0 : a.priority === "important" ? -1 : 1) ||
+      a.routine!.localeCompare(b.routine!) || a.title.localeCompare(b.title)
+    );
+  if (!offered.length) return null;
+  const free = gaps.map(([s, e]): [number, number] => [s, e]);
+  const items: Suggestion[] = [];
+  for (const t of offered) {
+    if (items.length >= MAX_SUGGESTIONS) break;
+    const duration = t.duration_min ?? ROUTINE_DEFAULT_MIN;
+    const base: Suggestion = {
+      task_id: t.id, title: t.title, routine: t.routine!, duration_min: duration,
+      ...(t.duration_min ? {} : { duration_assumed: true as const }), ...(t.due_on ? { due_on: t.due_on } : {}),
+    };
+    if (t.place) {
+      items.push(base);
+      continue;
+    }
+    const i = free.findIndex(([s, e]) => Math.ceil(s / 15) * 15 + duration <= e);
+    if (i < 0) continue;
+    const [s, e] = free[i];
+    const start = Math.ceil(s / 15) * 15;
+    free.splice(i, 1, ...([[s, start], [start + duration, e]] as [number, number][]).filter(([a, b]) => b > a));
+    items.push({ ...base, start: at(start), end: at(start + duration) });
+  }
+  return items.length ? { items, more: offered.length - items.length } : null;
 }
 
 /** Gaps of at least MIN_GAP minutes between `from` and `to` that nothing in `busy` covers. */

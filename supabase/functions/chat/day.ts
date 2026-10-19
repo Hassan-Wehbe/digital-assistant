@@ -31,6 +31,8 @@ import { localTime } from "../_shared/dayplan/time.ts";
 import { HOME_KIND, PLACE_TYPE, placePoint, placeScope } from "../mcp/lib/places.ts";
 import { normalizeTask, TASK_TYPE } from "../mcp/lib/tasks.ts";
 import { atDayEnd, MAX_SETTLES_PER_PLAN, saveDayEnd } from "../mcp/lib/day_end.ts";
+import { periodOn, settleRoutineTask } from "../mcp/lib/routines.ts";
+import { loadRoutines, saveTaskFields } from "../mcp/lib/routine_tasks.ts";
 import { type Agenda, type ChatPlan, choicesSchema, DAY, eventSchema, isTimeZone, LOCAL_TIME, MAX_AGENDA_EVENTS } from "./agenda.ts";
 
 export { localTime };
@@ -76,6 +78,8 @@ export interface DayLog {
   /** Tasks whose day ended, written as done or moved to the next day (D35), and writes that failed. */
   settled?: number;
   settle_failures?: number;
+  /** Routine tasks offered in "From your routines" (D39). */
+  suggestions?: number;
 }
 
 interface Row {
@@ -107,6 +111,16 @@ async function readItems(db: SupabaseClient): Promise<{ places: Row[]; tasks: Ro
     return ((data ?? []) as Row[]).filter((r) => r.item_type === type && !r.deleted_at && allowedSet.has(r.space_id));
   };
   return { places: await read(PLACE_TYPE), tasks: await read(TASK_TYPE) };
+}
+
+/**
+ * The tasks the user marked "Not today" for `date` in My day (D39, Q5; task_not_today, as the user:
+ * RLS own rows). A read that fails offers them all, never fails the plan.
+ */
+async function readNotToday(db: SupabaseClient, date: string): Promise<Set<string>> {
+  const { data, error } = await db.from("task_not_today").select("task_id, day").eq("day", date);
+  if (error) return new Set();
+  return new Set(((data ?? []) as { task_id: string }[]).map((r) => r.task_id));
 }
 
 /**
@@ -218,6 +232,14 @@ async function makePlan(deps: DayDeps, db: SupabaseClient, req: PlanRequest, log
   const placeById = new Map(places.map((r) => [r.id, r]));
   const dayTasks: PlanTask[] = [];
   const now = deps.now?.() ?? Date.now();
+  // Routines (D39): a routine's task is in the day while its window (its week or month) holds it,
+  // never overdue there; one missed in its period moves on to the next (Q6), written here like a
+  // day end. "Not today" (Q5) keeps it out of the suggestions for this day only.
+  const today = localTime(now, req.tz)?.slice(0, 10) ?? req.date;
+  const hasRoutines = tasks.some((r) => typeof r.metadata?.routine_id === "string");
+  const routines = hasRoutines ? await loadRoutines(db, today) : new Map();
+  const notToday = hasRoutines ? await readNotToday(db, req.date) : new Set<string>();
+  const settles = () => (log.settled ?? 0) + (log.settle_failures ?? 0);
   for (const r of tasks) {
     let t;
     try {
@@ -236,20 +258,46 @@ async function makePlan(deps: DayDeps, db: SupabaseClient, req: PlanRequest, log
       }
     }
     t = end.task;
+    const routine = t.routine_id ? routines.get(t.routine_id) : undefined;
+    if (routine) {
+      const missed = settleRoutineTask(t, routine.routine, today);
+      if (missed.missed && settles() < MAX_SETTLES_PER_PLAN) {
+        try {
+          await saveTaskFields(db, r.id, missed.task, "Missed in its period; moved on to the next (routines, Q6)");
+          log.settled = (log.settled ?? 0) + 1;
+        } catch {
+          log.settle_failures = (log.settle_failures ?? 0) + 1;
+        }
+      }
+      t = missed.task;
+    }
     if (t.status !== "open") continue;
     const plannedLocal = t.planned_at ? localTime(t.planned_at, req.tz) : undefined;
     const plannedToday = plannedLocal?.startsWith(req.date);
     const leftOpen = end.left_from !== undefined && end.left_from < req.date;
     if (plannedLocal && !plannedToday && !leftOpen) continue;
-    if (t.due_on && t.due_on > req.date && !plannedToday && !leftOpen) continue;
+    // A routine's task: its window (a later day planned ahead: the period that day is in).
+    let window: { from: string; due: string } | null = null;
+    if (t.window_from && t.due_on) {
+      window = { from: t.window_from, due: t.due_on };
+      if (req.date > t.due_on && routine) {
+        const p = periodOn(routine.routine, req.date);
+        window = { from: p.window_from, due: p.due_on };
+      }
+    }
+    const inWindow = !!window && window.from <= req.date && req.date <= window.due;
+    if (window && !inWindow && !plannedToday && !leftOpen) continue;
+    if (!window && t.due_on && t.due_on > req.date && !plannedToday && !leftOpen) continue;
     const placeRow = t.place_id ? placeById.get(t.place_id) : undefined;
     dayTasks.push({
       id: r.id, title: r.title, priority: t.priority,
       ...(t.duration_min ? { duration_min: t.duration_min } : {}),
       ...(t.duration_estimated ? { duration_estimated: true } : {}),
-      ...(t.due_on ? { due_on: t.due_on } : {}),
+      ...(window ? { due_on: window.due } : t.due_on ? { due_on: t.due_on } : {}),
       ...(t.repeat ? { repeat: t.repeat } : {}),
       ...(plannedToday ? { planned_at: plannedLocal } : {}),
+      ...(routine ? { routine: routine.title } : {}),
+      ...(routine && inWindow && routine.routine.suggest && !notToday.has(r.id) && !plannedToday ? { suggest: true as const } : {}),
       ...(leftOpen && plannedLocal ? { left_from: end.left_from, planned_time: plannedLocal.slice(11, 16) } : {}),
       place: placeRow ? asPlace(placeRow) : null,
     });
@@ -263,6 +311,7 @@ async function makePlan(deps: DayDeps, db: SupabaseClient, req: PlanRequest, log
     choices: req.choices, drives, weather, optionsFor: req.optionsFor,
   });
   log.drives = plan.rows.filter((r) => r.kind === "drive").length;
+  if (plan.suggestions) log.suggestions = plan.suggestions.items.length;
   if (drives?.stats) {
     log.drive_requests = drives.stats.requests;
     log.drive_failures = drives.stats.failed;

@@ -92,6 +92,8 @@ export class World {
    * in a searchable space (migration home_place, item_home_note), as the default.
    */
   homes: { id: string; label: string; address?: string; lat: number; lng: number; is_default: boolean }[] = [];
+  /** My day's "Not today" (task_not_today, routines Q5): one pretend user, so every row is theirs. */
+  notToday: { task_id: string; day: string }[] = [];
   /** What the tools handed out: vault entry links, reveal links, upload links. */
   secretEntries: { secret_id: string; name: string; space_id: string; secret_type: string }[] = [];
   reveals: string[] = [];
@@ -406,6 +408,12 @@ class Query implements PromiseLike<Result> {
         const rows = w.homes.length ? w.homes : copied;
         return this.shape(rows.map((h) => ({ ...h })).filter(where));
       }
+      case "task_not_today":
+        if (this.op === "insert") {
+          w.notToday.push({ task_id: String(this.payload.task_id), day: String(this.payload.day) });
+          return ok(null);
+        }
+        return this.shape(w.notToday.map((r) => ({ ...r })).filter(where));
       default:
         return err(`table ${this.table} is not part of the evaluation world`);
     }
