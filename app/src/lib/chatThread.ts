@@ -12,6 +12,7 @@
 import { cancelledMessage, checkDelete, deletedMessage } from './chatDeletes';
 import type { ChatEvent, PlaceCardData } from './chatStream';
 import type { RoutineCardData } from './chatRoutine';
+import type { OutingPlan } from './outing';
 import type { HomeCardData } from './homePlace';
 import type { RememberedMemory } from './memory';
 import type { AlarmCardData, EventCardData, ReminderCardData } from './phoneActions';
@@ -157,6 +158,9 @@ export type Entry =
   | ({ kind: 'home'; id: string; saved?: HomeSaved } & HomeCardData)
   /** Save a routine (D39): saved only when the user taps Save routine; `saved` is then its id (Open). */
   | ({ kind: 'routine'; id: string; saved?: string } & RoutineCardData)
+  /** A Date night or Family day plan (D40). Never saved with the chat (chatStore has no case for it):
+   * Mapbox's terms do not allow keeping its drive times. */
+  | { kind: 'outing'; id: string; plan: OutingPlan }
   /**
    * "You're at Mom's. Plan your day from: Home · Mom's" (homes step 4), before the chat's plan for
    * today is made. Home names and ids only: never where the phone was.
@@ -520,6 +524,8 @@ function onEvent(state: ChatState, event: ChatEvent): ChatState {
     case 'home_save':
       // A card only: nothing is saved until the user taps it (homes, D36).
       return add(state, { kind: 'home', id, label: event.label, address: event.address, makeDefault: event.makeDefault });
+    case 'outing_plan':
+      return add(state, { kind: 'outing', id, plan: event.plan });
     case 'routine_save': {
       // A card only: nothing is saved until the user taps it (routines, D39).
       const { type: _t, ...card } = event;

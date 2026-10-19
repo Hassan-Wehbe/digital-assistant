@@ -30,6 +30,7 @@
 //             {"type":"day_plan","date":...}                            the answer used a day plan: Open my day
 //             {"type":"alarm"|"show_alarms"|"reminder"|"find_reminders"|"calendar_add"|"home_save",...}  cards to confirm
 //             {"type":"routine_save",...}                             🔁 Save routine card (phone_actions.ts)
+//             {"type":"outing_plan","plan":{...}}                     a Date night or Family day plan (outing.ts, D40)
 //             {"type":"help","topic"?}                                🛟 Help topics (changes nothing)
 //                                                                     on the phone (phone_actions.ts)
 //             {"type":"error","code":"allowance_used"|"service_paused"|"connection","message":...}
@@ -59,7 +60,7 @@ import { memoriesForPrompt } from "../mcp/lib/memory.ts";
 import { type CredentialKind, findCredential } from "../mcp/lib/credentials.ts";
 import { classify, classifyBody, type ClassifyLog } from "./classify.ts";
 import { ACTION_NAMES, ACTION_SPECS, ChatActions } from "./actions.ts";
-import { type OutingLog, outingPlan } from "./outing.ts";
+import { CAN_OUTING, type OutingLog, outingForChat, outingPlan, PLAN_OUTING } from "./outing.ts";
 import { CONFIRM_TOOLS, confirmCard } from "./confirm.ts";
 import { isRoutine } from "../mcp/lib/routines.ts";
 import {
@@ -434,7 +435,13 @@ async function runChat(
     const system = systemPrompt(assistantName, tools.instructions, new Date(), here, tz, about);
     // The MCP tools plus the chat-only actions (never offered to the Claude connector).
     const specs = [...tools.specs, ...ACTION_SPECS];
-    const actions = new ChatActions({ db, distanceUnit, here, can, tz, now: deps.now });
+    // plan_outing (D40): the same outing as the app's screens; the day's calendar when the app re-sent it.
+    const oneDay = agenda && agenda.from === agenda.to
+      ? { date: agenda.from, list: agenda.events.map((e, i) => ({ ...e, key: `e${i}` })) }
+      : undefined;
+    const outing = (input: Record<string, unknown>) =>
+      outingForChat(deps, { db, userId, tz, events: oneDay, can: !!can?.has(CAN_OUTING) }, input);
+    const actions = new ChatActions({ db, distanceUnit, here, can, tz, now: deps.now, outing });
     const cards = new Set<string>();
     // The user's homes, read once when the model names one (from_home); labels only reach the model.
     let homeList: Promise<Home[]> | undefined;
@@ -476,7 +483,10 @@ async function runChat(
         }
         if (ACTION_NAMES.has(call.name)) {
           // Cards for the app; the log keeps the action's name only, never its ids or a point.
+          if (call.name === PLAN_OUTING) emit({ type: "status", tool: call.name, text: "Planning…" });
           const out = await actions.run(call.name, call.input);
+          // plan_outing's own AI request is part of this message's cost (one count for the message).
+          if (out.costCents) log.cost_cents += out.costCents;
           for (const ev of out.events) emit(ev);
           results.push({ callId: call.id, content: out.text, isError: out.isError });
           continue;

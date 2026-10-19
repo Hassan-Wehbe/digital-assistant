@@ -15,24 +15,21 @@
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Linking, Platform, ScrollView, Text, TextInput, View } from 'react-native';
+import { Platform, ScrollView, Text, TextInput, View } from 'react-native';
 
+import { OutingPlanCard } from '@/components/OutingPlanCard';
 import { Chips } from '@/components/PlaceFields';
 import { ProCard, useProPlan } from '@/components/ProCard';
-import { Badge, Button, Card, Muted, space, styles, TextLink, useColors, useLoad } from '@/components/ui';
+import { Button, Muted, space, styles, TextLink, useColors, useLoad } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
-import { addEvent, defaultTarget, deviceCalendar, phoneTimeZone, readAgenda, timeText } from '@/lib/calendar';
+import { deviceCalendar, phoneTimeZone, readAgenda, timeText } from '@/lib/calendar';
 import { loadChoice } from '@/lib/calendarSettings';
 import { phoneGeocode, placeEvents, withKeys } from '@/lib/dayAgenda';
 import { todayAndTomorrow } from '@/lib/dayView';
 import { deviceDayMemory, deviceSettingsStore } from '@/lib/deviceStorage';
 import { listMembers, type HouseholdDb } from '@/lib/household';
 import { deviceGeocoder } from '@/lib/location';
-import {
-  avoidOf, clock, EMPTY_TEXT, nextWeekday, planEvent, PROBLEM_TEXT, rainLine, stepDetail, withAlternative, whoFrom,
-  type OutingBody, type OutingKind, type OutingPlan,
-} from '@/lib/outing';
-import { mapsLink } from '@/lib/places';
+import { avoidOf, clock, EMPTY_TEXT, nextWeekday, PROBLEM_TEXT, whoFrom, type OutingBody, type OutingKind, type OutingPlan } from '@/lib/outing';
 import { needsPro } from '@/lib/pro';
 import { supabase } from '@/lib/supabase';
 import { localParts, shortDay } from '@/lib/tasks';
@@ -41,7 +38,7 @@ import { WilmaError } from '@/lib/wilma';
 type Shown =
   | { step: 'choose' }
   | { step: 'planning' }
-  | { step: 'plan'; plan: OutingPlan; added?: string; addProblem?: string }
+  | { step: 'plan'; plan: OutingPlan }
   | { step: 'empty'; text: string }
   | { step: 'problem'; text: string };
 
@@ -115,14 +112,6 @@ export default function Outing() {
       if (e instanceof WilmaError && e.signedOut) return void signOut();
       setShown({ step: 'problem', text: PROBLEM_TEXT.connection });
     }
-  };
-
-  const addToCalendar = async (p: OutingPlan) => {
-    const choice = await loadChoice(deviceSettingsStore, userId);
-    const target = defaultTarget(await deviceCalendar.calendars().catch(() => []), choice);
-    if (!target) return setShown({ step: 'plan', plan: p, addProblem: 'Turn on Use my calendar in Settings → Calendars and tick a calendar Wilma may add to.' });
-    const out = await addEvent(deviceCalendar, choice, target.id, planEvent(p), new Date());
-    setShown('added' in out ? { step: 'plan', plan: p, added: `Added to ${out.added.calendar}.` } : { step: 'plan', plan: p, addProblem: out.problem });
   };
 
   const pickDay = () =>
@@ -200,59 +189,20 @@ export default function Outing() {
     </View>
   );
 
-  const card = (p: OutingPlan, added?: string, addProblem?: string) => {
-    const firstPlace = p.steps.find((s) => s.place)?.place;
-    const maps = firstPlace ? firstPlace.maps_url ?? mapsLink({ lat: firstPlace.lat, lng: firstPlace.lng }) : null;
-    const weather = rainLine(p);
-    return (
-      <View style={{ gap: space.m }}>
-        <Card style={{ gap: space.s }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.s }}>
-            <Text style={[styles.title, { color: c.text, flex: 1 }]}>{p.title}</Text>
-            <Badge text="BEST FIT" />
-          </View>
-          <Muted>{shortDay(p.date, today)}</Muted>
-          {p.leave_at ? <Text style={{ color: c.muted, fontSize: 14 }}>{`${clock(p.leave_at)}  Leave ${p.from}`}</Text> : null}
-          {p.steps.map((s, i) => (
-            <View key={`${i}-${s.start}`} style={{ flexDirection: 'row', gap: space.m }}>
-              <Text style={{ width: 64, color: c.accent, fontSize: 14, fontWeight: '600' }}>{clock(s.start)}</Text>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={{ color: c.text, fontSize: 15, fontWeight: '600' }}>{s.place?.title ?? s.event?.title ?? 'Home'}</Text>
-                {stepDetail(s) ? <Muted>{stepDetail(s)}</Muted> : null}
-                {s.line ? <Text style={{ color: c.text, fontSize: 14 }}>{s.line}</Text> : null}
-              </View>
-            </View>
-          ))}
-          {p.back_home_min !== undefined ? <Muted>{`Home again: ${p.back_home_min} min drive`}</Muted> : null}
-          {weather ? <Text style={{ color: c.rain, fontSize: 13 }}>{weather}</Text> : null}
-          {added ? <Text style={{ color: c.good, fontSize: 14 }}>{`✓ ${added}`}</Text> : null}
-          {addProblem ? <Text style={{ color: c.danger, fontSize: 14 }}>{addProblem}</Text> : null}
-          <View style={{ flexDirection: 'row', gap: space.s, flexWrap: 'wrap' }}>
-            {!added ? <Button title="Add to calendar" onPress={() => void addToCalendar(p)} /> : null}
-            {maps ? <Button title="Open in Maps" kind="plain" onPress={() => void Linking.openURL(maps).catch(() => {})} /> : null}
-          </View>
-          {p.credits.length ? <Muted>{p.credits.join(' · ')}</Muted> : null}
-        </Card>
-        {p.alternative ? (
-          <Card style={{ gap: space.xs }}>
-            <Text style={{ color: c.text, fontSize: 15, fontWeight: '600' }}>{kind === 'date' ? 'Somewhere else' : 'Another place'}</Text>
-            <Text style={{ color: c.text, fontSize: 14 }}>{`${p.alternative.place.title}${p.alternative.minutes !== undefined ? ` · ${p.alternative.minutes} min` : ''}`}</Text>
-            {p.alternative.line ? <Muted>{p.alternative.line}</Muted> : null}
-            <TextLink title="Use this one" onPress={() => setShown({ step: 'plan', plan: withAlternative(p) })} />
-          </Card>
-        ) : null}
-        <Button title="Another idea" kind="plain" onPress={() => void plan(avoidOf(p))} />
-        <TextLink title="Change the choices" onPress={() => setShown({ step: 'choose' })} />
-        <Muted>Not saved anywhere: add it to your calendar to keep it.</Muted>
-      </View>
-    );
-  };
+  const card = (p: OutingPlan) => (
+    <View style={{ gap: space.m }}>
+      <OutingPlanCard key={avoidOf(p).join() + p.title} plan={p} today={today} />
+      <Button title="Another idea" kind="plain" onPress={() => void plan(avoidOf(p))} />
+      <TextLink title="Change the choices" onPress={() => setShown({ step: 'choose' })} />
+      <Muted>Not saved anywhere: add it to your calendar to keep it.</Muted>
+    </View>
+  );
 
   return (
     <>
       <Stack.Screen options={{ title: kind === 'date' ? 'Date night' : 'Family day' }} />
       <ScrollView style={{ backgroundColor: c.background }} contentContainerStyle={[styles.list, { gap: space.m }]} keyboardShouldPersistTaps="handled">
-        {shown.step === 'plan' ? card(shown.plan, shown.added, shown.addProblem) : choices}
+        {shown.step === 'plan' ? card(shown.plan) : choices}
         {calendarNote ? <Muted>{calendarNote}</Muted> : null}
         {shown.step === 'empty' || shown.step === 'problem' ? <Text style={{ color: shown.step === 'problem' ? c.danger : c.text, fontSize: 15 }}>{shown.text}</Text> : null}
       </ScrollView>

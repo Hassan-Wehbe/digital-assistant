@@ -129,3 +129,25 @@ describe('what the screens need', () => {
     expect(avoidOf(toOutingPlan(PLAN)!)).toEqual(['p1', 'p2']);
   });
 });
+
+describe('the plan in the chat (plan_outing)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { toChatEvent } = require('./chatStream') as typeof import('./chatStream');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { chatReducer, initialChat } = require('./chatThread') as typeof import('./chatThread');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { toEntry } = require('./chatStore') as typeof import('./chatStore');
+
+  it('is read from the outing_plan event, checked like the screen’s', () => {
+    expect(toChatEvent({ type: 'outing_plan', plan: PLAN })).toMatchObject({ type: 'outing_plan', plan: { title: 'Dinner and a walk' } });
+    expect(toChatEvent({ type: 'outing_plan', plan: { ...PLAN, steps: [] } })).toBeNull();
+  });
+
+  it('becomes a card in the thread, and is never saved with the chat (Mapbox’s terms)', () => {
+    let s = chatReducer(initialChat(), { type: 'send', text: 'plan a date night Friday' });
+    s = chatReducer(s, { type: 'event', event: toChatEvent({ type: 'outing_plan', plan: PLAN })! });
+    const card = s.entries.find((e) => e.kind === 'outing');
+    expect(card).toMatchObject({ kind: 'outing', plan: { title: 'Dinner and a walk' } });
+    expect(toEntry({ ...card })).toBeNull();
+  });
+});

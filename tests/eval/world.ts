@@ -94,6 +94,10 @@ export class World {
   homes: { id: string; label: string; address?: string; lat: number; lng: number; is_default: boolean }[] = [];
   /** My day's "Not today" (task_not_today, routines Q5): one pretend user, so every row is theirs. */
   notToday: { task_id: string; day: string }[] = [];
+  /** Settings → Household (household_member, D40): labels, adult or child, a child's birth year. */
+  household: { label: string; kind: "adult" | "child"; birth_year: number | null }[] = [];
+  /** The month's AI allowance used so far (my_ai_allowance), for planners that check it. */
+  aiUsed = 0;
   /** What the tools handed out: vault entry links, reveal links, upload links. */
   secretEntries: { secret_id: string; name: string; space_id: string; secret_type: string }[] = [];
   reveals: string[] = [];
@@ -408,6 +412,9 @@ class Query implements PromiseLike<Result> {
         const rows = w.homes.length ? w.homes : copied;
         return this.shape(rows.map((h) => ({ ...h })).filter(where));
       }
+      case "household_member":
+        // Read only (plan_outing reads roles and ages; the app writes it).
+        return this.shape(w.household.map((m) => ({ ...m })).filter(where));
       case "task_not_today":
         if (this.op === "insert") {
           w.notToday.push({ task_id: String(this.payload.task_id), day: String(this.payload.day) });
@@ -654,6 +661,8 @@ function rpc(w: World, name: string, p: Record<string, unknown>): Result {
     case "set_attachment_description":
     case "delete_attachment":
       return err("attachment not found", "P0002");
+    case "my_ai_allowance":
+      return ok({ month: "2026-10-01", used_fraction: w.aiUsed });
     case "use_day_plan": {
       // As the migration's function: Pro only, at most 30 plans a day, counted when allowed.
       if (w.plan !== "pro") return ok({ allowed: false, reason: "pro_required" });

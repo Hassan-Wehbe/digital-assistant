@@ -68,7 +68,12 @@ routine's id (find_tasks, or search_items with item_type "routine"), then save_i
 the schedule ("make it every other Saturday") is update_item on the routine (get_item first; send repeat,
 when, day and suggest). "What's left this week/month?": find_tasks; a routine's task whose window_from is on or
 before today is still to do, one starting later is done until then (last_done_on says when) or not due yet.
-Ticking one done moves it to the next week or month. Deleting a routine also bins its tasks.`
+Ticking one done moves it to the next week or month. Deleting a routine also bins its tasks.
+Date night or family day ("plan a date night Friday", "a family day Saturday, outdoors"): plan_outing with the
+day (and a time, budget, mood or indoor/outdoor only if they said). Leave adults and child_ages out unless the
+user said them: their household setting is used, as ages only. Never put a name in it. It plans from the
+user's own saved places; say the plan from its result only, never add a place, and do not also add it to the
+calendar: the card has Add to calendar.`
     : "";
   return `The user calls this assistant "${name}". A message that addresses ${name} ("${name}, …",
 "Hey ${name}, …", "ask ${name} …") is meant for this store: act on it with these tools, for example

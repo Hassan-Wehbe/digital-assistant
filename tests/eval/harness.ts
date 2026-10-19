@@ -7,7 +7,8 @@
 // app: it reads the case's calendar for those days and sends the question again with it, as the
 // chat function receives it, with the day planner's numbers for one day (chat/day.ts planForChat;
 // Pro cases only, with fake drive times and weather: no Mapbox or NWS request is made).
-import { ACTION_NAMES, ACTION_SPECS, ChatActions } from "../../supabase/functions/chat/actions.ts";
+import { ACTION_NAMES, ACTION_SPECS, type ActionContext, ChatActions } from "../../supabase/functions/chat/actions.ts";
+import { outingForChat } from "../../supabase/functions/chat/outing.ts";
 import { CAN_ALARM, CAN_CALENDAR_ADD, CAN_HELP, CAN_HOME, CAN_REMINDER, CAN_ROUTINE } from "../../supabase/functions/chat/phone_actions.ts";
 import {
   type Agenda, type AgendaEvent, type AgendaHomes, type AgendaRequest, AGENDA_TOOL, agendaCall, agendaSchema, withAgenda,
@@ -89,8 +90,8 @@ export interface Session {
   tools: ToolSpec[];
   system: string;
   call(name: string, args: Record<string, unknown>): Promise<{ isError: boolean; text: string }>;
-  /** The chat-only actions for one user message, as the chat function makes them. */
-  actions(): ChatActions;
+  /** The chat-only actions for one user message, as the chat function makes them (with plan_outing's planner). */
+  actions(outing?: ActionContext["outing"]): ChatActions;
   close(): Promise<void>;
 }
 
@@ -112,7 +113,7 @@ export async function openSession(
     // With memory on (a case's setup), the "About the user" block, as the chat function adds it.
     system: systemPrompt(ctx.assistantName, tools.instructions, new Date(), here, timeZone, about),
     call: tools.call,
-    actions: () => new ChatActions({ db: ctx.db, distanceUnit: ctx.distanceUnit ?? "mi", here, can, tz: timeZone }),
+    actions: (outing) => new ChatActions({ db: ctx.db, distanceUnit: ctx.distanceUnit ?? "mi", here, can, tz: timeZone, outing }),
     close: tools.close,
   };
 }
@@ -172,7 +173,21 @@ export async function runConversation(
       messages.push({ role: "user", content: user });
       const turn: TurnRecord = { user, reply: "", toolCalls: [], events: [], stop: "other" };
       record.turns.push(turn);
-      const actions = session.actions();
+      // plan_outing (D40), as the chat function: the same outing, its AI request made with the model
+      // under evaluation, the day's calendar when the app re-sent it.
+      const outing = (input: Record<string, unknown>) =>
+        outingForChat({
+          clientFor: () => world.client(),
+          drives: () => opts.planner?.drives ?? null,
+          weather: () => opts.planner?.weather ?? null,
+          llm: () => ({ stream: (_route, req) => adapter.stream(model, req) }),
+          log: () => {},
+        }, {
+          db: world.client(), userId: "eval-user", tz: opts.timeZone ?? opts.calendar?.time_zone,
+          events: agenda && agenda.from === agenda.to ? { date: agenda.from, list: agenda.events.map((e, i) => ({ ...e, key: `e${i}` })) } : undefined,
+          can: !opts.oldApp,
+        }, input);
+      const actions = session.actions(outing);
       const asked = messages.length; // the conversation as the app sends it, ending with this message
       let agenda: Agenda | undefined;
       let plan: ChatPlan | undefined;
@@ -225,6 +240,7 @@ export async function runConversation(
             out = { isError: !!a.result.isError, text: a.result.content };
           } else if (ACTION_NAMES.has(c.name)) {
             const a = await actions.run(c.name, c.input);
+            if (a.costCents) record.costCents += a.costCents;
             turn.events.push(...a.events);
             out = a;
           } else {
