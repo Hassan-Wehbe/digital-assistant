@@ -3,8 +3,9 @@
 Status: plan, 2026-10-19. **Owner's answers given the same day: all as recommended (Q1-Q10).** **Step 1
 built and merged (#236); migration applied 2026-10-19:** see "As built: step 1". **Step 2 built,
 merged (#237) and `chat` deployed (run 39285813529) 2026-10-19:** see "As built: step 2". **Step 3
-built (2026-10-19), branch `claude/planner-screens`, not merged; app only, next build:** see "As
-built: step 3". Design: D40 (and
+merged (#238) 2026-10-19; app only, next build:** see "As built: step 3". **Step 4 built
+(2026-10-19), branch `claude/outing-chat`, not merged, not deployed, evaluation not run:** see "As
+built: step 4". Design: D40 (and
 D25, the day planner; D26, places; D31, calendar entries; D38, the Plan with Wilma row). Mockups:
 the owner's private canvas "Wilma Home and Planners", screens "Date night" and "Family day".
 Model: the strongest for steps 1-4 (a new table holding details about children, the AI request,
@@ -267,5 +268,36 @@ App only; ships with the next build.
 - Tests: `lib/outing.test.ts` (10), the planners test updated. **923 app tests pass**; type check
   and lint clean; the Android bundle builds.
 
-**Owner:** merge. The phone checks come with step 5's checklist (after step 4, the chat and its
-evaluation, which comes before any build carries the planners).
+**Merged (#238), 2026-10-19.**
+
+## As built: step 4 (2026-10-19)
+
+The `chat` function and the app; the Claude connector (`mcp`) is unchanged.
+
+- **`chat/outing.ts`:** the route's work is now one core, `runOuting`, used by the route and by
+  **`plan_outing`** (chat only, `outingForChat`): kind, date and optional start, end, budget, mood,
+  setting, adults and child_ages, **with no field for a name**; for a family day without ages given,
+  the server reads the household (`household_member`, as the user) and passes on roles and ages
+  only. The day's calendar is used when the app has re-sent it for that day (`get_day_agenda`),
+  and the model is told when it was not. The model gets the checked plan's facts (titles, times,
+  lines, drives) to word it in two or three sentences, never to add a place; the app gets the plan
+  as `{"type":"outing_plan"}` when it lists `"outing"` in `can` (older apps: the model gives the plan
+  in words). Pro and one plan count as on the screens; its AI request is added to the chat
+  message's cost (one record for the message). Status line "Planning…".
+- **Instructions** (chat only): plan_outing for date nights and family days, ages only, never a
+  name, never add a place, the card has Add to calendar.
+- **The app:** the plan card is one component (`components/OutingPlanCard.tsx`) for the screen and
+  the chat; the chat's card is **never saved with the chat** (Mapbox's terms: `chatStore` keeps no
+  outing). The app sends `"outing"` in `can` on every platform.
+- **The evaluation:** the harness runs plan_outing with the model under evaluation (its cost
+  added), and the pretend account gains a household and the AI allowance. Five cases:
+  `outing-date-night` (the coming Friday, one card, a real place named, the restricted bar never),
+  `outing-family-household` (Saturday, no household name in the call or the reply),
+  `outing-restricted-trap`, `outing-password-trap` (a door code and a password never on a card;
+  the vault), `outing-not-pro` (no card; says Pro).
+- Tests: Deno `outing_test.ts` (+3: ages only and a name field refused, the calendar for that day
+  only, not Pro), the tool count (37); app `outing.test.ts` (+2: the chat card read and never saved),
+  the `can` lists. **537 Deno tests and 925 app tests pass**; type check and lint clean.
+
+**Owner, in order:** (1) OK, with a dollar cap, for one evaluation run (all chat cases; rule 9: the
+traps must pass); (2) merge; (3) OK to deploy `chat`. Then step 5 (help, privacy, checklist, build).

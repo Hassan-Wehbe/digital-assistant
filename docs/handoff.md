@@ -13,11 +13,16 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **D40 planners step 3, the screens (2026-10-19): branch `claude/planner-screens`, not merged;
-  app only.** `app/outing.tsx` (Date night and Family day from the mockups; Plan it, the plan card,
+- **D40 planners step 4, the chat (2026-10-19): branch `claude/outing-chat`, not merged, not
+  deployed, evaluation not run.** `plan_outing` (chat only; no name field; household as ages read
+  on the server; the re-sent calendar for that day) on the same core as the screens; the plan card
+  shared by the screen and the chat, never saved with the chat; five evaluation cases with traps.
+  537 Deno and 925 app tests. **Owner:** OK + cap for an evaluation run, merge, OK to deploy `chat`.
+  **Next:** step 5 (help, privacy line for the household, legal item, checklist, build).
+- **D40 planners step 3, the screens (2026-10-19): merged (#238); app only.** `app/outing.tsx` (Date night and Family day from the mockups; Plan it, the plan card,
   Add to calendar as one event with notes, Open in Maps, Use this one, Another idea), `lib/outing.ts`,
   calendar events gain notes; Home's row opens both (Vacation stays Soon). 923 app tests; bundles.
-  **Owner:** merge. **Next:** step 4, the chat's `plan_outing` and the evaluation (strongest model),
+  **Next:** step 4, the chat's `plan_outing` and the evaluation (strongest model),
   then step 5 (help, privacy, checklist, build).
 - **D40 planners step 2, the planner route (2026-10-19): merged (#237); `chat` deployed (run
   39285813529).** `{"mode":"outing"}` in `chat`: code short-lists saved places (searchable spaces

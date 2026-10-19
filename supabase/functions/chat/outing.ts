@@ -76,6 +76,8 @@ export interface OutingLog {
 export interface OutingDeps extends Pick<DayDeps, "clientFor" | "drives" | "weather" | "now"> {
   llm(): Pick<Llm, "stream">;
   log(entry: OutingLog): void;
+  /** false: the AI request is recorded with the chat message it belongs to (plan_outing), not here. */
+  recordUsage?: boolean;
 }
 
 /** A place in the plan, as the app shows it (Open in Maps). */
@@ -152,30 +154,26 @@ export function windowOf(body: Pick<OutingBody, "kind" | "start" | "end">): { st
 
 const json = (status: number, body: unknown) => ({ status, body });
 
-export async function outingPlan(deps: OutingDeps, token: string, userId: string, raw: unknown, signal?: AbortSignal): Promise<{ status: number; body: unknown }> {
-  const log: OutingLog = {
-    event: "outing", request: crypto.randomUUID(), user: userId, outcome: "ok", candidates: 0, steps: 0, dropped: 0, model_calls: 0,
-    cost_cents: 0, drive_requests: 0,
-  };
-  const done = (status: number, body: unknown) => {
-    log.cost_cents = Math.round(log.cost_cents * 10_000) / 10_000;
-    deps.log(log);
-    return json(status, body);
-  };
-  const parsed = outingBody.safeParse(raw);
-  const window = parsed.success ? windowOf(parsed.data) : null;
-  if (!parsed.success || !window) {
-    log.outcome = "bad_request";
-    return done(400, { error: "bad_request", error_description: "send {mode: \"outing\", kind, date, tz, events: [...]} with at least an hour between start and end" });
-  }
-  const body = parsed.data;
+/** What one outing came to (the route and the chat's plan_outing both read it). */
+export type OutingOutcome =
+  | { plan: OutingPlan; usage: { used?: number; limit?: number } }
+  | { empty: "no_home" | "no_places" | "no_plan" }
+  | { refused: "pro_required" | "fair_use" | "allowance_used"; used?: number; limit?: number }
+  | { connection: true };
+
+/**
+ * One outing, as the user (RLS): home, the short list (searchable spaces only), Pro and fair use,
+ * the AI allowance, drives and rain, one AI request, the checks, the real drives. Fills the log.
+ */
+export async function runOuting(
+  deps: OutingDeps, db: SupabaseClient, body: OutingBody, window: { start: string; end: string }, log: OutingLog, signal?: AbortSignal,
+): Promise<OutingOutcome> {
   log.kind = body.kind;
   const ask: OutingAsk = {
     kind: body.kind, date: body.date, start: window.start, end: window.end,
     ...(body.kind === "date" ? { budget: body.budget ?? 3, mood: body.mood ?? "favourite" } : { setting: body.setting ?? "either", ...(body.who ? { who: body.who } : {}) }),
     ...(body.avoid ? { avoid: body.avoid } : {}),
   };
-  const db = deps.clientFor(token);
   const now = deps.now?.() ?? Date.now();
   const today = localTime(now, body.tz)?.slice(0, 10) ?? body.date;
 
@@ -183,7 +181,7 @@ export async function outingPlan(deps: OutingDeps, token: string, userId: string
     const home = await readHome(db, body.start_from?.home);
     if (!home) {
       log.outcome = "no_home";
-      return done(200, { plan: null, reason: "no_home" });
+      return { empty: "no_home" };
     }
     const homePoint: Point = { lat: home.lat, lng: home.lng };
     const cands = shortlist(await readPlaces(db), ask, homePoint, body.now?.slice(0, 10) ?? today);
@@ -191,20 +189,20 @@ export async function outingPlan(deps: OutingDeps, token: string, userId: string
     if (!cands.length) {
       // Nothing to plan with: not counted, no AI request.
       log.outcome = "no_places";
-      return done(200, { plan: null, reason: "no_places" });
+      return { empty: "no_places" };
     }
 
     const g = await gate(db);
     if (!g) throw new Error("db:no_gate");
     if (!g.allowed) {
       log.outcome = g.reason;
-      return g.reason === "fair_use" ? done(429, { error: "fair_use", used: g.used, limit: g.limit }) : done(403, { error: "pro_required" });
+      return { refused: g.reason, used: g.used, limit: g.limit };
     }
     const { data: allowance, error: allowanceError } = await db.rpc("my_ai_allowance");
     if (allowanceError || !allowance) throw new Error(`db:${allowanceError?.code ?? "no_allowance"}`);
     if (Number((allowance as { used_fraction: unknown }).used_fraction) >= 1) {
       log.outcome = "allowance_used";
-      return done(429, { error: "allowance_used" });
+      return { refused: "allowance_used" };
     }
 
     // Drive times from home to each place, and the rain there (points and times only).
@@ -256,7 +254,7 @@ export async function outingPlan(deps: OutingDeps, token: string, userId: string
     } finally {
       clearTimeout(timer);
     }
-    if (log.model_calls > 0) {
+    if (log.model_calls > 0 && deps.recordUsage !== false) {
       const cents = Math.min(MAX_RECORD_CENTS, Math.max(0, Math.round(log.cost_cents * 10_000) / 10_000));
       const { error } = await db.rpc("record_ai_usage", { p_cost_cents: cents });
       log.usage_recorded = !error;
@@ -266,7 +264,7 @@ export async function outingPlan(deps: OutingDeps, token: string, userId: string
     const draft = answer ? checkAnswer(answer, ask, cands, busy) : null;
     if (!draft) {
       log.outcome = "no_plan";
-      return done(200, { plan: null, reason: "no_plan", usage: { used: g.used, limit: g.limit } });
+      return { empty: "no_plan" };
     }
     log.dropped = draft.dropped;
     log.steps = draft.steps.length;
@@ -314,10 +312,181 @@ export async function outingPlan(deps: OutingDeps, token: string, userId: string
       rain: rain.map((h) => ({ at: h.at, rain_pct: h.rain_pct })),
       credits: [...(drives ? ["Drive times © Mapbox"] : []), ...(rain.length ? ["Weather: US National Weather Service"] : [])],
     };
-    return done(200, { plan, usage: { used: g.used, limit: g.limit } });
+    return { plan, usage: { used: g.used, limit: g.limit } };
   } catch (e) {
     log.outcome = "connection";
     log.code ??= e instanceof Error && e.message.startsWith("db:") ? e.message : e instanceof Error ? e.name : "unknown";
-    return done(503, { error: "connection", error_description: "Could not make the plan. Try again." });
+    return { connection: true };
   }
+}
+
+/** A new log line for one outing (counts and codes only). */
+export const outingLog = (userId: string): OutingLog => ({
+  event: "outing", request: crypto.randomUUID(), user: userId, outcome: "ok", candidates: 0, steps: 0, dropped: 0, model_calls: 0,
+  cost_cents: 0, drive_requests: 0,
+});
+
+/** The route ({"mode":"outing"}): the outcome as a status and a JSON body. */
+export async function outingPlan(deps: OutingDeps, token: string, userId: string, raw: unknown, signal?: AbortSignal): Promise<{ status: number; body: unknown }> {
+  const log = outingLog(userId);
+  const done = (status: number, body: unknown) => {
+    log.cost_cents = Math.round(log.cost_cents * 10_000) / 10_000;
+    deps.log(log);
+    return json(status, body);
+  };
+  const parsed = outingBody.safeParse(raw);
+  const window = parsed.success ? windowOf(parsed.data) : null;
+  if (!parsed.success || !window) {
+    log.outcome = "bad_request";
+    return done(400, { error: "bad_request", error_description: "send {mode: \"outing\", kind, date, tz, events: [...]} with at least an hour between start and end" });
+  }
+  const out = await runOuting(deps, deps.clientFor(token), parsed.data, window, log, signal);
+  if ("plan" in out) return done(200, { plan: out.plan, usage: out.usage });
+  if ("empty" in out) return done(200, { plan: null, reason: out.empty });
+  if ("refused" in out) {
+    if (out.refused === "pro_required") return done(403, { error: "pro_required" });
+    if (out.refused === "fair_use") return done(429, { error: "fair_use", used: out.used, limit: out.limit });
+    return done(429, { error: "allowance_used" });
+  }
+  return done(503, { error: "connection", error_description: "Could not make the plan. Try again." });
+}
+
+// ---- In the chat: plan_outing (planners step 4) --------------------------------------------------
+
+export const PLAN_OUTING = "plan_outing";
+/** What the app lists in "can" for the plan card. */
+export const CAN_OUTING = "outing";
+
+export const PLAN_OUTING_SPEC = {
+  name: PLAN_OUTING,
+  description:
+    "Chat app only. Plans a date night or a family day from the user's own saved places, with drive times from " +
+    "home and the weather (\"plan a date night Friday\", \"a family day Saturday, outdoors\"). Pro, like My day; " +
+    "one plan each call (counted). The app shows the plan as a card with Add to calendar; nothing is added or " +
+    "saved by you. Never put a name in it: for a family day give adults and the children's ages if the user said " +
+    "them, else leave them out and the user's household setting is used (ages only).",
+  inputSchema: {
+    type: "object",
+    properties: {
+      kind: { type: "string", enum: ["date", "family"] },
+      date: { type: "string", description: "YYYY-MM-DD, from today's date when they say \"Friday\" or \"tomorrow\"" },
+      start: { type: "string", description: "HH:MM, only if they said a time (date night: default 19:00; family day: 09:00)" },
+      end: { type: "string", description: "HH:MM, only if they said when it ends" },
+      budget: { type: "integer", minimum: 1, maximum: 3, description: "Date night: 1 cheap … 3 any (default 3)" },
+      mood: { type: "string", enum: ["favourite", "new"], description: "Date night: a favourite, or somewhere new they want to try" },
+      setting: { type: "string", enum: ["outdoor", "indoor", "either"], description: "Family day" },
+      adults: { type: "integer", minimum: 0, maximum: 10, description: "Family day: only if the user said" },
+      child_ages: { type: "array", items: { type: "integer", minimum: 0, maximum: 17 }, maxItems: 10, description: "Family day: only if the user said" },
+    },
+    required: ["kind", "date"],
+    additionalProperties: false,
+  },
+};
+
+export interface ChatOutingContext {
+  db: SupabaseClient;
+  userId: string;
+  tz?: string;
+  /** The calendar the app re-sent for this message (get_day_agenda), when there is one. */
+  events?: { date: string; list: OutingBody["events"] };
+  /** The app shows the plan card. */
+  can: boolean;
+}
+
+const chatInput = z.object({
+  kind: z.enum(["date", "family"]),
+  date: z.string().regex(DAY),
+  start: z.string().regex(HHMM).optional(),
+  end: z.string().regex(HHMM).optional(),
+  budget: z.number().int().min(1).max(3).optional(),
+  mood: z.enum(["favourite", "new"]).optional(),
+  setting: z.enum(["outdoor", "indoor", "either"]).optional(),
+  adults: z.number().int().min(0).max(10).optional(),
+  child_ages: z.array(z.number().int().min(0).max(17)).max(10).optional(),
+}).strict();
+
+/** The household as roles and ages (RLS: the user's own rows); never a label (Q4). */
+async function householdWho(db: SupabaseClient, year: number): Promise<{ adults: number; child_ages: number[] } | undefined> {
+  const { data, error } = await db.from("household_member").select("kind, birth_year").limit(10);
+  if (error || !data?.length) return undefined;
+  const rows = data as { kind: string; birth_year: number | null }[];
+  return {
+    adults: rows.filter((r) => r.kind === "adult").length,
+    child_ages: rows.filter((r) => r.kind === "child" && typeof r.birth_year === "number").map((r) => Math.min(17, Math.max(0, year - r.birth_year!))),
+  };
+}
+
+/** plan_outing in the chat: the same outing as the screens, worded by the model, shown as a card. */
+export async function outingForChat(
+  deps: OutingDeps, ctx: ChatOutingContext, input: Record<string, unknown>,
+): Promise<{ isError: boolean; text: string; events: Record<string, unknown>[]; costCents: number }> {
+  const log = outingLog(ctx.userId);
+  const finish = (isError: boolean, text: string, events: Record<string, unknown>[] = []) => {
+    const costCents = log.cost_cents;
+    log.cost_cents = Math.round(log.cost_cents * 10_000) / 10_000;
+    deps.log(log);
+    return { isError, text, events, costCents };
+  };
+  const parsed = chatInput.safeParse(input);
+  if (!parsed.success) {
+    log.outcome = "bad_request";
+    return finish(true, "plan_outing takes kind, date (YYYY-MM-DD) and optional start, end, budget 1-3, mood, setting, adults, child_ages. No names.");
+  }
+  const a = parsed.data;
+  const tz = ctx.tz ?? "UTC";
+  const now = deps.now?.() ?? Date.now();
+  const year = Number((localTime(now, tz) ?? new Date(now).toISOString()).slice(0, 4));
+  const who = a.kind === "family"
+    ? (a.adults !== undefined || a.child_ages ? { adults: a.adults ?? 0, child_ages: a.child_ages ?? [] } : await householdWho(ctx.db, year))
+    : undefined;
+  const calendarChecked = ctx.events?.date === a.date;
+  const body: OutingBody = {
+    mode: "outing", kind: a.kind, date: a.date, tz,
+    ...(a.start ? { start: a.start } : {}), ...(a.end ? { end: a.end } : {}),
+    ...(a.kind === "date" ? { budget: a.budget ?? 3, mood: a.mood ?? "favourite" } : { setting: a.setting ?? "either", ...(who ? { who } : {}) }),
+    events: calendarChecked ? ctx.events!.list : [],
+  };
+  const window = windowOf(body);
+  if (!window) {
+    log.outcome = "bad_request";
+    return finish(true, "start and end must leave at least an hour.");
+  }
+  const out = await runOuting({ ...deps, recordUsage: false }, ctx.db, body, window, log);
+  if ("plan" in out) {
+    const p = out.plan;
+    const facts = {
+      status: "shown",
+      title: p.title, date: p.date, from: p.from, ...(p.leave_at ? { leave_at: p.leave_at } : {}),
+      steps: p.steps.map((s) => ({
+        time: `${s.start}-${s.end}`, what: s.place?.title ?? s.event?.title ?? "home", ...(s.line ? { line: s.line } : {}),
+        ...(s.drive_min !== undefined ? { drive_min: s.drive_min } : {}),
+      })),
+      ...(p.alternative ? { alternative: p.alternative.place.title } : {}),
+      ...(p.rain.some((h) => h.rain_pct >= 50) ? { rain_likely: true } : {}),
+      calendar_checked: calendarChecked,
+      message: (ctx.can
+        ? "The app shows this plan as a card with Add to calendar and Open in Maps. Say it in two or three short sentences from these facts only; "
+        : "This app cannot show the plan card: give the plan in a few short lines from these facts only; ") +
+        "never add a place or a time. Nothing was added to the calendar or saved." +
+        (calendarChecked ? "" : " Their calendar was not checked for that day: say they can use Date night or Family day on Home to plan around it."),
+    };
+    return finish(false, JSON.stringify(facts), ctx.can ? [{ type: "outing_plan", plan: p }] : []);
+  }
+  if ("empty" in out) {
+    const say = {
+      no_home: "The user has no home saved, so drives cannot be worked out. Offer save_home, or say they can set where they leave from in My day.",
+      no_places: "The user has no saved places that fit. Say Wilma plans from their own saved places, and suggest saving a few (restaurants, parks) and marking them date night or kids.",
+      no_plan: "No plan could be made from their places this time. Say so in one sentence and offer to try again with other choices.",
+    }[out.empty];
+    return finish(false, JSON.stringify({ status: out.empty, message: say }));
+  }
+  if ("refused" in out) {
+    const say = {
+      pro_required: "Planning a date night or family day is part of Wilma Pro. Say so in one sentence; nothing was made.",
+      fair_use: "Today's plans are used up. Say they can plan again tomorrow.",
+      allowance_used: "This month's AI allowance is used up. Say so in one sentence.",
+    }[out.refused];
+    return finish(false, JSON.stringify({ status: out.refused, message: say }));
+  }
+  return finish(true, "The plan could not be made just now (a connection problem). Say so in one sentence.");
 }

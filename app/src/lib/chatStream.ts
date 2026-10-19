@@ -10,6 +10,7 @@
 // is dropped here, as it is read: the app opens its own vault screen and never keeps the link.
 
 import { toRoutineCard, type RoutineCardData } from './chatRoutine';
+import { toOutingPlan, type OutingPlan } from './outing';
 import { toHomeCard, type HomeCardData } from './homePlace';
 import { toRemembered, type RememberedMemory } from './memory';
 import {
@@ -62,6 +63,8 @@ export type ChatEvent =
   | ({ type: 'home_save' } & HomeCardData)
   /** Save a routine (D39): the 🔁 card; nothing is saved until the user taps Save routine. */
   | ({ type: 'routine_save' } & RoutineCardData)
+  /** A Date night or Family day plan (D40): the card with Add to calendar; never saved with the chat. */
+  | { type: 'outing_plan'; plan: OutingPlan }
   | { type: 'error'; code: string; message: string }
   | { type: 'done'; counted: boolean }
   /** After `done`: what Wilma kept from this message (memory on): "🧠 Remembered · Undo". */
@@ -168,6 +171,10 @@ export function toChatEvent(raw: unknown): ChatEvent | null {
     case 'routine_save': {
       const card = toRoutineCard(raw);
       return card ? { type: 'routine_save', ...card } : null;
+    }
+    case 'outing_plan': {
+      const plan = toOutingPlan(raw.plan);
+      return plan ? { type: 'outing_plan', plan } : null;
     }
     case 'day_plan':
       return isDay(raw.date) ? { type: 'day_plan', date: raw.date } : null;

@@ -8,6 +8,8 @@
 //       {"type":"location_request"}
 //   set_alarm, show_alarms, set_reminder, find_reminders, add_calendar_event: cards to confirm on
 //       the phone (phone_actions.ts, D31)
+//   plan_outing({kind, date, ...})           a date night or family day plan (outing.ts, D40):
+//       {"type":"outing_plan","plan":{...}}
 //
 // Every id is checked as the user (lib/places.ts visiblePlaces): a place, not deleted, in one of
 // their own searchable spaces. Anything else gets the same "not found", so a restricted, deleted or
@@ -21,6 +23,7 @@ import type { ToolSpec } from "../_shared/llm/index.ts";
 import type { DistanceUnit } from "../mcp/lib/assistant.ts";
 import { distanceKm, inUnit, placePoint, type Point, type VisiblePlace, visiblePlaces } from "../mcp/lib/places.ts";
 import { PHONE_ACTION_NAMES, PHONE_ACTION_SPECS, PhoneActions } from "./phone_actions.ts";
+import { PLAN_OUTING, PLAN_OUTING_SPEC } from "./outing.ts";
 
 /** Place cards per message, whatever the model asks for (Q13). */
 export const MAX_PLACE_CARDS = 5;
@@ -59,6 +62,7 @@ export const ACTION_SPECS: ToolSpec[] = [
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
   },
   ...PHONE_ACTION_SPECS,
+  PLAN_OUTING_SPEC,
 ];
 
 export const ACTION_NAMES = new Set(ACTION_SPECS.map((s) => s.name));
@@ -81,6 +85,8 @@ export interface ActionOutput {
   text: string;
   /** What goes to the app, in order. */
   events: Record<string, unknown>[];
+  /** An AI request the action made itself (plan_outing): added to the message's cost. */
+  costCents?: number;
 }
 
 export interface ActionContext {
@@ -94,6 +100,8 @@ export interface ActionContext {
   tz?: string;
   /** The clock (tests set it). */
   now?: () => number;
+  /** plan_outing (planners step 4, outing.ts outingForChat): the chat function and the evaluation give it. */
+  outing?: (input: Record<string, unknown>) => Promise<ActionOutput>;
 }
 
 const NOT_FOUND = "not found";
@@ -131,6 +139,9 @@ export class ChatActions {
 
   async run(name: string, input: Record<string, unknown>): Promise<ActionOutput> {
     if (PHONE_ACTION_NAMES.has(name)) return this.phone.run(name, input);
+    if (name === PLAN_OUTING) {
+      return this.ctx.outing ? await this.ctx.outing(input) : { isError: true, text: "Planning is not available here.", events: [] };
+    }
     try {
       if (name === "show_places") return await this.showPlaces(input);
       if (name === "ask_for_location") return this.askForLocation();

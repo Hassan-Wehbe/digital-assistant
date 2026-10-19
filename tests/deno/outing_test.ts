@@ -254,3 +254,64 @@ Deno.test("route: the window: date night three hours from 7 pm, family day 9 to 
   assertEquals(windowOf({ kind: "family" }), { start: "09:00", end: "18:00" });
   assertEquals(windowOf({ kind: "family", start: "10:00", end: "10:30" }), null);
 });
+
+// ---- In the chat: plan_outing (step 4) --------------------------------------------------------
+
+import { outingForChat } from "../../supabase/functions/chat/outing.ts";
+
+const FAMILY_ANSWER = JSON.stringify({ title: "Out and about", steps: [{ place: 1, start: "10:00", minutes: 120, line: "A morning out." }] });
+
+Deno.test("plan_outing: the household goes as ages only; a name field is refused; the card only when the app shows it", async () => {
+  const s = setup(FAMILY_ANSWER);
+  s.account.world.household = [
+    { label: "Me", kind: "adult", birth_year: null },
+    { label: "Rania", kind: "adult", birth_year: null },
+    { label: "Lea", kind: "child", birth_year: 2019 },
+  ];
+  const ctx = { db: s.account.client(), userId: "u", tz: "Asia/Beirut", can: true };
+  const out = await outingForChat(s.deps, ctx, { kind: "family", date: "2026-10-24", setting: "outdoor" });
+  assertFalse(out.isError, out.text);
+  const said = s.prompts.map((p) => JSON.stringify(p.messages)).join();
+  assert(said.includes("2 adults, a child aged 7"), said);
+  assertFalse(/Rania|Lea/.test(said), "no household name reaches the model");
+  assertEquals(out.events.length, 1);
+  assertEquals((out.events[0] as { type: string }).type, "outing_plan");
+  assert(out.costCents > 0, "its AI request is added to the chat message's cost");
+  assertFalse(s.account.rpcs.includes("record_ai_usage"), "not recorded twice: the chat message records it");
+  const told = JSON.parse(out.text);
+  assertEquals(told.status, "shown");
+  assertEquals(told.calendar_checked, false);
+  assert(told.message.includes("never add a place"));
+
+  // A name the model tries to pass is refused before anything runs.
+  const bad = await outingForChat(s.deps, ctx, { kind: "family", date: "2026-10-24", names: ["Lea"] });
+  assert(bad.isError);
+  // An older app: the model words the plan, no card.
+  const old = await outingForChat(setup(ANSWER).deps, { ...ctx, can: false }, { kind: "date", date: "2026-10-23" });
+  assertEquals(old.events, []);
+});
+
+Deno.test("plan_outing: the day's calendar from the chat is used for that day only", async () => {
+  const s = setup(ANSWER);
+  const events = {
+    date: "2026-10-23",
+    list: [{ key: "e0", title: "Parents evening", start: "2026-10-23T19:00", end: "2026-10-23T20:00", all_day: false, calendar: "Family" }],
+  };
+  const ctx = { db: s.account.client(), userId: "u", tz: "Asia/Beirut", can: true, events };
+  const out = await outingForChat(s.deps, ctx, { kind: "date", date: "2026-10-23" });
+  assertEquals(JSON.parse(out.text).calendar_checked, true);
+  assert(JSON.stringify(s.prompts.at(-1)!.messages).includes("Parents evening"));
+  const other = setup(ANSWER);
+  const out2 = await outingForChat(other.deps, { ...ctx, db: other.account.client() }, { kind: "date", date: "2026-10-30" });
+  assertEquals(JSON.parse(out2.text).calendar_checked, false);
+  assertFalse(JSON.stringify(other.prompts.at(-1)!.messages).includes("Parents evening"));
+});
+
+Deno.test("plan_outing: not Pro and no places are said plainly, with nothing made", async () => {
+  const s = setup(ANSWER);
+  s.account.world.plan = "free";
+  const out = await outingForChat(s.deps, { db: s.account.client(), userId: "u", tz: "Asia/Beirut", can: true }, { kind: "date", date: "2026-10-23" });
+  assertEquals(JSON.parse(out.text).status, "pro_required");
+  assertEquals(out.events, []);
+  assertEquals(s.prompts.length, 0);
+});
