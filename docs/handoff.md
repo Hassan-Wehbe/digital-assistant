@@ -13,6 +13,13 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Routines step 5, help and the build (2026-10-19): branch `claude/routines-help-build`, not
+  merged; app and privacy page only.** Help's My day topic mentions routines; the privacy page adds
+  one sentence (routines; favourite spaces and Not today marks kept with the account; owner checks
+  the wording); legal checklist item for Get title (D41); `docs/versioncode21-phone-checklist.md`
+  for the whole next build (Home clean-up, shared links + cold-start fix, routines). **Owner:**
+  merge, then OK to build (preview or production), then the checklist. **After that:** D40, the date
+  night and family day planners with the household setting (strongest model, plan first).
 - **Routines step 4, the chat (2026-10-19): merged (#232); `chat` deployed (run 39280697614) after the evaluation
   (run 39277843260: 153/154, 0 leaks, 0 unsafe, $0.09; all six routine cases passed).** `save_routine` (chat only): a 🔁 card the user taps, schedule
   checked with `normalizeRoutine`, passwords refused (rule 9); `save_item` of a routine is refused

@@ -65,6 +65,11 @@ and is a starting point, not legal advice.
       other people the user mentions; and whether Play's Data safety form needs "Health info"
       when a user asks Wilma to remember a health detail (today: covered by "Other user-generated
       content").
+- [ ] **Get title on shared links** (D41): on the user's tap, the phone reads a shared page's
+      own title (YouTube through its public oEmbed address; other sites' og:title or title), with
+      no cookies or sign-in. Check this fits YouTube's API terms and the sites' terms of use, and
+      that the privacy page needs no line for it (nothing reaches Wilma's server until the user
+      saves the note).
 - [ ] **Data breach**: notification duties (Florida and other states where users live).
 - [ ] **Brand**: the name "Wilma" and the mascot (trademark search and registration), app name in
       the stores.
