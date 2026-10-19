@@ -4,9 +4,9 @@ import { describe, expect, it } from '@jest/globals';
 import { PLANNERS } from './planners';
 
 describe('Plan with Wilma', () => {
-  it('My day first and working; Date night, Family day and Vacation marked soon', () => {
+  it('My day, Date night and Family day work; Vacation is marked soon', () => {
     expect(PLANNERS.map((p) => p.id)).toEqual(['day', 'date', 'family', 'vacation']);
-    expect(PLANNERS[0].soon).toBeUndefined();
-    for (const p of PLANNERS.slice(1)) expect(p.soon).toMatch(/^Coming (soon|later)\./);
+    for (const p of PLANNERS.slice(0, 3)) expect(p.soon).toBeUndefined();
+    expect(PLANNERS[3].soon).toMatch(/^Coming later\./);
   });
 });

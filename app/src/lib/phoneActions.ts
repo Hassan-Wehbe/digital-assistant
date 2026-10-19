@@ -193,7 +193,12 @@ export interface EventCardData {
   end: string;
   allDay: boolean;
   location?: string;
+  /** The event's notes (a Date night or Family day plan's steps, D40); never from the chat card. */
+  notes?: string;
 }
+
+/** An event's notes at most this long. */
+export const MAX_EVENT_NOTES = 2000;
 
 const DAY_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
 
@@ -240,7 +245,8 @@ export function eventProblem(e: EventCardData, now: Date): string | null {
   if (!title) return 'Give the event a title.';
   if (title.length > MAX_EVENT_TITLE) return `Make the title shorter (at most ${MAX_EVENT_TITLE} characters).`;
   if ((e.location ?? '').length > MAX_EVENT_PLACE) return `Make the place shorter (at most ${MAX_EVENT_PLACE} characters).`;
-  if (findCredential(title) || (e.location && findCredential(e.location))) {
+  if ((e.notes ?? '').length > MAX_EVENT_NOTES) return `Make the notes shorter (at most ${MAX_EVENT_NOTES} characters).`;
+  if (findCredential(title) || (e.location && findCredential(e.location)) || (e.notes && findCredential(e.notes))) {
     return 'That looks like a password or code, so it can’t go in your calendar. Passwords belong in the Vault.';
   }
   let firstDay: string;
