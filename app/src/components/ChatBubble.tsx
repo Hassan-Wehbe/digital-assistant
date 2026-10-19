@@ -6,6 +6,7 @@ import { ChatCard, ChatCardText } from '@/components/ChatCard';
 import { CalendarCard, DayCard, DeleteCard, LocationCard, MemoryLine, NotesCard, PlacesCard, VaultCard } from '@/components/ChatCards';
 import { AlarmCard, AlarmsCard, EventCard, ReminderCard, RemindersCard } from '@/components/PhoneCards';
 import { HomeAskCard, HomeCard } from '@/components/HomeCard';
+import { RoutineCard } from '@/components/RoutineCard';
 import { Button, Muted, useColors } from '@/components/ui';
 import type { Entry, ErrorButton, EventAdded, HomeSaved } from '@/lib/chatThread';
 import type { EventCardData } from '@/lib/phoneActions';
@@ -27,6 +28,7 @@ export function ChatBubble({
   onUndoMemory,
   onEventAdded,
   onHomeSaved,
+  onRoutineSaved,
   homeAskActive = false,
   onAnswerHomeAsk,
 }: {
@@ -51,6 +53,8 @@ export function ChatBubble({
   onEventAdded?: (entryId: string, added: EventAdded, event: EventCardData) => void;
   /** A 🏠 card's home was saved (on its tap). */
   onHomeSaved?: (entryId: string, saved: HomeSaved) => void;
+  /** A 🔁 card's routine was saved (on its tap). */
+  onRoutineSaved?: (entryId: string, routineId: string) => void;
   /** A "You're at Mom's" card can be tapped. */
   homeAskActive?: boolean;
   onAnswerHomeAsk?: (entryId: string, chosen: 'at' | 'def') => void;
@@ -131,6 +135,8 @@ export function ChatBubble({
       return <EventCard entry={entry} onAdded={(added, event) => onEventAdded?.(entry.id, added, event)} />;
     case 'home':
       return <HomeCard entry={entry} onSaved={(saved) => onHomeSaved?.(entry.id, saved)} />;
+    case 'routine':
+      return <RoutineCard entry={entry} onSaved={(routineId) => onRoutineSaved?.(entry.id, routineId)} />;
     case 'home_ask':
       return <HomeAskCard entry={entry} active={homeAskActive && !!onAnswerHomeAsk} onAnswer={(chosen) => onAnswerHomeAsk?.(entry.id, chosen)} />;
     case 'memory':

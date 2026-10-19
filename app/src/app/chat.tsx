@@ -31,7 +31,7 @@ export default function Chat() {
   const { session } = useAuth();
   const {
     state, ready, canSend, routing, bannerVisible, send, askWilma, stop, retry, dismissBanner, clear, confirmDelete, cancelDelete,
-    shareLocation, dismissLocation, undoMemory, eventAdded, homeSaved, answerHomeAsk,
+    shareLocation, dismissLocation, undoMemory, eventAdded, homeSaved, routineSaved, answerHomeAsk,
   } = useChat();
   const [text, setText] = useState('');
   // Help's "Try it" (help plan Q3): the words go in the box, never sent by themselves. `at` makes
@@ -177,6 +177,7 @@ export default function Chat() {
               onUndoMemory={undoMemory}
               onEventAdded={eventAdded}
               onHomeSaved={homeSaved}
+              onRoutineSaved={routineSaved}
               homeAskActive={homeAskActive(state, item, todayAndTomorrow(new Date()).today) && canSend}
               onAnswerHomeAsk={answerHomeAsk}
             />

@@ -116,6 +116,8 @@ interface ChatContextValue {
   eventAdded(entryId: string, added: EventAdded, event: EventCardData): void;
   /** A 🏠 card's home was saved (the card wrote it on the tap): the card says so from now on. */
   homeSaved(entryId: string, saved: HomeSaved): void;
+  /** A 🔁 card's routine was saved (the card wrote it on the tap): Saved · Open from now on. */
+  routineSaved(entryId: string, routineId: string): void;
   /** "You're at Mom's": plan today from that home (kept for today), then the question again. */
   answerHomeAsk(entryId: string, chosen: 'at' | 'def'): void;
 }
@@ -418,6 +420,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       },
       homeSaved(entryId, saved) {
         act({ type: 'home_saved', id: entryId, saved });
+      },
+      routineSaved(entryId, routineId) {
+        act({ type: 'routine_saved', id: entryId, routineId });
       },
       answerHomeAsk(entryId, chosen) {
         const card = current.current.entries.find((e) => e.id === entryId);

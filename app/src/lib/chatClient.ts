@@ -40,6 +40,8 @@ const SESSION_ENDED = 'Your session has ended. Please sign in again.';
 
 /** The 🏠 card (save a home, D36; chat/phone_actions.ts save_home). */
 export const CAN_HOME = 'home';
+/** The 🔁 card (save a routine, D39; chat/phone_actions.ts save_routine): works on every platform. */
+export const CAN_ROUTINE = 'routine';
 
 /**
  * What this app version can do for Wilma: read the phone's calendar (chat/agenda.ts on the server),
@@ -47,7 +49,7 @@ export const CAN_HOME = 'home';
  * (chat/phone_actions.ts). Other platforms leave those out, so Wilma says they are not available
  * there instead of showing a card that cannot work (the web build has no Clock and no map lookup).
  */
-export const CAN = Platform.OS === 'android' ? ['calendar', CAN_ALARM, CAN_REMINDER, CAN_CALENDAR_ADD, CAN_HOME] : ['calendar'];
+export const CAN = Platform.OS === 'android' ? ['calendar', CAN_ALARM, CAN_REMINDER, CAN_CALENDAR_ADD, CAN_HOME, CAN_ROUTINE] : ['calendar', CAN_ROUTINE];
 
 /**
  * The request body: the thread, what the app can do, the phone's time zone (so "today" is the

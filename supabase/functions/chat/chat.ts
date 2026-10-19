@@ -29,6 +29,7 @@
 //                                                                     send again (with start_from)
 //             {"type":"day_plan","date":...}                            the answer used a day plan: Open my day
 //             {"type":"alarm"|"show_alarms"|"reminder"|"find_reminders"|"calendar_add"|"home_save",...}  cards to confirm
+//             {"type":"routine_save",...}                             🔁 Save routine card (phone_actions.ts)
 //             {"type":"help","topic"?}                                🛟 Help topics (changes nothing)
 //                                                                     on the phone (phone_actions.ts)
 //             {"type":"error","code":"allowance_used"|"service_paused"|"connection","message":...}
@@ -58,6 +59,7 @@ import { type CredentialKind, findCredential } from "../mcp/lib/credentials.ts";
 import { classify, classifyBody, type ClassifyLog } from "./classify.ts";
 import { ACTION_NAMES, ACTION_SPECS, ChatActions } from "./actions.ts";
 import { CONFIRM_TOOLS, confirmCard } from "./confirm.ts";
+import { isRoutine } from "../mcp/lib/routines.ts";
 import {
   type Agenda, type AgendaHomes, AGENDA_TOOL, agendaCall, agendaSchema, CAN_CALENDAR, isTimeZone, withAgenda,
 } from "./agenda.ts";
@@ -79,6 +81,9 @@ export const MAX_MESSAGE_CHARS = 20_000;
 export const ALLOWANCE_WARN = 0.8;
 /** Password retrieval never counts (D22): a message whose only tool calls are these is free. */
 export const VAULT_LOOKUPS = new Set(["find_secret", "get_secret"]);
+/** save_item with item_type "routine" in the chat: the card instead (nothing is saved without a tap). */
+export const ROUTINE_BY_CARD = "Not saved: in this app a new routine is saved only with save_routine, a card the user " +
+  "taps. Call save_routine with its name, schedule and tasks instead, and do not save its tasks separately.";
 /** record_ai_usage() refuses more than this per call. */
 const MAX_RECORD_CENTS = 100;
 
@@ -494,6 +499,11 @@ async function runChat(
           if (!cards.has(key)) emit(outcome.card as unknown as Record<string, unknown>);
           cards.add(key);
           results.push({ callId: call.id, content: outcome.toModel });
+          continue;
+        }
+        if (call.name === "save_item" && typeof call.input.item_type === "string" && isRoutine(call.input.item_type)) {
+          // A new routine is saved only from its card, on the user's tap (routines step 4, D39).
+          results.push({ callId: call.id, content: ROUTINE_BY_CARD, isError: true });
           continue;
         }
         const status = STATUS[call.name] ?? STATUS_DEFAULT;

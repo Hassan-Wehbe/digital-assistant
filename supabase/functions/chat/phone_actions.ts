@@ -14,6 +14,12 @@
 // the address on the map with its own geocoder (or uses where it is) and writes the home_place row
 // on the tap. Nothing is saved on the server here, and the model never sees a point.
 //   show_help({topic?})                         {"type":"help","topic"?}                       🛟 Help topics
+//   save_routine({name, repeat, when?, day?, tasks, suggest?})
+//                                               {"type":"routine_save","name","repeat","when","day"?,"suggest","tasks"}  Save routine
+//
+// save_routine (routines step 4, design D39, docs/routines-plan.md) is a card too: the schedule is
+// checked with the server's own rules (normalizeRoutine) and the app saves the routine and its tasks
+// on the tap, through the same tools as its New routine screen. Nothing is saved here.
 //
 // show_help (docs/help-plan.md step 2, design D37) is the one card here that changes nothing: it
 // opens the app's own Help topics. It carries a topic name only, never user data. An app without
@@ -27,6 +33,7 @@
 import type { ToolSpec } from "../_shared/llm/index.ts";
 import { localTime } from "../_shared/dayplan/time.ts";
 import { findCredential } from "../mcp/lib/credentials.ts";
+import { normalizeRoutine } from "../mcp/lib/routines.ts";
 
 /** What the app lists in "can" for these cards. */
 export const CAN_ALARM = "alarm";
@@ -34,6 +41,7 @@ export const CAN_REMINDER = "reminder";
 export const CAN_CALENDAR_ADD = "calendar_add";
 export const CAN_HOME = "home";
 export const CAN_HELP = "help";
+export const CAN_ROUTINE = "routine";
 
 /** The app's Help topics (app/src/lib/help.ts); show_help names one of these. */
 export const HELP_TOPICS = ["notes", "vault", "day", "alarms", "places", "memory", "spaces", "privacy"] as const;
@@ -43,6 +51,10 @@ export const MAX_LOCATION = 300;
 /** A home's name and address, as home_place allows (migration home_place). */
 export const MAX_HOME_LABEL = 60;
 export const MAX_HOME_ADDRESS = 300;
+/** A routine's name and tasks, as the app's New routine screen allows (app/src/lib/routineForm.ts). */
+export const MAX_ROUTINE_NAME = 200;
+export const MAX_ROUTINE_TASK = 300;
+export const MAX_ROUTINE_TASKS = 20;
 /** Reminders and events at most this far ahead. */
 export const MAX_DAYS_AHEAD = 366;
 /** An event at most this long (a timed one), or this many days (an all-day one). */
@@ -161,6 +173,47 @@ export const PHONE_ACTION_SPECS: ToolSpec[] = [
     },
   },
   {
+    name: "save_routine",
+    description:
+      "Chat app only. Shows the user a card to save a routine: a named group of tasks that comes back each week, " +
+      "every two weeks or each month (\"make my Saturday chores a weekly routine: laundry, vacuum, groceries\", " +
+      "\"a monthly routine for the HVAC filter and smoke alarms\"). Wilma then offers its tasks in My day when " +
+      "there is free time. Nothing is saved until they tap Save routine. The only way to make a new routine in the " +
+      "chat: never save_item for it or its tasks. To add a task to an existing routine use save_item (a task with " +
+      "metadata.routine_id) instead. Never put a password, PIN or code in it.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: `Its name, at most ${MAX_ROUTINE_NAME} characters ("Weekend house reset")` },
+        repeat: { type: "string", enum: ["weekly", "biweekly", "monthly"], description: "biweekly is every two weeks" },
+        when: {
+          type: "string",
+          enum: ["any_day", "same_day", "by_day"],
+          description: "any_day (default): any day of the week, fortnight or month. same_day (weekly, biweekly): only on " +
+            "`day`, e.g. every Saturday. by_day (monthly): by `day` of the month, e.g. by the 28th",
+        },
+        day: { type: "integer", description: "same_day: 0 Sunday … 6 Saturday; by_day: 1-31. Only with those" },
+        tasks: {
+          type: "array",
+          minItems: 1,
+          maxItems: MAX_ROUTINE_TASKS,
+          items: {
+            type: "object",
+            properties: {
+              title: { type: "string", description: "Short, in the user's words (\"Vacuum\")" },
+              minutes: { type: "integer", description: "How long, only if the user said (optional; My day assumes about 30)" },
+            },
+            required: ["title"],
+            additionalProperties: false,
+          },
+        },
+        suggest: { type: "boolean", description: "Offer its tasks in My day (optional, default true)" },
+      },
+      required: ["name", "repeat", "tasks"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "show_help",
     description:
       "Chat app only. Shows the user a Help card with the app's short topics (notes, the vault, My day, alarms " +
@@ -200,12 +253,13 @@ const NEEDS: Record<string, string> = {
   add_calendar_event: CAN_CALENDAR_ADD,
   save_home: CAN_HOME,
   show_help: CAN_HELP,
+  save_routine: CAN_ROUTINE,
 };
 
 const WHAT: Record<string, string> = {
   set_alarm: "set alarms", show_alarms: "open your alarms", set_reminder: "set reminders",
   find_reminders: "show your reminders", add_calendar_event: "add calendar events",
-  save_home: "save homes from the chat", show_help: "show Help",
+  save_home: "save homes from the chat", show_help: "show Help", save_routine: "save routines from the chat",
 };
 
 const fail = (text: string): PhoneOutput => ({ isError: true, text, events: [] });
@@ -214,6 +268,11 @@ const fail = (text: string): PhoneOutput => ({ isError: true, text, events: [] }
 const CREDENTIAL = "Not shown: that text looks like it contains a password, PIN or code. A reminder shows on the " +
   "lock screen and a calendar may be shared, so it can't go there. Do not repeat the value. Passwords belong in " +
   "the Vault: offer save_secret. The card can be made again without the value.";
+
+/** The same refusal for a routine: its name and tasks show in Tasks and My day (rule 9). */
+const ROUTINE_CREDENTIAL = "Not shown: that text looks like it contains a password, PIN or code, which never goes in " +
+  "a routine or its tasks (\"Change the Wi-Fi password\" is fine; the password itself is not). Do not repeat the " +
+  "value. Passwords belong in the Vault: offer save_secret. The card can be made again without the value.";
 
 /** The same refusal for a home: an alarm code or gate PIN is never part of one (rule 9). */
 const HOME_CREDENTIAL = "Not shown: that text looks like it contains a password, PIN or code (an alarm code or gate " +
@@ -287,7 +346,9 @@ export class PhoneActions {
           message: `This version of the app cannot ${WHAT[name]}. Tell the user in one short sentence that updating ` +
             "Wilma from the Play Store adds it" + (name === "set_alarm" || name === "show_alarms" ? ", and that meanwhile " +
               "they can use their Clock app." : name === "save_home" ? ", and that meanwhile they can set where they leave " +
-              "from in My day. Do not save the home as a note, a place or a memory instead." : "."),
+              "from in My day. Do not save the home as a note, a place or a memory instead." : name === "save_routine"
+              ? ", and that meanwhile they can make it in Tasks → Routines. Do not save the routine or its tasks some " +
+                "other way." : "."),
         }),
         events: [],
       };
@@ -309,6 +370,8 @@ export class PhoneActions {
         return this.home(input);
       case "show_help":
         return this.help(input);
+      case "save_routine":
+        return this.routine(input);
       default:
         return this.calendar(input);
     }
@@ -400,6 +463,48 @@ export class PhoneActions {
         "Save",
         " The phone finds the address on the map, so they can check it on the card (or use where they are). Do not also " +
           "save it as a note, a place or a memory.",
+      ),
+    );
+  }
+
+  private routine(input: Record<string, unknown>): PhoneOutput {
+    const name = text(input.name, "name", MAX_ROUTINE_NAME, true, ROUTINE_CREDENTIAL);
+    if (name.error) return fail(name.error);
+    if (!Array.isArray(input.tasks) || !input.tasks.length) return fail("tasks must list at least one task.");
+    if (input.tasks.length > MAX_ROUTINE_TASKS) return fail(`A routine holds up to ${MAX_ROUTINE_TASKS} tasks.`);
+    const tasks: { title: string; minutes?: number }[] = [];
+    for (const t of input.tasks) {
+      if (typeof t !== "object" || t === null || Array.isArray(t)) return fail("each task must be {title, minutes?}.");
+      const { title: rawTitle, minutes, ...rest } = t as Record<string, unknown>;
+      if (Object.keys(rest).length) return fail("each task has only title and minutes.");
+      const title = text(rawTitle, "a task's title", MAX_ROUTINE_TASK, true, ROUTINE_CREDENTIAL);
+      if (title.error) return fail(title.error);
+      if (minutes !== undefined && minutes !== null && (typeof minutes !== "number" || !Number.isInteger(minutes) || minutes < 1 || minutes > 1440)) {
+        return fail("minutes must be a whole number from 1 to 1440 (or left out).");
+      }
+      tasks.push({ title: title.value!, ...(typeof minutes === "number" ? { minutes } : {}) });
+    }
+    // The server's own rules for the schedule, so the card never offers what the tap could not save.
+    let schedule;
+    try {
+      schedule = normalizeRoutine({
+        repeat: input.repeat,
+        ...(input.when !== undefined ? { when: input.when } : {}),
+        ...(input.day !== undefined ? { day: input.day } : {}),
+        ...(input.suggest !== undefined ? { suggest: input.suggest } : {}),
+      }, this.nowLocal().slice(0, 10));
+    } catch (e) {
+      return fail((e as Error).message.replace(/^Routine not saved: /, ""));
+    }
+    return this.card(
+      {
+        type: "routine_save", name: name.value, repeat: schedule.repeat, when: schedule.when,
+        ...(schedule.day !== undefined ? { day: schedule.day } : {}), suggest: schedule.suggest, tasks,
+      },
+      waiting(
+        "Save routine",
+        "Save routine",
+        " After saving they can change it in Tasks → Routines. Do not also save the routine or its tasks with save_item.",
       ),
     );
   }

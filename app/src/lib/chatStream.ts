@@ -9,6 +9,7 @@
 // breaks) without `done` becomes the usual "trouble connecting" error. A vault event's `link`
 // is dropped here, as it is read: the app opens its own vault screen and never keeps the link.
 
+import { toRoutineCard, type RoutineCardData } from './chatRoutine';
 import { toHomeCard, type HomeCardData } from './homePlace';
 import { toRemembered, type RememberedMemory } from './memory';
 import {
@@ -59,6 +60,8 @@ export type ChatEvent =
   | ({ type: 'calendar_add' } & EventCardData)
   /** Save a home (D36): the 🏠 card; nothing is saved until the user taps Save. */
   | ({ type: 'home_save' } & HomeCardData)
+  /** Save a routine (D39): the 🔁 card; nothing is saved until the user taps Save routine. */
+  | ({ type: 'routine_save' } & RoutineCardData)
   | { type: 'error'; code: string; message: string }
   | { type: 'done'; counted: boolean }
   /** After `done`: what Wilma kept from this message (memory on): "🧠 Remembered · Undo". */
@@ -161,6 +164,10 @@ export function toChatEvent(raw: unknown): ChatEvent | null {
     case 'home_save': {
       const card = toHomeCard(raw, 'make_default');
       return card ? { type: 'home_save', ...card } : null;
+    }
+    case 'routine_save': {
+      const card = toRoutineCard(raw);
+      return card ? { type: 'routine_save', ...card } : null;
     }
     case 'day_plan':
       return isDay(raw.date) ? { type: 'day_plan', date: raw.date } : null;

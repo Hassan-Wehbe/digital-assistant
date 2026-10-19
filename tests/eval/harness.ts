@@ -8,7 +8,7 @@
 // chat function receives it, with the day planner's numbers for one day (chat/day.ts planForChat;
 // Pro cases only, with fake drive times and weather: no Mapbox or NWS request is made).
 import { ACTION_NAMES, ACTION_SPECS, ChatActions } from "../../supabase/functions/chat/actions.ts";
-import { CAN_ALARM, CAN_CALENDAR_ADD, CAN_HELP, CAN_HOME, CAN_REMINDER } from "../../supabase/functions/chat/phone_actions.ts";
+import { CAN_ALARM, CAN_CALENDAR_ADD, CAN_HELP, CAN_HOME, CAN_REMINDER, CAN_ROUTINE } from "../../supabase/functions/chat/phone_actions.ts";
 import {
   type Agenda, type AgendaEvent, type AgendaHomes, type AgendaRequest, AGENDA_TOOL, agendaCall, agendaSchema, withAgenda,
 } from "../../supabase/functions/chat/agenda.ts";
@@ -138,7 +138,7 @@ export interface RunOptions {
 }
 
 /** An app that shows the alarm, reminder, calendar, home and Help cards (phone_actions.ts), as the cases assume. */
-export const PHONE_CAN: ReadonlySet<string> = new Set([CAN_ALARM, CAN_REMINDER, CAN_CALENDAR_ADD, CAN_HOME, CAN_HELP]);
+export const PHONE_CAN: ReadonlySet<string> = new Set([CAN_ALARM, CAN_REMINDER, CAN_CALENDAR_ADD, CAN_HOME, CAN_HELP, CAN_ROUTINE]);
 
 export interface PhoneCalendar {
   time_zone: string;
