@@ -3,9 +3,10 @@
 Status: plan, 2026-10-19. **Owner's answers given the same day: all as recommended (Q1-Q10).** **Step 1
 built and merged (#236); migration applied 2026-10-19:** see "As built: step 1". **Step 2 built,
 merged (#237) and `chat` deployed (run 39285813529) 2026-10-19:** see "As built: step 2". **Step 3
-merged (#238) 2026-10-19; app only, next build:** see "As built: step 3". **Step 4 built
-(2026-10-19), branch `claude/outing-chat`, not merged, not deployed, evaluation not run:** see "As
-built: step 4". Design: D40 (and
+merged (#238) 2026-10-19; app only, next build:** see "As built: step 3". **Step 4 merged
+(#239) and `chat` deployed (run 39293348391) 2026-10-19, on the owner's word without an evaluation
+run (one is still owed, below):** see "As built: step 4". **Step 5 (help, privacy, checklist) built
+2026-10-19, not merged; then the build:** see "As built: step 5". Design: D40 (and
 D25, the day planner; D26, places; D31, calendar entries; D38, the Plan with Wilma row). Mockups:
 the owner's private canvas "Wilma Home and Planners", screens "Date night" and "Family day".
 Model: the strongest for steps 1-4 (a new table holding details about children, the AI request,
@@ -301,3 +302,38 @@ The `chat` function and the app; the Claude connector (`mcp`) is unchanged.
 
 **Owner, in order:** (1) OK, with a dollar cap, for one evaluation run (all chat cases; rule 9: the
 traps must pass); (2) merge; (3) OK to deploy `chat`. Then step 5 (help, privacy, checklist, build).
+
+**Merged (#239); `chat` deployed (run 39293348391; 401 without sign-in, as expected), 2026-10-19.**
+The owner chose to merge and deploy without the evaluation run. Rule 9 asks for it on a model or
+provider change, which this is not, but this is the first time the real model calls `plan_outing`
+and words a plan. **Still owed: one chat evaluation run (the five outing cases and the traps)**,
+whenever the owner gives a dollar cap; a leak found there is fixed before the build is promoted to
+testers.
+
+## As built: step 5 (2026-10-19)
+
+- **Help** (`app/src/lib/help.ts`): Places & Homes' list line is now "Places to visit, date nights,
+  family days, and your homes."; a fourth line "Date night, Family day (Pro): Wilma plans one from
+  your places. Who comes: Settings → Household."; Try it "Plan a date night Friday" and "Plan a
+  family day Saturday" (in place of "Where should we go for date night?").
+- **Privacy page** (`docs/legal/privacy.html`, still "Last updated 19 October 2026"): **Your
+  household** under What Wilma stores (labels, adult or child, a child's birth year; not a note,
+  never searched or shared, removed for good); a **Date night and family day** paragraph (saved
+  places only, never a restricted space; Mapbox and the weather service as for My day; what the AI
+  gets for one plan, and for a family day only the number of adults and the children's ages; the
+  plan not stored; one calendar event only on the tap); Mapbox and the weather service now say "your
+  day, a date night or a family day"; the **Children** section says a parent may add their children
+  to the household, and what is kept and sent. **The owner checks the wording.**
+- **Play Data safety: no change.** The household is user content the user types, kept with the
+  account, deleted with it, never shared; its ages reach the AI provider as a service provider,
+  as notes and memories (which may already hold children's names) do today under "Other
+  user-generated content". The app is not aimed at children, so the Families policy does not
+  apply. The lawyer's item below asks them to confirm.
+- **Legal checklist:** one item, children's details in the household (COPPA and state laws, the
+  privacy wording, Data safety and Families).
+- **`docs/versioncode22-phone-checklist.md`**: the household, both screens, the chat card with its
+  traps, Help.
+
+**Owner, in order:** (1) check the privacy wording; merge; (2) OK to build ("preview" for an .apk,
+or "production" for Play testers; production also submits to Google Play); (3) the phone checklist
+(after versionCode 21's, if not done yet); (4) when convenient, a cap for the owed evaluation run.

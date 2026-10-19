@@ -70,6 +70,15 @@ and is a starting point, not legal advice.
       no cookies or sign-in. Check this fits YouTube's API terms and the sites' terms of use, and
       that the privacy page needs no line for it (nothing reaches Wilma's server until the user
       saves the note).
+- [ ] **Children's details in the household** (D40, `docs/planners-plan.md`): a parent may add
+      their children to Settings → Household (a label they choose, and a birth year if they give
+      one) so Wilma can plan family days. Only the children's ages go to the AI provider (OpenAI),
+      for that one plan; never the label, never to Mapbox or the weather service, never stored with
+      a plan; removed with the person or the account. The account holder is always an adult (18+).
+      Check: that this is not "collecting from children" under COPPA and fits state children's and
+      privacy laws; the privacy page's household line and its Children section; and that Play's
+      Data safety answer ("Other user-generated content", not shared) and the Families policy need
+      nothing more (the app is not aimed at children).
 - [ ] **Data breach**: notification duties (Florida and other states where users live).
 - [ ] **Brand**: the name "Wilma" and the mascot (trademark search and registration), app name in
       the stores.
