@@ -13,6 +13,12 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Routines step 3a, My day's box (2026-10-19): branch `claude/routines-app`, not merged; app
+  only, next build.** My day shows 🔁 From your routines (Add at the time found, Find a time for a
+  task with a place, ✕ Not today kept in `task_not_today`, Add all); Your morning adds "N routine
+  tasks fit today." 868 app tests. **Next:** 3b, the Routines tab and New routine screen (the app
+  saves a routine as an item, `item_type 'routine'`, in the Tasks space; the server already checks
+  it). Then step 4 (chat) and step 5 (help, checklist, build).
 - **Share cold start (2026-10-19): merged (#229); app only, next
   build.** Owner (Android): sharing from Facebook, YouTube or Chrome works when Wilma is open, opens
   nothing when Wilma was closed. Fix tried (JS only): the share module keeps the starting share until
@@ -22,8 +28,8 @@ tokens or keys in chat.
   module may send the share before the app listens and then forget it; the next fix is a small patch
   to expo-share-intent (keep the share until `clearShareIntent`), which needs patch-package (native;
   strongest model).
-- **Routines step 2, the planner (2026-10-19): merged (#227, 22fed4f); `chat` deploy
-  approved. Evaluation passed (run 39259947527: 145/148, 0 leaks, $0.08; the 3 misses re-ran 9/9).** My day and "plan my day" get "From your routines": up to 3
+- **Routines step 2, the planner (2026-10-19): merged (#227, 22fed4f); `chat` deployed
+  (run 39264413187). Evaluation passed (run 39259947527: 145/148, 0 leaks, $0.08; the 3 misses re-ran 9/9).** My day and "plan my day" get "From your routines": up to 3
   routine tasks fitted into free time by code (quarter hours, no overlaps, 30 min when no duration,
   a task with a place gets Find a time), the rest counted; a routine's task is never overdue in its
   window; Not today (`task_not_today`) keeps it out of that day's suggestions; a missed one is moved

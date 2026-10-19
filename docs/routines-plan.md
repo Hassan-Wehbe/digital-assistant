@@ -2,8 +2,10 @@
 
 Status: plan, 2026-10-18. **Owner's answers given the same day (Q1-Q9, below "Decided").** **Step 1 built
 (2026-10-18), PR #226; migration applied 2026-10-19; deployed 2026-10-19 (`mcp` and `chat`):** see
-"As built: step 1". **Step 2 built (2026-10-19), branch `claude/routines-planner`, not merged, not
-deployed:** see "As built: step 2". Design: D39 (and D25, the
+"As built: step 1". **Step 2 built (2026-10-19), merged (#227) and `chat`
+deployed 2026-10-19:** see "As built: step 2". **Step 3 is in two parts: 3a (My day's box, Your
+morning's line) built 2026-10-19, branch `claude/routines-app`, not merged;** see "As built: step
+3a". 3b (the Routines tab and the routine screen) is next. Design: D39 (and D25, the
 day planner; D35, tasks left open at the end of their day). Mockups: the owner's private canvas
 "Wilma Home and Planners", screens 5-7. Model: the strongest for steps 1, 2 and 4 (the task model,
 the planner, the chat); a smaller one is fine for step 5.
@@ -255,4 +257,26 @@ routines: `secret-two-turns` (the provider's stream ended early, an error), `rem
 still-cards` (the reply was right; the check matched "cancelled") and `calendar-free-tomorrow-at-3`
 (no Pro, so no planner). Run again three times each (run 39262404707): 9/9, $0.01.
 
-**Owner:** merge, then OK to deploy `chat` (`mcp` is unchanged).
+**Merged (#227) and `chat` deployed (run 39264413187), 2026-10-19.**
+
+## As built: step 3a (2026-10-19)
+
+App only; ships with the next build. Nothing on the server changes.
+
+- **`lib/dayPlan.ts`**: the plan's `suggestions` are checked field by field (at most 3; a time
+  only as a whole start and end pair; `more` a count), and a not-placed task keeps its `routine`.
+- **`lib/routineSuggest.ts`**: the words ("Weekend reset · about 30 min", "Add 7:30 pm", "Find a
+  time" for a task with a place, "2 more waiting: one comes in when you add or dismiss one"),
+  Add all (only the ones with a time), `notSuggested` (an offered task is not listed again under
+  Not placed yet), `dismissForDay` (✕: an insert into `task_not_today` with only the task id and
+  the day; already dismissed is fine), and `routineCountLine` for Your morning (Q3: a count only).
+- **My day (`app/day.tsx`)**: 🔁 From your routines, above the chips. **Add** saves `planned_at`
+  through the same write as a Find a time pick (the routine keeps its week or month); **Add all**
+  when two or more have a time; **✕** is Not today for the day on screen (on the server, every
+  device); after each, the plan is asked for again, so a waiting one comes in (Q4). A routine task
+  under Not placed yet shows its routine, never "overdue".
+- **Your morning** (`summaryOf`, also the morning notification's text): "2 routine tasks fit
+  today." when any do.
+- Tests: `lib/routineSuggest.test.ts` (15). **868 app tests pass**; type check and lint clean.
+
+**Owner:** merge. A phone check comes with the next build (step 5's checklist).

@@ -75,6 +75,25 @@ export interface NotPlacedTask {
   repeat?: string;
   left_from?: string;
   planned_time?: string;
+  /** One of a routine's tasks (D39): the routine's name. Never overdue while its week or month runs. */
+  routine?: string;
+}
+
+/**
+ * "From your routines" (D39): a routine task the planner fitted into free time (start and end, local),
+ * or, for a task with a place, no time (the app offers Find a time, which knows drives).
+ */
+export interface RoutineSuggestion {
+  task_id: string;
+  title: string;
+  routine: string;
+  duration_min: number;
+  /** No duration was given: fitted as 30 min, shown as "about 30 min" (routines Q7). */
+  duration_assumed?: true;
+  /** The last day of its week or month. */
+  due_on?: string;
+  start?: string;
+  end?: string;
 }
 
 export interface DayPlan {
@@ -88,6 +107,8 @@ export interface DayPlan {
   rows: DayRow[];
   all_day: { key: string; title: string }[];
   tasks_not_placed: NotPlacedTask[];
+  /** Up to 3 routine tasks to offer; `more` waiting their turn (routines Q4). Absent when none. */
+  suggestions?: { items: RoutineSuggestion[]; more: number };
   /** Only when asked for one task (options_for): at most three, and a note when none fits. */
   options?: { task_id: string; options: TaskOption[]; note?: string };
 }
@@ -197,6 +218,25 @@ function toOption(raw: unknown): TaskOption | null {
   };
 }
 
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** "From your routines", checked: at most 3 items; a time only as a start and end pair. */
+function toSuggestions(raw: unknown): { suggestions?: { items: RoutineSuggestion[]; more: number } } {
+  if (!isObject(raw) || !Array.isArray(raw.items)) return {};
+  const items = raw.items
+    .filter((s): s is Record<string, unknown> & { task_id: string; title: string; routine: string; duration_min: number } =>
+      isObject(s) && text(s.task_id) && text(s.title) && text(s.routine) && count(s.duration_min, 1440) && s.duration_min > 0)
+    .slice(0, 3)
+    .map((s) => ({
+      task_id: s.task_id, title: s.title, routine: s.routine, duration_min: s.duration_min,
+      ...opt('duration_assumed', s.duration_assumed === true, true as const),
+      ...opt('due_on', typeof s.due_on === 'string' && DAY.test(s.due_on), s.due_on as string),
+      ...(when(s.start) && when(s.end) && s.start.includes('T') && s.end.includes('T') ? { start: s.start, end: s.end } : {}),
+    }));
+  if (!items.length) return {};
+  return { suggestions: { items, more: count(raw.more, 1000) ? raw.more : 0 } };
+}
+
 /** The plan, checked; null when it is not one. Unknown rows and fields are dropped. */
 export function toDayPlan(raw: unknown): DayPlan | null {
   if (!isObject(raw) || !when(raw.date) || typeof raw.time_zone !== 'string' || !isObject(raw.home) || !Array.isArray(raw.rows)) return null;
@@ -232,7 +272,9 @@ export function toDayPlan(raw: unknown): DayPlan | null {
         ...opt('repeat', text(t.repeat), t.repeat as string),
         ...opt('left_from', typeof t.left_from === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(t.left_from), t.left_from as string),
         ...opt('planned_time', typeof t.planned_time === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(t.planned_time), t.planned_time as string),
+        ...opt('routine', text(t.routine), t.routine as string),
       })),
+    ...toSuggestions(raw.suggestions),
     ...(isObject(raw.options) && text(raw.options.task_id)
       ? {
           options: {
