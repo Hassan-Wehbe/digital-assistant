@@ -35,6 +35,10 @@
         your default. You add and change them in Settings → Homes, in My day or from the chat (always
         with a tap). They are kept with your account but are not notes: they are never searched or
         shared, and a home you delete is gone for good.</li>
+    <li><strong>Your household (optional):</strong> who you plan family days for, set in Settings →
+        Household: a label you choose for each person (for example "Me", "Sam" or "Kid 1"), adult or
+        child, and for a child a birth year if you give one. It is kept with your account but is not a
+        note: it is never searched or shared, and a person you remove is gone for good.</li>
     <li><strong>Your vault:</strong> passwords, keys and other secrets you save in the vault. Their values
         are encrypted on your phone (or in your browser) with a key only you hold, before they are sent.
         The name, kind and website you give each secret are stored readable, so you can find it; a log
@@ -96,6 +100,16 @@
      calendar. Your own choices for the day ("take both", "not driving", the home you plan that day
      from) and your answers to "where is this?" are kept only on your phone, encrypted, and are
      forgotten when you sign out.</p>
+  <p><strong>Date night and family day (optional, Wilma Pro).</strong> When you ask Wilma to plan a
+     date night or a family day, on its screen or in the chat, Wilma picks from your own saved places
+     (never from a restricted space), works out drive times from your home with <strong>Mapbox</strong>
+     and the forecast with the <strong>US National Weather Service</strong>, as when you plan your day.
+     Our AI service then gets, for that plan only: the day and times, your budget or mood, the saved
+     places it may choose from (their names, kind, price, your rating and when you last went), the
+     titles and times of your calendar events in those hours, and the chance of rain. For a family day
+     it gets <strong>only how many adults and the children's ages</strong>, worked out from your
+     household; never the labels or names you gave them. The plan is not stored; it is added to your
+     calendar, as one event, only when you tap Add to calendar.</p>
   <p><strong>Morning briefing and leave-by alerts (optional, Wilma Pro, off unless you turn them on).</strong>
      In Settings → Morning briefing you choose each part. With the briefing on, the first time you open
      Wilma after your briefing time it plans your day the same way as My day (above) and shows a short
@@ -162,10 +176,10 @@
         When you plan your day, the same lookup finds the addresses of your calendar events (the address
         text only, never the event's title), the addresses you type for a home or a task, and the
         address of a home Wilma offers to save from the chat (only that address).</li>
-    <li><strong>Mapbox</strong>, in the United States, only when you plan your day: Wilma's server sends
+    <li><strong>Mapbox</strong>, in the United States, only when you plan your day, a date night or a family day: Wilma's server sends
         it the map coordinates of the places you drive between and when you would leave, to get drive
         times with traffic. Nothing else about you is sent, and Wilma does not keep the answers.</li>
-    <li><strong>The US National Weather Service</strong> (api.weather.gov), only when you plan your day:
+    <li><strong>The US National Weather Service</strong> (api.weather.gov), only when you plan your day, a date night or a family day:
         Wilma's server sends it the rounded map coordinates of the places you drive to, to get the
         hourly forecast and weather alerts there. Nothing else about you is sent.</li>
     <li>If you choose to connect Wilma to an AI assistant such as Claude, the things you ask it to look up
@@ -179,8 +193,11 @@
      <a href="delete-account">how to delete your account</a>. We complete deletions within 30 days.</p>
 
   <h2>Children</h2>
-  <p>Wilma is for adults: creating an account requires confirming you are 18 or older. We do not
-     knowingly hold children's data.</p>
+  <p>Wilma is for adults: creating an account requires confirming you are 18 or older. Children cannot
+     have an account, and we do not knowingly collect information from children. If you add your
+     children to your household (above), Wilma keeps only the label and birth year you enter, uses
+     them only to plan your family days (sending only their ages, never a name), and deletes them
+     when you remove them or delete your account.</p>
 
   <h2>Changes</h2>
   <p>If this policy changes, the new version is posted here with a new date. Features that send data
