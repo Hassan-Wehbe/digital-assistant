@@ -13,6 +13,14 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Shared links (2026-10-19): branch `claude/share-links`, not merged; app only, ships with the next
+  build.** D41: a social link's draft names the site ("Link from YouTube", "From YouTube" in the
+  note); **Get title** reads the page's title on the phone only on tap (`lib/linkInfo.ts`; YouTube
+  via oEmbed); favourite spaces first on the Share screen. 852 app tests. **Still open: the bug**
+  that sharing from Facebook or YouTube does not open the Share screen; questions to the owner
+  (Android version, Wilma open or closed, what shows). Suspect: expo-share-intent restarts the
+  activity when Wilma is not the task's root (`handleShareIntent`), and YouTube's title comes as
+  EXTRA_SUBJECT, which the module does not pass on.
 - **Routines step 1, the server (2026-10-18): branch `claude/routines-server` (#226); migration
   applied 2026-10-19 (owner ran it in the SQL editor after the connector timed out); not merged, not
   deployed.** Routines as items (`item_type routine`, kept in Tasks) with a schedule;
