@@ -13,11 +13,17 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **D40 planners step 2, the planner route (2026-10-19): branch `claude/outing-route`, not merged,
+  not deployed.** `{"mode":"outing"}` in `chat`: code short-lists saved places (searchable spaces
+  only), drive times and rain, one AI request answering JSON that code checks (places only from
+  the list, around calendar events, inside the window); roles and ages only, the body refuses
+  anything else; counted as a plan and an AI request. 534 Deno tests. Evaluation moved to step 4
+  (no chat change here). **Owner:** merge, OK to deploy `chat`. **Next:** step 3, the app screens.
 - **D40 planners step 1, the household (2026-10-19): branch `claude/household`; migration applied
   2026-10-19 (owner's dry run passed; the connector applied it; checked read-only).** Migration `20261020120000_household.sql` (`household_member`: label, adult/child, a
   child's birth year; at most 10; RLS own rows; anon nothing); SQL test 20 (25 checks, passed
   locally) and its dry run; app Settings → Household (`lib/household.ts`, `app/household.tsx`); 913
-  app tests. **Owner:** merge. **Next:** step 2, the planner route
+  app tests. **Merged (#236).** **Next:** step 2, the planner route
   (strongest model; an evaluation run).
 - **D40 planners, the plan (2026-10-19): `docs/planners-plan.md`, branch `claude/planners-plan`
   (docs only).** Date night and Family day screens as in the mockups; code short-lists saved places

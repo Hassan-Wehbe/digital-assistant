@@ -1,7 +1,8 @@
 # Date night and family day planners
 
 Status: plan, 2026-10-19. **Owner's answers given the same day: all as recommended (Q1-Q10).** **Step 1
-built (2026-10-19), branch `claude/household`; migration applied 2026-10-19:** see "As built: step 1". Design: D40 (and
+built and merged (#236); migration applied 2026-10-19:** see "As built: step 1". **Step 2 built
+(2026-10-19), branch `claude/outing-route`, not merged, not deployed:** see "As built: step 2". Design: D40 (and
 D25, the day planner; D26, places; D31, calendar entries; D38, the Plan with Wilma row). Mockups:
 the owner's private canvas "Wilma Home and Planners", screens "Date night" and "Family day".
 Model: the strongest for steps 1-4 (a new table holding details about children, the AI request,
@@ -203,3 +204,37 @@ to deploy: no function changes. The app part ships with the next build.
 Supabase connector applied it this time. Checked read-only afterwards: RLS on, 1 policy, 1 trigger;
 anon can neither read nor add; authenticated can read, delete and add a label but never write the
 owner (insert or update); anon cannot run the trigger function; 0 rows.
+
+## As built: step 2 (2026-10-19)
+
+The `chat` function only; nothing in the app yet (step 3), so nothing calls it until that build.
+
+- **`chat/outing_plan.ts`** (pure, no database or network): `shortlist` (Q1: code picks at most 8
+  saved places within 60 km of home, best first; date night by budget and mood, favourite = been,
+  rated 4-5 or marked date night, not visited for 30 days; somewhere new = want to go; a nearby walk
+  or drink added; family day = places marked kids and places to visit, plus three cheap or
+  kid-friendly places to eat; Another idea leaves out the places just shown when others fit),
+  `whoWords` ("2 adults, children aged 6 and 9", Q4), `outingPrompt` (numbered places with facts
+  only, never an id, the calendar's events in the window, rain by hour), and `checkAnswer` (JSON
+  only: places by number from the list, an event kept at its own time, home only on a family day,
+  inside the window, in order, nothing over an event, each place once, at most 6 steps, a
+  credential-like line blanked (rule 9); no place left = no plan).
+- **`chat/outing.ts`**, `{"mode":"outing"}`: the body takes roles and ages only (`who`), and any
+  other field is refused, so no name can arrive (Q4). Home (D36), then the short list from
+  searchable spaces only (rule 3; nothing to plan with: no count, no AI request); then Pro and fair
+  use (`use_day_plan`, one count per plan, Q7), the AI allowance, drive times from home to each
+  candidate (Mapbox) and the rain at home (NWS), one AI request (default route, 25 s), the answer
+  checked, then the real drives for the chosen order (leave-by time, minutes back home). The AI
+  request is recorded (`record_ai_usage`). Never stored; the log line holds counts and codes only.
+  `day.ts` now exports `gate` and `readHome` for it.
+- Tests: `tests/deno/outing_test.ts` (11: the short lists, the prompt, the checks, the route with
+  a scripted model: a restricted place never reaches the model, a name field is refused, Pro, no
+  home, no places (not counted), the allowance used, an answer with no place). **534 Deno tests
+  pass.**
+- **Evaluation: moved to step 4.** The evaluation runs chat conversations; this step adds no chat
+  tool and changes no chat instructions, so a run now would test nothing new. The model's answers
+  to this prompt are first evaluated in step 4 (`plan_outing` in the chat), with traps, before any
+  build carries the planners.
+
+**Owner:** merge, then OK to deploy `chat` (harmless until the app's screens come in step 3: no
+app calls it yet).
