@@ -383,6 +383,9 @@ The owner tried the planners and asked for three changes ("1-3 as recommended"):
   bundle builds. Evaluation: a new case `outing-coffee-date`.
 - Privacy page: a date of any kind; busy times, never titles; the switch.
 
-**Owner, in order:** (1) OK + cap for an evaluation run (the chat's instructions and tool changed);
-(2) merge; (3) OK to deploy `chat`; (4) OK to build (versionCode 23), then
+**Evaluation (owner's OK, $1 cap):** run 39312126926 on this branch (f29174f), Luna, all 160 chat
+cases: **160/160, 0 leaks, 0 unsafe**, $0.10; all six outing cases passed, `outing-coffee-date`
+included.
+
+**Owner, in order:** (1) merge; (2) OK to deploy `chat`; (3) OK to build (versionCode 23), then
 `docs/versioncode23-phone-checklist.md`.

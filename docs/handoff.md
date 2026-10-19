@@ -17,8 +17,8 @@ tokens or keys in chat.
   `claude/planners-feedback`, not merged, not deployed.** The calendar is only planned around (busy
   times, never titles, never steps; a Fit around my calendar switch), any of the next seven days,
   and kinds of date (dinner, lunch, coffee, drinks, something to do). `docs/planners-plan.md`
-  "Changes after versionCode 22". 538 Deno, 928 app tests. **Owner:** OK + cap for an evaluation
-  run, merge, OK to deploy `chat`, OK to build. **Also asked:** a plan for places from Google or
+  "Changes after versionCode 22". 538 Deno, 928 app tests. Evaluation run 39312126926: 160/160, 0
+  leaks, 0 unsafe. **Owner:** merge, OK to deploy `chat`, OK to build. **Also asked:** a plan for places from Google or
   another service (`docs/discover-nearby-plan.md`, separate PR).
 - **D40 planners done (2026-10-19): step 5 merged (#240); versionCode 22 built and submitted to
   Play internal testing; the owed evaluation passed (run 39294565911: 157/159, 0 leaks, 0 unsafe,
