@@ -5,7 +5,9 @@ import { rejectCredentials } from "../lib/credentials.ts";
 import { addVisit, assertOnlyHome, HOME_KIND, isPlace, normalizePlace, type PlaceMetadata, placePoint, withPlace } from "../lib/places.ts";
 import { withLinkLocation } from "../lib/maps_link.ts";
 import { isTask, normalizeTask, setTaskDone, type TaskMetadata, taskDate, withTask } from "../lib/tasks.ts";
-import { taskPlaceTitle } from "./save_item.ts";
+import { isRoutine, normalizeRoutine, type RoutineMetadata, routineTaskDone, routineWords, withRoutine } from "../lib/routines.ts";
+import { bringTasksInStep, findRoutine, loadRoutine, userToday } from "../lib/routine_tasks.ts";
+import { isTasksSpace, taskPlaceTitle } from "./save_item.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
 export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assistantName, timeZone }) => {
@@ -48,13 +50,15 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
         // The phone's date (the app sends it; Q12): without it, today in UTC.
         const today = taskDate(args.today, "today");
         rejectCredentials({ title, body, summary, tags, metadata, item_type, change_note, add_visit }, assistantName);
-        const targetSpace = args.space ? resolveSpace(await loadSpaces(db), args.space) : null;
+        const spaces = args.space ? await loadSpaces(db) : null;
+        const targetSpace = args.space ? resolveSpace(spaces!, args.space) : null;
 
         const textChanged = title !== undefined || body !== undefined || summary !== undefined;
         const fieldsChanged = metadata !== undefined || item_type !== undefined || add_visit !== undefined ||
           task_done !== undefined;
         let current: { title: string; summary: string | null; body_markdown: string; item_type: string; metadata: Record<string, unknown> } | null = null;
-        if (textChanged || fieldsChanged) {
+        // A move loads it too: a routine stays in the Tasks space.
+        if (textChanged || fieldsChanged || targetSpace) {
           const { data, error } = await db.rpc("get_item", { p_item_id: args.item_id });
           if (error) throw dbError("Could not load the item", error);
           if (!data) throw new Error("Item not found");
@@ -66,6 +70,22 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
         let place: PlaceMetadata | null = null;
         if (add_visit && !isPlace(finalType)) throw new Error("add_visit is only for places (item_type \"place\")");
         if (task_done !== undefined && !isTask(finalType)) throw new Error("task_done is only for tasks (item_type \"task\")");
+        // A routine (D39) stays in the Tasks space; its schedule is checked, and its tasks follow it.
+        const day = userToday(today, timeZone);
+        let routine: RoutineMetadata | null = null;
+        if (current && isRoutine(finalType)) {
+          if (targetSpace && !isTasksSpace(targetSpace, spaces!)) throw new Error("A routine is kept in the Tasks space.");
+          // A new schedule without starts_on keeps the routine's own, so every-two-weeks keeps its weeks.
+          const base = metadata ? { starts_on: current.metadata?.starts_on, ...metadata } : current.metadata;
+          if (fieldsChanged) routine = normalizeRoutine(base, day);
+          else {
+            try {
+              routine = normalizeRoutine(base, day);
+            } catch {
+              routine = null;
+            }
+          }
+        }
         // A task's fields likewise; its place must stay one of the user's own visible saved places.
         let task: TaskMetadata | null = null;
         if (current && isTask(finalType)) {
@@ -73,6 +93,21 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
           if (fieldsChanged) {
             task = task_done !== undefined ? setTaskDone(base, task_done, new Date(), today) : normalizeTask(base, new Date(), timeZone);
             if (task.place_id && metadata !== undefined) await taskPlaceTitle(db, task.place_id);
+            // A routine's task: the routine (the user's own) sets its schedule; done moves it to
+            // the routine's next period, not the plain repeat's next date.
+            // A routine that is gone (in the bin) leaves its task a plain repeating one; naming a new
+            // routine_id must name one of the user's own.
+            if (task.routine_id) {
+              const named = metadata !== undefined && task.routine_id !== current.metadata?.routine_id;
+              const loaded = named ? await loadRoutine(db, task.routine_id, day) : await findRoutine(db, task.routine_id, day);
+              if (loaded) {
+                task = task_done === true
+                  ? routineTaskDone(normalizeTask(base), loaded.routine, day)
+                  : task_done === false
+                  ? task
+                  : withRoutine(task, loaded.id, loaded.routine, day);
+              }
+            }
           } else {
             try {
               task = normalizeTask(base);
@@ -102,7 +137,7 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
           if (!removed) ({ place, filled: locationFromLink } = withLinkLocation(place));
         }
         if (place && fieldsChanged && place.kind === HOME_KIND) await assertOnlyHome(db, args.item_id);
-        const newMetadata = place && fieldsChanged ? place : task && fieldsChanged ? task : metadata ?? null;
+        const newMetadata = place && fieldsChanged ? place : task && fieldsChanged ? task : routine && fieldsChanged ? routine : metadata ?? null;
 
         // Text or place fields changed: re-chunk the new current version (only it is searchable).
         let chunks: Chunk[] | null = null;
@@ -110,7 +145,9 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
           chunks = await chunkAndEmbed({
             title: title ?? current.title,
             summary: summary ?? current.summary,
-            body: withTask(withPlace(body ?? current.body_markdown, place), task),
+            body: routine
+              ? `${(body ?? current.body_markdown).trim() ? `${body ?? current.body_markdown}\n\n` : ""}Routine: ${routineWords(routine)}`
+              : withTask(withPlace(body ?? current.body_markdown, place), task),
           });
         }
 
@@ -127,13 +164,20 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
           p_chunks: chunks,
         });
         if (error) throw dbError("Could not update the item", error);
-        if (hasPending(chunks)) scheduleEmbedPending(accessToken);
+        // Its schedule changed: the routine's tasks follow (each keeps a revision).
+        let inStep = 0;
+        let tasksPending = false;
+        if (routine && fieldsChanged && metadata !== undefined) {
+          ({ changed: inStep, pending: tasksPending } = await bringTasksInStep(db, { id: args.item_id, title: title ?? current!.title, routine }, day));
+        }
+        if (hasPending(chunks) || tasksPending) scheduleEmbedPending(accessToken);
         return ok({
           id: args.item_id,
           updated: true,
           reindexed: chunks !== null,
           ...(place && fieldsChanged ? { place: newMetadata } : {}),
           ...(task && fieldsChanged ? { task: newMetadata } : {}),
+          ...(routine && fieldsChanged ? { routine: { ...routine, schedule: routineWords(routine) }, tasks_in_step: inStep } : {}),
           ...(locationFromLink ? { location: "read from the Google Maps link" } : {}),
         });
       }),

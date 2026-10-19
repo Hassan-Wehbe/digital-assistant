@@ -345,3 +345,16 @@ create policy secret_log_insert on secret_access_log
 --   more than 6, repeats, and any space that is not your own and searchable, changing nothing.
 -- my_favourite_spaces(): the ids in order, only those still searchable (one restricted or moved
 --   under a restricted space later is no longer returned).
+
+-- =========================================================
+-- Routines (20261019120000_routines.sql; design.md D39, docs/routines-plan.md)
+-- =========================================================
+-- A routine is an item (item_type 'routine', in the Tasks space) whose metadata holds its schedule
+--   (repeat weekly | biweekly | monthly; when any_day | same_day | by_day; day; starts_on; suggest).
+--   Its tasks are tasks with metadata.routine_id, window_from (first day) and due_on (last day),
+--   kept in step by the MCP server (mcp/lib/routines.ts). No table of their own.
+-- task_not_today: user_id (owner, auth.uid()), task_id (cascade), day, created_at; primary key all
+--   three. My day's "Not today" on a suggested routine task. RLS own rows; only for your own live
+--   task in a searchable space; a day near today; old rows dropped on write. Users read, add, remove.
+-- delete_item / restore_item / purge_item / deleted_item_files: a routine takes its tasks with it
+--   (binned at the same moment; only those come back or are purged with it).
