@@ -11,8 +11,8 @@ import { draftText, HELP_TOPICS, helpTopic, helpTopics, MAX_DRAFT } from './help
 const src = (path: string) => readFileSync(resolve(__dirname, path), 'utf8');
 
 describe('the topics', () => {
-  it('are the eight agreed (Q2), each with a one-line summary and at most four short lines', () => {
-    expect(HELP_TOPICS.map((t) => t.id)).toEqual(['notes', 'vault', 'day', 'alarms', 'places', 'memory', 'spaces', 'privacy']);
+  it('are the eight agreed (Q2) and Recipes (D43), each with a one-line summary and at most four short lines', () => {
+    expect(HELP_TOPICS.map((t) => t.id)).toEqual(['notes', 'vault', 'day', 'alarms', 'places', 'recipes', 'memory', 'spaces', 'privacy']);
     for (const t of HELP_TOPICS) {
       expect(t.title.length).toBeGreaterThan(0);
       expect(t.line.length).toBeLessThanOrEqual(70);

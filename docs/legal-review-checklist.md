@@ -79,6 +79,16 @@ and is a starting point, not legal advice.
       privacy laws; the privacy page's household line and its Children section; and that Play's
       Data safety answer ("Other user-generated content", not shared) and the Families policy need
       nothing more (the app is not aimed at children).
+- [ ] **Recipes and cocktails** (D43, `docs/recipes-plan.md`): (1) **alcohol**: cocktail recipes
+      in a built-in space and Make a cocktail; the content rating answer (references to alcohol),
+      the 18-and-over target audience, and whether any country needs an age check (Wilma asks
+      none, Q11; "No alcohol" is always offered); (2) **importing**: the phone fetching a recipe
+      page the user picked, and TikTok's public oEmbed address for a caption (TikTok's developer
+      terms), with a copyright note that a saved recipe is for the user's own use; (3) **pictures
+      to the AI**: a screenshot the user picks is sent to OpenAI to read the recipe (smaller copy,
+      no location), not kept; the privacy wording; (4) **AI suggestions**: A new idea is marked
+      new and not tested; whether the terms need a line on following AI recipes (allergies, food
+      safety).
 - [ ] **Data breach**: notification duties (Florida and other states where users live).
 - [ ] **Brand**: the name "Wilma" and the mascot (trademark search and registration), app name in
       the stores.

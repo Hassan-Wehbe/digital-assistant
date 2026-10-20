@@ -93,6 +93,20 @@ export const HELP_TOPICS: HelpTopic[] = [
     more: { label: 'Settings → Homes', path: '/homes' },
   },
   {
+    id: 'recipes',
+    icon: '🍽️',
+    title: 'Recipes & cocktails',
+    line: 'Keep recipes and links; ask what to cook or mix.',
+    lines: [
+      'Save a recipe, or share a TikTok or website link into Recipes or Cocktails.',
+      'Fill in the recipe reads the link; 📷 Read a screenshot reads a picture.',
+      'What’s for dinner? and Make a cocktail (Home) pick from your own recipes.',
+      '10 suggestions a day, more with Pro. No alcohol is always a choice.',
+    ],
+    tryIt: ['What should I cook tonight? I have chicken and rice', 'What cocktail can I make with gin and lime?'],
+    more: { label: 'What’s for dinner?', path: '/suggest' },
+  },
+  {
     id: 'memory',
     icon: '🧠',
     title: 'Memory',

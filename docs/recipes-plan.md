@@ -12,7 +12,8 @@ v43; evaluation 5/5, 0 leaks, 0 unsafe); the button ships with the next build:**
 **Step 5 merged (#253) and live 2026-10-20 (migration applied, `chat` v44; evaluation 10/10, 0 leaks,
 0 unsafe); the screens are step 6:** see "As built: step 5". **Step 6 merged (#254) 2026-10-20 (mockups
 approved; Your morning moved to a button, owner's ask); app only, ships with the next build:** see "As built: step 6". **Step 7 merged (#256) and live 2026-10-20
-(`chat` v45; evaluation 42/42, 0 leaks, 0 unsafe); the chat cards ship with the next build:** see "As built: step 7". Design: D43
+(`chat` v45; evaluation 42/42, 0 leaks, 0 unsafe); the chat cards ship with the next build:** see "As built: step 7". **Step 8 built 2026-10-20,
+branch `claude/recipes-release`, not merged:** see "As built: step 8". Design: D43
 (builds on D41, links shared from social apps; D40, the planners and the household; the built-in
 spaces of the memory plan). Model: the strongest for steps 1, 3, 4, 5 and 7 (the sign-up trigger
 and a migration, what the AI sees, images sent to the AI, the chat); a smaller one is fine for the
@@ -654,3 +655,35 @@ unsafe, $0.03.**
 **Merged (#256, squash, 2004e28) and deployed 2026-10-20: `chat` v45 (run 39482954065).** The chat
 cards ship with the next build; until then the chat names the recipes in its words. **Next:** step 8
 (help, privacy, Play content rating and Data safety, the phone checklist, the build).
+
+## As built: step 8 (2026-10-20)
+
+Help, privacy, Play, the legal checklist and the phone checklist; then the build.
+
+- **Help:** a ninth topic, 🍽️ **Recipes & cocktails** (app `lib/help.ts`, after Places & Homes):
+  saving recipes and links, Fill in and Read a screenshot, What's for dinner? and Make a cocktail
+  from your own recipes, 10 a day (more with Pro), No alcohol always a choice; Try it "What should I
+  cook tonight? I have chicken and rice"; more: What's for dinner?. The chat's `show_help` takes
+  `recipes` too (`chat/phone_actions.ts`; a test keeps the two lists the same), so **this needs a
+  `chat` deploy** (v46). An older app opened at an unknown topic shows the list.
+- **Privacy page** (`docs/legal/privacy.html`): a **Recipes and cocktails** paragraph (what the AI
+  gets for a suggestion: what you have, the time and kind, ages never names, your recipes' titles,
+  times, up to 15 ingredients, ratings, last made, a link's site; A new idea: what you asked and
+  your titles; nothing stored but a daily count; I have and My bar on the phone; cocktails mention
+  alcohol, Wilma is for adults); the OpenAI line points to it; the morning briefing now says the
+  summary is kept **under Your morning on the home screen** (step 6). The TikTok caption and the
+  screenshot lines were added in steps 3 and 4.
+- **Play** (`docs/phase4-play-release.md`): **Content rating** to redo with **references to
+  alcohol** (likely a higher rating in some countries); **Target audience 18 and over only** (Q11);
+  **Data safety: no change** (recipes are user content; a screenshot to the AI is Photos, already
+  declared and stored; the fetch and caption are user-requested).
+- **Legal checklist** (`docs/legal-review-checklist.md`): alcohol and age, importing (TikTok's
+  terms, copyright), pictures to the AI, AI recipes (allergies, food safety).
+- **Phone checklist:** `docs/versioncode24-phone-checklist.md`, checks 1-32 (the plan's 1-25, the
+  chat 26-30, Help 31-32).
+- **Tests:** 996 app, 609 Deno; type check and lint clean.
+
+**Owner, in order:** (1) merge; (2) OK to deploy `chat` (the Help topic in the chat); (3) in Play
+Console, the content rating (alcohol) and Target audience 18+ (`docs/phase4-play-release.md`);
+(4) OK to build (production, a full build: it goes to Google Play's testing track as before); (5)
+the phone checklist on the new build.
