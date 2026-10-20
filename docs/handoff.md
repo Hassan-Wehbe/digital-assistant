@@ -13,6 +13,12 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **D43 recipes step 8, release (2026-10-20): branch `claude/recipes-release`, not merged.** Help
+  topic Recipes & cocktails (app and the chat's show_help: needs a `chat` deploy), the privacy page's
+  Recipes and cocktails paragraph and Your morning wording, Play notes (content rating: references
+  to alcohol; target audience 18+; Data safety unchanged), legal checklist items, and
+  `docs/versioncode24-phone-checklist.md` (32 checks). **Owner:** merge, OK to deploy `chat`, the
+  Play content rating and target audience, OK to build, the phone checklist.
 - **D43 recipes step 7, the chat (2026-10-20): merged (#256) and live (`chat` v45); evaluation
   run 39480220369 passed (six new cases and the 36 secret traps, Luna 42/42, 0 leaks, 0 unsafe, $0.03).** Chat-only `suggest_meal` and `suggest_cocktail` run the step 5
   route (own recipes, searchable spaces only, the daily count, cost counted with the message); the

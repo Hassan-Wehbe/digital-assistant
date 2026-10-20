@@ -124,7 +124,7 @@ Deno.test("show_help: the card with a topic, or the list; a topic outside the ap
   assertEquals(help({}).events, [{ type: "help" }]);
   assertEquals(help({ topic: "billing" }).isError, true);
   assertEquals(help({ topic: 7 }).isError, true);
-  assertEquals(HELP_TOPICS, ["notes", "vault", "day", "alarms", "places", "memory", "spaces", "privacy"]);
+  assertEquals(HELP_TOPICS, ["notes", "vault", "day", "alarms", "places", "recipes", "memory", "spaces", "privacy"]);
 });
 
 Deno.test("show_help: once per message; an app without it gets a short answer, not an update nag", () => {

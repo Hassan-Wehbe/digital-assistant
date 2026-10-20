@@ -44,7 +44,7 @@ export const CAN_HELP = "help";
 export const CAN_ROUTINE = "routine";
 
 /** The app's Help topics (app/src/lib/help.ts); show_help names one of these. */
-export const HELP_TOPICS = ["notes", "vault", "day", "alarms", "places", "memory", "spaces", "privacy"] as const;
+export const HELP_TOPICS = ["notes", "vault", "day", "alarms", "places", "recipes", "memory", "spaces", "privacy"] as const;
 
 export const MAX_TEXT = 200;
 export const MAX_LOCATION = 300;
@@ -217,7 +217,7 @@ export const PHONE_ACTION_SPECS: ToolSpec[] = [
     name: "show_help",
     description:
       "Chat app only. Shows the user a Help card with the app's short topics (notes, the vault, My day, alarms " +
-      "and calendar, places, memory, spaces, privacy), opened at `topic` when one fits. For \"what can you do\", " +
+      "and calendar, places, recipes and cocktails, memory, spaces, privacy), opened at `topic` when one fits. For \"what can you do\", " +
       "\"help\", \"how does this work\" and \"how do I …\" questions: answer in one or two short sentences and always call " +
       "this too, even when your sentences answer. Never list every feature yourself. It changes nothing and saves nothing.",
     inputSchema: {

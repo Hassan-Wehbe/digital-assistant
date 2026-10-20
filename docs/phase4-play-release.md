@@ -57,7 +57,17 @@ Communication, or Other*. Answer **No** to violence, sexuality, language, contro
 substances, gambling and user interaction or sharing (Wilma has no sharing between users and
 no chat with other people). The result should be "Everyone" or the local equivalent.
 
-**Target audience:** 18 and over (or 13 and over). Not designed for children.
+**Content rating, again for the recipes build (D43, `docs/recipes-plan.md` step 8):** the built-in
+Cocktails space and Make a cocktail mean the app now **references alcohol** (cocktail recipes; it
+sells nothing and does not encourage drinking; "No alcohol" is always offered). **Owner, in Play
+Console** before or with that release: Policy and programs → App content → **Content rating** →
+Edit questionnaire → answer the alcohol, tobacco or drugs question **Yes, references to alcohol**
+(no use shown in pictures or video, no purchase); keep everything else as above → Save → **Submit**.
+The new rating is likely higher than "Everyone" in some countries (for example Teen, PEGI 12 or USK
+12); that is expected. Then check **Target audience** below still says 18 and over.
+
+**Target audience:** 18 and over (or 13 and over). Not designed for children. **Owner, before the
+recipes build (D43 Q11):** set it to **18 and over only**, as Wilma now has cocktail recipes.
 
 **News app:** No. **COVID-19 contact tracing:** No. **Government app:** No.
 **Financial features:** None. **Health:** None.
@@ -141,6 +151,16 @@ reviewer account (`+playreview` email alias), never the owner's own sign-in or S
     foreground while planning and compares it **on the phone**; the reading never leaves the
     device, and Google does not count data processed only on the device as collected. Only home
     names go to the AI service (on our behalf, not "sharing"). Background location stays blocked.
+  - **Recipes and cocktails** (D43, `docs/recipes-plan.md`, from the build after versionCode 23):
+    **no new data type and no change in the form.** Recipes are notes ("Other user-generated
+    content", stored). *Read a screenshot* sends the one picture the user picks to the AI service
+    that reads it on our behalf (not "sharing"); it is not kept by Wilma, but *Photos* is already
+    declared as collected and stored (attachments), so "processed ephemerally" stays **No**. *Fill in
+    the recipe* is the phone fetching a public page the user chose (as opening a link), and a TikTok
+    caption sent to the AI service: user-requested, covered by "Other user-generated content".
+    What's for dinner? and Make a cocktail send the user's own recipes, what they have and the
+    household's ages (never names) to the AI service for that answer; the daily count is a number
+    per day. "I have" and "My bar" stay on the phone. Nothing is shared.
   - Not collected: contacts, messages, health, financial info, web browsing,
     device IDs, analytics or crash data (the app has none of these).
   - Vault values are end-to-end encrypted, so no one but the user can read them. Google's form
