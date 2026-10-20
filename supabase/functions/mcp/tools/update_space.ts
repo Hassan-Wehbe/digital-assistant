@@ -30,7 +30,7 @@ export const registerUpdateSpace: RegisterTool = (server, { db, assistantName })
         rejectCredentials({ name, description }, assistantName);
         const spaces = await loadSpaces(db);
         const target = resolveSpace(spaces, space);
-        // Tasks and Memories keep their names (the database refuses too).
+        // Built-in spaces (Tasks, Memories, Recipes, Cocktails) keep their names (the database refuses too).
         if (target.built_in && name !== undefined && name !== target.name) throw new Error(builtInRefusal(target, "renamed"));
         if (name !== undefined) {
           const taken = spaces.find((s) =>

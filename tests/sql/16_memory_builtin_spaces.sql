@@ -12,8 +12,8 @@ select pg_temp.check('a new account gets a built-in Tasks space',
 select pg_temp.check('and a built-in Memories space',
   (select count(*) = 1 from space where owner_user_id = '00000000-0000-4000-a000-00000000000a' and built_in = 'memories'
      and name = 'Memories' and description = 'What Wilma remembered about you' and parent_id is null and not is_restricted));
-select pg_temp.check('the other account gets its own two',
-  (select count(*) = 2 from space where owner_user_id = '00000000-0000-4000-a000-00000000000b' and built_in is not null));
+select pg_temp.check('the other account gets its own four (with Recipes and Cocktails, test 21)',
+  (select count(*) = 4 from space where owner_user_id = '00000000-0000-4000-a000-00000000000b' and built_in is not null));
 select pg_temp.check('memory is off by default',
   (select bool_and(not memory_on) from app_user));
 
@@ -54,12 +54,12 @@ select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-a000-0000000
 set local role authenticated;
 
 select pg_temp.check('A sees only their own built-in spaces, with the mark',
-  (select count(*) = 2 and bool_and(owner_user_id = '00000000-0000-4000-a000-00000000000a') from space where built_in is not null));
+  (select count(*) = 4 and bool_and(owner_user_id = '00000000-0000-4000-a000-00000000000a') from space where built_in is not null));
 
 create temp table _ids as
 select (select id from space where built_in = 'tasks') tasks,
        (select id from space where built_in = 'memories') memories;
-insert into space (owner_user_id, parent_id, name) values ('00000000-0000-4000-a000-00000000000a', null, 'Recipes');
+insert into space (owner_user_id, parent_id, name) values ('00000000-0000-4000-a000-00000000000a', null, 'Garden');
 update _ids set tasks = tasks;  -- (A may write their temp table)
 
 do $$
@@ -85,7 +85,7 @@ exception when others then
 end $$;
 do $$
 begin
-  update space set parent_id = (select id from space where name = 'Recipes') where id = (select tasks from _ids);
+  update space set parent_id = (select id from space where name = 'Garden') where id = (select tasks from _ids);
   perform pg_temp.check('it cannot be moved', false, 'moved');
 exception when others then
   perform pg_temp.check('it cannot be moved', sqlerrm like '%can''t be moved%', sqlerrm);
@@ -106,7 +106,7 @@ exception when others then
 end $$;
 do $$
 begin
-  update space set built_in = 'memories' where name = 'Recipes';
+  update space set built_in = 'memories' where name = 'Garden';
   perform pg_temp.check('a person cannot mark their own space built-in', false, 'marked');
 exception when others then
   perform pg_temp.check('a person cannot mark their own space built-in', sqlerrm like '%Only Wilma%', sqlerrm);
@@ -122,11 +122,11 @@ end $$;
 update space set description = 'Things I keep forgetting' where id = (select memories from _ids);
 select pg_temp.check('its description can change',
   (select description = 'Things I keep forgetting' from space where id = (select memories from _ids)));
-update space set name = 'Cooking' where name = 'Recipes';
+update space set name = 'Plants' where name = 'Garden';
 select pg_temp.check('an ordinary space is unaffected: renamed',
-  (select count(*) = 1 from space where name = 'Cooking'));
+  (select count(*) = 1 from space where name = 'Plants'));
 select pg_temp.check('and deleted',
-  (select (delete_space((select id from space where name = 'Cooking')) ->> 'deleted')::boolean));
+  (select (delete_space((select id from space where name = 'Plants')) ->> 'deleted')::boolean));
 
 -- ---- Memory notes ----
 select pg_temp.check('a memory saves into Memories',

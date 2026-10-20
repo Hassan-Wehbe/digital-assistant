@@ -10,12 +10,12 @@ $$;
 -- ---------- user A's data ----------
 select pg_temp.as_user('a');
 set local role authenticated;
-insert into space (name) values ('Recipes'), ('Empty'), ('Parent'), ('Vaulted');
+insert into space (name) values ('Soups'), ('Empty'), ('Parent'), ('Vaulted');
 insert into space (name, parent_id) values ('Child', (select id from space where name = 'Parent'));
 insert into space (name, is_restricted) values ('Private', true);
 select save_item((select id from space where name = sp), 'note', t, 'Red lentils and cumin.', null, '{}', '{}',
                  pg_temp.chunks('Red lentils and cumin.', 7))
-from (values ('Recipes', 'Lentil soup'), ('Recipes', 'Old soup'), ('Private', 'Secret soup')) v(sp, t);
+from (values ('Soups', 'Lentil soup'), ('Soups', 'Old soup'), ('Private', 'Secret soup')) v(sp, t);
 reset role;
 insert into attachment (item_id, storage_key, original_filename, mime_type)
 select i.id, '00000000-0000-4000-a000-00000000000a/11111111-1111-4111-8111-111111111111/soup.jpg', 'soup.jpg', 'image/jpeg'
@@ -34,7 +34,7 @@ create temp table _ids as
          (select id from _a_items where title = 'Old soup') as old,
          (select id from _a_items where title = 'Secret soup') as secret_soup,
          (select id from space where name = 'Empty' and owner_user_id = '00000000-0000-4000-a000-00000000000a') as empty,
-         (select id from space where name = 'Recipes' and owner_user_id = '00000000-0000-4000-a000-00000000000a') as recipes;
+         (select id from space where name = 'Soups' and owner_user_id = '00000000-0000-4000-a000-00000000000a') as recipes;
 grant select on _ids to authenticated, anon;
 
 select pg_temp.as_user('b');

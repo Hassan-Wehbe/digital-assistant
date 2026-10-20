@@ -13,10 +13,17 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **D43 recipes step 1, the built-in spaces (2026-10-20): #245, not merged; migration
+  applied 2026-10-20 (dry run 29/29; checked: 3 accounts, four built-in spaces each).** Migration `20261021120000_recipes_builtin_spaces.sql`: every
+  account gets built-in 🍽️ Recipes and 🍸 Cocktails (an own unrestricted "Recipes" is adopted; a
+  restricted one is left alone). SQL test 21 (29 checks), tests 07, 08, 16, 18 updated; all pass
+  on a local stand-in; dry run 29/29. App: icons and BUILT-IN badge. 928 app tests. See
+  `docs/recipes-plan.md` "As built: step 1". **Owner:** merge #245 (nothing to deploy; the app part ships with the next build). **Next
+  (strongest for the server check):** step 2, recipe fields.
 - **D43 Recipes and cocktails, the plan (2026-10-19): `docs/recipes-plan.md`, answers
-  all as recommended (2026-10-20); PR open, not merged; nothing built.** Two built-in spaces (Recipes, Cocktails),
+  all as recommended (2026-10-20); merged (#244).** Two built-in spaces (Recipes, Cocktails),
   recipe fields, Fill in the recipe from websites and TikTok captions, Read a screenshot, What's
-  for dinner and Make a cocktail from your own recipes, the chat. **Owner:** merge. **Next (strongest model):** step 1, the built-in spaces.
+  for dinner and Make a cocktail from your own recipes, the chat.
 - **D42 Discover nearby, the plan (2026-10-19): `docs/discover-nearby-plan.md`, merged (#243);
   answers all as recommended (Google Places).** **Owner:** step 0, the Google Cloud key as the
   Supabase secret `GOOGLE_PLACES_KEY` and a $10 budget alert (steps written in the plan), then say

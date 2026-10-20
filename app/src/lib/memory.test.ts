@@ -85,9 +85,17 @@ describe('remembered memories', () => {
 
 describe('built-in spaces', () => {
   it('are marked, titled with their icon, and Memories is found', () => {
-    const spaces = [sp('Tasks', { built_in: 'tasks' }), sp('Memories', { built_in: 'memories' }), sp('Recipes')];
-    expect(spaces.map(isBuiltIn)).toEqual([true, true, false]);
-    expect(spaces.map(spaceTitle)).toEqual(['✅ Tasks', '🧠 Memories', 'Recipes']);
+    const spaces = [
+      sp('Tasks', { built_in: 'tasks' }), sp('Memories', { built_in: 'memories' }),
+      sp('Recipes', { built_in: 'recipes' }), sp('Cocktails', { built_in: 'cocktails' }), sp('Garden'),
+    ];
+    expect(spaces.map(isBuiltIn)).toEqual([true, true, true, true, false]);
+    expect(spaces.map(spaceTitle)).toEqual(['✅ Tasks', '🧠 Memories', '🍽️ Recipes', '🍸 Cocktails', 'Garden']);
+    // A user's own space called Recipes (a restricted one is never made built-in) has no icon.
+    expect(spaceTitle(sp('Recipes'))).toBe('Recipes');
+    // A kind the app does not know yet is shown plainly, never as built-in.
+    expect(isBuiltIn({ built_in: 'desserts' })).toBe(false);
+    expect(isBuiltIn({ built_in: 'toString' })).toBe(false);
     expect(memoriesSpace(spaces)?.path).toBe('Memories');
     // A user's own space called Memories is not the built-in one.
     expect(memoriesSpace([sp('Memories')])).toBeUndefined();
