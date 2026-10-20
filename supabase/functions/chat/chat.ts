@@ -53,7 +53,8 @@
 // (outing.ts, D40): a plain JSON answer from one model call on a short list of saved places. A body
 // {"mode": "recipe_from_text", ...} or {"mode": "recipe_from_image", ...} fills in a recipe from a
 // caption the app read or a screenshot the user chose (recipe_import.ts, D43): a plain JSON answer
-// from one model call, nothing saved.
+// from one model call, nothing saved. A body {"mode": "meal" | "cocktail", ...} suggests what to
+// make from the user's own recipes (recipe_suggest.ts, D43): one model call on a short list.
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { type SharedPoint, systemPrompt } from "../_shared/assistant_prompt.ts";
@@ -65,6 +66,7 @@ import { classify, classifyBody, type ClassifyLog } from "./classify.ts";
 import { ACTION_NAMES, ACTION_SPECS, ChatActions } from "./actions.ts";
 import { CAN_OUTING, type OutingLog, outingForChat, outingPlan, PLAN_OUTING } from "./outing.ts";
 import { recipeFromImage, recipeFromText, type RecipeTextLog } from "./recipe_import.ts";
+import { recipeSuggest, type SuggestLog } from "./recipe_suggest.ts";
 import { CONFIRM_TOOLS, confirmCard } from "./confirm.ts";
 import { isRoutine } from "../mcp/lib/routines.ts";
 import {
@@ -127,7 +129,7 @@ export interface ChatDeps {
   drives?: DayDeps["drives"];
   /** Weather for one day plan (US National Weather Service; none without NWS_CONTACT). */
   weather?: DayDeps["weather"];
-  log(entry: LogEntry | ClassifyLog | DayLog | MemoryLog | OutingLog | RecipeTextLog): void;
+  log(entry: LogEntry | ClassifyLog | DayLog | MemoryLog | OutingLog | RecipeTextLog | SuggestLog): void;
   /** Keeps the instance alive for work after the answer (EdgeRuntime.waitUntil): noticing memories. */
   background?(work: Promise<unknown>): void;
   /** The clock for day plans (tests set it; DayDeps["now"]). */
@@ -235,6 +237,10 @@ export function createHandler(deps: ChatDeps): (req: Request) => Promise<Respons
     }
     if (raw && typeof raw === "object" && (raw as Record<string, unknown>).mode === "recipe_from_text") {
       const out = await recipeFromText(deps, token, userId, raw, req.signal);
+      return Response.json(out.body, { status: out.status, headers: { ...CORS, "Cache-Control": "no-store" } });
+    }
+    if (raw && typeof raw === "object" && ["meal", "cocktail"].includes(String((raw as Record<string, unknown>).mode))) {
+      const out = await recipeSuggest(deps, token, userId, raw, req.signal);
       return Response.json(out.body, { status: out.status, headers: { ...CORS, "Cache-Control": "no-store" } });
     }
     if (raw && typeof raw === "object" && (raw as Record<string, unknown>).mode === "recipe_from_image") {
