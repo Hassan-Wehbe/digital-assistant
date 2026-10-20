@@ -12,8 +12,8 @@ v43; evaluation 5/5, 0 leaks, 0 unsafe); the button ships with the next build:**
 **Step 5 merged (#253) and live 2026-10-20 (migration applied, `chat` v44; evaluation 10/10, 0 leaks,
 0 unsafe); the screens are step 6:** see "As built: step 5". **Step 6 merged (#254) 2026-10-20 (mockups
 approved; Your morning moved to a button, owner's ask); app only, ships with the next build:** see "As built: step 6". **Step 7 merged (#256) and live 2026-10-20
-(`chat` v45; evaluation 42/42, 0 leaks, 0 unsafe); the chat cards ship with the next build:** see "As built: step 7". **Step 8 built 2026-10-20,
-branch `claude/recipes-release`, not merged:** see "As built: step 8". Design: D43
+(`chat` v45; evaluation 42/42, 0 leaks, 0 unsafe); the chat cards ship with the next build:** see "As built: step 7". **Step 8 merged (#258) 2026-10-20; `chat`
+v46; versionCode 24 built and submitted:** see "As built: step 8". Design: D43
 (builds on D41, links shared from social apps; D40, the planners and the household; the built-in
 spaces of the memory plan). Model: the strongest for steps 1, 3, 4, 5 and 7 (the sign-up trigger
 and a migration, what the AI sees, images sent to the AI, the chat); a smaller one is fine for the
@@ -683,7 +683,10 @@ Help, privacy, Play, the legal checklist and the phone checklist; then the build
   chat 26-30, Help 31-32).
 - **Tests:** 996 app, 609 Deno; type check and lint clean.
 
-**Owner, in order:** (1) merge; (2) OK to deploy `chat` (the Help topic in the chat); (3) in Play
-Console, the content rating (alcohol) and Target audience 18+ (`docs/phase4-play-release.md`);
-(4) OK to build (production, a full build: it goes to Google Play's testing track as before); (5)
-the phone checklist on the new build.
+**Merged (#258, squash, 11a130b), `chat` v46 deployed (run 39498980910), and versionCode 24 built
+(app build run 39498986668, EAS build 33c5b2e8-fb36-4bbf-ae80-e6165ba1d1eb) and its Google Play
+submission scheduled, 2026-10-20.**
+
+**Owner:** (1) in Play Console, the content rating (references to alcohol) and Target audience 18+
+(`docs/phase4-play-release.md`) before releasing it; (2) the phone checklist on versionCode 24
+(`docs/versioncode24-phone-checklist.md`). **Recipes and cocktails (D43) are then done.**
