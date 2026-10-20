@@ -28,7 +28,7 @@ tokens or keys in chat.
   161/163, 0 leaks, 0 unsafe, $0.10; the three recipe cases pass; misses `plan-when-to-leave`
   (older) and `place-not-since-summer` (a reading slip).** See `docs/recipes-plan.md` "As built:
   step 2 (server)". **Owner:** merge (#246), OK to deploy `mcp` and `chat`. **Next:** the app half of step 2 (screens; smaller model is fine).
-- **D43 recipes step 1, the built-in spaces (2026-10-20): #245, not merged; migration
+- **D43 recipes step 1, the built-in spaces (2026-10-20): merged (#245); migration
   applied 2026-10-20 (dry run 29/29; checked: 3 accounts, four built-in spaces each).** Migration `20261021120000_recipes_builtin_spaces.sql`: every
   account gets built-in 🍽️ Recipes and 🍸 Cocktails (an own unrestricted "Recipes" is adopted; a
   restricted one is left alone). SQL test 21 (29 checks), tests 07, 08, 16, 18 updated; all pass
