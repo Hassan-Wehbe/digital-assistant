@@ -5,8 +5,8 @@
 import { describe, expect, it, jest } from '@jest/globals';
 
 import {
-  captionFromOembed, fillForm, fillFromLink, FILL_WORDS, isoMinutes, recipeFromHtml, type RecipeTextAnswer, recipeTextClient,
-  tiktokOembedUrl, toRecipeTextAnswer,
+  captionFromOembed, fillForm, fillFromLink, fillFromScreenshot, FILL_WORDS, isoMinutes, MAX_PICTURE_BASE64, type PickedPicture,
+  recipeFromHtml, type RecipeTextAnswer, recipeTextClient, SCREENSHOT_WORDS, shrinkFor, tiktokOembedUrl, toRecipeTextAnswer,
 } from './recipeImport';
 import { EMPTY_RECIPE, type RecipeForm } from './recipes';
 
@@ -246,5 +246,65 @@ describe('fillFromLink (the tap)', () => {
     const full: RecipeForm = { ...EMPTY_RECIPE, link: 'https://x.example/r', ingredients: 'mine', steps: 'mine', minutes: '5', serves: '1' };
     expect(await fillFromLink(full, 'recipe', { fetch: pageFetch(200, page(WORDPRESS)), fromText: never }))
       .toEqual({ form: full, message: FILL_WORDS.nothingNew });
+  });
+});
+
+describe('Read a screenshot (step 4)', () => {
+  it('shrinks by the longer side to 2000 px, only when bigger', () => {
+    expect(shrinkFor(1080, 2400)).toEqual({ height: 2000 });
+    expect(shrinkFor(4032, 3024)).toEqual({ width: 2000 });
+    expect(shrinkFor(1080, 1920)).toBeNull();
+    expect(shrinkFor(0, 0)).toBeNull();
+  });
+
+  it('the client sends the picture as recipe_from_image, a JPEG', async () => {
+    const bodies: unknown[] = [];
+    const f = jest.fn(async (_url: string, init: { body: string }) => {
+      bodies.push(JSON.parse(init.body));
+      return { status: 200, json: async () => ({ fields: { ingredients: ['mint'] } }) };
+    });
+    const client = recipeTextClient({ url: 'u', token: async () => 't', refresh: async () => null, fetch: f });
+    expect(await client.fromImage('cocktail', '/9j/4AAQ')).toEqual({ fields: { ingredients: ['mint'] } });
+    expect(bodies).toEqual([{ mode: 'recipe_from_image', type: 'cocktail', image: { media_type: 'image/jpeg', data: '/9j/4AAQ' } }]);
+  });
+
+  const pick = (p: PickedPicture) => jest.fn(async () => p);
+  const answer = (a: RecipeTextAnswer) => jest.fn(async () => a);
+
+  it('a picked picture fills the empty boxes', async () => {
+    const fromImage = answer({ fields: { ingredients: ['2 oz tequila', 'Grapefruit soda'], steps: ['Shake'], strength: 'regular' } });
+    const out = await fillFromScreenshot(EMPTY_RECIPE, 'cocktail', { pick: pick({ base64: '/9j/4AAQ' }), fromImage });
+    expect(fromImage).toHaveBeenCalledWith('cocktail', '/9j/4AAQ');
+    expect(out).toEqual({
+      form: { ...EMPTY_RECIPE, ingredients: '2 oz tequila\nGrapefruit soda', steps: 'Shake', strength: 'regular' },
+      message: SCREENSHOT_WORDS.filled(['ingredients', 'steps', 'strength']),
+    });
+  });
+
+  it('cancelled: nothing happens, nothing is sent', async () => {
+    const fromImage = answer({ problem: 'connection' });
+    expect(await fillFromScreenshot(EMPTY_RECIPE, 'recipe', { pick: pick(null), fromImage })).toBeNull();
+    expect(fromImage).not.toHaveBeenCalled();
+  });
+
+  it('a picture that cannot be read or is too big is never sent', async () => {
+    const fromImage = answer({ problem: 'connection' });
+    expect(await fillFromScreenshot(EMPTY_RECIPE, 'recipe', { pick: pick({ error: SCREENSHOT_WORDS.noPicture }), fromImage }))
+      .toEqual({ error: SCREENSHOT_WORDS.noPicture });
+    expect(await fillFromScreenshot(EMPTY_RECIPE, 'recipe', { pick: pick({ base64: 'A'.repeat(MAX_PICTURE_BASE64 + 1) }), fromImage }))
+      .toEqual({ error: SCREENSHOT_WORDS.tooBig });
+    expect(fromImage).not.toHaveBeenCalled();
+  });
+
+  it('no recipe in it, an unreadable answer, the allowance, no connection: plain words', async () => {
+    const run = (a: RecipeTextAnswer) => fillFromScreenshot(EMPTY_RECIPE, 'recipe', { pick: pick({ base64: 'x' }), fromImage: answer(a) });
+    expect(await run({ none: 'not_a_recipe' })).toEqual({ error: SCREENSHOT_WORDS.notARecipe });
+    expect(await run({ none: 'no_answer' })).toEqual({ error: SCREENSHOT_WORDS.noAnswer });
+    expect(await run({ problem: 'allowance_used' })).toEqual({ error: SCREENSHOT_WORDS.allowance });
+    expect(await run({ problem: 'connection' })).toEqual({ error: FILL_WORDS.connection });
+  });
+
+  it('Facebook and Instagram now point to Read a screenshot', () => {
+    expect(FILL_WORDS.signInSite('Facebook')).toContain('Read a screenshot');
   });
 });

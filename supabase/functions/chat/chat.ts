@@ -51,8 +51,9 @@
 // answer, not a stream. A body {"mode": "day", ...} is My day (day.ts): the day planner, a plain
 // JSON answer with no model call. A body {"mode": "outing", ...} is Date night or Family day
 // (outing.ts, D40): a plain JSON answer from one model call on a short list of saved places. A body
-// {"mode": "recipe_from_text", ...} fills in a recipe from a caption the app read (recipe_import.ts,
-// D43): a plain JSON answer from one model call, nothing saved.
+// {"mode": "recipe_from_text", ...} or {"mode": "recipe_from_image", ...} fills in a recipe from a
+// caption the app read or a screenshot the user chose (recipe_import.ts, D43): a plain JSON answer
+// from one model call, nothing saved.
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { type SharedPoint, systemPrompt } from "../_shared/assistant_prompt.ts";
@@ -63,7 +64,7 @@ import { type CredentialKind, findCredential } from "../mcp/lib/credentials.ts";
 import { classify, classifyBody, type ClassifyLog } from "./classify.ts";
 import { ACTION_NAMES, ACTION_SPECS, ChatActions } from "./actions.ts";
 import { CAN_OUTING, type OutingLog, outingForChat, outingPlan, PLAN_OUTING } from "./outing.ts";
-import { recipeFromText, type RecipeTextLog } from "./recipe_import.ts";
+import { recipeFromImage, recipeFromText, type RecipeTextLog } from "./recipe_import.ts";
 import { CONFIRM_TOOLS, confirmCard } from "./confirm.ts";
 import { isRoutine } from "../mcp/lib/routines.ts";
 import {
@@ -234,6 +235,10 @@ export function createHandler(deps: ChatDeps): (req: Request) => Promise<Respons
     }
     if (raw && typeof raw === "object" && (raw as Record<string, unknown>).mode === "recipe_from_text") {
       const out = await recipeFromText(deps, token, userId, raw, req.signal);
+      return Response.json(out.body, { status: out.status, headers: { ...CORS, "Cache-Control": "no-store" } });
+    }
+    if (raw && typeof raw === "object" && (raw as Record<string, unknown>).mode === "recipe_from_image") {
+      const out = await recipeFromImage(deps, token, userId, raw, req.signal);
       return Response.json(out.body, { status: out.status, headers: { ...CORS, "Cache-Control": "no-store" } });
     }
     const parsed = bodySchema.safeParse(raw);

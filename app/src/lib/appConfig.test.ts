@@ -58,7 +58,8 @@ describe('app.json', () => {
   it('never lets the image picker record video (it would use the microphone)', () => {
     const src = readFileSync(resolve(__dirname, 'deviceFiles.ts'), 'utf8');
     const calls = src.match(/launch(Camera|ImageLibrary)Async\(\{[^}]*\}/g) ?? [];
-    expect(calls).toHaveLength(2);
+    // Take a photo, Pick pictures, and Read a screenshot (recipes step 4): each pictures only.
+    expect(calls).toHaveLength(3);
     for (const c of calls) expect(c).toMatch(/mediaTypes: \['images'\]/);
     expect(src).not.toMatch(/videos|livePhotos|MediaType(Options)?\.(Videos|All)/);
   });

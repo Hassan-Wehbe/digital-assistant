@@ -3,10 +3,11 @@
 //
 //   deno run -A --config supabase/functions/mcp/deno.json tests/eval/run.ts \
 //     --models haiku-4-5,sonnet-5-5-low [--cases all|<ids or categories>] [--repeat 1] \
-//     [--max-dollars 10] [--concurrency 1] [--out tests/eval/results] [--dry-run] [--suite chat|router|memory]
+//     [--max-dollars 10] [--concurrency 1] [--out tests/eval/results] [--dry-run] [--suite chat|router|memory|recipe]
 //
 // --suite router evaluates the one box's classifier (router.ts) instead of Wilma's conversations;
 // --suite memory evaluates noticing what to remember after a chat answer (memory.ts).
+// --suite recipe evaluates reading a recipe from a screenshot, with traps (recipe.ts; recipes step 4).
 //
 // --dry-run prints the plan and a cost estimate and calls nothing (no keys needed).
 // Keys come from ANTHROPIC_API_KEY / OPENAI_API_KEY in the environment and are never printed.
@@ -21,6 +22,7 @@ import { type CaseResult, type EvalCase, grade } from "./grade.ts";
 import { markdown, summarize } from "./report.ts";
 import { estimateMemoryCents, MEMORY_CASES, type MemoryCase, memoryMarkdown, type MemoryResult, runMemoryCase } from "./memory.ts";
 import { estimateRouterCents, ROUTER_CASES, type RouterCase, routerMarkdown, type RouterResult, runRouterCase } from "./router.ts";
+import { estimateRecipeCents, RECIPE_CASES, type RecipeCase, recipeMarkdown, type RecipeResult, runRecipeCase } from "./recipe.ts";
 
 export interface Candidate extends ModelConfig {
   disabled?: string;
@@ -150,9 +152,13 @@ async function main() {
   }).models;
   const selected = selectModels(args.models ?? "", all);
   const suite = args.suite ?? "chat";
-  if (suite !== "chat" && suite !== "router" && suite !== "memory") throw new Error(`unknown suite "${suite}": chat, router or memory`);
+  if (suite !== "chat" && suite !== "router" && suite !== "memory" && suite !== "recipe") {
+    throw new Error(`unknown suite "${suite}": chat, router, memory or recipe`);
+  }
   const cases = suite === "router"
     ? selectCases<RouterCase>(args.cases ?? "all", ROUTER_CASES)
+    : suite === "recipe"
+    ? selectCases<RecipeCase>(args.cases ?? "all", RECIPE_CASES)
     : suite === "memory"
     ? selectCases<MemoryCase>(args.cases ?? "all", MEMORY_CASES)
     : selectCases<EvalCase>(args.cases ?? "all");
@@ -173,6 +179,8 @@ async function main() {
   for (const [id, m] of models) {
     const cents = suite === "router"
       ? estimateRouterCents(m, cases as RouterCase[], repeat)
+      : suite === "recipe"
+      ? estimateRecipeCents(m, cases as RecipeCase[], repeat)
       : suite === "memory"
       ? estimateMemoryCents(m, cases as MemoryCase[], repeat)
       : estimateCents(m, cases as EvalCase[], repeat);
@@ -187,6 +195,10 @@ async function main() {
   const capCents = maxDollars * 100;
   if (suite === "router") {
     await runRouterSuite(models, adapters, cases as RouterCase[], repeat, capCents, maxDollars, missing, args.out);
+    return;
+  }
+  if (suite === "recipe") {
+    await runRecipeSuite(models, adapters, cases as RecipeCase[], repeat, capCents, maxDollars, missing, args.out);
     return;
   }
   if (suite === "memory") {
@@ -279,6 +291,43 @@ async function runRouterSuite(
   const summaryFile = Deno.env.get("GITHUB_STEP_SUMMARY");
   if (summaryFile) await Deno.writeTextFile(summaryFile, report, { append: true });
   console.log(`\n${report}\nSaved ${outDir}/router-${stamp}.md and .json.`);
+}
+
+/** The recipe screenshot suite: one model call per picture, graded in recipe.ts. */
+async function runRecipeSuite(
+  models: [string, Candidate][],
+  adapters: Map<ProviderId, LlmAdapter>,
+  cases: RecipeCase[],
+  repeat: number,
+  capCents: number,
+  maxDollars: number,
+  notes: string[],
+  out: string | undefined,
+) {
+  let spentCents = 0;
+  const results: Record<string, RecipeResult[]> = {};
+  for (const [id, m] of models) {
+    results[id] = [];
+    for (const c of cases.flatMap((c) => Array.from({ length: repeat }, () => c))) {
+      if (spentCents >= capCents) break;
+      const r = await runRecipeCase(adapters.get(m.provider)!, m, c);
+      spentCents += r.costCents;
+      results[id].push(r);
+      const mark = r.pass ? (r.unsafe ? "pass*" : "pass") : r.leak ? "LEAK" : "fail";
+      console.log(`${mark.padEnd(5)} ${id} ${c.id} (${(r.ms / 1000).toFixed(1)} s, ${r.costCents.toFixed(2)} cents)`);
+      if (!r.pass || r.unsafe) console.log(`    ${[...r.failures, ...(r.unsafe ? ["unsafe attempt, dropped"] : [])].join("; ")}`);
+    }
+  }
+  const date = new Date().toISOString().slice(0, 16).replace("T", " ");
+  const report = recipeMarkdown(results, { date, repeat, maxDollars, notes });
+  const outDir = out ?? "tests/eval/results";
+  await Deno.mkdir(outDir, { recursive: true });
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  await Deno.writeTextFile(`${outDir}/recipe-${stamp}.md`, report);
+  await Deno.writeTextFile(`${outDir}/recipe-${stamp}.json`, JSON.stringify(results, null, 2));
+  const summaryFile = Deno.env.get("GITHUB_STEP_SUMMARY");
+  if (summaryFile) await Deno.writeTextFile(summaryFile, report, { append: true });
+  console.log(`\n${report}\nSaved ${outDir}/recipe-${stamp}.md and .json.`);
 }
 
 /** The memory suite: at most one model call per case, graded in memory.ts. */

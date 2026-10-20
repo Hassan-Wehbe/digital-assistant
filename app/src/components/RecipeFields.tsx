@@ -1,11 +1,12 @@
 // The recipe part of New note and Edit note (recipes.ts): ingredients and steps one per line, the
 // time, how many it serves, the link it came from, and a cocktail's strength. All optional.
-// Fill in from the link (recipeImport.ts) fills the empty boxes, only when tapped.
+// Fill in from the link, or Read a screenshot (recipeImport.ts), fills the empty boxes, only when tapped.
 import { useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 
 import { useAuth } from '@/lib/auth';
-import { canFill, fillFromLink } from '@/lib/recipeImport';
+import { pickRecipePicture } from '@/lib/deviceFiles';
+import { canFill, fillFromLink, fillFromScreenshot, type FillOutcome } from '@/lib/recipeImport';
 import { MAX_LINK, STRENGTH_LABELS, STRENGTHS, type RecipeForm, type RecipeType, type Strength } from '@/lib/recipes';
 import { WilmaError } from '@/lib/wilma';
 
@@ -32,12 +33,14 @@ export function RecipeFields({
   const set = (change: Partial<RecipeForm>) => onChange((current) => ({ ...current, ...change }));
   const locked = disabled || filling;
 
-  // Only on the tap: the page (or TikTok's caption, then one AI request) is read, the empty boxes filled.
-  const fill = async () => {
+  // Only on the tap: the page (or TikTok's caption, then one AI request), or a picture the user picks
+  // (one AI request), is read and the empty boxes filled.
+  const run = async (read: () => Promise<FillOutcome | null>) => {
     setFilling(true);
     setFillNote(null);
     try {
-      const out = await fillFromLink(f, type, { fetch, fromText: recipeText.fromText });
+      const out = await read();
+      if (!out) return;
       if ('error' in out) setFillNote({ text: out.error, error: true });
       else {
         onChange(() => out.form);
@@ -49,6 +52,8 @@ export function RecipeFields({
       setFilling(false);
     }
   };
+  const fill = () => run(() => fillFromLink(f, type, { fetch, fromText: recipeText.fromText }));
+  const readPicture = () => run(() => fillFromScreenshot(f, type, { pick: pickRecipePicture, fromImage: recipeText.fromImage }));
   const input = [styles.input, { color: c.text, borderColor: c.line, backgroundColor: c.card }];
   const box = [...input, { minHeight: 110, textAlignVertical: 'top' as const }];
   const label = [styles.title, { color: c.text, fontSize: 15 }];
@@ -114,13 +119,14 @@ export function RecipeFields({
         }}
         editable={!locked}
       />
-      {canFill(f) && !disabled ? (
-        filling ? (
-          <Muted>Reading the link…</Muted>
-        ) : (
-          <TextLink title="Fill in the recipe from the link" onPress={() => void fill()} />
-        )
-      ) : null}
+      {disabled ? null : filling ? (
+        <Muted>Reading…</Muted>
+      ) : (
+        <View style={{ gap: 6 }}>
+          {canFill(f) ? <TextLink title="Fill in the recipe from the link" onPress={() => void fill()} /> : null}
+          <TextLink title="📷 Read a screenshot of the recipe" onPress={() => void readPicture()} />
+        </View>
+      )}
       {fillNote ? <Text style={{ color: fillNote.error ? c.danger : c.muted, fontSize: 15 }}>{fillNote.text}</Text> : null}
       {type === 'cocktail' ? (
         <>

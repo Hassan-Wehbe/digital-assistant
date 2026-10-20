@@ -5,7 +5,10 @@
 //   - TikTok: the phone reads the video's caption from TikTok's public oEmbed address (as Get title
 //     reads YouTube's), and sends only that text to the chat function's recipe_from_text route, where
 //     one AI request turns it into fields that the server checks. Counted against the AI allowance.
-//   - Facebook and Instagram: not readable without a sign-in, so Wilma says so.
+//   - Facebook and Instagram: not readable without a sign-in, so Wilma says so; a screenshot works.
+//   - A screenshot or photo (step 4): the user picks one, the phone shrinks it (at most 2000 px, a
+//     new JPEG: its location and camera details are not copied), and only that picture goes to the
+//     recipe_from_image route, where one AI request reads the recipe and the server checks it.
 // Only empty boxes are filled, so nothing the user typed is lost; the user checks the result and
 // taps Save (save_item / update_item check everything again). A caption or a line that looks like a
 // password is never sent or filled in (rule 9).
@@ -184,8 +187,15 @@ export function recipeTextClient({ url, token, refresh, fetch: f = fetch as unkn
   fetch?: JsonFetch;
 }) {
   /** Turns a caption into fields. Never throws except when the session has ended (a signed-out WilmaError). */
-  async function fromText(type: RecipeType, text: string, signal?: AbortSignal): Promise<RecipeTextAnswer> {
-    const json = JSON.stringify({ mode: 'recipe_from_text', type, text: text.slice(0, MAX_CAPTION) });
+  function fromText(type: RecipeType, text: string, signal?: AbortSignal): Promise<RecipeTextAnswer> {
+    return ask(type, { mode: 'recipe_from_text', type, text: text.slice(0, MAX_CAPTION) }, signal);
+  }
+  /** Reads a recipe from a picture (JPEG, base64). Never throws except when the session has ended. */
+  function fromImage(type: RecipeType, jpegBase64: string, signal?: AbortSignal): Promise<RecipeTextAnswer> {
+    return ask(type, { mode: 'recipe_from_image', type, image: { media_type: 'image/jpeg', data: jpegBase64 } }, signal);
+  }
+  async function ask(type: RecipeType, body: Record<string, unknown>, signal?: AbortSignal): Promise<RecipeTextAnswer> {
+    const json = JSON.stringify(body);
     const post = (accessToken: string) =>
       f(url, { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Accept: 'application/json' }, body: json, signal });
     let accessToken = await token();
@@ -210,7 +220,7 @@ export function recipeTextClient({ url, token, refresh, fetch: f = fetch as unkn
       return { problem: 'connection' };
     }
   }
-  return { fromText };
+  return { fromText, fromImage };
 }
 
 export type RecipeTextClient = ReturnType<typeof recipeTextClient>;
@@ -265,7 +275,7 @@ export type FillOutcome = { form: RecipeForm; message: string } | { error: strin
 
 export const FILL_WORDS = {
   noLink: 'Add the link it came from first.',
-  signInSite: (site: string) => `${site} doesn’t let apps read its posts. Copy the ingredients and steps into the boxes instead.`,
+  signInSite: (site: string) => `${site} doesn’t let apps read its posts. Take a screenshot of the recipe and tap Read a screenshot instead.`,
   noPage: 'Couldn’t open the page. Check the connection and try again.',
   noRecipeOnPage: 'This page has no recipe Wilma can read. Copy the ingredients and steps into the boxes instead.',
   noCaption: 'TikTok didn’t share this video’s caption. Type the ingredients and steps in instead.',
@@ -333,6 +343,55 @@ export async function fillFromLink(
   const { form: next, filled } = fillForm(form, fields, type);
   if (!filled.length) return { form, message: FILL_WORDS.nothingNew };
   return { form: next, message: FILL_WORDS.filled(filled, from) };
+}
+
+// ---- Step 4: a screenshot ----------------------------------------------------------------------
+
+/** The longest side a picture is shrunk to before it is sent (recipe text stays readable). */
+export const MAX_PICTURE_SIDE = 2000;
+
+/** How to shrink a picture of this size: by its longer side, only when it is bigger. */
+export function shrinkFor(width: number, height: number): { width: number } | { height: number } | null {
+  if (!(width > 0) || !(height > 0) || Math.max(width, height) <= MAX_PICTURE_SIDE) return null;
+  return width >= height ? { width: MAX_PICTURE_SIDE } : { height: MAX_PICTURE_SIDE };
+}
+
+/** What the phone's picker gives back: a shrunk JPEG as base64, nothing (cancelled), or why not. */
+export type PickedPicture = { base64: string } | null | { error: string };
+
+export const SCREENSHOT_WORDS = {
+  noPicture: 'Wilma couldn’t open that picture. Try another one.',
+  tooBig: 'That picture is too big to send. Try a screenshot of just the recipe.',
+  notARecipe: 'Wilma couldn’t find a recipe in this picture.',
+  noAnswer: 'Wilma couldn’t read a recipe from the picture. Try again, or a clearer screenshot.',
+  allowance: 'This month’s AI allowance is used up, so Wilma can’t read the picture.',
+  filled: (parts: FilledPart[]) => `Filled in the ${partsWords(parts)} from the picture. Check them, then Save.`,
+} as const;
+
+/** At most this much base64 is sent (the route's limit). */
+export const MAX_PICTURE_BASE64 = 3_000_000;
+
+/**
+ * Read a screenshot: the user picks it (deps.pick shrinks it on the phone), only that picture goes to
+ * the route, and the empty boxes are filled. Null when the user cancelled. Never throws except when
+ * the session has ended.
+ */
+export async function fillFromScreenshot(
+  form: RecipeForm,
+  type: RecipeType,
+  deps: { pick: () => Promise<PickedPicture>; fromImage: RecipeTextClient['fromImage'] },
+): Promise<FillOutcome | null> {
+  const picked = await deps.pick();
+  if (picked === null) return null;
+  if ('error' in picked) return { error: picked.error };
+  if (!picked.base64) return { error: SCREENSHOT_WORDS.noPicture };
+  if (picked.base64.length > MAX_PICTURE_BASE64) return { error: SCREENSHOT_WORDS.tooBig };
+  const out = await deps.fromImage(type, picked.base64);
+  if ('problem' in out) return { error: out.problem === 'allowance_used' ? SCREENSHOT_WORDS.allowance : FILL_WORDS.connection };
+  if ('none' in out) return { error: out.none === 'not_a_recipe' ? SCREENSHOT_WORDS.notARecipe : SCREENSHOT_WORDS.noAnswer };
+  const { form: next, filled } = fillForm(form, out.fields, type);
+  if (!filled.length) return { form, message: FILL_WORDS.nothingNew };
+  return { form: next, message: SCREENSHOT_WORDS.filled(filled) };
 }
 
 /** Whether the form's link can be filled in from (the button shows only then). */

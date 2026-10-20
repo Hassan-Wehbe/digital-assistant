@@ -163,7 +163,11 @@
         on, your newest memories and the messages checked for things to remember are sent to OpenAI to
         write the reply. When you tap <em>Fill in the recipe</em> on a TikTok link, that video's caption
         (its text only) is sent to OpenAI to turn it into ingredients and steps; a caption that looks like
-        it holds a password or a code is never sent. Vault values are never sent: Wilma never sees them. We
+        it holds a password or a code is never sent. When you tap <em>Read a screenshot of the recipe</em>,
+        the one picture you choose is sent to OpenAI to read the recipe in it: your phone first makes a
+        smaller copy, without the picture's location or camera details. Wilma does not keep that picture,
+        and only the recipe comes back; anything else in the picture is not copied, and a line that looks
+        like a password or a code is dropped. Choose a picture of the recipe only. Vault values are never sent: Wilma never sees them. We
         ask OpenAI not to store these requests, and OpenAI does not use them to train its models. OpenAI may
         keep them for up to 30 days to detect abuse, then deletes them.</li>
     <li><strong>Your phone's speech service</strong> (on most Android phones, Google's), only when you
