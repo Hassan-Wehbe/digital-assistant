@@ -5,15 +5,15 @@
 // here is in the ＋ menu). Below: Plan with Wilma (PlanRow.tsx), then the favourite spaces, or the
 // ones opened most recently on this phone until a favourite is chosen, and All spaces
 // (homeSpaces.ts; the Tasks space is reached by the ✅ Tasks tile). With the morning briefing on,
-// 🌅 Your morning above them (MorningCard.tsx, day planner step 4).
+// Home makes 🌅 Your morning at the briefing time (useMorning.ts, day planner step 4); since recipes
+// step 6 it is a button on Plan with Wilma, NEW until opened. Under that row, Cook with Wilma.
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, RefreshControl, Text, TextInput, View } from 'react-native';
 
 import { MicButton } from '@/components/MicButton';
-import { MorningCard } from '@/components/MorningCard';
 import { PasswordHold } from '@/components/PasswordHold';
-import { PlanRow } from '@/components/PlanRow';
+import { CookRow, PlanRow } from '@/components/PlanRow';
 import { useProPlan } from '@/components/ProCard';
 import { ItemRow } from '@/components/rows';
 import { SpaceGrid } from '@/components/SpaceGrid';
@@ -35,6 +35,7 @@ import {
   useReloadOnReturn,
 } from '@/components/ui';
 import { MemoryCard } from '@/components/MemoryCard';
+import { useMorning } from '@/components/useMorning';
 import { WelcomeCard } from '@/components/WelcomeCard';
 import { BoxCounter, WilmaBox } from '@/components/WilmaBox';
 import { deviceRecentSpaces } from '@/lib/deviceStorage';
@@ -110,8 +111,9 @@ export default function Home() {
   // Two stable reload functions: useReloadOnReturn re-runs whenever its function changes.
   useReloadOnReturn(reload);
   useReloadOnReturn(usage.reload);
-  // Pull to refresh also makes Your morning again, when it is showing.
+  // Pull to refresh also looks again whether Your morning is due (it no longer makes it again).
   const [pulls, setPulls] = useState(0);
+  const morning = useMorning({ auto: true, refresh: pulls });
   const reloadAll = () => {
     reload();
     usage.reload();
@@ -227,8 +229,10 @@ export default function Home() {
     <View style={{ gap: space.m }}>
       {query ? null : <WelcomeCard />}
       {query ? null : <MemoryCard />}
-      {query ? null : <MorningCard refresh={pulls} />}
-      {query ? null : <PlanRow onMyDay={openMyDay} myDayBadge={needsPro(pro) ? 'PRO' : undefined} />}
+      {query ? null : (
+        <PlanRow onMyDay={openMyDay} myDayBadge={needsPro(pro) ? 'PRO' : undefined} morningBadge={morning.unseen ? 'NEW' : undefined} />
+      )}
+      {query ? null : <CookRow />}
       {query ? (
         <Text style={[styles.title, { color: c.text }]}>{`Results for “${query}”`}</Text>
       ) : (

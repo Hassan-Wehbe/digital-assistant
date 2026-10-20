@@ -13,12 +13,19 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **D43 recipes step 5, the suggestions (2026-10-20): #253, not merged, migration applied, not
-  deployed; evaluation run 39461879477 passed (`recipe` suite 10/10, 0 leaks, 0 unsafe, $0.0016).** Migration `20261022120000_recipe_suggestions.sql` (daily
+- **D43 recipes step 6, the screens (2026-10-20): branch `claude/recipe-screens`, not merged; app
+  only, ships with the next build.** Home's new Cook with Wilma row; `app/suggest.tsx` (What's for
+  dinner? and Make a cocktail, from the approved mockups on the canvas "Wilma Home and Planners");
+  A new idea saved only on Save to Recipes. **Owner's ask:** Your morning moved from a card on Home
+  to a button on Plan with Wilma (NEW until opened) and its own screen; a pull on Home no longer
+  makes it again. 993 app tests. See `docs/recipes-plan.md` "As built: step 6" (phone checks
+  16-25). **Owner:** merge. **Next:** step 7, the chat tools.
+- **D43 recipes step 5, the suggestions (2026-10-20): merged (#253) and live (migration
+  applied, `chat` v44); evaluation run 39461879477 passed (`recipe` suite 10/10, 0 leaks, 0 unsafe, $0.0016).** Migration `20261022120000_recipe_suggestions.sql` (daily
   count: 10 Free, 50 Pro; SQL test 22, dry run 15/15); the `chat` route `{"mode":"meal"|"cocktail"}`
   (code short-lists your recipes from searchable spaces only, one AI request picks up to 3 by
   number, checked; A new idea); five suggestion cases in the `recipe` evaluation suite. 600 Deno
-  tests. See `docs/recipes-plan.md` "As built: step 5". **Owner:** merge, OK to deploy `chat`. **Next:** step 6, the screens.
+  tests. See `docs/recipes-plan.md` "As built: step 5". **Next:** step 6, the screens (mockups first).
 - **D43 recipes step 4, Read a screenshot (2026-10-20): merged (#251); `chat` v43 live (run
   39448448496); evaluation run 39443492688 passed (`recipe` suite, Luna 5/5, 0 leaks, 0 unsafe,
   $0.001); the button ships with the next build.** Pictures in the AI layer (both providers); the `chat` route

@@ -1,8 +1,9 @@
-// Your morning, on Home (day planner step 4, step 3; docs/phase6-day-planner-step4-plan.md): with
-// the briefing on ("In Wilma only" or "In Wilma and as a notification"), the first time Wilma is
-// opened after the briefing time, today's plan is made the way My day makes it (the ticked
-// calendars, read then; places; the planner) and its summary is shown. Once a day; pull to refresh
-// makes it again. With the briefing off, nothing here reads the calendar or asks for a plan.
+// Your morning (day planner step 4, step 3; docs/phase6-day-planner-step4-plan.md; a button on
+// Home's Plan with Wilma row since recipes step 6): with the briefing on ("In Wilma only" or "In
+// Wilma and as a notification"), the first time Wilma is opened after the briefing time, today's
+// plan is made the way My day makes it (the ticked calendars, read then; places; the planner) and
+// its summary is kept for the Your morning screen. Once a day; the screen's Make it again makes it
+// again. With the briefing off, nothing here reads the calendar or asks for a plan.
 //
 // Kept on the phone: only the day it was made and the day it was hidden (dates, per account). The
 // plan and its summary stay in memory, as My day's do (Mapbox's terms, dayPlan.ts).
@@ -93,5 +94,5 @@ export async function makeMorning(deps: MorningDeps, now: Date, nowText: string)
 export const MORNING_PROBLEM: Record<'calendar' | 'limit' | 'connection', string> = {
   calendar: 'Wilma can’t read your calendar. Turn it on in Settings → Calendars.',
   limit: 'My day has reached today’s limit, so your morning can’t be made again today.',
-  connection: 'Couldn’t make your morning just now. Pull down to try again.',
+  connection: 'Couldn’t make your morning just now. Tap Try again in a moment.',
 };

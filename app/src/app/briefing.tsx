@@ -23,7 +23,7 @@ const NO_PERMISSION = 'Notifications are off for Wilma. Allow them in your phone
 
 const MODE_TEXT: Record<BriefingSettings['briefing'], string> = {
   off: 'No briefing.',
-  app: 'The first time you open Wilma after this time, Home shows Your morning, made then: what’s on, when to leave, rain. No notification.',
+  app: 'The first time you open Wilma after this time, she makes Your morning (Home → Plan with Wilma): what’s on, when to leave, rain. No notification.',
   notify:
     'The same in Wilma, and a notification at this time. If you planned the day the evening before (My day → Tomorrow), it says what’s on.',
 };
