@@ -2,10 +2,10 @@
 
 Status: plan, 2026-10-19. **Owner's answers given 2026-10-20: all as recommended (Q1-Q12).** **Step 1
 built 2026-10-20 (#245, not merged); migration applied 2026-10-20 (owner's dry run passed; the
-connector applied it; checked read-only):** see "As built: step 1". **Step 2, server half, built
-2026-10-20, branch `claude/recipe-fields`, not merged, not deployed:** see "As built: step 2 (server)";
-the app half (the screens) follows in its own PR. **Step 2, app half, built 2026-10-20, branch
-`claude/recipe-fields-app` (on top of the server half), not merged; ships with the next build:** see
+connector applied it; checked read-only):** see "As built: step 1". **Step 2, server half, merged (#246)
+and live 2026-10-20 (`mcp` v36, `chat` v41):** see "As built: step 2 (server)";
+the app half (the screens) follows in its own PR. **Step 2, app half, merged (#247) 2026-10-20;
+ships with the next build:** see
 "As built: step 2 (app)". Design: D43
 (builds on D41, links shared from social apps; D40, the planners and the household; the built-in
 spaces of the memory plan). Model: the strongest for steps 1, 3, 4, 5 and 7 (the sign-up trigger
@@ -337,8 +337,10 @@ older miss, as in run 39294565911) and `place-not-since-summer` (the search foun
 the reply named only Tawlet; a reading slip on a places question whose tools this change does not
 touch).
 
-**Owner, in order:** (1) merge; (2) OK to deploy `mcp` (and `chat`, which uses the same tools).
-Nothing changes in the app until the app half ships.
+**Merged (#246) and deployed 2026-10-20 on the owner's OK:** `mcp` (run 39427469238, now v36) and
+`chat` (run 39427541685, now v41), checked read-only: both active. The Claude connector and the
+chat now check recipe fields and understand "made it"; the app's screens follow with the next
+build (#247).
 
 ## As built: step 2 (app) (2026-10-20)
 
