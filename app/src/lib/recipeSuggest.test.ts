@@ -6,7 +6,7 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
 import {
-  historyLine, lastMadeText, limitText, loadHave, noneFitText, saveHave, shortLine, suggestBody, suggestClient,
+  historyLine, lastMadeText, limitText, loadHave, noneFitText, saveHave, saveIdea, shortLine, suggestBody, suggestClient,
   toIdeaAnswer, toSuggestAnswer, toSuggestion, usageText, type JsonFetch, type Suggestion,
 } from './recipeSuggest';
 import { WilmaError } from './wilma';
@@ -185,8 +185,56 @@ describe('the screen', () => {
   });
 
   it('saves A new idea only on its button, into the built-in space', () => {
-    expect(screen).toContain("s.built_in === builtIn");
-    expect(screen.match(/wilma\.saveItem\(/g)).toHaveLength(1);
-    expect(screen).toContain('onSave={() => void saveIdea(ideaTitle, fields)}');
+    expect(screen).toContain('await saveIdea(wilma, mode, title, fields)');
+    expect(screen).not.toContain('wilma.saveItem(');
+    expect(screen).toContain('onSave={() => void saveNewIdea(ideaTitle, fields)}');
+  });
+});
+
+describe('in the chat (step 7)', () => {
+  // Required here: chatStream and chatThread load the app's whole chat, as in outing.test.ts.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { toChatEvent } = require('./chatStream') as typeof import('./chatStream');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { chatReducer, initialChat } = require('./chatThread') as typeof import('./chatThread');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { toEntry } = require('./chatStore') as typeof import('./chatStore');
+
+  it('the suggestions and A new idea are read from their events, checked as the screen checks them', () => {
+    expect(toChatEvent({ type: 'recipe_suggestions', mode: 'meal', suggestions: [CURRY, { title: 'no id' }], usage: { used: 2, limit: 10 } })).toEqual({
+      type: 'recipe_suggestions', mode: 'meal', suggestions: [CURRY], usage: { used: 2, limit: 10 },
+    });
+    expect(toChatEvent({ type: 'recipe_suggestions', mode: 'meal', suggestions: [] })).toBeNull();
+    expect(toChatEvent({ type: 'recipe_suggestions', mode: 'dessert', suggestions: [CURRY] })).toBeNull();
+    expect(toChatEvent({ type: 'recipe_idea', mode: 'cocktail', idea: { title: 'Virgin mojito', fields: { ingredients: ['mint', 'lime'], strength: 'none' } } })).toEqual({
+      type: 'recipe_idea', mode: 'cocktail', title: 'Virgin mojito', fields: { ingredients: ['mint', 'lime'], strength: 'none' },
+    });
+    expect(toChatEvent({ type: 'recipe_idea', mode: 'meal', idea: { title: 'Empty', fields: {} } })).toBeNull();
+  });
+
+  it('become cards in the thread, and are never saved with the chat', () => {
+    let s = chatReducer(initialChat(), { type: 'send', text: 'what should I cook tonight?' });
+    s = chatReducer(s, { type: 'event', event: toChatEvent({ type: 'recipe_suggestions', mode: 'meal', suggestions: [CURRY], usage: {} })! });
+    s = chatReducer(s, { type: 'event', event: toChatEvent({ type: 'recipe_idea', mode: 'meal', idea: { title: 'Halloumi skewers', fields: { steps: ['Grill'] } } })! });
+    const cards = s.entries.filter((e) => e.kind === 'recipes' || e.kind === 'recipe_idea');
+    expect(cards.map((e) => e.kind)).toEqual(['recipes', 'recipe_idea']);
+    for (const card of cards) expect(toEntry({ ...card })).toBeNull();
+  });
+
+  it('Save to Recipes: into the built-in space only, as a recipe note with the checked fields', async () => {
+    const saved: unknown[] = [];
+    const wilma = {
+      listSpaces: async () => [
+        { id: 's1', path: 'Recipes', description: null, restricted: false, built_in: 'recipes' },
+        { id: 's2', path: 'Cocktails', description: null, restricted: false, built_in: 'cocktails' },
+      ],
+      saveItem: async (item: unknown) => {
+        saved.push(item);
+        return { id: 'new-id', space: 'Recipes' };
+      },
+    };
+    expect(await saveIdea(wilma, 'cocktail', 'Virgin mojito', { ingredients: ['mint'] })).toBe('new-id');
+    expect(saved).toEqual([{ space: 'Cocktails', title: 'Virgin mojito', body: '', item_type: 'cocktail', metadata: { ingredients: ['mint'] } }]);
+    await expect(saveIdea({ ...wilma, listSpaces: async () => [] }, 'meal', 'X', {})).rejects.toThrow("Your Recipes space wasn't found.");
   });
 });

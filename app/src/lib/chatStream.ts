@@ -11,6 +11,7 @@
 
 import { toRoutineCard, type RoutineCardData } from './chatRoutine';
 import { toOutingPlan, type OutingPlan } from './outing';
+import { toChatRecipeCard, type ChatRecipeCard } from './recipeSuggest';
 import { toHomeCard, type HomeCardData } from './homePlace';
 import { toRemembered, type RememberedMemory } from './memory';
 import {
@@ -65,6 +66,8 @@ export type ChatEvent =
   | ({ type: 'routine_save' } & RoutineCardData)
   /** A Date night or Family day plan (D40): the card with Add to calendar; never saved with the chat. */
   | { type: 'outing_plan'; plan: OutingPlan }
+  /** Recipe suggestions or A new idea (D43): the cards of What's for dinner? and Make a cocktail; never saved with the chat. */
+  | ChatRecipeCard
   | { type: 'error'; code: string; message: string }
   | { type: 'done'; counted: boolean }
   /** After `done`: what Wilma kept from this message (memory on): "🧠 Remembered · Undo". */
@@ -176,6 +179,9 @@ export function toChatEvent(raw: unknown): ChatEvent | null {
       const plan = toOutingPlan(raw.plan);
       return plan ? { type: 'outing_plan', plan } : null;
     }
+    case 'recipe_suggestions':
+    case 'recipe_idea':
+      return toChatRecipeCard(raw);
     case 'day_plan':
       return isDay(raw.date) ? { type: 'day_plan', date: raw.date } : null;
     case 'alarm': {

@@ -9,6 +9,7 @@
 // Pro cases only, with fake drive times and weather: no Mapbox or NWS request is made).
 import { ACTION_NAMES, ACTION_SPECS, type ActionContext, ChatActions } from "../../supabase/functions/chat/actions.ts";
 import { outingForChat } from "../../supabase/functions/chat/outing.ts";
+import { CAN_RECIPES, suggestForChat } from "../../supabase/functions/chat/recipe_chat.ts";
 import { CAN_ALARM, CAN_CALENDAR_ADD, CAN_HELP, CAN_HOME, CAN_REMINDER, CAN_ROUTINE } from "../../supabase/functions/chat/phone_actions.ts";
 import {
   type Agenda, type AgendaEvent, type AgendaHomes, type AgendaRequest, AGENDA_TOOL, agendaCall, agendaSchema, withAgenda,
@@ -90,8 +91,8 @@ export interface Session {
   tools: ToolSpec[];
   system: string;
   call(name: string, args: Record<string, unknown>): Promise<{ isError: boolean; text: string }>;
-  /** The chat-only actions for one user message, as the chat function makes them (with plan_outing's planner). */
-  actions(outing?: ActionContext["outing"]): ChatActions;
+  /** The chat-only actions for one user message, as the chat function makes them (with plan_outing's planner and the suggestions). */
+  actions(outing?: ActionContext["outing"], suggest?: ActionContext["suggest"]): ChatActions;
   close(): Promise<void>;
 }
 
@@ -113,7 +114,7 @@ export async function openSession(
     // With memory on (a case's setup), the "About the user" block, as the chat function adds it.
     system: systemPrompt(ctx.assistantName, tools.instructions, new Date(), here, timeZone, about),
     call: tools.call,
-    actions: (outing) => new ChatActions({ db: ctx.db, distanceUnit: ctx.distanceUnit ?? "mi", here, can, tz: timeZone, outing }),
+    actions: (outing, suggest) => new ChatActions({ db: ctx.db, distanceUnit: ctx.distanceUnit ?? "mi", here, can, tz: timeZone, outing, suggest }),
     close: tools.close,
   };
 }
@@ -139,7 +140,7 @@ export interface RunOptions {
 }
 
 /** An app that shows the alarm, reminder, calendar, home and Help cards (phone_actions.ts), as the cases assume. */
-export const PHONE_CAN: ReadonlySet<string> = new Set([CAN_ALARM, CAN_REMINDER, CAN_CALENDAR_ADD, CAN_HOME, CAN_HELP, CAN_ROUTINE]);
+export const PHONE_CAN: ReadonlySet<string> = new Set([CAN_ALARM, CAN_REMINDER, CAN_CALENDAR_ADD, CAN_HOME, CAN_HELP, CAN_ROUTINE, CAN_RECIPES]);
 
 export interface PhoneCalendar {
   time_zone: string;
@@ -187,7 +188,15 @@ export async function runConversation(
           events: agenda && agenda.from === agenda.to ? { date: agenda.from, list: agenda.events.map((e, i) => ({ ...e, key: `e${i}` })) } : undefined,
           can: !opts.oldApp,
         }, input);
-      const actions = session.actions(outing);
+      // suggest_meal and suggest_cocktail (D43), as the chat function: the same suggestion route, its
+      // AI request made with the model under evaluation, counted with the message.
+      const suggest = (name: string, input: Record<string, unknown>) =>
+        suggestForChat({
+          clientFor: () => world.client(),
+          llm: () => ({ stream: (_route, req) => adapter.stream(model, req) }),
+          log: () => {},
+        }, { db: world.client(), token: "eval-token", userId: "eval-user", tz: opts.timeZone, can: !opts.oldApp }, name, input);
+      const actions = session.actions(outing, suggest);
       const asked = messages.length; // the conversation as the app sends it, ending with this message
       let agenda: Agenda | undefined;
       let plan: ChatPlan | undefined;

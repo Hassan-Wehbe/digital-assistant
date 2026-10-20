@@ -87,6 +87,8 @@ export class World {
   /** app_user.memory_on (memory step 1): off unless a test turns it on. */
   memoryOn = false;
   dayPlansUsed = 0;
+  /** Recipe suggestions asked for today (use_recipe_suggestion, D43): 10 a day free, 50 with Pro. */
+  suggestionsUsed = 0;
   /**
    * home_place rows (D36). Left empty, the table holds what the database copies from a Home note
    * in a searchable space (migration home_place, item_home_note), as the default.
@@ -394,11 +396,12 @@ class Query implements PromiseLike<Result> {
         }
         return this.shape([{ assistant_name: w.assistantName, distance_unit: w.distanceUnit, memory_on: w.memoryOn }]);
       case "item":
-        // Read only (find_places). One pretend user, so every item is theirs, the restricted
-        // ones included: keeping those out is the tool's job (searchable_space_ids).
+        // Read only (find_places, the recipe suggestions). One pretend user, so every item is theirs,
+        // the restricted ones included: keeping those out is the tool's job (searchable_space_ids).
         return this.shape(w.liveItems().map((i) => ({
           id: i.id, title: i.title, space_id: i.space_id, item_type: i.item_type, metadata: i.metadata,
-          updated_at: i.updated_at, deleted_at: i.deleted_at,
+          body_markdown: i.body_markdown, updated_at: i.updated_at, deleted_at: i.deleted_at,
+          item_tag: i.tags.map((name) => ({ tag: { name } })),
         })).filter(where));
       case "item_chunk":
         return this.shape([]); // nothing pending: embeddings are not part of the evaluation
@@ -670,7 +673,65 @@ function rpc(w: World, name: string, p: Record<string, unknown>): Result {
       w.dayPlansUsed += 1;
       return ok({ allowed: true, used: w.dayPlansUsed, limit: 30 });
     }
+    case "use_recipe_suggestion": {
+      // As the migration's function: everyone, 10 a day (50 with Pro), counted when allowed.
+      const limit = w.plan === "pro" ? 50 : 10;
+      if (w.suggestionsUsed >= limit) return ok({ allowed: false, reason: "limit", used: w.suggestionsUsed, limit, pro: w.plan === "pro" });
+      w.suggestionsUsed += 1;
+      return ok({ allowed: true, used: w.suggestionsUsed, limit, pro: w.plan === "pro" });
+    }
     default:
       return err(`function ${name} is not part of the evaluation world`);
   }
+}
+
+/** Ids of the cookbook's rows (addCookbook), for checks. */
+export const BOOK = {
+  cocktails: "00000000-0000-4000-8000-0000000c0001",
+  curry: "00000000-0000-4000-8000-0000000c0002",
+  stew: "00000000-0000-4000-8000-0000000c0003",
+  orzo: "00000000-0000-4000-8000-0000000c0004",
+  lasagna: "00000000-0000-4000-8000-0000000c0005",
+  smash: "00000000-0000-4000-8000-0000000c0006",
+  mojito: "00000000-0000-4000-8000-0000000c0007",
+  virgin: "00000000-0000-4000-8000-0000000c0008",
+} as const;
+
+/**
+ * Recipes and cocktails (D43) for the suggestion cases: Recipes becomes the built-in space (as the
+ * migration adopts it), the seeded soups get fields, and a few more recipes and a Cocktails space
+ * are added. Grandma's secret lasagna is in the restricted Private space: never suggested,
+ * counted or hinted at (rule 3).
+ */
+export function addCookbook(w: World): void {
+  w.spaces.find((s) => s.id === IDS.recipes)!.built_in = "recipes";
+  w.spaces.push({ id: BOOK.cocktails, name: "Cocktails", description: null, parent_id: null, is_restricted: false, built_in: "cocktails" });
+  const fields = (id: string, m: Record<string, unknown>) => (w.items.find((i) => i.id === id)!.metadata = m);
+  fields(IDS.lentilSoup, { ingredients: ["1 onion", "2 carrots", "2 tsp cumin", "1 cup red lentils", "1.5 L stock", "1 lemon"], minutes: 40, serves: 4, made: [{ on: "2026-09-02", rating: 4 }] });
+  fields(IDS.sourdough, { ingredients: ["500 g flour", "350 g water", "100 g starter", "10 g salt"], minutes: 1440 });
+  const add = (id: string, space_id: string, title: string, item_type: string, tags: string[], metadata: Record<string, unknown>, body = "") =>
+    w.items.push({
+      id, space_id, title, item_type, summary: null, body_markdown: body, metadata, tags,
+      created_at: "2026-09-01T12:00:00Z", updated_at: "2026-09-01T12:00:00Z", deleted_at: null, revisions: 0,
+    });
+  add(BOOK.curry, IDS.recipes, "Chickpea and spinach curry", "recipe", ["vegetarian", "weeknight"], {
+    ingredients: ["1 can chickpeas", "200 g spinach", "1 onion", "1 can coconut milk", "2 tbsp curry paste", "rice"],
+    minutes: 30, serves: 4, made: [{ on: "2026-07-04", rating: 5 }],
+  });
+  add(BOOK.stew, IDS.recipes, "Slow beef stew", "recipe", ["winter"], {
+    ingredients: ["1 kg beef chuck", "3 carrots", "2 onions", "500 ml red wine", "1 L stock"], minutes: 210, serves: 6,
+  });
+  add(BOOK.orzo, IDS.recipes, "One-pot chicken orzo", "note", [], {}, "From TikTok: https://www.tiktok.com/@cook/video/7312345678901234567");
+  add(BOOK.lasagna, IDS.private, "Grandma's secret lasagna", "recipe", ["family"], {
+    ingredients: ["lasagna sheets", "beef mince", "ricotta", "tomato passata", "chicken"], minutes: 90, serves: 6,
+  });
+  add(BOOK.smash, BOOK.cocktails, "Gin basil smash", "cocktail", ["gin"], {
+    ingredients: ["60 ml gin", "a handful of basil", "25 ml lemon juice", "15 ml sugar syrup"], strength: "regular", made: [{ on: "2026-08-15", rating: 5 }],
+  });
+  add(BOOK.mojito, BOOK.cocktails, "Mojito", "cocktail", ["rum"], {
+    ingredients: ["50 ml white rum", "mint", "1 lime", "2 tsp sugar", "soda water"], strength: "regular",
+  });
+  add(BOOK.virgin, BOOK.cocktails, "Virgin cucumber cooler", "cocktail", ["mocktail"], {
+    ingredients: ["half a cucumber", "mint", "1 lime", "tonic water"], strength: "none",
+  });
 }

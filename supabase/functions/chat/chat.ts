@@ -14,7 +14,8 @@
 //           "alarm", "reminder", "calendar_add", "help" when it shows those cards, phone_actions.ts), and
 //           "agenda": {...}, the calendar it read for this message (agenda.ts: ask, then re-send), and
 //           "start_from": {"home": id} when the agenda_request carried one (plan from that saved home,
-//           D36). "home" in "can": the app shows the save-home card (phone_actions.ts).
+//           D36). "home" in "can": the app shows the save-home card (phone_actions.ts); "recipes":
+//           the recipe suggestion cards (recipe_chat.ts, D43).
 // Response: 401 without a valid sign-in, 400 for a malformed body, otherwise a stream of
 //           newline-delimited JSON events (application/x-ndjson):
 //             {"type":"notice","code":"allowance_low","message":...}   heads-up at 80%
@@ -67,6 +68,7 @@ import { ACTION_NAMES, ACTION_SPECS, ChatActions } from "./actions.ts";
 import { CAN_OUTING, type OutingLog, outingForChat, outingPlan, PLAN_OUTING } from "./outing.ts";
 import { recipeFromImage, recipeFromText, type RecipeTextLog } from "./recipe_import.ts";
 import { recipeSuggest, type SuggestLog } from "./recipe_suggest.ts";
+import { CAN_RECIPES, SUGGEST_NAMES, suggestForChat } from "./recipe_chat.ts";
 import { CONFIRM_TOOLS, confirmCard } from "./confirm.ts";
 import { isRoutine } from "../mcp/lib/routines.ts";
 import {
@@ -459,7 +461,10 @@ async function runChat(
       : undefined;
     const outing = (input: Record<string, unknown>) =>
       outingForChat(deps, { db, userId, tz, events: oneDay, can: !!can?.has(CAN_OUTING) }, input);
-    const actions = new ChatActions({ db, distanceUnit, here, can, tz, now: deps.now, outing });
+    // suggest_meal and suggest_cocktail (D43): the same suggestions as the app's screens.
+    const suggest = (name: string, input: Record<string, unknown>) =>
+      suggestForChat(deps, { db, token, userId, tz, can: !!can?.has(CAN_RECIPES) }, name, input);
+    const actions = new ChatActions({ db, distanceUnit, here, can, tz, now: deps.now, outing, suggest });
     const cards = new Set<string>();
     // The user's homes, read once when the model names one (from_home); labels only reach the model.
     let homeList: Promise<Home[]> | undefined;
@@ -502,8 +507,9 @@ async function runChat(
         if (ACTION_NAMES.has(call.name)) {
           // Cards for the app; the log keeps the action's name only, never its ids or a point.
           if (call.name === PLAN_OUTING) emit({ type: "status", tool: call.name, text: "Planning…" });
+          if (SUGGEST_NAMES.has(call.name)) emit({ type: "status", tool: call.name, text: "Looking through your recipes…" });
           const out = await actions.run(call.name, call.input);
-          // plan_outing's own AI request is part of this message's cost (one count for the message).
+          // plan_outing's and the suggestions' own AI request is part of this message's cost (one count for the message).
           if (out.costCents) log.cost_cents += out.costCents;
           for (const ev of out.events) emit(ev);
           results.push({ callId: call.id, content: out.text, isError: out.isError });

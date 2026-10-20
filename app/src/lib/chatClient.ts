@@ -44,6 +44,8 @@ export const CAN_HOME = 'home';
 export const CAN_ROUTINE = 'routine';
 /** A Date night or Family day plan card (D40; chat/outing.ts plan_outing): every platform. */
 export const CAN_OUTING = 'outing';
+/** The recipe cards (D43; chat/recipe_chat.ts suggest_meal and suggest_cocktail): every platform. */
+export const CAN_RECIPES = 'recipes';
 
 /**
  * What this app version can do for Wilma: read the phone's calendar (chat/agenda.ts on the server),
@@ -51,7 +53,7 @@ export const CAN_OUTING = 'outing';
  * (chat/phone_actions.ts). Other platforms leave those out, so Wilma says they are not available
  * there instead of showing a card that cannot work (the web build has no Clock and no map lookup).
  */
-export const CAN = Platform.OS === 'android' ? ['calendar', CAN_ALARM, CAN_REMINDER, CAN_CALENDAR_ADD, CAN_HOME, CAN_ROUTINE, CAN_OUTING] : ['calendar', CAN_ROUTINE, CAN_OUTING];
+export const CAN = Platform.OS === 'android' ? ['calendar', CAN_ALARM, CAN_REMINDER, CAN_CALENDAR_ADD, CAN_HOME, CAN_ROUTINE, CAN_OUTING, CAN_RECIPES] : ['calendar', CAN_ROUTINE, CAN_OUTING, CAN_RECIPES];
 
 /**
  * The request body: the thread, what the app can do, the phone's time zone (so "today" is the

@@ -136,6 +136,8 @@ export const READ_ONLY = new Set([
   "show_places", "ask_for_location", "get_day_agenda",
   // A date night or family day plan (outing.ts): shown as a card, nothing saved or added.
   "plan_outing",
+  // Recipe suggestions and A new idea (recipe_chat.ts): cards only; a new idea is saved only by the user's tap.
+  "suggest_meal", "suggest_cocktail",
   // Phone cards that change nothing (phone_actions.ts); set_alarm, set_reminder and
   // add_calendar_event propose a change, so they count as writes.
   "show_alarms", "find_reminders", "show_help",

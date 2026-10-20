@@ -426,7 +426,7 @@ const chatInput = z.object({
 }).strict();
 
 /** The household as roles and ages (RLS: the user's own rows); never a label (Q4). */
-async function householdWho(db: SupabaseClient, year: number): Promise<{ adults: number; child_ages: number[] } | undefined> {
+export async function householdWho(db: SupabaseClient, year: number): Promise<{ adults: number; child_ages: number[] } | undefined> {
   const { data, error } = await db.from("household_member").select("kind, birth_year").limit(10);
   if (error || !data?.length) return undefined;
   const rows = data as { kind: string; birth_year: number | null }[];
