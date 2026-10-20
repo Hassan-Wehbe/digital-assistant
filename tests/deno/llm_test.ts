@@ -16,8 +16,8 @@ import {
   RoutesConfigError,
   type StreamEvent,
 } from "../../supabase/functions/_shared/llm/index.ts";
-import { AnthropicAdapter, type AnthropicLike } from "../../supabase/functions/_shared/llm/anthropic.ts";
-import { OpenAIAdapter, type OpenAILike, openaiParameters } from "../../supabase/functions/_shared/llm/openai.ts";
+import { AnthropicAdapter, type AnthropicLike, toAnthropicMessages } from "../../supabase/functions/_shared/llm/anthropic.ts";
+import { OpenAIAdapter, type OpenAILike, openaiParameters, toOpenAIInput } from "../../supabase/functions/_shared/llm/openai.ts";
 
 const PRICE = { input: 1, output: 5, cacheRead: 0.1, cacheWrite: 1.25 }; // USD per million tokens
 const CLAUDE: ModelConfig = { provider: "anthropic", model: "claude-test", price: PRICE, maxOutputTokens: 4096 };
@@ -522,4 +522,25 @@ Deno.test("OpenAI errors report where in the request the problem is, never text"
   assertEquals([e.code, e.where, e.retryable], ["invalid_function_parameters", "tools[12].parameters", false]);
   assert(e.message.endsWith("at tools[12].parameters"));
   assert(!e.message.includes("hunter2"));
+});
+
+Deno.test("a user message with a picture: an image block before the words (Anthropic), input_image after them (OpenAI)", () => {
+  const msg = { role: "user" as const, content: "Read this recipe.", images: [{ mediaType: "image/png" as const, base64: "iVBORw0K" }] };
+  assertEquals(toAnthropicMessages([msg], "m"), [{
+    role: "user",
+    content: [
+      { type: "image", source: { type: "base64", media_type: "image/png", data: "iVBORw0K" } },
+      { type: "text", text: "Read this recipe." },
+    ],
+  }]);
+  assertEquals(toOpenAIInput([msg], "m"), [{
+    role: "user",
+    content: [
+      { type: "input_text", text: "Read this recipe." },
+      { type: "input_image", image_url: "data:image/png;base64,iVBORw0K", detail: "auto" },
+    ],
+  }]);
+  // Without pictures, unchanged: plain text.
+  assertEquals(toAnthropicMessages([{ role: "user", content: "Hi" }], "m"), [{ role: "user", content: "Hi" }]);
+  assertEquals(toOpenAIInput([{ role: "user", content: "Hi", images: [] }], "m"), [{ role: "user", content: "Hi" }]);
 });

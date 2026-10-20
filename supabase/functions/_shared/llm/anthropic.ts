@@ -43,7 +43,18 @@ export function toAnthropicMessages(messages: Message[], model: string): Anthrop
   const out: Anthropic.MessageParam[] = [];
   for (const m of messages) {
     if (m.role === "user") {
-      out.push({ role: "user", content: m.content });
+      // Pictures first, then the words (Anthropic's advice for image prompts).
+      out.push(
+        m.images?.length
+          ? {
+            role: "user",
+            content: [
+              ...m.images.map((i) => ({ type: "image" as const, source: { type: "base64" as const, media_type: i.mediaType, data: i.base64 } })),
+              { type: "text" as const, text: m.content },
+            ],
+          }
+          : { role: "user", content: m.content },
+      );
     } else if (m.role === "assistant") {
       // Same model: replay its own blocks unchanged (thinking blocks must not be edited).
       if (m.native?.provider === "anthropic" && m.native.model === model) {

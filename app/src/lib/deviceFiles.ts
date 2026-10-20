@@ -2,11 +2,13 @@
 // Checks live in picked.ts / filetypes.ts; the upload steps in upload.ts.
 import * as DocumentPicker from 'expo-document-picker';
 import { File, Paths, UploadType } from 'expo-file-system';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 
 import { MCP_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from './config';
 import { MAX_FILES, PICKER_TYPES } from './filetypes';
 import { preparePicked, type RawPick } from './picked';
+import { type PickedPicture, SCREENSHOT_WORDS, shrinkFor } from './recipeImport';
 import { sourceFor, type SharedFile } from './shared';
 import { supabase } from './supabase';
 import { BUCKET, type PickedFile, type UploadDeps } from './upload';
@@ -55,6 +57,30 @@ export async function pickPictures(room: number): Promise<PickOutcome> {
   });
   if (result.canceled) return { files: [], errors: [] };
   return prepareAll(result.assets.map((a) => ({ uri: a.uri, name: a.fileName, mimeType: a.mimeType, size: a.fileSize })));
+}
+
+/**
+ * One picture for Read a screenshot (recipes step 4): from the photo picker, shrunk on the phone to
+ * at most 2000 px and saved again as a JPEG, which leaves out its location and camera details.
+ * Nothing is kept: the new file stays in the app's cache. Null when the user cancelled.
+ */
+export async function pickRecipePicture(): Promise<PickedPicture> {
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    allowsMultipleSelection: false,
+    quality: 1,
+    exif: false,
+    preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+  });
+  if (result.canceled || !result.assets.length) return null;
+  const a = result.assets[0];
+  try {
+    const resize = shrinkFor(a.width, a.height);
+    const out = await manipulateAsync(a.uri, resize ? [{ resize }] : [], { compress: 0.7, format: SaveFormat.JPEG, base64: true });
+    return out.base64 ? { base64: out.base64 } : { error: SCREENSHOT_WORDS.noPicture };
+  } catch {
+    return { error: SCREENSHOT_WORDS.noPicture };
+  }
 }
 
 /** Pick pictures or Visio files from the phone's files (Downloads, Drive, ...). */

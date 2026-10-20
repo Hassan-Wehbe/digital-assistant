@@ -36,8 +36,17 @@ export interface NativeTurn {
   content: unknown;
 }
 
+/**
+ * A picture sent with a user message (recipes step 4: a screenshot the user chose). JPEG or PNG,
+ * base64 without the data: prefix; the caller checks its kind and size before it gets here.
+ */
+export interface ImageInput {
+  mediaType: "image/jpeg" | "image/png";
+  base64: string;
+}
+
 export type Message =
-  | { role: "user"; content: string }
+  | { role: "user"; content: string; images?: ImageInput[] }
   | { role: "assistant"; text: string; toolCalls: ToolCall[]; native?: NativeTurn }
   /** Results for every tool call of the assistant turn just before it. */
   | { role: "tool"; results: ToolResult[] };

@@ -37,7 +37,17 @@ export function toOpenAIInput(messages: Message[], model: string): R.ResponseInp
   const out: R.ResponseInputItem[] = [];
   for (const m of messages) {
     if (m.role === "user") {
-      out.push({ role: "user", content: m.content });
+      out.push(
+        m.images?.length
+          ? {
+            role: "user",
+            content: [
+              { type: "input_text", text: m.content },
+              ...m.images.map((i) => ({ type: "input_image" as const, image_url: `data:${i.mediaType};base64,${i.base64}`, detail: "auto" as const })),
+            ],
+          }
+          : { role: "user", content: m.content },
+      );
     } else if (m.role === "assistant") {
       // Same model: its reasoning items go back first (encrypted; OpenAI stores nothing).
       if (m.native?.provider === "openai" && m.native.model === model) {
