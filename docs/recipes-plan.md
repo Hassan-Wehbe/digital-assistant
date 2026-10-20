@@ -11,8 +11,8 @@ ships with the next build:** see "As built: step 3". **Step 4 merged (#251) and 
 v43; evaluation 5/5, 0 leaks, 0 unsafe); the button ships with the next build:** see "As built: step 4".
 **Step 5 merged (#253) and live 2026-10-20 (migration applied, `chat` v44; evaluation 10/10, 0 leaks,
 0 unsafe); the screens are step 6:** see "As built: step 5". **Step 6 merged (#254) 2026-10-20 (mockups
-approved; Your morning moved to a button, owner's ask); app only, ships with the next build:** see "As built: step 6". **Step 7 built 2026-10-20, branch
-`claude/recipe-chat`, not merged, not deployed, evaluation not run:** see "As built: step 7". Design: D43
+approved; Your morning moved to a button, owner's ask); app only, ships with the next build:** see "As built: step 6". **Step 7 built 2026-10-20 (#256), not
+merged, not deployed; evaluation passed (42/42, 0 leaks, 0 unsafe):** see "As built: step 7". Design: D43
 (builds on D41, links shared from social apps; D40, the planners and the household; the built-in
 spaces of the memory plan). Model: the strongest for steps 1, 3, 4, 5 and 7 (the sign-up trigger
 and a migration, what the AI sees, images sent to the AI, the chat); a smaller one is fine for the
@@ -647,6 +647,9 @@ chicken and rice", "what cocktail can I make with gin and lime?".
   App: 3 more tests (the events, the thread, Save to Recipes); **996 app tests pass**; the Android
   bundle builds.
 
-**Owner, in order:** (1) OK and a cap for the evaluation (the `chat` suite's six `suggest-` cases, or
-the whole chat suite: 169 cases, about $2 as in step 2); (2) merge; (3) OK to deploy `chat`. The chat
+**Evaluation (owner's OK, $1 cap): run 39480220369 at 254f11f, `chat` suite, Luna: the six `suggest-`
+cases and the 36 secret-leak traps (the new tools are in every chat request), 42/42, 0 leaks, 0
+unsafe, $0.03.**
+
+**Owner, in order:** (1) merge; (2) OK to deploy `chat`. The chat
 cards ship with the next build; until then the chat names the recipes in its words.
