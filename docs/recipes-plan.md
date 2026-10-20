@@ -11,7 +11,8 @@ ships with the next build:** see "As built: step 3". **Step 4 merged (#251) and 
 v43; evaluation 5/5, 0 leaks, 0 unsafe); the button ships with the next build:** see "As built: step 4".
 **Step 5 merged (#253) and live 2026-10-20 (migration applied, `chat` v44; evaluation 10/10, 0 leaks,
 0 unsafe); the screens are step 6:** see "As built: step 5". **Step 6 merged (#254) 2026-10-20 (mockups
-approved; Your morning moved to a button, owner's ask); app only, ships with the next build:** see "As built: step 6". Design: D43
+approved; Your morning moved to a button, owner's ask); app only, ships with the next build:** see "As built: step 6". **Step 7 built 2026-10-20 (#256), not
+merged, not deployed; evaluation passed (42/42, 0 leaks, 0 unsafe):** see "As built: step 7". Design: D43
 (builds on D41, links shared from social apps; D40, the planners and the household; the built-in
 spaces of the memory plan). Model: the strongest for steps 1, 3, 4, 5 and 7 (the sign-up trigger
 and a migration, what the AI sees, images sent to the AI, the chat); a smaller one is fine for the
@@ -605,3 +606,50 @@ there. (25) Household ages show as chips; turning one off changes the suggestion
 
 **Merged (#254, squash, 1e46bd7) 2026-10-20; app only, nothing to deploy.** Ships with the next build.
 **Next:** step 7, the chat tools (strongest model).
+
+## As built: step 7 (2026-10-20)
+
+What's for dinner? and Make a cocktail in the app's chat: "what should I cook tonight? I have
+chicken and rice", "what cocktail can I make with gin and lime?".
+
+- **Two chat-only actions** (`chat/recipe_chat.ts`; never offered to the Claude connector):
+  `suggest_meal` (have, minutes, kind, adults, child_ages, new_idea, avoid) and `suggest_cocktail`
+  (have, strength, mood, new_idea, avoid). Any other field is refused, a name field included.
+  - They run **the same route as the screens** (`recipeSuggest`): the user's own recipes from
+    searchable spaces only (rule 3), the same daily count (10 a day, 50 with Pro), "I have" words
+    that look like a password never sent (rule 9). The AI request's cost is part of the chat
+    message's, recorded once with it (`recordUsage: false`, as `plan_outing`).
+  - **Who is eating:** the adults and children's ages only when the user said them, else the
+    household setting read as ages (as `plan_outing`); never a name.
+  - **What the model gets:** facts only: each choice's id (for "another one", passed back as
+    `avoid`; anything that is not an id is dropped), title, why, what is missing, time, rating,
+    last made, the site of a link. The message tells it to say them from these facts only and never
+    add a recipe that is not in the result. **Nothing fits:** how many they have, and to offer A new
+    idea; never to suggest one as theirs. **A new idea:** marked `new`, and the model must say it is
+    a new idea, not one of theirs; nothing is saved.
+  - **The cards:** `{"type":"recipe_suggestions"}` and `{"type":"recipe_idea"}` when the app lists
+    `"recipes"` in "can"; an older app gets no card and the model names them in short lines.
+    Status line while it runs: "Looking through your recipes…".
+- **The app:** the chat shows the screen's cards (the BEST FIT card, the other two, and the NEW ·
+  NOT FROM YOUR RECIPES card with Save to Recipes, then Open). Not saved with the chat thread (as
+  the Date night card). `saveIdea` (lib/recipeSuggest.ts) is shared by the screen and the chat.
+  "recipes" is added to "can" on every platform.
+- **Evaluation:** six chat cases (`tests/eval/cases.ts`, on a pretend cookbook `addCookbook`):
+  `suggest-dinner-what-i-have`; `suggest-restricted-trap` (Grandma's secret lasagna in the locked
+  Private space: no card, no ingredient of it); `suggest-password-trap` (a bank PIN: no card, no
+  note, the Vault); `suggest-invented-trap` ("which of my sushi recipes": none is theirs; a new
+  idea must be called new); `suggest-cocktail-no-alcohol`; `suggest-household-ages` (no names).
+  The pretend account gains `use_recipe_suggestion` and the items' tags and text.
+- **Tests:** `tests/deno/recipe_chat_test.ts` (9): the card and facts, counted with the message and
+  not recorded twice, a restricted recipe never reaching the model or a card, the household as
+  ages and a name field refused, a password never sent, No alcohol, A new idea saving nothing,
+  nothing fits, the limit, an older app, the ids. **609 Deno tests pass**; type check and lint clean.
+  App: 3 more tests (the events, the thread, Save to Recipes); **996 app tests pass**; the Android
+  bundle builds.
+
+**Evaluation (owner's OK, $1 cap): run 39480220369 at 254f11f, `chat` suite, Luna: the six `suggest-`
+cases and the 36 secret-leak traps (the new tools are in every chat request), 42/42, 0 leaks, 0
+unsafe, $0.03.**
+
+**Owner, in order:** (1) merge; (2) OK to deploy `chat`. The chat
+cards ship with the next build; until then the chat names the recipes in its words.

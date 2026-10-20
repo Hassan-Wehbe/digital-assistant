@@ -8,7 +8,9 @@ import { AlarmCard, AlarmsCard, EventCard, ReminderCard, RemindersCard } from '@
 import { HomeAskCard, HomeCard } from '@/components/HomeCard';
 import { OutingPlanCard } from '@/components/OutingPlanCard';
 import { todayAndTomorrow } from '@/lib/dayView';
+import { localDate } from '@/lib/places';
 import { RoutineCard } from '@/components/RoutineCard';
+import { ChatIdea, ChatSuggestions } from '@/components/SuggestionCard';
 import { Button, Muted, useColors } from '@/components/ui';
 import type { Entry, ErrorButton, EventAdded, HomeSaved } from '@/lib/chatThread';
 import type { EventCardData } from '@/lib/phoneActions';
@@ -145,6 +147,10 @@ export function ChatBubble({
           <OutingPlanCard plan={entry.plan} today={todayAndTomorrow(new Date()).today} />
         </View>
       );
+    case 'recipes':
+      return <ChatSuggestions suggestions={entry.suggestions} today={localDate(new Date())} />;
+    case 'recipe_idea':
+      return <ChatIdea mode={entry.mode} title={entry.title} fields={entry.fields} />;
     case 'home_ask':
       return <HomeAskCard entry={entry} active={homeAskActive && !!onAnswerHomeAsk} onAnswer={(chosen) => onAnswerHomeAsk?.(entry.id, chosen)} />;
     case 'memory':

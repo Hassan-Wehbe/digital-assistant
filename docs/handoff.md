@@ -13,6 +13,12 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **D43 recipes step 7, the chat (2026-10-20): #256, not merged, not deployed; evaluation run
+  39480220369 passed (six new cases and the 36 secret traps, Luna 42/42, 0 leaks, 0 unsafe, $0.03).** Chat-only `suggest_meal` and `suggest_cocktail` run the step 5
+  route (own recipes, searchable spaces only, the daily count, cost counted with the message); the
+  app shows the same cards in the chat. Six evaluation cases with traps (a locked recipe, a PIN,
+  a recipe they don't have, no alcohol, household names). 609 Deno, 996 app tests. See
+  `docs/recipes-plan.md` "As built: step 7". **Owner:** merge, OK to deploy `chat`. **Next:** step 8 (help, privacy, Play, build).
 - **D43 recipes step 6, the screens (2026-10-20): merged (#254); app only,
   ships with the next build.** Home's new Cook with Wilma row; `app/suggest.tsx` (What's for
   dinner? and Make a cocktail, from the approved mockups on the canvas "Wilma Home and Planners");

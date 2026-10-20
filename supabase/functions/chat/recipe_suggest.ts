@@ -377,12 +377,18 @@ export const suggestLog = (userId: string): SuggestLog => ({
   dropped: 0, model_calls: 0, cost_cents: 0,
 });
 
-/** The route ({"mode":"meal"|"cocktail"}): the outcome as a status and a JSON body. */
+/**
+ * The route ({"mode":"meal"|"cocktail"}): the outcome as a status and a JSON body. The chat's
+ * suggest_meal and suggest_cocktail (step 7) run it too, with `recordUsage: false`: their AI
+ * request is part of the chat message's cost, recorded once with the message (as plan_outing).
+ */
 export async function recipeSuggest(
   deps: SuggestDeps, token: string, userId: string, raw: unknown, signal?: AbortSignal,
+  opts: { recordUsage?: boolean; cost?: (cents: number) => void } = {},
 ): Promise<{ status: number; body: unknown }> {
   const log = suggestLog(userId);
   const done = (status: number, body: unknown) => {
+    opts.cost?.(log.cost_cents);
     log.cost_cents = Math.round(log.cost_cents * 10_000) / 10_000;
     deps.log(log);
     return { status, body };
@@ -456,7 +462,7 @@ export async function recipeSuggest(
     } finally {
       clearTimeout(timer);
     }
-    if (log.model_calls > 0) {
+    if (log.model_calls > 0 && opts.recordUsage !== false) {
       const cents = Math.min(MAX_RECORD_CENTS, Math.max(0, Math.round(log.cost_cents * 10_000) / 10_000));
       const { error } = await db.rpc("record_ai_usage", { p_cost_cents: cents });
       log.usage_recorded = !error;

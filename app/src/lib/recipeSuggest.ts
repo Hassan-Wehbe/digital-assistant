@@ -10,7 +10,7 @@
 import { recipeOf, type RecipeType, type Strength, STRENGTHS } from './recipes';
 import type { FilledFields } from './recipeImport';
 import type { SettingsStore } from './calendarSettings';
-import { WilmaError } from './wilma';
+import { WilmaError, type WilmaClient } from './wilma';
 
 export type SuggestMode = 'meal' | 'cocktail';
 export type MealKind = 'anything' | 'vegetarian' | 'kid_friendly' | 'light';
@@ -236,6 +236,43 @@ export function suggestClient({ url, token, refresh, fetch: f = fetch as unknown
 }
 
 export type SuggestClient = ReturnType<typeof suggestClient>;
+
+// ---- Save to Recipes (A new idea, Q7) ------------------------------------------------------------
+
+/**
+ * Saves A new idea as a recipe (or cocktail) note in the built-in Recipes (or Cocktails) space, only
+ * on the card's button; the server checks every field again (rule 9). Returns the new note's id.
+ */
+export async function saveIdea(
+  wilma: Pick<WilmaClient, 'listSpaces' | 'saveItem'>, mode: SuggestMode, title: string, fields: FilledFields,
+): Promise<string> {
+  const builtIn = mode === 'meal' ? 'recipes' : 'cocktails';
+  const home = (await wilma.listSpaces()).find((s) => s.built_in === builtIn);
+  if (!home) throw new Error(`Your ${mode === 'meal' ? 'Recipes' : 'Cocktails'} space wasn't found.`);
+  const out = await wilma.saveItem({ space: home.path, title, body: '', item_type: typeOf(mode), metadata: fields });
+  return out.id;
+}
+
+// ---- In the chat (recipes step 7; chat/recipe_chat.ts) -------------------------------------------
+
+export type ChatRecipeCard =
+  | { type: 'recipe_suggestions'; mode: SuggestMode; suggestions: Suggestion[]; usage: Usage }
+  | { type: 'recipe_idea'; mode: SuggestMode; title: string; fields: FilledFields };
+
+/** The chat's recipe cards, checked as the screen checks the route's answers; null when unusable. */
+export function toChatRecipeCard(raw: Record<string, unknown>): ChatRecipeCard | null {
+  const mode = raw.mode === 'meal' || raw.mode === 'cocktail' ? raw.mode : null;
+  if (!mode) return null;
+  if (raw.type === 'recipe_suggestions') {
+    const out = toSuggestAnswer(200, { suggestions: raw.suggestions, usage: raw.usage });
+    return 'suggestions' in out ? { type: 'recipe_suggestions', mode, suggestions: out.suggestions, usage: out.usage } : null;
+  }
+  if (raw.type === 'recipe_idea') {
+    const out = toIdeaAnswer(200, { idea: raw.idea }, typeOf(mode));
+    return 'idea' in out ? { type: 'recipe_idea', mode, title: out.idea.title, fields: out.idea.fields } : null;
+  }
+  return null;
+}
 
 // ---- What the screen says ----------------------------------------------------------------------
 

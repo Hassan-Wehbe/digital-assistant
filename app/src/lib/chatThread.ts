@@ -13,6 +13,8 @@ import { cancelledMessage, checkDelete, deletedMessage } from './chatDeletes';
 import type { ChatEvent, PlaceCardData } from './chatStream';
 import type { RoutineCardData } from './chatRoutine';
 import type { OutingPlan } from './outing';
+import type { FilledFields } from './recipeImport';
+import type { Suggestion, SuggestMode, Usage } from './recipeSuggest';
 import type { HomeCardData } from './homePlace';
 import type { RememberedMemory } from './memory';
 import type { AlarmCardData, EventCardData, ReminderCardData } from './phoneActions';
@@ -161,6 +163,11 @@ export type Entry =
   /** A Date night or Family day plan (D40). Never saved with the chat (chatStore has no case for it):
    * Mapbox's terms do not allow keeping its drive times. */
   | { kind: 'outing'; id: string; plan: OutingPlan }
+  /** What's for dinner? or Make a cocktail in the chat (D43): the user's own recipes, as the screen's
+   * cards. Never saved with the chat (chatStore has no case for it), like the outing card. */
+  | { kind: 'recipes'; id: string; mode: SuggestMode; suggestions: Suggestion[]; usage: Usage }
+  /** A new idea (Q7): saved into Recipes or Cocktails only on its Save (the card remembers that while open). */
+  | { kind: 'recipe_idea'; id: string; mode: SuggestMode; title: string; fields: FilledFields }
   /**
    * "You're at Mom's. Plan your day from: Home · Mom's" (homes step 4), before the chat's plan for
    * today is made. Home names and ids only: never where the phone was.
@@ -526,6 +533,11 @@ function onEvent(state: ChatState, event: ChatEvent): ChatState {
       return add(state, { kind: 'home', id, label: event.label, address: event.address, makeDefault: event.makeDefault });
     case 'outing_plan':
       return add(state, { kind: 'outing', id, plan: event.plan });
+    case 'recipe_suggestions':
+      return add(state, { kind: 'recipes', id, mode: event.mode, suggestions: event.suggestions, usage: event.usage });
+    case 'recipe_idea':
+      // A card only: nothing is saved until the user taps Save to Recipes.
+      return add(state, { kind: 'recipe_idea', id, mode: event.mode, title: event.title, fields: event.fields });
     case 'routine_save': {
       // A card only: nothing is saved until the user taps it (routines, D39).
       const { type: _t, ...card } = event;

@@ -29,7 +29,7 @@ import { whoFrom } from '@/lib/outing';
 import { localDate } from '@/lib/places';
 import type { FilledFields } from '@/lib/recipeImport';
 import {
-  KINDS, limitText, loadHave, MAX_HAVE, MOODS, NONE_TEXT, noneFitText, PROBLEM_TEXT, saveHave, suggestBody, TIMES, typeOf, usageText,
+  KINDS, limitText, loadHave, MAX_HAVE, MOODS, NONE_TEXT, noneFitText, PROBLEM_TEXT, saveHave, saveIdea, suggestBody, TIMES, usageText,
   type MealKind, type Mood, type SuggestAnswer, type SuggestChoices, type SuggestMode, type Suggestion, type Usage,
 } from '@/lib/recipeSuggest';
 import { STRENGTH_LABELS, STRENGTHS, type Strength } from '@/lib/recipes';
@@ -129,15 +129,12 @@ export default function Suggest() {
 
   // Save to Recipes (or Cocktails): the built-in space, a new note of that type (the server checks
   // every field again, rule 9).
-  const saveIdea = async (title: string, fields: FilledFields) => {
+  const saveNewIdea = async (title: string, fields: FilledFields) => {
     setSaving(true);
     setSaveProblem(null);
     try {
-      const builtIn = meal ? 'recipes' : 'cocktails';
-      const home = (await wilma.listSpaces()).find((s) => s.built_in === builtIn);
-      if (!home) throw new Error(`Your ${meal ? 'Recipes' : 'Cocktails'} space wasn't found.`);
-      const out = await wilma.saveItem({ space: home.path, title, body: '', item_type: typeOf(mode), metadata: fields });
-      router.replace({ pathname: '/item/[id]', params: { id: out.id } });
+      const id = await saveIdea(wilma, mode, title, fields);
+      router.replace({ pathname: '/item/[id]', params: { id } });
     } catch (e) {
       if (e instanceof WilmaError && e.signedOut) return void signOut();
       setSaveProblem(e instanceof Error ? e.message : String(e));
@@ -242,7 +239,7 @@ export default function Suggest() {
           fields={fields}
           saveTo={meal ? 'Recipes' : 'Cocktails'}
           saving={saving}
-          onSave={() => void saveIdea(ideaTitle, fields)}
+          onSave={() => void saveNewIdea(ideaTitle, fields)}
           onAnother={() => void newIdea()}
         />
         {saveProblem ? <Text style={{ color: c.danger, fontSize: 15 }}>{saveProblem}</Text> : null}
