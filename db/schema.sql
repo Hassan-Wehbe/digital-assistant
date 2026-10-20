@@ -85,7 +85,7 @@ create table item (
   title          text not null,
   body_markdown  text not null default '',
   summary        text,
-  metadata       jsonb not null default '{}'::jsonb,  -- place: checked fields (mcp/lib/places.ts)
+  metadata       jsonb not null default '{}'::jsonb,  -- place, recipe, cocktail: checked fields (mcp/lib/places.ts, recipes.ts)
   source         text not null default 'typed' check (source in ('typed','voice','import')),
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now(),
