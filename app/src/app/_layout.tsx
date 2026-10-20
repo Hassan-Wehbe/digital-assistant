@@ -100,6 +100,8 @@ function Screens() {
         <Stack.Screen name="household" options={{ title: 'Household' }} />
         <Stack.Screen name="outing" options={{ title: 'Plan' }} />
         <Stack.Screen name="day" options={{ title: 'My day' }} />
+        <Stack.Screen name="morning" options={{ title: 'Your morning' }} />
+        <Stack.Screen name="suggest" options={{ title: 'Suggest' }} />
         <Stack.Screen name="tasks" options={{ title: 'Tasks' }} />
         <Stack.Screen name="task" options={{ title: 'Task' }} />
         <Stack.Screen name="routine" options={{ title: 'Routine' }} />

@@ -12,6 +12,7 @@ import { forgetOtherAccounts } from './notifications';
 import { outingClient, type OutingClient } from './outing';
 import { changePassword as changePasswordFlow } from './password';
 import { recipeTextClient, type RecipeTextClient } from './recipeImport';
+import { suggestClient, type SuggestClient } from './recipeSuggest';
 import { sessionToken } from './sessionToken';
 import { supabase } from './supabase';
 import { wilmaClient, type WilmaClient } from './wilma';
@@ -31,6 +32,8 @@ interface AuthState {
   outing: OutingClient;
   /** Fill in a recipe from a TikTok caption (the chat function's recipe_from_text route; one model call, D43). */
   recipeText: RecipeTextClient;
+  /** What's for dinner? and Make a cocktail (the chat function's suggestion route; one model call each, D43). */
+  suggest: SuggestClient;
   signIn(email: string, password: string): Promise<string | null>;
   signOut(): Promise<void>;
   /** New sign-in password; the current one is checked first. */
@@ -63,6 +66,7 @@ const chat = chatClient({ url: CHAT_URL, token, refresh });
 const day = dayClient({ url: CHAT_URL, token, refresh });
 const outing = outingClient({ url: CHAT_URL, token, refresh });
 const recipeText = recipeTextClient({ url: CHAT_URL, token, refresh });
+const suggest = suggestClient({ url: CHAT_URL, token, refresh });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -116,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       day,
       outing,
       recipeText,
+      suggest,
       async signIn(email, password) {
         const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (!error) return null;

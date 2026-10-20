@@ -10,7 +10,9 @@ ships with the next build:** see
 ships with the next build:** see "As built: step 3". **Step 4 merged (#251) and live 2026-10-20 (`chat`
 v43; evaluation 5/5, 0 leaks, 0 unsafe); the button ships with the next build:** see "As built: step 4".
 **Step 5 merged (#253) and live 2026-10-20 (migration applied, `chat` v44; evaluation 10/10, 0 leaks,
-0 unsafe); the screens are step 6:** see "As built: step 5". Design: D43
+0 unsafe); the screens are step 6:** see "As built: step 5". **Step 6 built 2026-10-20 (mockups approved;
+Your morning moved to a button, owner's ask), branch `claude/recipe-screens`, not merged; app only,
+ships with the next build:** see "As built: step 6". Design: D43
 (builds on D41, links shared from social apps; D40, the planners and the household; the built-in
 spaces of the memory plan). Model: the strongest for steps 1, 3, 4, 5 and 7 (the sign-up trigger
 and a migration, what the AI sees, images sent to the AI, the chat); a smaller one is fine for the
@@ -548,3 +550,58 @@ select the table, `use_recipe_suggestion()` is security definer and runs for `au
 
 **Merged (#253, squash, bca3c37) and deployed 2026-10-20: `chat` v44 (run 39464805180).** Nothing in the
 app yet: the screens are step 6.
+
+## As built: step 6 (2026-10-20)
+
+The screens for What's for dinner? and Make a cocktail, from the mockups the owner approved on the
+canvas "Wilma Home and Planners" (row "Recipes and cocktails", screens 8-11). App only: no
+migration, no deploy; the route is step 5's, live as `chat` v44.
+
+- **Home:** a new **Cook with Wilma** row under Plan with Wilma (Q9): 🍽️ What's for dinner? and 🍸
+  Make a cocktail, for everyone (`lib/planners.ts` `COOKS`, `components/PlanRow.tsx` `CookRow`).
+- **`app/suggest.tsx`** (`/suggest?mode=meal|cocktail`):
+  - What's for dinner?: Time (20 min · 45 min · No rush), Who (chips from Settings → Household,
+    roles and ages only, Q12; either can be turned off), Kind (Anything · Vegetarian · Kid-friendly
+    · Light), I have. Make a cocktail: My bar, Strength (Regular · Light · No alcohol, Q11), Mood
+    (A classic · Fruity · Surprise me).
+  - I have and My bar are remembered on this phone per account (Q6); text that looks like a password
+    is held on the phone (the usual warning) and Suggest is off until it is changed (rule 9).
+  - The answer: a BEST FIT card (why, what is missing, "You rated it 5 · last made in July", Open
+    recipe, and Open on TikTok or the site when it has a link), the other two as one line each,
+    Another idea (asks again without everything shown) and "3 of 10 today".
+  - Nothing fits: "None of your 12 recipes fits 20 minutes and vegetarian." (an empty space says
+    so), "This didn't count toward today's suggestions.", and A new idea: a dashed card marked
+    **NEW · NOT FROM YOUR RECIPES** with the ingredients and steps, "Wilma's idea, not a recipe
+    you've tried", **Save to Recipes** (or Cocktails; save_item into the built-in space, the server
+    checks every field) and Another idea. Nothing is saved before that tap.
+  - The day's limit, the month's allowance and a lost connection each say so in one line.
+  - **Left out from the plan's sketch:** "For: Tonight · Lunch · Pick a day" (the route takes no day,
+    so the choice would change nothing; owner, 2026-10-20).
+- **`lib/recipeSuggest.ts`**: the body (only the fields the route takes; nothing can carry a name),
+  every answer checked field by field (an unknown kind, a bad link or a rating out of range is
+  dropped), the client (a fresh token after a 401; a failure is a connection problem), the words.
+- **Your morning moved (owner, 2026-10-20):** no longer a card on top of Home but a 🌅 **Your
+  morning** button on Plan with Wilma, beside My day (the row is now two by two, Vacation alone).
+  Home still makes it the first time Wilma is opened after the briefing time (that also schedules
+  the leave-by alerts); the button says **NEW** until it is opened. The new **Your morning** screen
+  (`app/morning.tsx`) shows the summary, Open My day, Make it again, Show it again (made earlier,
+  no longer in memory), Make it now (before the briefing time), or a way to Settings → Morning
+  briefing when it is off; Free accounts get the Pro card. `components/MorningCard.tsx` became
+  `components/useMorning.ts`. **A pull on Home no longer makes it again** (each time is one plan,
+  counted against My day's limit, and nothing on Home would show it): Make it again on the screen
+  does. Hide for today is gone (nothing on Home to hide).
+- **Tests:** `lib/recipeSuggest.test.ts` (17) and `lib/planners.test.ts` (4, the row, the morning
+  button, Cook with Wilma). **993 app tests pass**; type check and lint clean; the Android bundle
+  builds (`expo export`).
+
+**Phone checks for the next build:** (16) Home: Your morning sits beside My day; Cook with Wilma
+under the planners. (17) With the briefing on, open Wilma after its time: Your morning says NEW;
+open it: the summary, NEW gone. (18) Before the briefing time: Make it now works. (19) Briefing off:
+the screen offers Morning briefing ›. (20) What's for dinner? with a few recipes: three cards, Open
+recipe opens the note; Another idea gives different ones. (21) Vegetarian with no vegetarian
+recipe: "None of your … fits", then A new idea, Save to Recipes: a new recipe note in Recipes.
+(22) Make a cocktail, No alcohol: only mocktails or a new one with no spirits. (23) Type "password
+1234" in I have: the warning, Suggest off. (24) Leave and come back: I have and My bar are still
+there. (25) Household ages show as chips; turning one off changes the suggestions.
+
+**Owner:** merge. Nothing to deploy. **Next:** step 7, the chat tools (strongest model).
