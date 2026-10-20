@@ -1,7 +1,8 @@
 # Recipes and cocktails: two built-in spaces, importing, and "what should I make?"
 
-Status: plan, 2026-10-19. **Owner's answers given 2026-10-20: all as recommended (Q1-Q12).** Nothing
-built; next: step 1. Design: D43
+Status: plan, 2026-10-19. **Owner's answers given 2026-10-20: all as recommended (Q1-Q12).** **Step 1
+built 2026-10-20, branch `claude/recipes-builtin-spaces`, not merged, migration not applied:** see
+"As built: step 1". Design: D43
 (builds on D41, links shared from social apps; D40, the planners and the household; the built-in
 spaces of the memory plan). Model: the strongest for steps 1, 3, 4, 5 and 7 (the sign-up trigger
 and a migration, what the AI sees, images sent to the AI, the chat); a smaller one is fine for the
@@ -258,3 +259,34 @@ is 18 and over before the step 8 build); Q12 the household's roles and ages, nev
 
 Steps 1-3 are useful on their own (the spaces and imports, no suggestions yet) and can ship in one
 build; 4 can wait if you want to see the rest first.
+
+## As built: step 1 (2026-10-20)
+
+- **Migration `20261021120000_recipes_builtin_spaces.sql`:** `space.built_in` also allows
+  `'recipes'` and `'cocktails'`; `_ensure_built_in_spaces` marks or makes all four (Recipes, "Meals
+  to cook: full recipes or links"; Cocktails, "Drinks to make: full recipes or links"), adopting the
+  user's own oldest top-level, not restricted space of that name (any case, its name, description
+  and notes kept). A restricted space of that name is left alone and nothing is made beside it
+  (rule 3); such an account simply has no built-in Recipes (or Cocktails) until the user unlocks or
+  renames theirs and the helper runs again. Sign-up already calls the helper, so `handle_new_auth_user`
+  is unchanged; every existing account gets them when the migration runs. The guard is unchanged:
+  they cannot be deleted, renamed, moved or restricted. Nothing new is granted.
+- **SQL test `tests/sql/21_recipes_builtin_spaces.sql`: 29 checks**, and tests 07, 08, 16 and 18
+  updated (their throwaway "Recipes" spaces renamed, since every account now has one; 16 counts
+  four built-in spaces). **All SQL tests pass on a local Postgres 16 stand-in** (Supabase's auth,
+  roles and storage stubbed, pgvector as text; test 06 needs Supabase storage and was not run there,
+  as before). **Dry run** `tests/sql/dry_runs/21_recipes_builtin_spaces_dry_run.sql`: 29 "ok": true
+  on a stand-in with an account made before the migration, and nothing kept.
+- **The app:** `isBuiltIn` and `spaceTitle` (`lib/memory.ts`) know all four: 🍽️ Recipes and 🍸
+  Cocktails get the BUILT-IN badge and line, and no Delete or rename, like Tasks and Memories (the
+  space screen now uses `isBuiltIn`). 928 app tests pass; lint and type check clean.
+- **Server:** no change beyond two comments (`list_spaces` already returns `built_in`; update and
+  delete already refuse any built-in space). No deploy needed.
+- `db/schema.sql`: the `built_in` column (it was missing from the overview).
+
+**Owner, in order:** (1) run the dry run `tests/sql/dry_runs/21_recipes_builtin_spaces_dry_run.sql`
+in the Supabase SQL editor (a new, empty query; it ends with an error on purpose, whose message
+lists 29 checks that must all say `"ok": true`; nothing is kept); (2) OK to apply the migration;
+(3) merge. Nothing to deploy. The app part (icons, badge) ships with the next build; until then the
+current app shows Recipes and Cocktails as ordinary spaces, and the server still refuses deleting
+or renaming them.

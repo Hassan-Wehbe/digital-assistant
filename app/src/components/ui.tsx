@@ -298,7 +298,7 @@ export function GroupRow({
   dimmed?: boolean;
   /** One of a set of choices (Settings → Distances): a ✓ instead of ›, read out as a radio button. */
   checked?: boolean;
-  /** A small label after the title (BUILT-IN on Tasks and Memories). */
+  /** A small label after the title (BUILT-IN on Tasks, Memories, Recipes and Cocktails). */
   badge?: string;
 }) {
   const choice = checked !== undefined;

@@ -4,9 +4,9 @@
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-a000-00000000000a","role":"authenticated"}', true);
 set local role authenticated;
 
-insert into space (name) values ('Recipes');
+insert into space (name) values ('Soups');
 insert into space (name, is_restricted) values ('Private', true);
-select save_item((select id from space where name = 'Recipes'), 'recipe', 'Lentil soup',
+select save_item((select id from space where name = 'Soups'), 'recipe', 'Lentil soup',
                  'Red lentils, onion, cumin.', null, '{}', '{}',
                  pg_temp.chunks('Red lentils, onion, cumin.', 7));
 select save_item((select id from space where name = 'Private'), 'note', 'Private soup',

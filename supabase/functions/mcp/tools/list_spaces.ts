@@ -21,7 +21,7 @@ export const registerListSpaces: RegisterTool = (server, { db }) => {
             path,
             description,
             restricted: is_restricted,
-            // Tasks and Memories: the app marks them BUILT-IN and offers no Delete or rename.
+            // Tasks, Memories, Recipes and Cocktails: the app marks them BUILT-IN and offers no Delete or rename.
             ...(built_in ? { built_in } : {}),
           })),
         });

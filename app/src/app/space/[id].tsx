@@ -22,7 +22,7 @@ import {
 } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { canBeFavourite, loadFavourites, saveFavourites, toggleFavourite } from '@/lib/favourites';
-import { BUILT_IN_LINE } from '@/lib/memory';
+import { BUILT_IN_LINE, isBuiltIn } from '@/lib/memory';
 import { secretRoute, spaceSecretRow } from '@/lib/secretRows';
 import { supabase } from '@/lib/supabase';
 
@@ -31,8 +31,8 @@ const rpc = (fn: string, args?: Record<string, unknown>) => supabase.rpc(fn, arg
 export default function SpaceScreen() {
   const c = useColors();
   const { id, path, builtIn } = useLocalSearchParams<{ id: string; path?: string; builtIn?: string }>();
-  // Tasks and Memories (memory step 3, Q8): marked BUILT-IN, with no Delete (the server refuses it too).
-  const builtInSpace = builtIn === 'tasks' || builtIn === 'memories';
+  // Tasks, Memories, Recipes and Cocktails: marked BUILT-IN, with no Delete (the server refuses it too).
+  const builtInSpace = isBuiltIn({ built_in: builtIn });
   const { wilma } = useAuth();
   const { data, error, loading, reload } = useLoad(`space:${id}`, () => wilma.search({ space: id, limit: 50 }));
   useReloadOnReturn(reload);

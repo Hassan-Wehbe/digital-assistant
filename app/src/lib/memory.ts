@@ -104,16 +104,19 @@ export async function undoMemory(api: UndoApi, m: RememberedMemory): Promise<voi
 
 // ---- Built-in spaces -------------------------------------------------------------------------
 
-export const isBuiltIn = (s: Pick<Space, 'built_in'>) => s.built_in === 'tasks' || s.built_in === 'memories';
+// Tasks and Memories (memory plan), Recipes and Cocktails (docs/recipes-plan.md step 1): made by Wilma,
+// never deleted or renamed (the server refuses it too).
+const BUILT_IN_ICONS = new Map([['tasks', '✅'], ['memories', '🧠'], ['recipes', '🍽️'], ['cocktails', '🍸']]);
+
+export const isBuiltIn = (s: Pick<Space, 'built_in'>) => !!s.built_in && BUILT_IN_ICONS.has(s.built_in);
 
 /** The account's Memories space, from list_spaces. */
 export const memoriesSpace = (spaces: Space[]): Space | undefined => spaces.find((s) => s.built_in === 'memories' && !s.restricted);
 
-/** A space's row title: ✅ Tasks, 🧠 Memories, others as they are. */
+/** A space's row title: ✅ Tasks, 🧠 Memories, 🍽️ Recipes, 🍸 Cocktails, others as they are. */
 export function spaceTitle(s: Pick<Space, 'path' | 'built_in'>): string {
-  if (s.built_in === 'tasks') return `✅ ${s.path}`;
-  if (s.built_in === 'memories') return `🧠 ${s.path}`;
-  return s.path;
+  const icon = s.built_in ? BUILT_IN_ICONS.get(s.built_in) : undefined;
+  return icon ? `${icon} ${s.path}` : s.path;
 }
 
 /** The line Edit space and the space's screen show for a built-in space. */
