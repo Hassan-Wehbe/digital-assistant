@@ -1,16 +1,19 @@
 // Edit a note's title and text. Saving keeps the previous version in the note's history (the
 // server does that first) and refuses anything that looks like a password (CLAUDE.md rules 7, 9).
-// A place's fields are edited here too, and a note can become a place (places.ts).
+// A place's fields are edited here too, and a note can become a place (places.ts); likewise a
+// recipe's or cocktail's fields (recipes.ts).
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
 
 import { PlaceFields } from '@/components/PlaceFields';
+import { RecipeFields } from '@/components/RecipeFields';
 import { SpaceChips } from '@/components/SpaceChips';
 import { Button, ErrorBox, KeyboardScreen, Loading, Muted, styles, useColors, useLoad } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { editError, MAX_BODY, MAX_TITLE, noteChanges } from '@/lib/noteEdit';
 import { hasVisits, isPlace, placeForm, placeMetadata, placeOf, samePlace, type PlaceForm } from '@/lib/places';
+import { kindForSpace, recipeForm, recipeMetadata, recipeOf, recipeType, sameRecipe, type RecipeForm, type RecipeType } from '@/lib/recipes';
 import type { Item } from '@/lib/wilma';
 
 export default function EditItem() {
@@ -38,8 +41,14 @@ function EditForm({ item }: { item: Item }) {
   const base = placeOf(item);
   const [asPlace, setAsPlace] = useState(wasPlace);
   const [place, setPlace] = useState<PlaceForm>(() => placeForm(base));
+  const wasRecipe = recipeType(item.item_type);
+  const baseRecipe = recipeOf(item);
+  const [asRecipe, setAsRecipe] = useState<RecipeType | null>(wasRecipe);
+  const [recipe, setRecipe] = useState<RecipeForm>(() => recipeForm(baseRecipe));
   // Moving the note: the spaces the app can open (a restricted one would hide the note from the app).
   const spaces = useLoad('spaces', async () => (await wilma.listSpaces()).filter((s) => !s.restricted));
+  // A note in the Cocktails space becomes a cocktail; anywhere else, a recipe.
+  const newRecipeType: RecipeType = kindForSpace(spaces.data?.find((s) => s.id === item.space.id)) ?? 'recipe';
   const [spaceId, setSpaceId] = useState(item.space.id);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +61,12 @@ function EditForm({ item }: { item: Item }) {
       if ('error' in fields) return setError(fields.error);
       if (!wasPlace) out.changes.item_type = 'place';
       if (!wasPlace || !samePlace(fields.metadata, base)) out.changes.metadata = fields.metadata;
+    }
+    if (asRecipe) {
+      const fields = recipeMetadata(recipe, asRecipe, baseRecipe);
+      if ('error' in fields) return setError(fields.error);
+      if (wasRecipe !== asRecipe) out.changes.item_type = asRecipe;
+      if (wasRecipe !== asRecipe || !sameRecipe(fields.metadata, baseRecipe)) out.changes.metadata = fields.metadata;
     }
     if (!Object.keys(out.changes).length) return router.back();
     setBusy(true);
@@ -85,8 +100,22 @@ function EditForm({ item }: { item: Item }) {
             <PlaceFields value={place} onChange={setPlace} disabled={busy} hasVisits={hasVisits(base)} />
             {!wasPlace ? <Button title="Keep it a plain note" kind="plain" onPress={() => setAsPlace(false)} disabled={busy} /> : null}
           </>
+        ) : asRecipe ? (
+          <>
+            <Text style={[styles.title, { color: c.text }]}>{asRecipe === 'cocktail' ? '🍸 Cocktail' : '🍽️ Recipe'}</Text>
+            <RecipeFields type={asRecipe} value={recipe} onChange={setRecipe} disabled={busy} />
+            {!wasRecipe ? <Button title="Keep it a plain note" kind="plain" onPress={() => setAsRecipe(null)} disabled={busy} /> : null}
+          </>
         ) : (
-          <Button title="📍 Make this a place" kind="plain" onPress={() => setAsPlace(true)} disabled={busy} />
+          <>
+            <Button title="📍 Make this a place" kind="plain" onPress={() => setAsPlace(true)} disabled={busy} />
+            <Button
+              title={newRecipeType === 'cocktail' ? '🍸 Make this a cocktail' : '🍽️ Make this a recipe'}
+              kind="plain"
+              onPress={() => setAsRecipe(newRecipeType)}
+              disabled={busy}
+            />
+          </>
         )}
         <Text style={[styles.title, { color: c.text }]}>Note</Text>
         <TextInput

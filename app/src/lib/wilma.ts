@@ -5,6 +5,7 @@
 // stateless and answers with JSON.
 
 import type { NewVisit, PlaceMetadata } from './places';
+import type { RecipeMetadata } from './recipes';
 import type { RoutineMetadata } from './routines';
 import { toTaskRows, type TaskMetadata } from './tasks';
 
@@ -108,8 +109,8 @@ export interface NewItem {
   title: string;
   body: string;
   item_type?: string;
-  /** For a place, its fields (checked again by the server). */
-  metadata?: PlaceMetadata;
+  /** For a place, a recipe or a cocktail, its fields (checked again by the server). */
+  metadata?: PlaceMetadata | RecipeMetadata;
 }
 
 /** What the app may change on a note: only the fields given are sent. */
@@ -125,10 +126,10 @@ export interface NoteChanges {
   body?: string;
   /** Moves the note to this space (its id). */
   space?: string;
-  /** "place" turns a note into a place (with metadata). */
+  /** "place", "recipe" or "cocktail" turns a note into one (with metadata). */
   item_type?: string;
-  /** Replaces all of the item's metadata (a place's, a task's: tasks.ts, or a routine's schedule: routines.ts). */
-  metadata?: PlaceMetadata | TaskMetadata | Omit<RoutineMetadata, 'starts_on'>;
+  /** Replaces all of the item's metadata (a place's, a recipe's: recipes.ts, a task's: tasks.ts, or a routine's schedule: routines.ts). */
+  metadata?: PlaceMetadata | RecipeMetadata | TaskMetadata | Omit<RoutineMetadata, 'starts_on'>;
 }
 
 export interface UploadLink {
@@ -280,6 +281,9 @@ export function wilmaClient({ url, token, refresh, fetch: f = fetch }: ClientOpt
     /** "We went again": a visit goes first and the place counts as been (the server checks it). */
     addVisit: (id: string, visit: NewVisit) =>
       call<{ id: string; updated: boolean; place?: PlaceMetadata }>('update_item', { item_id: id, add_visit: visit }),
+    /** "Made it": a recipe or cocktail made today (the phone's date), newest first (the server checks it). */
+    madeIt: (id: string, made: { on: string; rating?: number }) =>
+      call<{ id: string; updated: boolean }>('update_item', { item_id: id, made_it: made, today: made.on }),
     /** A one-time upload link for an existing item, or for a new one (space + title + note). */
     uploadLink: (target: { item_id: string } | { space: string; title: string; note?: string }) =>
       call<UploadLink>('attach_file', target),

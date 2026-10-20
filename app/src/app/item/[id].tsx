@@ -1,14 +1,16 @@
 // One item in full: text, tags, attachments (with a download button) and linked items; Edit note
 // changes its title and text (edit-item.tsx). A place also shows its fields, Open in Maps and
-// We went again (PlaceCard).
+// We went again (PlaceCard); a recipe or cocktail its ingredients, steps, link and Made it (RecipeCard).
 import { Link, router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 
 import { PlaceCard } from '@/components/PlaceCard';
+import { RecipeCard } from '@/components/RecipeCard';
 import { Button, Card, confirm, ErrorBox, Loading, Muted, styles, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { placeOf } from '@/lib/places';
+import { recipeOf, recipeType } from '@/lib/recipes';
 import { todayAndTomorrow } from '@/lib/dayView';
 import { isTask, taskLine, type TaskMetadata } from '@/lib/tasks';
 import { fileSize, type Attachment, type Item } from '@/lib/wilma';
@@ -31,6 +33,8 @@ export default function ItemScreen() {
   }
 
   const place = placeOf(item);
+  const rtype = recipeType(item.item_type);
+  const recipe = recipeOf(item);
   const meta = [item.space.path ?? item.space.name, item.item_type, ...item.tags.map((t) => `#${t}`)].join(' · ');
   return (
     <>
@@ -62,6 +66,7 @@ export default function ItemScreen() {
           </Muted>
         </Card>
         {place ? <PlaceCard itemId={item.id} place={place} onChanged={reload} /> : null}
+        {rtype && recipe ? <RecipeCard itemId={item.id} type={rtype} recipe={recipe} onChanged={reload} /> : null}
 
         {item.attachments.length > 0 && (
           <>

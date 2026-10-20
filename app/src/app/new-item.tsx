@@ -1,23 +1,30 @@
 // Save a new note in a space, optionally with pictures or Visio files (saveNote.ts). Choosing
-// Place adds an address, a Google Maps link, the kind and so on (places.ts); Task opens task.tsx.
+// Place adds an address, a Google Maps link, the kind and so on (places.ts); Recipe or Cocktail adds
+// ingredients, steps and so on (recipes.ts), and is where a note in the built-in Recipes or
+// Cocktails space starts; Task opens task.tsx.
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Text, TextInput } from 'react-native';
 
 import { AttachmentPicker } from '@/components/AttachmentPicker';
 import { Chips, PlaceFields } from '@/components/PlaceFields';
+import { RecipeFields } from '@/components/RecipeFields';
 import { SpaceChips } from '@/components/SpaceChips';
 import { Button, Card, KeyboardScreen, Muted, styles, useColors, useLoad } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { deviceUploadDeps } from '@/lib/deviceFiles';
 import { EMPTY_PLACE, placeMetadata, type PlaceForm } from '@/lib/places';
+import { EMPTY_RECIPE, kindForSpace, recipeMetadata, type RecipeForm, type RecipeType } from '@/lib/recipes';
 import { saveNote } from '@/lib/saveNote';
 import type { PickedFile } from '@/lib/upload';
 
+type NoteKind = 'note' | 'place' | RecipeType;
 // ✅ Task opens the task form (task.tsx): a task has its own fields and lives in the Tasks space.
-const KINDS_OF_NOTE: { value: boolean | 'task'; label: string }[] = [
-  { value: false, label: 'Note' },
-  { value: true, label: '📍 Place' },
+const KINDS_OF_NOTE: { value: NoteKind | 'task'; label: string }[] = [
+  { value: 'note', label: 'Note' },
+  { value: 'place', label: '📍 Place' },
+  { value: 'recipe', label: '🍽️ Recipe' },
+  { value: 'cocktail', label: '🍸 Cocktail' },
   { value: 'task', label: '✅ Task' },
 ];
 
@@ -32,8 +39,13 @@ export default function NewItem() {
   const [space, setSpace] = useState<string | undefined>(params.space);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const [isPlace, setIsPlace] = useState(params.here === '1');
+  // The kind the user picked; until then, the space decides (Recipes and Cocktails start as one).
+  const [chosen, setChosen] = useState<NoteKind | null>(params.here === '1' ? 'place' : null);
+  const kind: NoteKind = chosen ?? kindForSpace(spaces.data?.find((s) => s.id === space)) ?? 'note';
+  const isPlace = kind === 'place';
+  const rtype = kind === 'recipe' || kind === 'cocktail' ? kind : null;
   const [place, setPlace] = useState<PlaceForm>(EMPTY_PLACE);
+  const [recipe, setRecipe] = useState<RecipeForm>(EMPTY_RECIPE);
   const [files, setFiles] = useState<PickedFile[]>([]);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -43,14 +55,24 @@ export default function NewItem() {
 
   const save = async () => {
     if (!space) return setError('Choose a space.');
-    if (!title.trim()) return setError(isPlace ? 'Give the place a name.' : 'Give the note a title.');
+    if (!title.trim()) return setError(isPlace ? 'Give the place a name.' : rtype ? `Give the ${rtype} a name.` : 'Give the note a title.');
     const fields = isPlace && !createdId ? placeMetadata(place) : null;
     if (fields && 'error' in fields) return setError(fields.error);
+    const recipeFields = rtype && !createdId ? recipeMetadata(recipe, rtype) : null;
+    if (recipeFields && 'error' in recipeFields) return setError(recipeFields.error);
     setBusy(true);
     setError(null);
     let itemId = createdId;
     try {
-      const target = itemId ? { itemId } : { space, title: title.trim(), body, ...(fields ? { place: fields.metadata } : {}) };
+      const target = itemId
+        ? { itemId }
+        : {
+            space,
+            title: title.trim(),
+            body,
+            ...(fields ? { place: fields.metadata } : {}),
+            ...(rtype && recipeFields ? { recipe: { type: rtype, metadata: recipeFields.metadata } } : {}),
+          };
       const out = await saveNote(wilma, target, files, deviceUploadDeps, {
         onCreated: (id) => {
           itemId = id;
@@ -89,13 +111,13 @@ export default function NewItem() {
 
         <Chips
           options={KINDS_OF_NOTE}
-          selected={(v) => v === isPlace}
-          onPress={(v) => (v === 'task' ? router.replace('/task') : setIsPlace(v))}
+          selected={(v) => v === kind}
+          onPress={(v) => (v === 'task' ? router.replace('/task') : setChosen(v))}
           disabled={busy || !!createdId}
         />
         <TextInput
           style={input}
-          placeholder={isPlace ? 'Name of the place' : 'Title'}
+          placeholder={isPlace ? 'Name of the place' : rtype ? `Name of the ${rtype}` : 'Title'}
           placeholderTextColor={c.muted}
           maxLength={300}
           value={title}
@@ -105,9 +127,10 @@ export default function NewItem() {
         {isPlace ? (
           <PlaceFields value={place} onChange={setPlace} disabled={busy || !!createdId} locateNow={params.here === '1'} />
         ) : null}
+        {rtype ? <RecipeFields type={rtype} value={recipe} onChange={setRecipe} disabled={busy || !!createdId} /> : null}
         <TextInput
           style={[input, { minHeight: 140, textAlignVertical: 'top' }]}
-          placeholder={isPlace ? 'Note (optional), e.g. try the fattoush' : 'Note (optional)'}
+          placeholder={isPlace ? 'Note (optional), e.g. try the fattoush' : rtype ? 'Note (optional), e.g. the recipe as written, or a tip' : 'Note (optional)'}
           placeholderTextColor={c.muted}
           multiline
           maxLength={40000}
