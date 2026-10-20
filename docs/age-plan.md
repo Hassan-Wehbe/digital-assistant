@@ -1,7 +1,8 @@
 # Ages: open Wilma to teens, cocktails at 21, mocktails for everyone else
 
 **Status:** plan, 2026-10-20; **owner's answers the same day: all as recommended, Q5 option B** (keep
-only the result, never the birth date; see Answers). Nothing built.
+only the result, never the birth date; see Answers). **Step 1 built 2026-10-20, branch `claude/age-step1`,
+not merged, migration not applied:** see "As built: step 1".
 Design: D44 (builds on D29, invite-only sign-up with its 18+ box; D43, recipes and cocktails).
 Model: the strongest for steps 1-2 (sign-up, the account, server checks) and for step 3's chat
 part; a smaller one for the app screens and the paperwork.
@@ -162,3 +163,35 @@ everywhere yet (owner, 2026-10-20).
 5. **Later, its own plan:** family accounts (Q11).
 
 Until step 4 is done, Play's target audience stays **18 and over**.
+
+## As built: step 1 (2026-10-20)
+
+The age check in the database, keeping only its result (Q5 option B). Nothing changes in the app
+yet (step 3 sends the date and asks older accounts); nothing changes for drinks yet (step 2).
+
+- **Migration `20261023120000_age_check.sql`:**
+  - `app_user.alcohol_from` (date): `'-infinity'` for 21 or over, else the first day of the month
+    after the person turns 21; `null` when not asked yet. `signup_setting.min_age` (18; 13 after the
+    lawyer, step 4).
+  - **Sign-up hook:** a newer app sends `birth_month` and `birth_year`: an impossible or missing date
+    is refused ("Please enter your month and year of birth."), under the minimum is refused ("Wilma is
+    for people 18 and over."), and the terms are still required; no message repeats the date. An
+    older app's 18+ box (`age_confirmed`) works as before (asked later).
+  - **Sign-up trigger:** stores only `alcohol_from` and removes `birth_month` and `birth_year` from the
+    account's metadata (with the invite code, as before); the built-in spaces as before.
+  - `set_birth_month(month, year)` for accounts made before: once only ("Your age is already set. If it
+    is wrong, contact us."); `my_age_status()` ({asked, is_21, alcohol_from only while under 21}) and
+    `is_21()`, the caller's own row only; helpers callable by no one; nothing for anon; nobody writes
+    `alcohol_from` directly.
+  - Never early: an age counts from the first day of the month after the birthday month.
+- **SQL test 23 (31 checks):** the hook's paths and messages, the 18 and 21 boundaries, the minimum at
+  13, only the result kept (the birth year nowhere in the account rows or metadata), set once, own
+  row only, anon refused, deleted with the account. Every other SQL test still passes (06 as before);
+  **dry run 31/31** on a copy without the migration, nothing kept.
+- **Check after applying (read-only):** the hook still runs for Supabase Auth (its grant to
+  `supabase_auth_admin` is kept by `create or replace`); Supabase's Auth logs are not expected to
+  hold sign-up bodies, which the owner can confirm in the dashboard's Auth logs after a test sign-up
+  in step 3.
+
+**Owner, in order:** (1) run the dry run `tests/sql/dry_runs/23_age_check_dry_run.sql` in the Supabase
+SQL editor (31 checks, all `"ok": true`; nothing kept); (2) OK to apply; (3) merge.

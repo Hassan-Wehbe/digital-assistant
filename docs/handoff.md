@@ -13,6 +13,12 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **D44 ages step 1, the age check (2026-10-20): branch `claude/age-step1`, not merged, migration
+  not applied.** `app_user.alcohol_from` (only "21 or over" or the month cocktails open; the month and
+  year of birth are never kept), the sign-up hook's month and year with a minimum age (18 for now;
+  older apps' 18+ box still works), `set_birth_month()` once for older accounts, `is_21()`,
+  `my_age_status()`. SQL test 23 (31 checks), dry run 31/31. See `docs/age-plan.md` "As built: step
+  1". **Owner:** dry run, OK to apply, merge. **Next:** step 2, the drinks rules on the server.
 - **D43 recipes step 8, release (2026-10-20): merged (#258); `chat` v46; versionCode 24 built
   (EAS 33c5b2e8) and submitted to Google Play.** Help
   topic Recipes & cocktails (app and the chat's show_help: needs a `chat` deploy), the privacy page's
