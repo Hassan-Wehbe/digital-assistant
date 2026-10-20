@@ -8,6 +8,7 @@ import { isTask, normalizeTask, type TaskMetadata, TASKS_SPACE, tasksSpace, with
 import { withLinkLocation } from "../lib/maps_link.ts";
 import { isRoutine, normalizeRoutine, type RoutineMetadata, routineWords, withRoutine } from "../lib/routines.ts";
 import { loadRoutine, userToday } from "../lib/routine_tasks.ts";
+import { normalizeRecipe, recipeType, STRENGTHS, withRecipe } from "../lib/recipes.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
 export const registerSaveItem: RegisterTool = (server, { db, accessToken, assistantName, timeZone }) => {
@@ -28,7 +29,11 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
         'metadata: due_on (YYYY-MM-DD), duration_min (5-480), duration_estimated (true when you guessed it), ' +
         'priority ("normal" or "important"), place_id (a saved place\'s id) or address, status ("open" or "done"), ' +
         'repeat ("daily", "weekdays", "weekly", "biweekly", "monthly"; leave out for one time), ' +
-        'planned_at (only when the user says a time to do it: the local time, "2026-10-09T12:30").' +
+        'planned_at (only when the user says a time to do it: the local time, "2026-10-09T12:30"). ' +
+        'For a recipe or a drink use item_type "recipe" or "cocktail" (default spaces Recipes and Cocktails), ' +
+        "with the recipe as written in body, and optional metadata: ingredients [one per line], steps [in order], " +
+        `minutes (total time), serves, source_url (the link it came from), source_site ("TikTok"), strength (cocktails: ${STRENGTHS.join(", ")}; none = no alcohol), ` +
+        "made [{on, rating 1-5}]. The server checks these fields." +
         addressedAs(assistantName, "save this recipe"),
       inputSchema: {
         space: z.string().optional().describe(`Space name, path (Work/Gartner) or id; for a task, default ${TASKS_SPACE}`),
@@ -54,6 +59,9 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
         // (the routine must be the user's own).
         const today = userToday(undefined, timeZone);
         const routine: RoutineMetadata | null = isRoutine(item_type) ? normalizeRoutine(metadata, today) : null;
+        // A recipe's or cocktail's fields (D43) are checked too, and added to the searchable text.
+        const rtype = recipeType(item_type);
+        const recipe = rtype ? normalizeRecipe(metadata, rtype, today) : null;
         if (task?.routine_id) {
           const loaded = await loadRoutine(db, task.routine_id, today);
           task = withRoutine(task, loaded.id, loaded.routine, today);
@@ -77,7 +85,9 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
         // A Maps link with coordinates and no location: the location is read from the link (Q15).
         let locationFromLink = false;
         if (place) ({ place, filled: locationFromLink } = withLinkLocation(place));
-        const searchable = routine ? `${body.trim() ? `${body}\n\n` : ""}Routine: ${routineWords(routine)}` : withTask(withPlace(body, place), task);
+        const searchable = routine
+          ? `${body.trim() ? `${body}\n\n` : ""}Routine: ${routineWords(routine)}`
+          : withRecipe(withTask(withPlace(body, place), task), recipe);
         const chunks = await chunkAndEmbed({ title, summary, body: searchable });
         const { data, error } = await db.rpc("save_item", {
           p_space_id: target.id,
@@ -85,7 +95,7 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
           p_title: title,
           p_body: body,
           p_summary: summary ?? null,
-          p_metadata: place ?? task ?? routine ?? metadata ?? {},
+          p_metadata: place ?? task ?? routine ?? recipe ?? metadata ?? {},
           p_tags: tags ?? [],
           p_chunks: chunks,
         });

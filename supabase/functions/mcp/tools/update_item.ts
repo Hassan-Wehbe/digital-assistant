@@ -7,6 +7,7 @@ import { withLinkLocation } from "../lib/maps_link.ts";
 import { isTask, normalizeTask, setTaskDone, type TaskMetadata, taskDate, withTask } from "../lib/tasks.ts";
 import { isRoutine, normalizeRoutine, type RoutineMetadata, routineTaskDone, routineWords, withRoutine } from "../lib/routines.ts";
 import { bringTasksInStep, findRoutine, loadRoutine, userToday } from "../lib/routine_tasks.ts";
+import { addMade, normalizeRecipe, type RecipeMetadata, recipeType, withRecipe } from "../lib/recipes.ts";
 import { isTasksSpace, taskPlaceTitle } from "./save_item.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
@@ -22,7 +23,8 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
         "the rest of its fields; metadata replaces them all. For a task, task_done: true marks it done " +
         "(\"I picked up the dry cleaning\") and false opens it again, keeping its other fields; a repeating task " +
         "moves to its next date instead. To give a task a time (\"move my lunch to 1\"), pass its metadata with " +
-        "planned_at, the local time (\"2026-10-09T13:00\").",
+        "planned_at, the local time (\"2026-10-09T13:00\"). For a recipe or cocktail, made_it records that the " +
+        "user made it (\"I made the shrimp again, 5 stars\"), keeping its other fields.",
       inputSchema: {
         item_id: z.string().uuid(),
         title: z.string().trim().min(1).max(300).optional(),
@@ -39,6 +41,10 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
           rating: z.number().int().min(1).max(5).optional().describe("New rating for the place, 1-5"),
         }).optional().describe("Places only: add a visit, newest first; the place becomes \"been\""),
         task_done: z.boolean().optional().describe("Tasks only: true marks it done, false opens it again"),
+        made_it: z.object({
+          on: z.string().optional().describe("Date made, YYYY-MM-DD; default today"),
+          rating: z.number().int().min(1).max(5).optional().describe("How it turned out, 1-5"),
+        }).optional().describe("Recipes and cocktails only: the user made it; newest first"),
         today: z.string().optional().describe("With task_done: the user's local date, YYYY-MM-DD (a repeating task's next date is after it)"),
         change_note: z.string().max(500).optional().describe("Why it changed, kept with the old version"),
       },
@@ -46,16 +52,16 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
     (args) =>
       guarded(async () => {
         // Rule 9: enforced here, not left to the model.
-        const { title, body, summary, tags, metadata, item_type, change_note, add_visit, task_done } = args;
+        const { title, body, summary, tags, metadata, item_type, change_note, add_visit, task_done, made_it } = args;
         // The phone's date (the app sends it; Q12): without it, today in UTC.
         const today = taskDate(args.today, "today");
-        rejectCredentials({ title, body, summary, tags, metadata, item_type, change_note, add_visit }, assistantName);
+        rejectCredentials({ title, body, summary, tags, metadata, item_type, change_note, add_visit, made_it }, assistantName);
         const spaces = args.space ? await loadSpaces(db) : null;
         const targetSpace = args.space ? resolveSpace(spaces!, args.space) : null;
 
         const textChanged = title !== undefined || body !== undefined || summary !== undefined;
         const fieldsChanged = metadata !== undefined || item_type !== undefined || add_visit !== undefined ||
-          task_done !== undefined;
+          task_done !== undefined || made_it !== undefined;
         let current: { title: string; summary: string | null; body_markdown: string; item_type: string; metadata: Record<string, unknown> } | null = null;
         // A move loads it too: a routine stays in the Tasks space.
         if (textChanged || fieldsChanged || targetSpace) {
@@ -70,6 +76,8 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
         let place: PlaceMetadata | null = null;
         if (add_visit && !isPlace(finalType)) throw new Error("add_visit is only for places (item_type \"place\")");
         if (task_done !== undefined && !isTask(finalType)) throw new Error("task_done is only for tasks (item_type \"task\")");
+        const rtype = recipeType(finalType);
+        if (made_it && !rtype) throw new Error("made_it is only for recipes and cocktails (item_type \"recipe\" or \"cocktail\")");
         // A routine (D39) stays in the Tasks space; its schedule is checked, and its tasks follow it.
         const day = userToday(today, timeZone);
         let routine: RoutineMetadata | null = null;
@@ -129,6 +137,19 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
             }
           }
         }
+        // A recipe's or cocktail's fields likewise (D43); a text-only edit never fails because of them.
+        let recipe: RecipeMetadata | null = null;
+        if (current && rtype) {
+          const base = metadata ?? current.metadata;
+          if (fieldsChanged) recipe = made_it ? addMade(base, made_it, rtype, day) : normalizeRecipe(base, rtype, day);
+          else {
+            try {
+              recipe = normalizeRecipe(base, rtype, day);
+            } catch {
+              recipe = null;
+            }
+          }
+        }
         // A Maps link with coordinates and no location: the location is read from the link (Q15).
         // Not when the place had a location and keeps the same link: the user removed it on purpose.
         let locationFromLink = false;
@@ -137,7 +158,15 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
           if (!removed) ({ place, filled: locationFromLink } = withLinkLocation(place));
         }
         if (place && fieldsChanged && place.kind === HOME_KIND) await assertOnlyHome(db, args.item_id);
-        const newMetadata = place && fieldsChanged ? place : task && fieldsChanged ? task : routine && fieldsChanged ? routine : metadata ?? null;
+        const newMetadata = place && fieldsChanged
+          ? place
+          : task && fieldsChanged
+          ? task
+          : routine && fieldsChanged
+          ? routine
+          : recipe && fieldsChanged
+          ? recipe
+          : metadata ?? null;
 
         // Text or place fields changed: re-chunk the new current version (only it is searchable).
         let chunks: Chunk[] | null = null;
@@ -147,7 +176,7 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
             summary: summary ?? current.summary,
             body: routine
               ? `${(body ?? current.body_markdown).trim() ? `${body ?? current.body_markdown}\n\n` : ""}Routine: ${routineWords(routine)}`
-              : withTask(withPlace(body ?? current.body_markdown, place), task),
+              : withRecipe(withTask(withPlace(body ?? current.body_markdown, place), task), recipe),
           });
         }
 
@@ -177,6 +206,7 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
           reindexed: chunks !== null,
           ...(place && fieldsChanged ? { place: newMetadata } : {}),
           ...(task && fieldsChanged ? { task: newMetadata } : {}),
+          ...(recipe && fieldsChanged ? { [rtype!]: newMetadata } : {}),
           ...(routine && fieldsChanged ? { routine: { ...routine, schedule: routineWords(routine) }, tasks_in_step: inStep } : {}),
           ...(locationFromLink ? { location: "read from the Google Maps link" } : {}),
         });

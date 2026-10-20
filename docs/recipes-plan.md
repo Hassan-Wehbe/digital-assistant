@@ -2,7 +2,9 @@
 
 Status: plan, 2026-10-19. **Owner's answers given 2026-10-20: all as recommended (Q1-Q12).** **Step 1
 built 2026-10-20 (#245, not merged); migration applied 2026-10-20 (owner's dry run passed; the
-connector applied it; checked read-only):** see "As built: step 1". Design: D43
+connector applied it; checked read-only):** see "As built: step 1". **Step 2, server half, built
+2026-10-20, branch `claude/recipe-fields`, not merged, not deployed:** see "As built: step 2 (server)";
+the app half (the screens) follows in its own PR. Design: D43
 (builds on D41, links shared from social apps; D40, the planners and the household; the built-in
 spaces of the memory plan). Model: the strongest for steps 1, 3, 4, 5 and 7 (the sign-up trigger
 and a migration, what the AI sees, images sent to the AI, the chat); a smaller one is fine for the
@@ -296,3 +298,36 @@ Supabase connector applied it (recorded as `20261020003347 recipes_builtin_space
 read-only afterwards: 3 accounts, each with four built-in spaces; 3 Recipes and 3 Cocktails, none
 nested or restricted; one account's own "Recipes" adopted with its 3 notes; the new check in
 place; `_ensure_built_in_spaces` not callable by authenticated or anon.
+
+## As built: step 2 (server) (2026-10-20)
+
+- **`mcp/lib/recipes.ts`:** item types `recipe` and `cocktail`. `normalizeRecipe` checks and tidies
+  the fields, all optional (a link note with none is still a recipe): `ingredients` (≤ 60 lines,
+  each ≤ 200 characters; a list or one text with a line each; bullets dropped), `steps` (≤ 40, each
+  ≤ 1,000; "1. ", "2) ", "Step 3: " dropped, "1.5 cups" kept), `minutes` (1-1440), `serves` (1-100),
+  `source_url` (http or https, no name or password in it), `source_site` (≤ 60), `strength`
+  (cocktails only: regular, light, none; "mocktail", "non-alcoholic" read as none), `made` (≤ 50,
+  `{on, rating 1-5}`, newest first, never in the future). Unknown fields are refused with the list
+  of known ones, as for places. `addMade` adds a time first and keeps the rest.
+- **One change from "How it works" 2:** the note's own text (`body`) stays as written; the fields
+  are added to what meaning search reads (`withRecipe`, as places' `withPlace`), rather than the
+  text being rewritten from the fields. So a recipe saved from the chat or the Claude connector
+  keeps its words, and the fields are extras. Keyword search still reads the title and text only;
+  making it read recipe fields too is a one-line change to `search_items` (as places did) for a
+  later migration if "harissa" ever fails to find a recipe whose text doesn't say it.
+- **`save_item`** checks the fields for those two types, stores them, and adds them to search; its
+  description tells the model about them ("with the recipe as written in body"). **`update_item`**
+  checks them on any change (a text-only edit never fails on fields saved before these checks), and
+  gains **`made_it: {on?, rating?}`** ("I made the shrimp again, 5 stars"; default today, the phone's
+  date when sent), refused for other types. Rule 9: every field, and `made_it`, passes the password
+  check first (the value is never echoed).
+- **Tests:** `tests/deno/recipes_test.ts` (21: the checks, the text for search, the tools with a stand-in
+  database, a password in an ingredient or a step refused before anything is written, a text edit
+  on an old recipe, a note becoming a recipe). **559 Deno tests pass**; both functions type-check.
+  Three evaluation cases: `save-cocktail`, `recipe-made-it`, `recipe-password-trap` (the eval code's
+  own tests pass; the run itself needs the owner's OK and a cap).
+- `db/schema.sql`: the metadata comment.
+
+**Owner, in order:** (1) OK and a spending cap for an evaluation run (the tool descriptions
+changed; the chat suite on this branch); (2) merge; (3) OK to deploy `mcp` (and `chat`, which uses
+the same tools). Nothing changes in the app until the app half ships.

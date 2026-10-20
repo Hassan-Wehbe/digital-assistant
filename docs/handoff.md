@@ -13,6 +13,13 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **D43 recipes step 2, server half (2026-10-20): branch `claude/recipe-fields`, not merged, not
+  deployed.** `mcp/lib/recipes.ts`: checked recipe and cocktail fields (ingredients, steps, minutes,
+  serves, source link, strength for cocktails, made with ratings); `save_item` and `update_item`
+  check them and add them to search; `update_item` gains `made_it`. The note's text is never
+  rewritten. 21 new Deno tests (559 pass); three evaluation cases. See `docs/recipes-plan.md`
+  "As built: step 2 (server)". **Owner:** OK + cap for an evaluation run, merge, OK to deploy `mcp`
+  and `chat`. **Next:** the app half of step 2 (screens; smaller model is fine).
 - **D43 recipes step 1, the built-in spaces (2026-10-20): #245, not merged; migration
   applied 2026-10-20 (dry run 29/29; checked: 3 accounts, four built-in spaces each).** Migration `20261021120000_recipes_builtin_spaces.sql`: every
   account gets built-in 🍽️ Recipes and 🍸 Cocktails (an own unrestricted "Recipes" is adopted; a
