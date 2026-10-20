@@ -1,8 +1,8 @@
 # Recipes and cocktails: two built-in spaces, importing, and "what should I make?"
 
 Status: plan, 2026-10-19. **Owner's answers given 2026-10-20: all as recommended (Q1-Q12).** **Step 1
-built 2026-10-20, branch `claude/recipes-builtin-spaces`, not merged, migration not applied:** see
-"As built: step 1". Design: D43
+built 2026-10-20 (#245, not merged); migration applied 2026-10-20 (owner's dry run passed; the
+connector applied it; checked read-only):** see "As built: step 1". Design: D43
 (builds on D41, links shared from social apps; D40, the planners and the household; the built-in
 spaces of the memory plan). Model: the strongest for steps 1, 3, 4, 5 and 7 (the sign-up trigger
 and a migration, what the AI sees, images sent to the AI, the chat); a smaller one is fine for the
@@ -290,3 +290,9 @@ lists 29 checks that must all say `"ok": true`; nothing is kept); (2) OK to appl
 (3) merge. Nothing to deploy. The app part (icons, badge) ships with the next build; until then the
 current app shows Recipes and Cocktails as ordinary spaces, and the server still refuses deleting
 or renaming them.
+
+**Applied (2026-10-20):** the owner's dry run passed (29 "ok": true); on the owner's OK the
+Supabase connector applied it (recorded as `20261020003347 recipes_builtin_spaces`). Checked
+read-only afterwards: 3 accounts, each with four built-in spaces; 3 Recipes and 3 Cocktails, none
+nested or restricted; one account's own "Recipes" adopted with its 3 notes; the new check in
+place; `_ensure_built_in_spaces` not callable by authenticated or anon.

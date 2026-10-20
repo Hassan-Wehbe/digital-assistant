@@ -13,12 +13,12 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **D43 recipes step 1, the built-in spaces (2026-10-20): branch `claude/recipes-builtin-spaces`,
-  not merged, migration not applied.** Migration `20261021120000_recipes_builtin_spaces.sql`: every
+- **D43 recipes step 1, the built-in spaces (2026-10-20): #245, not merged; **migration
+  applied 2026-10-20** (dry run 29/29; checked: 3 accounts, four built-in spaces each).** Migration `20261021120000_recipes_builtin_spaces.sql`: every
   account gets built-in 🍽️ Recipes and 🍸 Cocktails (an own unrestricted "Recipes" is adopted; a
   restricted one is left alone). SQL test 21 (29 checks), tests 07, 08, 16, 18 updated; all pass
   on a local stand-in; dry run 29/29. App: icons and BUILT-IN badge. 928 app tests. See
-  `docs/recipes-plan.md` "As built: step 1". **Owner:** dry run, OK to apply, merge. **Next
+  `docs/recipes-plan.md` "As built: step 1". **Owner:** merge #245 (nothing to deploy; the app part ships with the next build). **Next
   (strongest for the server check):** step 2, recipe fields.
 - **D43 Recipes and cocktails, the plan (2026-10-19): `docs/recipes-plan.md`, answers
   all as recommended (2026-10-20); merged (#244).** Two built-in spaces (Recipes, Cocktails),
