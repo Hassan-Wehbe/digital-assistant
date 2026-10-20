@@ -9,7 +9,7 @@ ships with the next build:** see
 "As built: step 2 (app)". **Step 3 merged (#249) and live 2026-10-20 (`chat` v42); the app part
 ships with the next build:** see "As built: step 3". **Step 4 merged (#251) and live 2026-10-20 (`chat`
 v43; evaluation 5/5, 0 leaks, 0 unsafe); the button ships with the next build:** see "As built: step 4".
-**Step 5 built 2026-10-20 (#253), not merged, migration not applied, not deployed; evaluation passed
+**Step 5 built 2026-10-20 (#253), not merged, migration applied 2026-10-20, not deployed; evaluation passed
 (10/10, 0 leaks, 0 unsafe):** see "As built: step 5". Design: D43
 (builds on D41, links shared from social apps; D40, the planners and the household; the built-in
 spaces of the memory plan). Model: the strongest for steps 1, 3, 4, 5 and 7 (the sign-up trigger
@@ -541,6 +541,9 @@ unsafe, $0.0016.** All five suggestion cases passed: the chickpea curry for what
 for vegetarian, no vindaloo for children 4 and 6, the title's order ignored, a new mocktail with no
 spirits; the five screenshot cases passed again.
 
-**Owner, in order:** (1) run the dry run `tests/sql/dry_runs/22_recipe_suggestions_dry_run.sql` in the
-Supabase SQL editor (15 checks, all `"ok": true`; nothing kept); (2) OK to apply the migration;
-(3) merge; (4) OK to deploy `chat`. Nothing in the app yet: the screens are step 6.
+**Migration applied 2026-10-20 (owner's OK), recorded as 20261020171613 `recipe_suggestions`.** Checked
+read-only after: limits 10 and 50, RLS on with the one own-rows policy, `authenticated` may only
+select the table, `use_recipe_suggestion()` is security definer and runs for `authenticated` but not
+`anon`, no rows yet.
+
+**Owner, in order:** (1) merge; (2) OK to deploy `chat`. Nothing in the app yet: the screens are step 6.
