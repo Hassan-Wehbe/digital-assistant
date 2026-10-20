@@ -13,14 +13,14 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **D43 recipes step 4, Read a screenshot (2026-10-20): branch `claude/recipe-screenshot`, not merged,
-  not deployed, evaluation not run.** Pictures in the AI layer (both providers); the `chat` route
+- **D43 recipes step 4, Read a screenshot (2026-10-20): #251, not merged, not deployed; evaluation
+  run 39443492688 passed (`recipe` suite, Luna 5/5, 0 leaks, 0 unsafe, $0.001).** Pictures in the AI layer (both providers); the `chat` route
   `recipe_from_image` (JPEG or PNG checked, ≤ 3 MB base64, read only the recipe, credential-like
   lines dropped, nothing kept); the app's 📷 Read a screenshot (picker, shrunk to 2000 px and saved
   again as JPEG with `expo-image-manipulator`, new); a new evaluation suite `recipe` with five real
   pictures and two traps. Privacy page updated (owner checks the wording). 582 Deno, 973 app tests.
-  See `docs/recipes-plan.md` "As built: step 4". **Owner:** OK + cap for the `recipe` evaluation,
-  merge, OK to deploy `chat`; the next build (new native module). **Next:** step 5, the suggestions.
+  See `docs/recipes-plan.md` "As built: step 4". **Owner:** privacy wording, merge, OK to deploy
+  `chat`; the next build (new native module). **Next:** step 5, the suggestions.
 - **D43 recipes step 3, Fill in the recipe (2026-10-20): merged (#249); `chat` v42 live (run
   39437589943); the app part ships with the next build.** On a recipe with a link, a tap fills the empty boxes: recipe websites from their
   JSON-LD Recipe block on the phone (no AI); TikTok from its oEmbed caption through the new
