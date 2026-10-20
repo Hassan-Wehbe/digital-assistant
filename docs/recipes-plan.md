@@ -1,6 +1,7 @@
 # Recipes and cocktails: two built-in spaces, importing, and "what should I make?"
 
-Status: plan, 2026-10-19, **waiting on the owner's answers (Q1-Q12)**. Nothing built. Design: D43
+Status: plan, 2026-10-19. **Owner's answers given 2026-10-20: all as recommended (Q1-Q12).** Nothing
+built; next: step 1. Design: D43
 (builds on D41, links shared from social apps; D40, the planners and the household; the built-in
 spaces of the memory plan). Model: the strongest for steps 1, 3, 4, 5 and 7 (the sign-up trigger
 and a migration, what the AI sees, images sent to the AI, the chat); a smaller one is fine for the
@@ -176,6 +177,16 @@ make with gin and lime?" give the same cards (step 7). "Save this recipe" keeps 
 - **Cost:** a website import is free; a caption or a suggestion is one small AI request; a
   screenshot is one AI request with an image (a few times a text request); all inside the existing
   AI allowance and fair use.
+
+## Answers (owner, 2026-10-20): all as recommended
+
+Q1 built in, like Tasks and Memories; Q2 "Recipes" and "Cocktails"; Q3 a recipe can live in any
+searchable space, the two spaces are the default; Q4 websites (no AI) and TikTok captions (AI), on
+a tap; Q5 screenshots yes, in step 4; Q6 "I have" and "My bar" typed, remembered on the phone; Q7
+say so, and A new idea clearly marked, saved only on a tap; Q8 Made it with an optional ★ 1-5; Q9 a
+new Home row "Cook with Wilma", plus the chat; Q10 everyone, 10 suggestions a day free, more with
+Pro; Q11 "No alcohol" always offered, no age question (the owner confirms Play's target audience
+is 18 and over before the step 8 build); Q12 the household's roles and ages, never names.
 
 ## Questions (recommendation first)
 

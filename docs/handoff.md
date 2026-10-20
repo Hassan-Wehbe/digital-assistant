@@ -13,11 +13,10 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **D43 Recipes and cocktails, the plan (2026-10-19): `docs/recipes-plan.md`, branch
-  `claude/recipes-plan`, not merged; nothing built.** Two built-in spaces (Recipes, Cocktails),
+- **D43 Recipes and cocktails, the plan (2026-10-19): `docs/recipes-plan.md`, answers
+  all as recommended (2026-10-20); PR open, not merged; nothing built.** Two built-in spaces (Recipes, Cocktails),
   recipe fields, Fill in the recipe from websites and TikTok captions, Read a screenshot, What's
-  for dinner and Make a cocktail from your own recipes, the chat. **Owner:** answer Q1-Q12 (or
-  "all as recommended"), then merge. **Next (strongest model):** step 1, the built-in spaces.
+  for dinner and Make a cocktail from your own recipes, the chat. **Owner:** merge. **Next (strongest model):** step 1, the built-in spaces.
 - **D42 Discover nearby, the plan (2026-10-19): `docs/discover-nearby-plan.md`, merged (#243);
   answers all as recommended (Google Places).** **Owner:** step 0, the Google Cloud key as the
   Supabase secret `GOOGLE_PLACES_KEY` and a $10 budget alert (steps written in the plan), then say
