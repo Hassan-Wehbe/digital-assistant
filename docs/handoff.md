@@ -13,13 +13,14 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **D43 recipes step 3, Fill in the recipe (2026-10-20): branch `claude/recipe-fill-in`, not merged,
-  not deployed.** On a recipe with a link, a tap fills the empty boxes: recipe websites from their
+- **D43 recipes step 3, Fill in the recipe (2026-10-20): merged (#249); `chat` v42 live (run
+  39437589943); the app part ships with the next build.** On a recipe with a link, a tap fills the empty boxes: recipe websites from their
   JSON-LD Recipe block on the phone (no AI); TikTok from its oEmbed caption through the new
   `chat` route `recipe_from_text` (one AI request, checked; a caption with a password never sent);
   Facebook and Instagram not read. Privacy page updated (owner checks the wording). 570 Deno,
-  966 app tests; bundles. See `docs/recipes-plan.md` "As built: step 3". **Owner:** check the
-  privacy wording, merge, OK to deploy `chat`. **Next (strongest model):** step 4, Read a screenshot.
+  966 app tests; bundles. See `docs/recipes-plan.md` "As built: step 3". **Next (strongest
+  model, fresh session):** step 4, Read a screenshot. **Owner:** the next build, then the recipe
+  phone checks 1-11 in `docs/recipes-plan.md`.
 - **D43 recipes step 2 done (2026-10-20): server half merged (#246) and live (`mcp` v36, run
   39427469238; `chat` v41, run 39427541685; both active); app half merged (#247), ships with the
   next build** (phone checks in `docs/recipes-plan.md` "As built: step 2 (app)"). **Next:** step 3 (see above).

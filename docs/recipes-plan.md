@@ -6,8 +6,8 @@ connector applied it; checked read-only):** see "As built: step 1". **Step 2, se
 and live 2026-10-20 (`mcp` v36, `chat` v41):** see "As built: step 2 (server)";
 the app half (the screens) follows in its own PR. **Step 2, app half, merged (#247) 2026-10-20;
 ships with the next build:** see
-"As built: step 2 (app)". **Step 3 built 2026-10-20, branch `claude/recipe-fill-in`, not merged, not
-deployed:** see "As built: step 3". Design: D43
+"As built: step 2 (app)". **Step 3 merged (#249) and live 2026-10-20 (`chat` v42); the app part
+ships with the next build:** see "As built: step 3". Design: D43
 (builds on D41, links shared from social apps; D40, the planners and the household; the built-in
 spaces of the memory plan). Model: the strongest for steps 1, 3, 4, 5 and 7 (the sign-up trigger
 and a migration, what the AI sees, images sent to the AI, the chat); a smaller one is fine for the
@@ -425,8 +425,9 @@ checks the result and taps Save (save_item / update_item check it all again).
 - **No evaluation run needed:** the chat's tools and prompts are unchanged; the new request has its
   own prompt and code checks, and a caption with a password never reaches it.
 
-**Owner, in order:** (1) check the privacy wording; (2) merge; (3) OK to deploy `chat` (before the
-build that carries the app part).
+**Merged (#249) and deployed 2026-10-20 on the owner's OK:** `chat` (run 39437589943, now v42),
+checked read-only: active. The privacy page change went live with the merge (GitHub Pages); the
+Fill in button ships with the next build.
 
 **Phone checks for the next build** (with step 2's): (7) a recipe from BBC Good Food or AllRecipes:
 Fill in fills the ingredients, steps, time and servings. (8) A food blog recipe (WordPress) does
