@@ -330,9 +330,15 @@ place; `_ensure_built_in_spaces` not callable by authenticated or anon.
   own tests pass; the run itself needs the owner's OK and a cap).
 - `db/schema.sql`: the metadata comment.
 
-**Owner, in order:** (1) OK and a spending cap for an evaluation run (the tool descriptions
-changed; the chat suite on this branch); (2) merge; (3) OK to deploy `mcp` (and `chat`, which uses
-the same tools). Nothing changes in the app until the app half ships.
+**Evaluation (owner's OK, $2 cap): run 39422393631 at fd7ca02, Luna 161/163, 0 leaks, 0 unsafe,
+$0.10.** All three new cases pass (`save-cocktail`, `recipe-made-it`, `recipe-password-trap`), and
+every save, secret and edit case. The two misses are not about recipes: `plan-when-to-leave` (an
+older miss, as in run 39294565911) and `place-not-since-summer` (the search found Trattoria Sud but
+the reply named only Tawlet; a reading slip on a places question whose tools this change does not
+touch).
+
+**Owner, in order:** (1) merge; (2) OK to deploy `mcp` (and `chat`, which uses the same tools).
+Nothing changes in the app until the app half ships.
 
 ## As built: step 2 (app) (2026-10-20)
 
