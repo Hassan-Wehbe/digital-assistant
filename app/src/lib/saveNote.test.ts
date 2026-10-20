@@ -90,3 +90,22 @@ describe('saveNote: places', () => {
     expect(out).toEqual({ itemId: 'new-1', failed: [] });
   });
 });
+
+describe('saveNote: recipes and cocktails', () => {
+  const recipe = { type: 'recipe' as const, metadata: { ingredients: ['400 g shrimp'], minutes: 15 } };
+
+  it('saves a recipe with save_item, as its own type with its fields', async () => {
+    const f = fakes();
+    await saveNote(f.wilma, { space: 'Recipes', title: 'Shrimp', body: '', recipe }, [], f.deps);
+    expect(f.saveItem).toHaveBeenCalledWith({ space: 'Recipes', title: 'Shrimp', body: '', item_type: 'recipe', metadata: recipe.metadata });
+    expect(f.uploadLink).not.toHaveBeenCalled();
+  });
+
+  it('with a photo, saves the cocktail first, then adds the photo to it', async () => {
+    const f = fakes();
+    const cocktail = { type: 'cocktail' as const, metadata: { strength: 'none' as const } };
+    await saveNote(f.wilma, { space: 'Cocktails', title: 'Virgin mojito', body: '', recipe: cocktail }, [photo], f.deps);
+    expect(f.saveItem).toHaveBeenCalledWith({ space: 'Cocktails', title: 'Virgin mojito', body: '', item_type: 'cocktail', metadata: { strength: 'none' } });
+    expect(f.uploadLink).toHaveBeenCalledWith({ item_id: 'new-1' });
+  });
+});

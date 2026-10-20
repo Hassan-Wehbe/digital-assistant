@@ -4,7 +4,9 @@ Status: plan, 2026-10-19. **Owner's answers given 2026-10-20: all as recommended
 built 2026-10-20 (#245, not merged); migration applied 2026-10-20 (owner's dry run passed; the
 connector applied it; checked read-only):** see "As built: step 1". **Step 2, server half, built
 2026-10-20, branch `claude/recipe-fields`, not merged, not deployed:** see "As built: step 2 (server)";
-the app half (the screens) follows in its own PR. Design: D43
+the app half (the screens) follows in its own PR. **Step 2, app half, built 2026-10-20, branch
+`claude/recipe-fields-app` (on top of the server half), not merged; ships with the next build:** see
+"As built: step 2 (app)". Design: D43
 (builds on D41, links shared from social apps; D40, the planners and the household; the built-in
 spaces of the memory plan). Model: the strongest for steps 1, 3, 4, 5 and 7 (the sign-up trigger
 and a migration, what the AI sees, images sent to the AI, the chat); a smaller one is fine for the
@@ -331,3 +333,39 @@ place; `_ensure_built_in_spaces` not callable by authenticated or anon.
 **Owner, in order:** (1) OK and a spending cap for an evaluation run (the tool descriptions
 changed; the chat suite on this branch); (2) merge; (3) OK to deploy `mcp` (and `chat`, which uses
 the same tools). Nothing changes in the app until the app half ships.
+
+## As built: step 2 (app) (2026-10-20)
+
+- **`lib/recipes.ts`:** the form ↔ fields (`recipeMetadata`: lines tidied as the server does, the
+  same limits in plain words, the made-it times kept, the site's name from the link, `sameRecipe`
+  so an unchanged recipe sends no metadata), `recipeOf` (reads saved fields defensively: only
+  well-formed values are shown), `kindForSpace` (the built-in Recipes and Cocktails spaces), the
+  note's summary and made-it lines, `madeArgs` (today on the phone), `linkButton` ("Open on
+  TikTok"), `sharedRecipe` (a shared link kept as the source). `lib/wilma.ts` gains `madeIt`
+  (update_item's `made_it` with the phone's date); `saveNote` saves a recipe with save_item, then
+  any files onto it.
+- **New note:** chips Note · 📍 Place · 🍽️ Recipe · 🍸 Cocktail · ✅ Task. A note in the built-in
+  Recipes or Cocktails space starts as a recipe or cocktail until another kind is picked.
+  **`RecipeFields`:** Ingredients and Steps (one per line), Minutes and Serves, the link it came from,
+  and for a cocktail Strength (Regular · Light · No alcohol). All optional.
+- **Edit note:** a recipe's fields are edited there; a plain note gets "🍽️ Make this a recipe" (or
+  "🍸 Make this a cocktail" in the Cocktails space) next to "📍 Make this a place".
+- **The note (`RecipeCard`):** "🍽️ Recipe · 25 min · serves 4", the ingredients, the numbered steps,
+  "Made 2 times · last on 2026-10-19 · ★5", **Open on TikTok** (the link it came from) and **Made
+  it** with an optional ★ 1-5.
+- **Share → Wilma:** a link shared into Recipes or Cocktails is saved as a recipe or cocktail with
+  the link as its source ("Saved as a 🍽️ recipe with its link. Add the ingredients and steps later
+  with Edit note.").
+- Tests: `lib/recipes.test.ts` (15), `wilma.test.ts` and `saveNote.test.ts` (3 more). **946 app
+  tests pass**; type check and lint clean; `expo export --platform android` bundles. Not seen on a
+  screen here (the browser flows need a throwaway account): the phone checks below go into the next
+  build's checklist.
+- **Order:** deploy `mcp` (server half) before the build that carries this; an older server keeps
+  recipe fields unchecked and ignores Made it.
+
+**Phone checks for the next build:** (1) New note in 🍽️ Recipes starts as Recipe; add two
+ingredients, two steps, 20 minutes, serves 2; save; the note shows them in order. (2) Made it with
+★★★★ → "Made once · last on today · ★4". (3) Share a TikTok link into Recipes → saved as a recipe;
+"Open on TikTok" opens it. (4) New note in 🍸 Cocktails → Strength No alcohol shows on the note.
+(5) Edit a plain note → 🍽️ Make this a recipe → save → it shows the recipe card. (6) Typing a
+password in an ingredient is refused and pointed to the vault.

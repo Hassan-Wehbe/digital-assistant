@@ -2,16 +2,17 @@
 // "New note" and "Share to Wilma".
 // Without files: save_item. With files: attach_file creates the note (or targets the
 // existing one) and gives an upload link in one step, then the files go up (upload.ts).
-// A place (places.ts) is always created with save_item, which checks its fields; its files then
-// go onto it like onto an existing note.
+// A place (places.ts), a recipe or a cocktail (recipes.ts) is always created with save_item, which
+// checks its fields; its files then go onto it like onto an existing note.
 import type { PlaceMetadata } from './places';
+import type { RecipeMetadata, RecipeType } from './recipes';
 import { uploadToLink, type PickedFile, type UploadDeps } from './upload';
 import type { WilmaClient } from './wilma';
 
 export type SaveTarget =
   /** An existing note (or one created by an earlier try that failed during the upload). */
   | { itemId: string }
-  | { space: string; title: string; body: string; place?: PlaceMetadata };
+  | { space: string; title: string; body: string; place?: PlaceMetadata; recipe?: { type: RecipeType; metadata: RecipeMetadata } };
 
 export interface SaveOutcome {
   itemId: string;
@@ -26,9 +27,15 @@ export async function saveNote(
   deps: UploadDeps,
   hooks: { onCreated?: (itemId: string) => void; onStatus?: (message: string) => void } = {},
 ): Promise<SaveOutcome> {
-  if ('space' in target && (target.place || !files.length)) {
-    const { space, title, body, place } = target;
-    const { id } = await wilma.saveItem(place ? { space, title, body, item_type: 'place', metadata: place } : { space, title, body });
+  if ('space' in target && (target.place || target.recipe || !files.length)) {
+    const { space, title, body, place, recipe } = target;
+    const { id } = await wilma.saveItem(
+      place
+        ? { space, title, body, item_type: 'place', metadata: place }
+        : recipe
+        ? { space, title, body, item_type: recipe.type, metadata: recipe.metadata }
+        : { space, title, body },
+    );
     hooks.onCreated?.(id);
     if (!files.length) return { itemId: id, failed: [] };
     target = { itemId: id };

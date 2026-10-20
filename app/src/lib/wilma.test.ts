@@ -116,7 +116,7 @@ describe('wilma client', () => {
     ]);
     expect(Object.keys(setup([]).client).sort()).toEqual(
       ['addVisit', 'attachmentLink', 'createSpace', 'deleteAttachment', 'deleteItem', 'deleteSecret', 'deleteSpace', 'findSecrets', 'findTasks', 'getItem', 'listSpaces',
-        'newValueLink', 'purgeItem', 'recycleBin', 'restoreItem', 'revealLink', 'saveItem', 'saveRoutine', 'saveSecret', 'saveTask', 'search', 'taskDone', 'updateItem',
+        'madeIt', 'newValueLink', 'purgeItem', 'recycleBin', 'restoreItem', 'revealLink', 'saveItem', 'saveRoutine', 'saveSecret', 'saveTask', 'search', 'taskDone', 'updateItem',
         'updateSecret', 'updateSpace', 'uploadLink'],
     );
   });
@@ -306,5 +306,13 @@ describe('places', () => {
       { name: 'update_item', arguments: { item_id: 'p1', item_type: 'place', metadata: { ...place, status: 'been', rating: 4 } } },
       { name: 'update_item', arguments: { item_id: 'p1', add_visit: { on: '2026-10-03', with: 'Sarah' } } },
     ]);
+  });
+
+  it('records that a recipe was made, with the phone’s date as today', async () => {
+    const { client, fetch } = setup([reply(200, toolResult({ id: 'r1', updated: true }))]);
+    await client.madeIt('r1', { on: '2026-10-20', rating: 5 });
+    expect(JSON.parse(fetch.mock.calls[0][1].body as string).params).toEqual({
+      name: 'update_item', arguments: { item_id: 'r1', made_it: { on: '2026-10-20', rating: 5 }, today: '2026-10-20' },
+    });
   });
 });

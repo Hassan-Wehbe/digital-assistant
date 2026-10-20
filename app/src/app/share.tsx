@@ -5,6 +5,8 @@
 // "Is this it?" from the phone's map lookup of its name and address (PlaceLookup; Yes only).
 // A shared link (Facebook, YouTube, ...) can get the page's own title with "Get title", read on
 // the phone only on that tap (linkInfo.ts); the favourite spaces come first in the space list (D38).
+// Into the built-in Recipes or Cocktails space, it is saved as a recipe or cocktail with the link as
+// its source (recipes.ts); ingredients and steps can be added later with Edit note.
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
@@ -23,6 +25,7 @@ import { fetchLinkTitle, firstUrl } from '@/lib/linkInfo';
 import { saveNote, type SaveTarget } from '@/lib/saveNote';
 import { supabase } from '@/lib/supabase';
 import { EMPTY_PLACE, placeMetadata, type PlaceForm } from '@/lib/places';
+import { kindForSpace, sharedRecipe } from '@/lib/recipes';
 import { draftFromShared, placeFromShared, TITLE_MAX, type Shared } from '@/lib/shared';
 import { useShare } from '@/lib/shareIntake';
 import type { PickedFile } from '@/lib/upload';
@@ -84,6 +87,7 @@ function ShareForm({ shared, onDone, onCancel }: { shared: Shared; onDone: () =>
   // A Maps share keeps its link in the place's map link, not in the note.
   const [body, setBody] = useState(fromMaps ? '' : draft.body);
   const [isPlace, setIsPlace] = useState(!!fromMaps);
+  const shareType = isPlace ? null : kindForSpace(spaces.data?.find((s) => s.id === space));
   const [place, setPlace] = useState<PlaceForm>(
     fromMaps ? { ...EMPTY_PLACE, mapsUrl: fromMaps.mapsUrl, address: fromMaps.address } : EMPTY_PLACE,
   );
@@ -141,7 +145,8 @@ function ShareForm({ shared, onDone, onCancel }: { shared: Shared; onDone: () =>
         const fields = placeMetadata(place);
         if ('error' in fields) return setError(fields.error);
         target = { space, title: title.trim(), body, place: fields.metadata };
-      } else target = { space, title: title.trim(), body };
+      } else if (shareType) target = { space, title: title.trim(), body, recipe: { type: shareType, metadata: sharedRecipe(link) } };
+      else target = { space, title: title.trim(), body };
     }
     setBusy(true);
     let savedId = createdId;
@@ -237,6 +242,11 @@ function ShareForm({ shared, onDone, onCancel }: { shared: Shared; onDone: () =>
               />
             ) : null}
             {isPlace ? <PlaceFields value={place} onChange={setPlace} disabled={locked} /> : null}
+            {shareType ? (
+              <Muted>
+                {`Saved as a ${shareType === 'cocktail' ? '🍸 cocktail' : '🍽️ recipe'}${link ? ' with its link' : ''}. Add the ingredients and steps later with Edit note.`}
+              </Muted>
+            ) : null}
             <TextInput
               style={[input, { minHeight: 120, textAlignVertical: 'top' }]}
               placeholder={isPlace ? 'Note (optional), e.g. try the fattoush' : 'Note (optional)'}

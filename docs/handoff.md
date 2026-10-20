@@ -13,6 +13,13 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **D43 recipes step 2, app half (2026-10-20): branch `claude/recipe-fields-app` (on top of the
+  server half, #246), not merged; ships with the next build.** New note's 🍽️ Recipe and 🍸 Cocktail
+  (a note in the built-in spaces starts as one), the recipe fields on New and Edit note, the
+  recipe card on the note (ingredients, numbered steps, Open on TikTok, Made it ★), and a link
+  shared into Recipes saved as a recipe with its source. 946 app tests; bundles. Phone checks in
+  `docs/recipes-plan.md` "As built: step 2 (app)". **Owner:** merge after #246; deploy `mcp` before
+  the build. **Next (strongest model):** step 3, Fill in the recipe from a link.
 - **D43 recipes step 2, server half (2026-10-20): branch `claude/recipe-fields`, not merged, not
   deployed.** `mcp/lib/recipes.ts`: checked recipe and cocktail fields (ingredients, steps, minutes,
   serves, source link, strength for cocktails, made with ratings); `save_item` and `update_item`
