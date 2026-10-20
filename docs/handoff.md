@@ -13,6 +13,13 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **D43 recipes step 5, the suggestions (2026-10-20): branch `claude/recipe-suggestions`, not merged,
+  migration not applied, not deployed.** Migration `20261022120000_recipe_suggestions.sql` (daily
+  count: 10 Free, 50 Pro; SQL test 22, dry run 15/15); the `chat` route `{"mode":"meal"|"cocktail"}`
+  (code short-lists your recipes from searchable spaces only, one AI request picks up to 3 by
+  number, checked; A new idea); five suggestion cases in the `recipe` evaluation suite. 600 Deno
+  tests. See `docs/recipes-plan.md` "As built: step 5". **Owner:** dry run, OK to apply, OK + cap for
+  the evaluation, merge, OK to deploy `chat`. **Next:** step 6, the screens.
 - **D43 recipes step 4, Read a screenshot (2026-10-20): merged (#251); `chat` v43 live (run
   39448448496); evaluation run 39443492688 passed (`recipe` suite, Luna 5/5, 0 leaks, 0 unsafe,
   $0.001); the button ships with the next build.** Pictures in the AI layer (both providers); the `chat` route

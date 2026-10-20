@@ -21,14 +21,20 @@ const scripted = (answer: string): LlmAdapter => ({
 
 Deno.test("recipe eval: unique ids, both categories, every picture a real PNG the route accepts", async () => {
   assertEquals(new Set(RECIPE_CASES.map((c) => c.id)).size, RECIPE_CASES.length);
-  assertEquals(new Set(RECIPE_CASES.map((c) => c.category)), new Set(["read", "trap"]));
+  assertEquals(new Set(RECIPE_CASES.map((c) => c.category)), new Set(["read", "trap", "suggest"]));
   for (const c of RECIPE_CASES) {
+    if (!c.picture) {
+      assert(c.suggest, `${c.id} is a picture or a suggestion case`);
+      continue;
+    }
     const bytes = await Deno.readFile(new URL(`../eval/fixtures/recipe/${c.picture}`, import.meta.url));
     const head = btoa(String.fromCharCode(...bytes.subarray(0, 12)));
     assert(imageMatches("image/png", head), c.picture);
     assert(bytes.length * 4 / 3 < MAX_IMAGE_BASE64, `${c.picture} fits the route's limit`);
   }
-  assertEquals(selectCases("trap", RECIPE_CASES).map((c) => c.id), ["screenshot-sticky-password-trap", "screenshot-injection-trap"]);
+  assertEquals(selectCases("trap", RECIPE_CASES).map((c) => c.id), [
+    "screenshot-sticky-password-trap", "screenshot-injection-trap", "suggest-vegetarian-trap", "suggest-injection-trap",
+  ]);
   assert(estimateRecipeCents(MODEL, RECIPE_CASES, 1) < 1, "a run costs well under a cent per model here");
 });
 
@@ -63,4 +69,24 @@ Deno.test("recipe eval: a case runs the real route with the picture, and is grad
   assertEquals([good.pass, good.leak, good.unsafe], [true, false, false], good.failures.join("; "));
   const bad = await runRecipeCase(scripted("Sorry, I can't read that."), MODEL, card);
   assertFalse(bad.pass);
+});
+
+Deno.test("recipe eval: a suggestion case runs the real route on the pretend recipe book, and is graded", async () => {
+  const veg = RECIPE_CASES.find((c) => c.id === "suggest-vegetarian-trap")!;
+  // The short list numbers by score then title; find the chickpea curry's number from the prompt itself.
+  const pick = (title: RegExp): LlmAdapter => ({
+    async *stream(_m, req) {
+      const prompt = JSON.stringify(req.messages);
+      assertFalse(prompt.includes("secret lasagna"), "the locked space never reaches the model");
+      const n = prompt.split("\\n").find((l) => title.test(l))?.match(/^(\d+)\./)?.[1];
+      yield {
+        type: "done", turn: { role: "assistant", text: `{"choices":[{"n":${n},"why":"fits"}]}`, toolCalls: [] }, stop: "end",
+        usage: { inputTokens: 900, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 50, costCents: 0.01 },
+      } as StreamEvent;
+    },
+  } as LlmAdapter);
+  assert((await runRecipeCase(pick(/Chickpea curry/), MODEL, veg)).pass);
+  const bad = await runRecipeCase(pick(/Slow beef stew/), MODEL, veg);
+  assertFalse(bad.pass);
+  assert(bad.failures.some((f) => f.includes("a choice matches")));
 });
