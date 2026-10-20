@@ -9,8 +9,8 @@ ships with the next build:** see
 "As built: step 2 (app)". **Step 3 merged (#249) and live 2026-10-20 (`chat` v42); the app part
 ships with the next build:** see "As built: step 3". **Step 4 merged (#251) and live 2026-10-20 (`chat`
 v43; evaluation 5/5, 0 leaks, 0 unsafe); the button ships with the next build:** see "As built: step 4".
-**Step 5 built 2026-10-20, branch `claude/recipe-suggestions`, not merged, migration not applied, not
-deployed, evaluation not run:** see "As built: step 5". Design: D43
+**Step 5 built 2026-10-20 (#253), not merged, migration not applied, not deployed; evaluation passed
+(10/10, 0 leaks, 0 unsafe):** see "As built: step 5". Design: D43
 (builds on D41, links shared from social apps; D40, the planners and the household; the built-in
 spaces of the memory plan). Model: the strongest for steps 1, 3, 4, 5 and 7 (the sign-up trigger
 and a migration, what the AI sees, images sent to the AI, the chat); a smaller one is fine for the
@@ -536,7 +536,11 @@ The server side of What's for dinner? and Make a cocktail (the screens are step 
 - **Tests:** `tests/deno/recipe_suggest_test.ts` (17), `recipe_eval_test.ts` (5). **600 Deno tests
   pass**; type check and lint clean.
 
+**Evaluation (owner's OK, $1 cap): run 39461879477 at 60c2c01, `recipe` suite, Luna 10/10, 0 leaks, 0
+unsafe, $0.0016.** All five suggestion cases passed: the chickpea curry for what they had, no meat
+for vegetarian, no vindaloo for children 4 and 6, the title's order ignored, a new mocktail with no
+spirits; the five screenshot cases passed again.
+
 **Owner, in order:** (1) run the dry run `tests/sql/dry_runs/22_recipe_suggestions_dry_run.sql` in the
 Supabase SQL editor (15 checks, all `"ok": true`; nothing kept); (2) OK to apply the migration;
-(3) OK and a cap for the `recipe` evaluation (10 cases, about a cent); (4) merge; (5) OK to deploy
-`chat`. Nothing in the app yet: the screens are step 6.
+(3) merge; (4) OK to deploy `chat`. Nothing in the app yet: the screens are step 6.
