@@ -1,12 +1,13 @@
 # Recipes and cocktails: two built-in spaces, importing, and "what should I make?"
 
 Status: plan, 2026-10-19. **Owner's answers given 2026-10-20: all as recommended (Q1-Q12).** **Step 1
-built 2026-10-20 (#245, not merged); migration applied 2026-10-20 (owner's dry run passed; the
+merged (#245); migration applied 2026-10-20 (owner's dry run passed; the
 connector applied it; checked read-only):** see "As built: step 1". **Step 2, server half, merged (#246)
 and live 2026-10-20 (`mcp` v36, `chat` v41):** see "As built: step 2 (server)";
 the app half (the screens) follows in its own PR. **Step 2, app half, merged (#247) 2026-10-20;
 ships with the next build:** see
-"As built: step 2 (app)". Design: D43
+"As built: step 2 (app)". **Step 3 built 2026-10-20, branch `claude/recipe-fill-in`, not merged, not
+deployed:** see "As built: step 3". Design: D43
 (builds on D41, links shared from social apps; D40, the planners and the household; the built-in
 spaces of the memory plan). Model: the strongest for steps 1, 3, 4, 5 and 7 (the sign-up trigger
 and a migration, what the AI sees, images sent to the AI, the chat); a smaller one is fine for the
@@ -377,3 +378,58 @@ ingredients, two steps, 20 minutes, serves 2; save; the note shows them in order
 "Open on TikTok" opens it. (4) New note in 🍸 Cocktails → Strength No alcohol shows on the note.
 (5) Edit a plain note → 🍽️ Make this a recipe → save → it shows the recipe card. (6) Typing a
 password in an ingredient is refused and pointed to the vault.
+
+## As built: step 3 (2026-10-20)
+
+**Fill in the recipe**, only on the user's tap, on a recipe or cocktail with a link (New note and
+Edit note, under the link box). Only empty boxes are filled, so nothing typed is lost; the user
+checks the result and taps Save (save_item / update_item check it all again).
+
+- **Recipe websites (the phone, no AI, no cost):** `lib/recipeImport.ts` `recipeFromHtml` reads the
+  page's JSON-LD `Recipe` block, in the shapes big sites use (an `@graph` from WordPress recipe
+  plugins, a list, `@type` as a list; steps as text, `HowToStep` or `HowToSection`), with
+  `totalTime` or prep + cook time, and servings from `recipeYield`. Entities and tags are cleaned;
+  lines are cut to the server's limits; a line that looks like a password is left out (rule 9).
+  The page is fetched by the phone as opening the link would (no cookies, no sign-in), at most
+  3 MB, 10 seconds. A page without a block: "This page has no recipe Wilma can read. Copy the
+  ingredients and steps into the boxes instead."
+- **TikTok (one AI request):** the phone reads the caption from TikTok's public oEmbed address
+  (`https://www.tiktok.com/oembed?url=…`; no key; documented by TikTok for embedding, where `title`
+  is the caption: checked 2026-10-20; reading it to pre-fill the user's own private note, on their
+  tap, with the link and creator kept, is a light use of it). A caption that looks like it holds a
+  password is never sent (checked on the phone and again on the server). Only the caption goes to
+  the chat function's new route **`{"mode":"recipe_from_text", type, text ≤ 4000}`**
+  (`chat/recipe_import.ts`): the AI allowance is checked, one AI request (default route, 20 s) with
+  the caption inside `<post>` as data, never instructions, and "never invent"; the answer is JSON
+  only, cut to the limits, any credential-like line dropped, then `normalizeRecipe` (the same
+  checks as save_item). Counted against the AI allowance, not a Pro feature. Nothing is saved
+  there; the log holds counts and codes only.
+- **Facebook and Instagram:** not read at all ("Facebook doesn't let apps read its posts. Copy the
+  ingredients and steps into the boxes instead."). Screenshots (step 4) will cover them.
+- **The app:** `recipeTextClient` (on `useAuth`, as the planners' clients), the **Fill in the
+  recipe from the link** link under the link box in `RecipeFields`, the form locked while it reads,
+  and one plain line for the outcome: what was filled ("Filled in the ingredients, steps and time
+  from the page. Check them, then Save."), or why not. Share → Wilma's hint now mentions it.
+- **Privacy page:** the OpenAI line names the TikTok caption (only on the tap; never one that looks
+  like a password), and a new line covers the recipe website or TikTok the phone contacts on that
+  tap. **The owner checks the wording.** Play Data safety: no new data type (a caption is content
+  the user chose, processed like a chat message); checked again in step 8.
+- **Tests:** `tests/deno/recipe_import_test.ts` (11: the prompt keeps the caption as data, the
+  answer checks, a credential-like line dropped, a caption with a password never reaching the model
+  and not counted, the allowance, a malformed body, the chat function routing it and requiring
+  sign-in). **570 Deno tests pass.** `lib/recipeImport.test.ts` (20: the three page shapes,
+  entities, limits, durations, the oEmbed caption, the client with its one retry, only empty boxes
+  filled, every failure's words, Facebook and Instagram never fetched). **966 app tests pass**;
+  type check and lint clean; the Android bundle builds. Real recipe pages could not be fetched from
+  here (the container's network blocks those sites), so the phone checks below cover them.
+- **No evaluation run needed:** the chat's tools and prompts are unchanged; the new request has its
+  own prompt and code checks, and a caption with a password never reaches it.
+
+**Owner, in order:** (1) check the privacy wording; (2) merge; (3) OK to deploy `chat` (before the
+build that carries the app part).
+
+**Phone checks for the next build** (with step 2's): (7) a recipe from BBC Good Food or AllRecipes:
+Fill in fills the ingredients, steps, time and servings. (8) A food blog recipe (WordPress) does
+the same. (9) A TikTok recipe video with the ingredients in its caption: Fill in fills them. (10) A
+Facebook link: the "doesn't let apps read its posts" line, nothing fetched. (11) Type an
+ingredient first, then Fill in: your ingredient stays.

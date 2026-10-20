@@ -11,6 +11,7 @@ import { deviceChatStore, deviceDayMemory, deviceRecentSpaces } from './deviceSt
 import { forgetOtherAccounts } from './notifications';
 import { outingClient, type OutingClient } from './outing';
 import { changePassword as changePasswordFlow } from './password';
+import { recipeTextClient, type RecipeTextClient } from './recipeImport';
 import { sessionToken } from './sessionToken';
 import { supabase } from './supabase';
 import { wilmaClient, type WilmaClient } from './wilma';
@@ -28,6 +29,8 @@ interface AuthState {
   day: DayClient;
   /** Date night and Family day (the chat function's outing route; one model call per plan, D40). */
   outing: OutingClient;
+  /** Fill in a recipe from a TikTok caption (the chat function's recipe_from_text route; one model call, D43). */
+  recipeText: RecipeTextClient;
   signIn(email: string, password: string): Promise<string | null>;
   signOut(): Promise<void>;
   /** New sign-in password; the current one is checked first. */
@@ -59,6 +62,7 @@ const wilma = wilmaClient({ url: MCP_URL, token, refresh });
 const chat = chatClient({ url: CHAT_URL, token, refresh });
 const day = dayClient({ url: CHAT_URL, token, refresh });
 const outing = outingClient({ url: CHAT_URL, token, refresh });
+const recipeText = recipeTextClient({ url: CHAT_URL, token, refresh });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -111,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       chat,
       day,
       outing,
+      recipeText,
       async signIn(email, password) {
         const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (!error) return null;

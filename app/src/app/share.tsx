@@ -244,7 +244,7 @@ function ShareForm({ shared, onDone, onCancel }: { shared: Shared; onDone: () =>
             {isPlace ? <PlaceFields value={place} onChange={setPlace} disabled={locked} /> : null}
             {shareType ? (
               <Muted>
-                {`Saved as a ${shareType === 'cocktail' ? '🍸 cocktail' : '🍽️ recipe'}${link ? ' with its link' : ''}. Add the ingredients and steps later with Edit note.`}
+                {`Saved as a ${shareType === 'cocktail' ? '🍸 cocktail' : '🍽️ recipe'}${link ? ' with its link' : ''}. Add the ingredients and steps later with Edit note, or tap Fill in the recipe there.`}
               </Muted>
             ) : null}
             <TextInput

@@ -1,11 +1,16 @@
 // The recipe part of New note and Edit note (recipes.ts): ingredients and steps one per line, the
 // time, how many it serves, the link it came from, and a cocktail's strength. All optional.
+// Fill in from the link (recipeImport.ts) fills the empty boxes, only when tapped.
+import { useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 
+import { useAuth } from '@/lib/auth';
+import { canFill, fillFromLink } from '@/lib/recipeImport';
 import { MAX_LINK, STRENGTH_LABELS, STRENGTHS, type RecipeForm, type RecipeType, type Strength } from '@/lib/recipes';
+import { WilmaError } from '@/lib/wilma';
 
 import { Chips } from './PlaceFields';
-import { Muted, styles, useColors } from './ui';
+import { Muted, styles, TextLink, useColors } from './ui';
 
 const STRENGTH_CHIPS = STRENGTHS.map((s) => ({ value: s, label: STRENGTH_LABELS[s] }));
 
@@ -21,7 +26,29 @@ export function RecipeFields({
   disabled?: boolean;
 }) {
   const c = useColors();
+  const { recipeText } = useAuth();
+  const [filling, setFilling] = useState(false);
+  const [fillNote, setFillNote] = useState<{ text: string; error: boolean } | null>(null);
   const set = (change: Partial<RecipeForm>) => onChange((current) => ({ ...current, ...change }));
+  const locked = disabled || filling;
+
+  // Only on the tap: the page (or TikTok's caption, then one AI request) is read, the empty boxes filled.
+  const fill = async () => {
+    setFilling(true);
+    setFillNote(null);
+    try {
+      const out = await fillFromLink(f, type, { fetch, fromText: recipeText.fromText });
+      if ('error' in out) setFillNote({ text: out.error, error: true });
+      else {
+        onChange(() => out.form);
+        setFillNote({ text: out.message, error: false });
+      }
+    } catch (e) {
+      setFillNote({ text: e instanceof WilmaError ? e.message : 'Couldn’t fill it in. Try again.', error: true });
+    } finally {
+      setFilling(false);
+    }
+  };
   const input = [styles.input, { color: c.text, borderColor: c.line, backgroundColor: c.card }];
   const box = [...input, { minHeight: 110, textAlignVertical: 'top' as const }];
   const label = [styles.title, { color: c.text, fontSize: 15 }];
@@ -36,7 +63,7 @@ export function RecipeFields({
         multiline
         value={f.ingredients}
         onChangeText={(ingredients) => set({ ingredients })}
-        editable={!disabled}
+        editable={!locked}
       />
       <Text style={label}>Steps</Text>
       <TextInput
@@ -46,7 +73,7 @@ export function RecipeFields({
         multiline
         value={f.steps}
         onChangeText={(steps) => set({ steps })}
-        editable={!disabled}
+        editable={!locked}
       />
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <TextInput
@@ -58,7 +85,7 @@ export function RecipeFields({
           accessibilityLabel="Time in minutes"
           value={f.minutes}
           onChangeText={(minutes) => set({ minutes })}
-          editable={!disabled}
+          editable={!locked}
         />
         <TextInput
           style={[...input, { flex: 1 }]}
@@ -69,7 +96,7 @@ export function RecipeFields({
           accessibilityLabel="How many it serves"
           value={f.serves}
           onChangeText={(serves) => set({ serves })}
-          editable={!disabled}
+          editable={!locked}
         />
       </View>
       <TextInput
@@ -81,9 +108,20 @@ export function RecipeFields({
         autoCorrect={false}
         keyboardType="url"
         value={f.link}
-        onChangeText={(link) => set({ link })}
-        editable={!disabled}
+        onChangeText={(link) => {
+          set({ link });
+          setFillNote(null);
+        }}
+        editable={!locked}
       />
+      {canFill(f) && !disabled ? (
+        filling ? (
+          <Muted>Reading the link…</Muted>
+        ) : (
+          <TextLink title="Fill in the recipe from the link" onPress={() => void fill()} />
+        )
+      ) : null}
+      {fillNote ? <Text style={{ color: fillNote.error ? c.danger : c.muted, fontSize: 15 }}>{fillNote.text}</Text> : null}
       {type === 'cocktail' ? (
         <>
           <Text style={label}>Strength</Text>
@@ -91,7 +129,7 @@ export function RecipeFields({
             options={STRENGTH_CHIPS}
             selected={(s) => f.strength === s}
             onPress={(s) => set({ strength: f.strength === s ? null : s })}
-            disabled={disabled}
+            disabled={locked}
           />
         </>
       ) : null}
