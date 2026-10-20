@@ -1,6 +1,7 @@
 # Ages: open Wilma to teens, cocktails at 21, mocktails for everyone else
 
-**Status:** plan, 2026-10-20, waiting for the owner's answers (Questions, below). Nothing built.
+**Status:** plan, 2026-10-20; **owner's answers the same day: all as recommended, Q5 option B** (keep
+only the result, never the birth date; see Answers). Nothing built.
 Design: D44 (builds on D29, invite-only sign-up with its 18+ box; D43, recipes and cocktails).
 Model: the strongest for steps 1-2 (sign-up, the account, server checks) and for step 3's chat
 part; a smaller one for the app screens and the paperwork.
@@ -31,7 +32,8 @@ becomes a later **family accounts** plan, not part of this one (Q11).
 
 ## What the owner will see
 
-**Sign-up:** instead of the 18+ box, **Date of birth** (month and year, Q5) and the terms box.
+**Sign-up:** instead of the 18+ box, **Date of birth** (month and year) and the terms box. It is
+checked and thrown away (Q5): Wilma keeps only "21 or over", or the month the person turns 21.
 Under the minimum age (13, Q1): "Wilma is for people 13 and over." and no account. Under 18, a line
 that a parent or guardian should agree to the terms (wording from the lawyer, Q10).
 
@@ -51,16 +53,22 @@ age-limited parts like cocktails." (month and year). Until it is answered, drink
   cocktails are for 21 and over; never a recipe with alcohol.
 - Help's Recipes topic says Mocktails.
 
-**Settings → Account:** the date of birth shown, not editable in the app (Q7: "Wrong date? Contact us").
+**Settings → Account:** "Cocktails: yes (21 or over)" or "Cocktails from March 2028", not editable in
+the app (Q7: "Wrong date? Contact us"). No birth date is shown because none is kept.
 
 ## How it works
 
-1. **The date of birth** (step 1): `app_user.birth_month` (a date, the first of that month; Q5), set
-   once by `set_birth_month(date)` (refused when already set; RLS: own row) and by the sign-up hook
-   from the sign-up form. `age_at(day)` and **`is_21()`** in SQL (security definer, the caller's own
-   row): 21 from the **first day of the month after** the 21st birthday month, so never early (Q5).
-   No date: treated as under 21 for drinks. The sign-up hook checks the minimum age (13, Q1) the same
-   way and refuses with a plain message. Revoke anon; grant authenticated only what it needs.
+1. **The age check, keeping only the result** (step 1; Q5 option B): one column,
+   `app_user.alcohol_from` (a date): the first day of the month **after** the person turns 21, or
+   `'-infinity'` once they are 21 or over (stored as "21+", no month kept). Set once by
+   `set_birth_month(month, year)` (refused when already set; RLS: own row) and by the sign-up hook
+   from the sign-up form: the function works out the age **in the database, from the values it is
+   given, and stores only `alcohol_from`**; the month and year are never written to a table, a log or
+   an error message. **`is_21()`** in SQL (security definer, the caller's own row): `alcohol_from <=
+   today`, so never early (at most a month late). No answer yet (`null`): treated as under 21 for
+   drinks. The sign-up hook checks the minimum age (18 for now, 13 after step 4, Q1) from the same
+   values and refuses with a plain message, keeping nothing. Revoke anon; grant authenticated only
+   what it needs.
 2. **Drinks on the server** (step 2): every rule enforced by the server, whatever the app or the
    model does (CLAUDE.md rule 9's spirit):
    - The suggestion route (`chat/recipe_suggest.ts`, mode `cocktail`): under 21 the strength is
@@ -79,10 +87,12 @@ age-limited parts like cocktails." (month and year). Until it is answered, drink
    space's name and icon from the server, Strength hidden under 21, Help, Settings → Account. The
    chat's cards are unchanged (the server already decided).
 4. **Paperwork and the switch** (step 4): the terms (13 and over; under 18 with a parent's
-   agreement, the lawyer's wording), the privacy page (date of birth: month and year, why, kept with
-   the account, deleted with it), Play: **Target audience** 13-15, 16-17 and 18 and over;
-   **Content rating** stays "references to alcohol"; **Data safety**: date of birth (Personal info,
-   collected, required, App functionality); the legal checklist. **Only then** the sign-up minimum
+   agreement, the lawyer's wording), the privacy page (the month and year of birth are asked once,
+   checked and not kept: only "21 or over" or the month the person turns 21 is kept with the account,
+   deleted with it), Play: **Target audience** 13-15, 16-17 and 18 and over;
+   **Content rating** stays "references to alcohol"; **Data safety**: probably no date of birth to declare,
+   since none is kept or sent (only the 21+ result); the lawyer confirms (Personal info → Other info
+   if it is needed); the legal checklist. **Only then** the sign-up minimum
    changes from 18 to 13 (a one-line setting, Q10).
 
 ## Rules check
@@ -93,7 +103,18 @@ age-limited parts like cocktails." (month and year). Until it is answered, drink
   only the caller's own row; nothing about age goes to the AI except "mocktails only" for drinks.
 - Rule 9 (security never depends on the model): every drinks rule is in code on the server; the
   model's own knowledge is covered by the prompt and by evaluation traps.
-- Data minimisation: month and year only (Q5), never shown to the AI, not in logs.
+- Data minimisation (Q5 option B): the month and year are used once and thrown away; only "21+" or
+  the month the person turns 21 is kept; never shown to the AI, not in logs.
+
+## Answers (owner, 2026-10-20): all as recommended, Q5 option B
+
+Q1 minimum age 13, after the lawyer (Q10); Q2 21 everywhere; Q3 mocktails under 21; Q4 asked at
+sign-up, and once for existing accounts; **Q5 option B: only the result is kept** ("21 or over", or
+the month the person turns 21); Q6 existing accounts mocktails only until they answer; Q7 set once,
+mistakes through support; Q8 the drinks space is Mocktails under 21; Q9 an 18-20 account keeps its
+saved cocktails, never suggested, no new ones; Q10 teens only after the lawyer; Q11 family accounts
+later. Google's own age range (Play Age Signals) is not used: it stops at 18+ and is not available
+everywhere yet (owner, 2026-10-20).
 
 ## Questions (recommendation first)
 
@@ -104,8 +125,10 @@ age-limited parts like cocktails." (month and year). Until it is answered, drink
 - **Q3. Under 21:** **mocktails only** (owner, 2026-10-20).
 - **Q4. How the age is asked:** **the date of birth at sign-up, once** (rec.: the usual neutral age
   screen; a box that says "I am 21" invites a tap); or a 21+ box only when opening Cocktails.
-- **Q5. What is stored:** **month and year only**, counting 21 from the month after (rec.: stores
-  less and is never early, at most a month late); or the full date of birth.
+- **Q5. What is stored:** **option B, only the result** (owner, 2026-10-20): "21 or over", or the
+  month the person turns 21, counting from the month after (never early, at most a month late); the
+  month and year of birth are thrown away. (Option A: keep month and year; option C: a "21 or older"
+  box only.)
 - **Q6. Existing accounts:** **asked once on the next open; until answered, mocktails only** (rec.);
   or keep cocktails until they answer (they all said 18+).
 - **Q7. Changing the date:** **set once; a mistake goes through support** (rec.: a 17-year-old cannot
@@ -123,9 +146,9 @@ age-limited parts like cocktails." (month and year). Until it is answered, drink
 
 ## Steps
 
-1. **The date of birth (strongest model).** Migration: `app_user.birth_month`, `set_birth_month()`,
-   `is_21()`, the sign-up hook's date and minimum age (still 18 until step 4); SQL tests and a dry
-   run. **Owner:** dry run, OK to apply, merge.
+1. **The age check (strongest model).** Migration: `app_user.alcohol_from`, `set_birth_month()`
+   (keeps only the result), `is_21()`, the sign-up hook's date and minimum age (still 18 until step
+   4); SQL tests (no month or year stored anywhere) and a dry run. **Owner:** dry run, OK to apply, merge.
 2. **Drinks on the server (strongest model).** The route, the chat tool, save and update, the space's
    name; Deno tests; evaluation traps (an under-21 account asking for a vodka cocktail in the chat;
    A new idea under 21; a 21-year-old still getting cocktails). **Owner:** OK + cap for the
