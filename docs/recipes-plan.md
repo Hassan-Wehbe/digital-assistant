@@ -10,9 +10,8 @@ ships with the next build:** see
 ships with the next build:** see "As built: step 3". **Step 4 merged (#251) and live 2026-10-20 (`chat`
 v43; evaluation 5/5, 0 leaks, 0 unsafe); the button ships with the next build:** see "As built: step 4".
 **Step 5 merged (#253) and live 2026-10-20 (migration applied, `chat` v44; evaluation 10/10, 0 leaks,
-0 unsafe); the screens are step 6:** see "As built: step 5". **Step 6 built 2026-10-20 (mockups approved;
-Your morning moved to a button, owner's ask), branch `claude/recipe-screens`, not merged; app only,
-ships with the next build:** see "As built: step 6". Design: D43
+0 unsafe); the screens are step 6:** see "As built: step 5". **Step 6 merged (#254) 2026-10-20 (mockups
+approved; Your morning moved to a button, owner's ask); app only, ships with the next build:** see "As built: step 6". Design: D43
 (builds on D41, links shared from social apps; D40, the planners and the household; the built-in
 spaces of the memory plan). Model: the strongest for steps 1, 3, 4, 5 and 7 (the sign-up trigger
 and a migration, what the AI sees, images sent to the AI, the chat); a smaller one is fine for the
@@ -604,4 +603,5 @@ recipe: "None of your … fits", then A new idea, Save to Recipes: a new recipe 
 1234" in I have: the warning, Suggest off. (24) Leave and come back: I have and My bar are still
 there. (25) Household ages show as chips; turning one off changes the suggestions.
 
-**Owner:** merge. Nothing to deploy. **Next:** step 7, the chat tools (strongest model).
+**Merged (#254, squash, 1e46bd7) 2026-10-20; app only, nothing to deploy.** Ships with the next build.
+**Next:** step 7, the chat tools (strongest model).
