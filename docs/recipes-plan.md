@@ -11,8 +11,8 @@ ships with the next build:** see "As built: step 3". **Step 4 merged (#251) and 
 v43; evaluation 5/5, 0 leaks, 0 unsafe); the button ships with the next build:** see "As built: step 4".
 **Step 5 merged (#253) and live 2026-10-20 (migration applied, `chat` v44; evaluation 10/10, 0 leaks,
 0 unsafe); the screens are step 6:** see "As built: step 5". **Step 6 merged (#254) 2026-10-20 (mockups
-approved; Your morning moved to a button, owner's ask); app only, ships with the next build:** see "As built: step 6". **Step 7 built 2026-10-20 (#256), not
-merged, not deployed; evaluation passed (42/42, 0 leaks, 0 unsafe):** see "As built: step 7". Design: D43
+approved; Your morning moved to a button, owner's ask); app only, ships with the next build:** see "As built: step 6". **Step 7 merged (#256) and live 2026-10-20
+(`chat` v45; evaluation 42/42, 0 leaks, 0 unsafe); the chat cards ship with the next build:** see "As built: step 7". Design: D43
 (builds on D41, links shared from social apps; D40, the planners and the household; the built-in
 spaces of the memory plan). Model: the strongest for steps 1, 3, 4, 5 and 7 (the sign-up trigger
 and a migration, what the AI sees, images sent to the AI, the chat); a smaller one is fine for the
@@ -651,5 +651,6 @@ chicken and rice", "what cocktail can I make with gin and lime?".
 cases and the 36 secret-leak traps (the new tools are in every chat request), 42/42, 0 leaks, 0
 unsafe, $0.03.**
 
-**Owner, in order:** (1) merge; (2) OK to deploy `chat`. The chat
-cards ship with the next build; until then the chat names the recipes in its words.
+**Merged (#256, squash, 2004e28) and deployed 2026-10-20: `chat` v45 (run 39482954065).** The chat
+cards ship with the next build; until then the chat names the recipes in its words. **Next:** step 8
+(help, privacy, Play content rating and Data safety, the phone checklist, the build).
