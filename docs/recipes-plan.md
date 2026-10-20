@@ -9,8 +9,8 @@ ships with the next build:** see
 "As built: step 2 (app)". **Step 3 merged (#249) and live 2026-10-20 (`chat` v42); the app part
 ships with the next build:** see "As built: step 3". **Step 4 merged (#251) and live 2026-10-20 (`chat`
 v43; evaluation 5/5, 0 leaks, 0 unsafe); the button ships with the next build:** see "As built: step 4".
-**Step 5 built 2026-10-20 (#253), not merged, migration applied 2026-10-20, not deployed; evaluation passed
-(10/10, 0 leaks, 0 unsafe):** see "As built: step 5". Design: D43
+**Step 5 merged (#253) and live 2026-10-20 (migration applied, `chat` v44; evaluation 10/10, 0 leaks,
+0 unsafe); the screens are step 6:** see "As built: step 5". Design: D43
 (builds on D41, links shared from social apps; D40, the planners and the household; the built-in
 spaces of the memory plan). Model: the strongest for steps 1, 3, 4, 5 and 7 (the sign-up trigger
 and a migration, what the AI sees, images sent to the AI, the chat); a smaller one is fine for the
@@ -546,4 +546,5 @@ read-only after: limits 10 and 50, RLS on with the one own-rows policy, `authent
 select the table, `use_recipe_suggestion()` is security definer and runs for `authenticated` but not
 `anon`, no rows yet.
 
-**Owner, in order:** (1) merge; (2) OK to deploy `chat`. Nothing in the app yet: the screens are step 6.
+**Merged (#253, squash, bca3c37) and deployed 2026-10-20: `chat` v44 (run 39464805180).** Nothing in the
+app yet: the screens are step 6.
