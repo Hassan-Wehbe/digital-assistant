@@ -6,11 +6,13 @@
 // ones opened most recently on this phone until a favourite is chosen, and All spaces
 // (homeSpaces.ts; the Tasks space is reached by the ✅ Tasks tile). With the morning briefing on,
 // Home makes 🌅 Your morning at the briefing time (useMorning.ts, day planner step 4); since recipes
-// step 6 it is a button on Plan with Wilma, NEW until opened. Under that row, Cook with Wilma.
+// step 6 it is a button on Plan with Wilma, NEW until opened. Under that row, Cook with Wilma. An
+// account not asked its age yet sees the one-time question (AgeCard, D44).
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, RefreshControl, Text, TextInput, View } from 'react-native';
 
+import { AgeCard } from '@/components/AgeCard';
 import { MicButton } from '@/components/MicButton';
 import { PasswordHold } from '@/components/PasswordHold';
 import { CookRow, PlanRow } from '@/components/PlanRow';
@@ -229,6 +231,7 @@ export default function Home() {
     <View style={{ gap: space.m }}>
       {query ? null : <WelcomeCard />}
       {query ? null : <MemoryCard />}
+      {query ? null : <AgeCard />}
       {query ? null : (
         <PlanRow onMyDay={openMyDay} myDayBadge={needsPro(pro) ? 'PRO' : undefined} morningBadge={morning.unseen ? 'NEW' : undefined} />
       )}

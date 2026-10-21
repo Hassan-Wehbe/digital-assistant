@@ -17,7 +17,7 @@ import {
   type SignupForm,
 } from './signup';
 
-const FORM: SignupForm = { code: ' wilma-7k3q-p9xd ', email: ' Tess@Example.com ', password: 'correct horse', again: 'correct horse', agreed: true };
+const FORM: SignupForm = { code: ' wilma-7k3q-p9xd ', email: ' Tess@Example.com ', password: 'correct horse', again: 'correct horse', birthMonth: 4, birthYear: ' 1990 ', agreed: true };
 
 function fakeDeps(error: { message: string; code?: string } | null = null) {
   const calls: Parameters<SignupDeps['signUp']>[0][] = [];
@@ -41,16 +41,23 @@ describe('the form', () => {
     expect(signupProblem({ ...FORM, code: '' }, 'open')).toBeNull();
   });
 
-  it('checks the email, the password length and match, and the box', () => {
+  it('checks the email, the password length and match, the month and year of birth, and the box', () => {
     expect(signupProblem({ ...FORM, email: 'tess' }, 'invite')).toBe('Enter your email address.');
     expect(signupProblem({ ...FORM, password: 'short', again: 'short' }, 'invite')).toMatch(/at least 10 characters/);
     expect(signupProblem({ ...FORM, again: 'correct horsE' }, 'invite')).toBe('The two passwords are different.');
-    expect(signupProblem({ ...FORM, agreed: false }, 'invite')).toMatch(/18 or older/);
+    expect(signupProblem({ ...FORM, agreed: false }, 'invite')).toBe('Tick the box to agree to the privacy policy and testing terms.');
+    const today = new Date(2026, 9, 21);
+    expect(signupProblem({ ...FORM, birthMonth: null }, 'invite', today)).toBe('Enter your month and year of birth.');
+    expect(signupProblem({ ...FORM, birthYear: '90' }, 'invite', today)).toBe('Enter your month and year of birth.');
+    expect(signupProblem({ ...FORM, birthMonth: 11, birthYear: '2026' }, 'invite', today)).toBe('Please enter a real month and year of birth.');
+    expect(signupProblem({ ...FORM, birthYear: '1890' }, 'invite', today)).toBe('Please enter a real month and year of birth.');
+    // The minimum age is the server's: a 15-year-old's form is sent, and the server says no.
+    expect(signupProblem({ ...FORM, birthYear: '2011' }, 'invite', today)).toBeNull();
   });
 });
 
 describe('creating the account', () => {
-  it('sends the code, 18+ and the terms version as sign-up metadata, and the confirmation page', async () => {
+  it('sends the code, the month and year of birth and the terms version as sign-up metadata, and the confirmation page', async () => {
     const { deps, calls } = fakeDeps();
     expect(await createAccount(deps, FORM, 'invite')).toBeNull();
     expect(calls).toEqual([
@@ -58,7 +65,7 @@ describe('creating the account', () => {
         email: 'tess@example.com',
         password: 'correct horse',
         options: {
-          data: { invite_code: 'wilma-7k3q-p9xd', age_confirmed: true, terms_version: TERMS_VERSION },
+          data: { invite_code: 'wilma-7k3q-p9xd', birth_month: 4, birth_year: 1990, terms_version: TERMS_VERSION },
           emailRedirectTo: EMAIL_CONFIRMED_URL,
         },
       },
@@ -73,7 +80,7 @@ describe('creating the account', () => {
 
   it('sends nothing when the form is not complete', async () => {
     const { deps, calls } = fakeDeps();
-    expect(await createAccount(deps, { ...FORM, agreed: false }, 'invite')).toMatch(/18 or older/);
+    expect(await createAccount(deps, { ...FORM, agreed: false }, 'invite')).toMatch(/Tick the box/);
     expect(calls).toHaveLength(0);
   });
 

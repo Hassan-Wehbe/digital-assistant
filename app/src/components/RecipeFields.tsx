@@ -1,9 +1,13 @@
 // The recipe part of New note and Edit note (recipes.ts): ingredients and steps one per line, the
 // time, how many it serves, the link it came from, and a cocktail's strength. All optional.
 // Fill in from the link, or Read a screenshot (recipeImport.ts), fills the empty boxes, only when tapped.
-import { useState } from 'react';
+// Under 21, or until the age is given (D44): a drink is No alcohol only (the server refuses others);
+// a drink with no strength yet starts as No alcohol.
+import { useEffect, useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 
+import { useAge } from '@/components/useAge';
+import { mocktailsOnly } from '@/lib/age';
 import { useAuth } from '@/lib/auth';
 import { pickRecipePicture } from '@/lib/deviceFiles';
 import { canFill, fillFromLink, fillFromScreenshot, type FillOutcome } from '@/lib/recipeImport';
@@ -28,6 +32,12 @@ export function RecipeFields({
 }) {
   const c = useColors();
   const { recipeText } = useAuth();
+  // Only once the status is known, so a 21-year-old's new drink is never set to No alcohol by a slow read.
+  const age = useAge();
+  const mocktails = type === 'cocktail' && age.loaded && mocktailsOnly(age.status);
+  useEffect(() => {
+    if (mocktails && !f.strength) onChange((cur) => ({ ...cur, strength: 'none' }));
+  }, [mocktails, f.strength, onChange]);
   const [filling, setFilling] = useState(false);
   const [fillNote, setFillNote] = useState<{ text: string; error: boolean } | null>(null);
   const set = (change: Partial<RecipeForm>) => onChange((current) => ({ ...current, ...change }));
@@ -132,11 +142,18 @@ export function RecipeFields({
         <>
           <Text style={label}>Strength</Text>
           <Chips<Strength>
-            options={STRENGTH_CHIPS}
+            options={mocktails ? STRENGTH_CHIPS.filter((s) => s.value === 'none') : STRENGTH_CHIPS}
             selected={(s) => f.strength === s}
-            onPress={(s) => set({ strength: f.strength === s ? null : s })}
+            onPress={(s) => set({ strength: mocktails ? 'none' : f.strength === s ? null : s })}
             disabled={locked}
           />
+          {mocktails ? (
+            <Muted>
+              {f.strength && f.strength !== 'none'
+                ? `This drink has alcohol (${STRENGTH_LABELS[f.strength]}). Cocktails with alcohol are for 21 and over, so its fields can’t be changed until then.`
+                : 'Mocktails only: cocktails with alcohol are for 21 and over.'}
+            </Muted>
+          ) : null}
         </>
       ) : null}
     </View>
