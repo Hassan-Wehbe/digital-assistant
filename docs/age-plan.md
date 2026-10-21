@@ -3,7 +3,8 @@
 **Status:** plan, 2026-10-20; **owner's answers the same day: all as recommended, Q5 option B** (keep
 only the result, never the birth date; see Answers). **Step 1 built 2026-10-20, migration applied
 2026-10-21:** see "As built: step 1". **Step 2 built 2026-10-21, merged (#262), evaluated; migration
-not applied, not deployed (with step 3's build):** see "As built: step 2". **Step 3 (the app) built
+applied 2026-10-21 (20261021170700 `drinks_space_name`, dry run 13/13); `mcp` and `chat` not deployed
+yet (with step 3's build):** see "As built: step 2". **Step 3 (the app) built
 2026-10-21, branch `claude/age-step3`, not merged:** see "As built: step 3".
 Design: D44 (builds on D29, invite-only sign-up with its 18+ box; D43, recipes and cocktails).
 Model: the strongest for steps 1-2 (sign-up, the account, server checks) and for step 3's chat
@@ -294,7 +295,16 @@ Branch `claude/age-step3`. **Not merged; not built.** The app; nothing on the se
   `age_confirmed`). **1016 app tests pass**; lint and type check clean.
 - **Phone checklist:** the Ages section of `docs/versioncode25-phone-checklist.md`.
 
-**Owner, in order:** (1) check the privacy wording; merge; (2) the dry run
+**Merged (#267). Migration `20261024120000` applied 2026-10-21 after the owner's dry run (13/13),
+recorded as 20261021170700 `drinks_space_name`.** Checked read-only after: all three accounts'
+drinks spaces are now **Mocktails** (none has given an age yet); signed-in users can run
+`sync_drinks_space()` and `set_birth_month()`, anon cannot; the helper `_sync_drinks_space` is closed
+to signed-in users and anon (the service role keeps Supabase's default access, as it has to every
+function); sign-up's `_ensure_built_in_spaces` now names the drinks space; the built-in space guard
+is in place. Until `mcp` and `chat` are deployed, the old server code still says Cocktails in its
+suggestions, and the space shows as Mocktails.
+
+**Owner, in order (before this):** (1) check the privacy wording; merge; (2) the dry run
 `tests/sql/dry_runs/24_drinks_space_name_dry_run.sql`, then **OK to apply** `20261024120000`; (3)
 **OK to deploy `mcp` and `chat`** (step 2's drinks rules, daily routines step 1, the 30-second
 suggestion limit) and **OK to build**, together; (4) the phone checklist. Your own account: answer the

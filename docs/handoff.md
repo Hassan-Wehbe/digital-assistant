@@ -17,8 +17,9 @@ tokens or keys in chat.
   of birth at sign-up (no 18+ box), the one-time question on Home (and in Settings → Account), Make a
   mocktail with no Strength under 21, a drink note No alcohol only, 🍹 Mocktails, the Account line,
   Help; the privacy page now says the month and year are asked once and not kept. 1016 app tests.
-  **Owner:** check the privacy wording, merge; dry run 24, OK to apply; OK to deploy `mcp` and
-  `chat` and OK to build together (with daily routines); the phone checklist (versionCode 25).
+  **Merged (#267); migration 24 applied 2026-10-21 (20261021170700, dry run 13/13): every drinks
+  space is now Mocktails until its owner gives an age.** **Owner:** OK to deploy `mcp` and `chat`
+  and OK to build together (with daily routines); the phone checklist (versionCode 25).
 - **D39 daily routines step 2, the app (2026-10-21): branch `claude/daily-routines-step2`, not
   merged.** The editor's Daily (every day or weekdays) and time, the Routines tab's "Today: 2 of 3",
   My day's one line per daily routine (Add each at its time, ✕ for all), the chat card's time, Help.
