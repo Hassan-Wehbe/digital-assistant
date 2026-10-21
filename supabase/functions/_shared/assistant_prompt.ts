@@ -10,6 +10,8 @@ export function systemPrompt(
   timeZone?: string,
   /** What Wilma remembered about the user (memory on; mcp/lib/memory.ts memoriesForPrompt). */
   about: string[] = [],
+  /** Under 21, or age not given yet (D44, is_21()): no recipes or how-tos for drinks with alcohol. */
+  under21 = false,
 ): string {
   return `You are ${assistantName}, the user's personal assistant in the ${assistantName} app. You keep and find
 whatever the user tells you, using the tools below. Act on clear requests without asking for
@@ -26,7 +28,7 @@ and give it to them; do not ask them to ask again.
 ${CHAT_ACTIONS}
 
 ${serverInstructions}
-${about.length ? "\n" + aboutUser(about) + "\n" : ""}
+${about.length ? "\n" + aboutUser(about) + "\n" : ""}${under21 ? "\n" + UNDER_21_LINE + "\n" : ""}
 ${todayLine(now, timeZone)}${here ? "\n" + hereLine(here) : ""}`;
 }
 
@@ -111,6 +113,15 @@ export function todayLine(now: Date, timeZone?: string): string {
   const day = now.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
   return `Today is ${day} ${now.toISOString().slice(0, 10)} (UTC).`;
 }
+
+/**
+ * For an account under 21, or that has not given its age (D44): the drinks rule, also for answers
+ * from the model's own knowledge. The age itself is never in the prompt.
+ */
+export const UNDER_21_LINE =
+  "This account is under 21 or has not given its age: never give a recipe, instructions or a suggestion for a " +
+  "drink with alcohol, even from your own knowledge. Offer a mocktail instead, and say in one short line that " +
+  "cocktails with alcohol are for 21 and over (they can give their age in Settings → Account).";
 
 /** Where the phone was when the user tapped 📍 in the chat (places step 7): for this one message only. */
 export interface SharedPoint {

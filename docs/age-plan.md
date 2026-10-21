@@ -2,7 +2,8 @@
 
 **Status:** plan, 2026-10-20; **owner's answers the same day: all as recommended, Q5 option B** (keep
 only the result, never the birth date; see Answers). **Step 1 built 2026-10-20, migration applied
-2026-10-21:** see "As built: step 1".
+2026-10-21:** see "As built: step 1". **Step 2 built 2026-10-21, branch `claude/age-step2`, not merged, migration
+not applied, not deployed, evaluation not run:** see "As built: step 2".
 Design: D44 (builds on D29, invite-only sign-up with its 18+ box; D43, recipes and cocktails).
 Model: the strongest for steps 1-2 (sign-up, the account, server checks) and for step 3's chat
 part; a smaller one for the app screens and the paperwork.
@@ -199,3 +200,49 @@ the 3 accounts not asked yet (`alcohol_from` null, so mocktails only once step 2
 still answers and Supabase Auth can still run it; `is_21` and `set_birth_month` run for signed-in
 users only, the helpers for no one; nobody can write `alcohol_from` directly; the sign-up trigger is
 on. **Next:** step 2, the drinks rules on the server (strongest model).
+
+## As built: step 2 (2026-10-21)
+
+The drinks rules, on the server: under 21, or until the age is given (`is_21()` false), every drink
+is a mocktail, whatever the app or the model asks. 21 and over is unchanged.
+
+- **Migration `20261024120000_drinks_space_name.sql`** (Q8): `_sync_drinks_space(user)` names the
+  built-in drinks space **Mocktails** under 21 and **Cocktails** from 21 (the same space and notes;
+  left as it is when the user already has another space of that name); `sync_drinks_space()` for the
+  caller's own; sign-up (`_ensure_built_in_spaces`) and `set_birth_month()` end with it; every
+  existing account is set when it is applied (not asked yet: Mocktails). `space_built_in_guard` lets
+  only Wilma's own functions make that one switch; users still cannot rename a built-in space. No
+  scheduled job: `list_spaces` (the app lists spaces on every open) calls `sync_drinks_space()`, so a
+  21st birthday shows on the next open. **SQL test 24 (13 checks)**; test 21 now expects Mocktails
+  for an account with no age; all SQL tests pass (06 as before); **dry run 13/13**, nothing kept.
+- **Saving** (`mcp/lib/recipes.ts`, `save_item`, `update_item`): under 21 a `cocktail` with strength
+  regular, light or not set, or with alcohol named in its title, ingredients or steps, is refused
+  ("Cocktails with alcohol are for 21 and over. Save it as a mocktail…"). Made it alone still works
+  on a cocktail saved before (Q9). The Claude connector gets the same check.
+- **The alcohol words** (`namesAlcohol`): spirits, wine, beer, cider, liqueurs, bitters by name; not
+  ginger beer or ale, root beer, "non-alcoholic …", "alcohol-free …", vanilla or rum extract, wine
+  vinegar, bitter lemon, "virgin".
+- **Suggestions** (`chat/recipe_suggest.ts`): under 21 the strength is always `none`; with no alcohol
+  (asked, or under 21) the short list also drops a drink whose title or ingredients name alcohol, a
+  why or missing line naming alcohol is dropped, and A new idea naming alcohol is refused (a mocktail
+  comes back with strength none). Answers carry `mocktails_only: true` under 21.
+- **The chat:** `suggest_cocktail`'s facts say "Mocktails only…" (never a drink with alcohol, even from
+  the model's own knowledge; one short line that cocktails with alcohol are for 21 and over), and A
+  new idea's card says Save to Mocktails. Every chat message under 21 adds one line to the system
+  prompt (`UNDER_21_LINE`; the age itself is never in it), read with `is_21()` while the tools
+  connect.
+- **Evaluation:** four cases: `age-under21-vodka-cocktail`, `age-under21-margarita-knowledge` (from the
+  model's own knowledge), `age-under21-save-tequila`, `age-adult-still-cocktails`. The pretend account
+  gains `is21` (default yes, so the other cases are unchanged), `is_21` and `sync_drinks_space`.
+- **Tests:** `tests/deno/age_drinks_test.ts` (8). **617 Deno tests pass**; type check and lint clean.
+- **When to switch it on:** applying the migration and deploying `mcp` and `chat` make every account
+  that has not given its age **mocktails only** (Q6), and the app cannot ask for the age until step
+  3's build. So the recommended order is: evaluation, merge, then step 3 (the app), and apply this
+  migration and deploy `mcp` and `chat` when step 3's build is ready to release. (The owner can also
+  set their own account to 21 or over in the SQL editor, as support would: `update app_user set
+  alcohol_from = '-infinity' where email = '<your email>';`.)
+
+**Owner, in order:** (1) OK and a cap for the evaluation (the four `age-` cases and the ten
+`suggest-` ones, about a cent); (2) merge; (3) step 3; then the dry run
+`tests/sql/dry_runs/24_drinks_space_name_dry_run.sql`, OK to apply, OK to deploy `mcp` and `chat`,
+with step 3's build.

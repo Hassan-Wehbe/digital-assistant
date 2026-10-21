@@ -8,7 +8,7 @@ import { isTask, normalizeTask, type TaskMetadata, TASKS_SPACE, tasksSpace, with
 import { withLinkLocation } from "../lib/maps_link.ts";
 import { isRoutine, normalizeRoutine, type RoutineMetadata, routineWords, withRoutine } from "../lib/routines.ts";
 import { loadRoutine, userToday } from "../lib/routine_tasks.ts";
-import { normalizeRecipe, recipeType, STRENGTHS, withRecipe } from "../lib/recipes.ts";
+import { drinkHasAlcohol, isAdult21, normalizeRecipe, recipeType, STRENGTHS, UNDER_21, withRecipe } from "../lib/recipes.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
 export const registerSaveItem: RegisterTool = (server, { db, accessToken, assistantName, timeZone }) => {
@@ -62,6 +62,8 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
         // A recipe's or cocktail's fields (D43) are checked too, and added to the searchable text.
         const rtype = recipeType(item_type);
         const recipe = rtype ? normalizeRecipe(metadata, rtype, today) : null;
+        // A drink with alcohol only from 21 (D44): checked here, whatever the app or the model sent.
+        if (rtype === "cocktail" && drinkHasAlcohol(title, recipe) && !(await isAdult21(db))) throw new Error(UNDER_21);
         if (task?.routine_id) {
           const loaded = await loadRoutine(db, task.routine_id, today);
           task = withRoutine(task, loaded.id, loaded.routine, today);

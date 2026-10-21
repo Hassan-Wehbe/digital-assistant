@@ -112,7 +112,7 @@ export async function openSession(
     tools: [...tools.specs, ...ACTION_SPECS],
     // `here`: the 📍 location the chat function adds to a message's instructions (places step 7).
     // With memory on (a case's setup), the "About the user" block, as the chat function adds it.
-    system: systemPrompt(ctx.assistantName, tools.instructions, new Date(), here, timeZone, about),
+    system: systemPrompt(ctx.assistantName, tools.instructions, new Date(), here, timeZone, about, !world.is21),
     call: tools.call,
     actions: (outing, suggest) => new ChatActions({ db: ctx.db, distanceUnit: ctx.distanceUnit ?? "mi", here, can, tz: timeZone, outing, suggest }),
     close: tools.close,

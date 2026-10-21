@@ -23,6 +23,12 @@ export const SUGGEST_NAMES = new Set([SUGGEST_MEAL, SUGGEST_COCKTAIL]);
 /** What the app lists in "can" for the recipe cards. */
 export const CAN_RECIPES = "recipes";
 
+/** What the model is told when the drinks were mocktails only (under 21, or age not given yet; D44). */
+export const MOCKTAILS_ONLY =
+  "Mocktails only: this account is under 21 or has not given its age, so every drink here has no alcohol. Never suggest, " +
+  "describe or give a recipe for a drink with alcohol, even from your own knowledge. If they asked for alcohol, say in one " +
+  "short line that cocktails with alcohol are for 21 and over, and offer these mocktails.";
+
 const COMMON =
   "From the user's OWN saved recipes only (searchable spaces). One call each time (counted: 10 a day, more with Pro). " +
   "The app shows the choices as cards with Open recipe; nothing is saved. Never present a recipe that is not in " +
@@ -114,7 +120,13 @@ export async function suggestForChat(
   }
   const out = await recipeSuggest(deps, ctx.token, ctx.userId, body, undefined, { recordUsage: false, cost: (c) => (costCents = c) });
   const b = (out.body ?? {}) as Record<string, unknown>;
-  const what = meal ? "recipe" : "cocktail";
+  // Under 21, or age not given yet (D44): the route gave drinks without alcohol only; so does the model.
+  const under21 = b.mocktails_only === true;
+  const what = meal ? "recipe" : under21 ? "mocktail" : "cocktail";
+  const reply21 = (isError: boolean, facts: Record<string, unknown>, events: Record<string, unknown>[] = []): Out =>
+    under21
+      ? reply(isError, { ...facts, mocktails_only: true, message: `${facts.message} ${MOCKTAILS_ONLY}` }, events)
+      : reply(isError, facts, events);
 
   if (out.status === 400) return reply(true, `${name}: ${String((b as { error_description?: string }).error_description ?? "bad input")}. No names.`);
   if (out.status === 429) {
@@ -136,14 +148,14 @@ export async function suggestForChat(
   }
   if (body.new_idea) {
     const idea = b.idea as { title: string; fields: Record<string, unknown> } | null | undefined;
-    if (!idea) return reply(false, { status: "no_idea", message: `No new ${what} could be made this time. Say so in one sentence.` });
-    return reply(false, {
+    if (!idea) return reply21(false, { status: "no_idea", message: `No new ${what} could be made this time. Say so in one sentence.` });
+    return reply21(false, {
       status: "new_idea",
       new: true,
       title: idea.title,
       ...idea.fields,
       message: (ctx.can
-        ? `The app shows this as a card marked NEW · NOT FROM YOUR RECIPES with Save to ${meal ? "Recipes" : "Cocktails"}. `
+        ? `The app shows this as a card marked NEW · NOT FROM YOUR RECIPES with Save to ${meal ? "Recipes" : under21 ? "Mocktails" : "Cocktails"}. `
         : "This app cannot show the card: give the ingredients and steps in a few short lines. ") +
         `Say clearly it is a new idea, not one of their ${what}s, in one or two sentences from these facts only. ` +
         "Nothing was saved.",
@@ -152,7 +164,7 @@ export async function suggestForChat(
   const list = Array.isArray(b.suggestions) ? (b.suggestions as Record<string, unknown>[]) : [];
   if (!list.length) {
     const none = b.reason === "none_fit";
-    return reply(false, {
+    return reply21(false, {
       status: none ? "none_fit" : "no_answer",
       ...(typeof b.recipes === "number" ? { saved: b.recipes } : {}),
       message: none
@@ -167,7 +179,7 @@ export async function suggestForChat(
     ...(s.minutes ? { minutes: s.minutes } : {}), ...(s.rating ? { rating: s.rating } : {}), ...(s.last_made ? { last_made: s.last_made } : {}),
     ...(s.source_site ? { from: s.source_site } : {}),
   }));
-  return reply(false, {
+  return reply21(false, {
     status: "shown",
     suggestions: facts,
     message: (ctx.can
