@@ -1,6 +1,6 @@
 # Routines: weekly and monthly task groups
 
-**Addition, 2026-10-21: daily routines** (plan; Q-D1 answered, Q-D2 to Q-D4 awaited): see "Daily routines"
+**Addition, 2026-10-21: daily routines** (plan; owner's answers 2026-10-21: Q-D1 every day or weekdays, the rest as recommended): see "Daily routines"
 at the end.
 
 Status: plan, 2026-10-18. **Owner's answers given the same day (Q1-Q9, below "Decided").** **Step 1 built
@@ -378,6 +378,8 @@ single repeating tasks); those stay as they are.
 **Answered (owner, 2026-10-21):** **Q-D1: Daily means every day, weekends included** ("I want to
 check my email every day"), **with Weekdays as the other choice.** A routine of one task ("Check
 email") is fine.
+**Q-D2 to Q-D4: as recommended** (owner, 2026-10-21): one line per daily routine in My day, an
+optional At time, and "Today: 2 of 3" with no Missed lines on the Routines screen.
 
 ### What the owner will see
 

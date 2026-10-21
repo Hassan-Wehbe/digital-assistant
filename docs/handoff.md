@@ -13,8 +13,8 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **D39 addition, daily routines (2026-10-21): plan written; Q-D1 answered (every day, weekends
-  included, or weekdays), Q-D2 to Q-D4 awaited** (Q-D1 to Q-D4 in `docs/routines-plan.md`, "Daily routines"). Every day or weekdays, an optional time, one
+- **D39 addition, daily routines (2026-10-21): plan written and answered** (every day, weekends
+  included, or weekdays; the rest as recommended). **Next:** step 1, server and planner (Q-D1 to Q-D4 in `docs/routines-plan.md`, "Daily routines"). Every day or weekdays, an optional time, one
   line per daily routine in My day; no migration; server and app ship together.
 - **D44 ages step 2, the drinks rules (2026-10-21): merged (#262), evaluated (9/10, all four age
   cases passed, 0 leaks; the one failure was the meal suggestion's 20 s limit, raised to 30 s on
