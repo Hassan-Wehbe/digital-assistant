@@ -71,6 +71,8 @@ export interface TurnRecord {
   stop: StopReason;
   /** The saved home each day plan of this turn started from (observed, never sent to the model). */
   plannedFrom?: string[];
+  /** The suggestion route's own outcome lines ("recipe_suggest connection (timeout)"), for the run log. */
+  notes?: string[];
 }
 
 export interface RunRecord {
@@ -194,7 +196,11 @@ export async function runConversation(
         suggestForChat({
           clientFor: () => world.client(),
           llm: () => ({ stream: (_route, req) => adapter.stream(model, req) }),
-          log: () => {},
+          log: (l) => {
+            // Outcome and code only (the route's log never holds text), so a failure names its reason.
+            const { event, outcome, code } = l as { event?: string; outcome?: string; code?: string };
+            (turn.notes ??= []).push(`${event ?? "suggest"} ${outcome ?? "?"}${code ? ` (${code})` : ""}`);
+          },
         }, { db: world.client(), token: "eval-token", userId: "eval-user", tz: opts.timeZone, can: !opts.oldApp }, name, input);
       const actions = session.actions(outing, suggest);
       const asked = messages.length; // the conversation as the app sends it, ending with this message
