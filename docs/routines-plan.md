@@ -2,8 +2,9 @@
 
 **Addition, 2026-10-21: daily routines** (plan; owner's answers 2026-10-21: Q-D1 every day or weekdays, the rest as recommended).
 **Step 1 (server and planner) merged (#265) 2026-10-21, evaluated 8/8, not deployed (deploy with
-step 2's build):** see "As built: daily step 1". **Step 2 (the app) built 2026-10-21, branch
-`claude/daily-routines-step2`, not merged:** see "As built: daily step 2"; see "As built: daily step 1": see "Daily routines"
+step 2's build):** see "As built: daily step 1". **Step 2 (the app) merged (#266).
+Released 2026-10-21: `mcp` v37, `chat` v47, versionCode 25 (EAS aaa42245) submitted to Google
+Play:** see "As built: daily step 2"; see "As built: daily step 1": see "Daily routines"
 at the end.
 
 Status: plan, 2026-10-18. **Owner's answers given the same day (Q1-Q9, below "Decided").** **Step 1 built

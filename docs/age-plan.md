@@ -5,7 +5,9 @@ only the result, never the birth date; see Answers). **Step 1 built 2026-10-20, 
 2026-10-21:** see "As built: step 1". **Step 2 built 2026-10-21, merged (#262), evaluated; migration
 applied 2026-10-21 (20261021170700 `drinks_space_name`, dry run 13/13); `mcp` and `chat` not deployed
 yet (with step 3's build):** see "As built: step 2". **Step 3 (the app) built
-2026-10-21, branch `claude/age-step3`, not merged:** see "As built: step 3".
+2026-10-21, merged (#267). Released 2026-10-21: `mcp` v37, `chat` v47, versionCode 25 (EAS
+aaa42245) submitted to Google Play:** see "As built: step 3". **Next:** step 4 (paperwork, the
+lawyer, then the minimum age 13).
 Design: D44 (builds on D29, invite-only sign-up with its 18+ box; D43, recipes and cocktails).
 Model: the strongest for steps 1-2 (sign-up, the account, server checks) and for step 3's chat
 part; a smaller one for the app screens and the paperwork.
