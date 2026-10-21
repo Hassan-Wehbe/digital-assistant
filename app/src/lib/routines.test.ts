@@ -18,7 +18,7 @@ describe('a routine’s schedule', () => {
   });
 
   it('is null for anything else', () => {
-    for (const bad of [null, 'weekly', [], { repeat: 'daily' }, { repeat: 'monthly', when: 'same_day', day: 3 }, { repeat: 'weekly', when: 'by_day', day: 3 },
+    for (const bad of [null, 'weekly', [], { repeat: 'hourly' }, { repeat: 'daily', when: 'same_day', day: 3 }, { repeat: 'monthly', when: 'same_day', day: 3 }, { repeat: 'weekly', when: 'by_day', day: 3 },
       { repeat: 'weekly', when: 'same_day', day: 7 }, { repeat: 'monthly', when: 'by_day', day: 0 }, { repeat: 'weekly', when: 'same_day' }]) {
       expect(toRoutine(bad)).toBeNull();
     }

@@ -57,7 +57,7 @@ import { deviceGeocoder, deviceLocation } from '@/lib/location';
 import { LOOKS_LIKE_SECRET, editError } from '@/lib/noteEdit';
 import { scheduleForPlan } from '@/lib/notifications';
 import { loadNotice, noticeHome, noticeText, type Noticed } from '@/lib/homeNotice';
-import { addable, dismissForDay, moreText, notSuggested, suggestionAction, suggestionDetail, type NotTodayDb } from '@/lib/routineSuggest';
+import { addable, dismissForDay, moreText, notSuggested, suggestionAction, suggestionDetail, suggestionTasks, type NotTodayDb } from '@/lib/routineSuggest';
 import { supabase } from '@/lib/supabase';
 import { needsPro } from '@/lib/pro';
 import { addDays, addToDay, EMPTY_TASK, localParts, plannedAt, shortDay, taskMetadata, type TaskDayEnd, type TaskMetadata, withTime } from '@/lib/tasks';
@@ -405,10 +405,14 @@ export default function MyDay() {
     const done: string[] = [];
     try {
       for (const sg of list) {
-        const at = sg.start ? plannedAt(sg.start) : null;
-        if (!at || !sg.start) continue;
-        const item = await wilma.getItem(sg.task_id);
-        await wilma.updateItem(sg.task_id, { metadata: withTime((item.metadata ?? {}) as unknown as TaskMetadata, at, null) });
+        if (!sg.start) continue;
+        // A daily routine's line: each of its tasks at its own time, one after another.
+        for (const t of suggestionTasks(sg)) {
+          const at = t.start ? plannedAt(t.start) : null;
+          if (!at) continue;
+          const item = await wilma.getItem(t.task_id);
+          await wilma.updateItem(t.task_id, { metadata: withTime((item.metadata ?? {}) as unknown as TaskMetadata, at, null) });
+        }
         done.push(`${sg.title} at ${clock(sg.start)}`);
       }
     } catch (e) {
@@ -424,7 +428,12 @@ export default function MyDay() {
   const dismissSuggestion = async (sg: RoutineSuggestion) => {
     setSuggestBusy(sg.task_id);
     setSuggestError(null);
-    const out = await dismissForDay(supabase as unknown as NotTodayDb, sg.task_id, date);
+    // A daily routine's line: Not today for each of its tasks.
+    let out: Awaited<ReturnType<typeof dismissForDay>> = { ok: true };
+    for (const t of suggestionTasks(sg)) {
+      out = await dismissForDay(supabase as unknown as NotTodayDb, t.task_id, date);
+      if ('error' in out) break;
+    }
     if (!alive.current) return;
     setSuggestBusy(null);
     if ('error' in out) setSuggestError(out.error);

@@ -1,5 +1,6 @@
 // A routine: new, or edit with ?id= (routines step 3b, mockup 6; docs/routines-plan.md). A name,
-// Repeats, When, its tasks (each with optional minutes), and Suggest in My day (lib/routineForm.ts).
+// Repeats, When (for Daily: every day or weekdays, and an optional time; "Daily routines"), its
+// tasks (each with optional minutes), and Suggest in My day (lib/routineForm.ts).
 // Saving sends the routine first (the server keeps it in the Tasks space and brings its tasks in
 // step with a new schedule, each keeping a revision, rule 7), then each task added, changed or
 // taken out (out: to the Recycle bin, rule 8). Delete routine bins the routine and all its tasks,
@@ -15,10 +16,10 @@ import { useAuth } from '@/lib/auth';
 import { todayAndTomorrow } from '@/lib/dayView';
 import { editError } from '@/lib/noteEdit';
 import {
-  checkRoutine, EMPTY_ROUTINE, MAX_ROUTINE_TASKS, REPEAT_CHOICES, routineForm, routineSavePlan, routineTaskMetadata, whenChoices, withMinutes, withRepeat,
-  type RoutineForm,
+  checkRoutine, DAILY_CHOICES, EMPTY_ROUTINE, MAX_ROUTINE_TASKS, REPEAT_CHOICES, repeatChip, routineForm, routineSavePlan, routineTaskMetadata, whenChoices,
+  withMinutes, withRepeat, type RoutineForm,
 } from '@/lib/routineForm';
-import { routineWords, toRoutine, WEEKDAYS, type RoutineMetadata } from '@/lib/routines';
+import { isDaily, routineWords, toRoutine, WEEKDAYS, type RoutineMetadata } from '@/lib/routines';
 import type { TaskMetadata, TaskRow } from '@/lib/tasks';
 
 interface Loaded {
@@ -142,10 +143,26 @@ function RoutineEditor({ saved }: { saved: Loaded | null }) {
         <TextInput style={input} placeholder="Weekend house reset" placeholderTextColor={c.muted} maxLength={200} value={form.title} onChangeText={(title) => set({ title })} editable={!busy} />
 
         {label('REPEATS')}
-        <Chips options={REPEAT_CHOICES} selected={(v) => v === form.repeat} onPress={(v) => setForm((f) => withRepeat(f, v))} disabled={busy} />
+        <Chips options={REPEAT_CHOICES} selected={(v) => v === repeatChip(form.repeat)} onPress={(v) => setForm((f) => withRepeat(f, v))} disabled={busy} />
 
         {label('WHEN')}
-        <Chips options={whenChoices(form.repeat)} selected={(v) => v === form.when} onPress={(when) => set({ when })} disabled={busy} />
+        {isDaily(form.repeat) ? (
+          <>
+            <Chips options={DAILY_CHOICES} selected={(v) => v === form.repeat} onPress={(repeat) => set({ repeat })} disabled={busy} />
+            <TextInput
+              style={input}
+              placeholder="At a time (optional): 7:30 am"
+              placeholderTextColor={c.muted}
+              maxLength={10}
+              value={form.at}
+              onChangeText={(at) => set({ at })}
+              editable={!busy}
+              accessibilityLabel="Time (optional)"
+            />
+          </>
+        ) : (
+          <Chips options={whenChoices(form.repeat)} selected={(v) => v === form.when} onPress={(when) => set({ when })} disabled={busy} />
+        )}
         {form.when === 'same_day' ? (
           <Chips
             options={WEEKDAYS.map((d, i) => ({ value: i, label: d.slice(0, 3) }))}
@@ -166,7 +183,13 @@ function RoutineEditor({ saved }: { saved: Loaded | null }) {
             editable={!busy}
           />
         ) : null}
-        {words ? <Muted>{`${words}. Not done in time: it’s passed by and the next one comes up.`}</Muted> : null}
+        {words ? (
+          <Muted>
+            {isDaily(form.repeat)
+              ? `${words}. My day offers it as one line${form.at.trim() ? ' at that time, or the next free time' : ''}. Not done that day: it simply comes back the next.`
+              : `${words}. Not done in time: it’s passed by and the next one comes up.`}
+          </Muted>
+        ) : null}
 
         {label('TASKS')}
         {form.tasks.map((t, i) => (

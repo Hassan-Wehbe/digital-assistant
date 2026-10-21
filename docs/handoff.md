@@ -13,8 +13,13 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **D39 daily routines step 1, server and planner (2026-10-21): PR #265, evaluated 8/8 (0 leaks,
-  $0.01), not merged, not deployed.** Daily or weekdays with an optional time; My day offers a daily routine
+- **D39 daily routines step 2, the app (2026-10-21): branch `claude/daily-routines-step2`, not
+  merged.** The editor's Daily (every day or weekdays) and time, the Routines tab's "Today: 2 of 3",
+  My day's one line per daily routine (Add each at its time, ✕ for all), the chat card's time, Help.
+  1008 app tests. Phone checklist `docs/versioncode25-phone-checklist.md`. **Owner:** merge; OK to
+  deploy `mcp` and `chat` and OK to build together (or with age step 3).
+- **D39 daily routines step 1, server and planner (2026-10-21): merged (#265), evaluated 8/8 (0
+  leaks, $0.01), not deployed (with step 2's build).** Daily or weekdays with an optional time; My day offers a daily routine
   as one line (its tasks in the order added); the chat's Save routine card and plan line; no
   migration. 628 Deno tests; four evaluation cases. See `docs/routines-plan.md` "As built: daily step
   1". **Owner:** merge; deploy `mcp` and `chat` with step 2's build.

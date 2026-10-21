@@ -25,7 +25,7 @@ export function toRoutineCard(raw: unknown): RoutineCardData | null {
   if (typeof r.name !== 'string' || !oneLine(r.name) || r.name.length > 200) return null;
   // The server's event has the schedule's fields alongside the name; a saved chat keeps them under `routine`.
   const src = typeof r.routine === 'object' && r.routine !== null ? (r.routine as Record<string, unknown>) : r;
-  const routine = toRoutine({ repeat: src.repeat, when: src.when, day: src.day, suggest: src.suggest });
+  const routine = toRoutine({ repeat: src.repeat, when: src.when, day: src.day, suggest: src.suggest, at: src.at });
   if (!routine || !Array.isArray(r.tasks) || !r.tasks.length || r.tasks.length > MAX_CARD_TASKS) return null;
   const tasks: RoutineCardData['tasks'] = [];
   for (const t of r.tasks) {
@@ -51,6 +51,7 @@ export function cardForm(c: RoutineCardData): RoutineForm {
     when: c.routine.when,
     weekday: c.routine.when === 'same_day' ? c.routine.day! : 6,
     monthDay: c.routine.when === 'by_day' ? String(c.routine.day) : '',
+    at: c.routine.at ?? '',
     suggest: c.routine.suggest,
     tasks: c.tasks.map((t) => ({ title: t.title, duration: t.minutes ? String(t.minutes) : '' })),
   };

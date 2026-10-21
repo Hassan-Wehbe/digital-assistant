@@ -1,8 +1,9 @@
 # Routines: weekly and monthly task groups
 
 **Addition, 2026-10-21: daily routines** (plan; owner's answers 2026-10-21: Q-D1 every day or weekdays, the rest as recommended).
-**Step 1 (server and planner) built 2026-10-21, PR #265, evaluated (8/8), not merged, not deployed
-(deploy with step 2's build):** see "As built: daily step 1": see "Daily routines"
+**Step 1 (server and planner) merged (#265) 2026-10-21, evaluated 8/8, not deployed (deploy with
+step 2's build):** see "As built: daily step 1". **Step 2 (the app) built 2026-10-21, branch
+`claude/daily-routines-step2`, not merged:** see "As built: daily step 2"; see "As built: daily step 1": see "Daily routines"
 at the end.
 
 Status: plan, 2026-10-18. **Owner's answers given the same day (Q1-Q9, below "Decided").** **Step 1 built
@@ -459,7 +460,7 @@ free of AI cost), so the privacy page and Play Data safety need no change (re-ch
 
 ### As built: daily step 1 (2026-10-21)
 
-Branch `claude/daily-routines-step1`, PR #265. **Evaluated 8/8; not merged, not deployed:** `mcp` and
+Branch `claude/daily-routines-step1`, **merged (#265)**. **Evaluated 8/8; not deployed:** `mcp` and
 `chat` are deployed together with step 2's build (point 5 above).
 
 - **Schedules** (`mcp/lib/routines.ts`): `ROUTINE_REPEATS` gains `daily` and `weekdays`;
@@ -499,4 +500,36 @@ Branch `claude/daily-routines-step1`, PR #265. **Evaluated 8/8; not merged, not 
   39608304185): 8/8 passed** (the four new cases and four earlier routine cases: `plan-routine-suggestion`,
   `routine-new-weekly`, `routine-new-monthly-by-day`, `routine-password-trap`), **0 leaks, 0 unsafe
   attempts, $0.01.** **Owner:** merge.
+
+### As built: daily step 2 (2026-10-21)
+
+Branch `claude/daily-routines-step2`. **Not merged; not built.** The app part; nothing on the server.
+
+- **The schedule** (`app/src/lib/routines.ts`, mirroring the server's): `daily` and `weekdays`
+  (`isDaily`), with `at` read only as "HH:MM" and only for them; `periodOn` as the server's (checked
+  over a whole year); `routineWords` with a 12-hour time ("Every day at 7:30 am", `atWords`). The
+  Routines tab says **"Today: 2 of 3"** / **"Done for today"** for a daily routine, its Monday for a
+  weekdays one at the weekend, and **no Missed lines** (Q-D4).
+- **The editor** (`app/src/app/routine.tsx`, `lib/routineForm.ts`): Repeats **Daily** · Weekly ·
+  Every 2 weeks · Monthly; for Daily, When is **Every day** or **Weekdays (Mon–Fri)** and a time box
+  ("7:30 am", "19:00", "7 pm"; `parseAt`); the time is sent only for daily kinds; an unreadable
+  time is said before anything is sent. A saved routine opens with its time in words.
+- **My day** (`lib/dayPlan.ts`, `lib/routineSuggest.ts`, `app/src/app/day.tsx`): the server's daily
+  line is read only whole (each task with its id, minutes and time); its detail names the tasks
+  ("Make bed, Vitamins, Stretch · 20 min"); **Add** puts each task at its own time; **✕** is Not
+  today for each of them; its tasks are not listed again under Not placed yet; Your morning's count
+  counts its tasks.
+- **The chat's card** (`lib/chatRoutine.ts`): keeps `at` (also in a saved chat), says "Every day at
+  7:30 am · 1 task", and saves it.
+- **Help** (My day): "daily, weekly or monthly tasks offered in free time", and the Try it "A
+  morning routine every day at 7:30: make bed, vitamins". Still four lines.
+- **Privacy page re-checked: no change** (no new data: routines and their tasks are saved like
+  notes, and the time is part of the routine).
+- **Tests:** `app/src/lib/dailyRoutines.test.ts` (12); two older tests now use "hourly" as the
+  refused repeat. **1008 app tests pass**; lint and type check clean.
+- **Phone checklist:** `docs/versioncode25-phone-checklist.md` (14 checks).
+
+**Owner, in order:** merge; **OK to deploy `mcp` and `chat`** (daily routines step 1 and the
+30-second suggestion limit) and **OK to build** together (production also submits to Google Play),
+or wait for the age plan's step 3 to share the build; then the phone checklist.
 
