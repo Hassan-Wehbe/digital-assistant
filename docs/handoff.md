@@ -13,6 +13,11 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **D39 daily routines step 1, server and planner (2026-10-21): PR #265, evaluated 8/8 (0 leaks,
+  $0.01), not merged, not deployed.** Daily or weekdays with an optional time; My day offers a daily routine
+  as one line (its tasks in the order added); the chat's Save routine card and plan line; no
+  migration. 628 Deno tests; four evaluation cases. See `docs/routines-plan.md` "As built: daily step
+  1". **Owner:** merge; deploy `mcp` and `chat` with step 2's build.
 - **D39 addition, daily routines (2026-10-21): plan written and answered** (every day, weekends
   included, or weekdays; the rest as recommended). **Next:** step 1, server and planner (Q-D1 to Q-D4 in `docs/routines-plan.md`, "Daily routines"). Every day or weekdays, an optional time, one
   line per daily routine in My day; no migration; server and app ship together.

@@ -1,6 +1,8 @@
 # Routines: weekly and monthly task groups
 
-**Addition, 2026-10-21: daily routines** (plan; owner's answers 2026-10-21: Q-D1 every day or weekdays, the rest as recommended): see "Daily routines"
+**Addition, 2026-10-21: daily routines** (plan; owner's answers 2026-10-21: Q-D1 every day or weekdays, the rest as recommended).
+**Step 1 (server and planner) built 2026-10-21, PR #265, evaluated (8/8), not merged, not deployed
+(deploy with step 2's build):** see "As built: daily step 1": see "Daily routines"
 at the end.
 
 Status: plan, 2026-10-18. **Owner's answers given the same day (Q1-Q9, below "Decided").** **Step 1 built
@@ -454,3 +456,47 @@ free of AI cost), so the privacy page and Play Data safety need no change (re-ch
    Daily choice and At time, My day's grouped line (Add / ✕), the Routines screen's "Today: 2 of
    3", the Help line and Try it; app tests; the phone checklist. **Owner:** OK to deploy `mcp` and
    `chat`, and OK to build, together.
+
+### As built: daily step 1 (2026-10-21)
+
+Branch `claude/daily-routines-step1`, PR #265. **Evaluated 8/8; not merged, not deployed:** `mcp` and
+`chat` are deployed together with step 2's build (point 5 above).
+
+- **Schedules** (`mcp/lib/routines.ts`): `ROUTINE_REPEATS` gains `daily` and `weekdays`;
+  `isDailyRepeat`; for them `when` is always `any_day` and `day` is refused; `at` ("HH:MM", "7:30"
+  tidied to "07:30") only for them. `periodOn`: daily, that day; weekdays, that day or the Monday
+  after a weekend. Done, missed and kept-in-step need no other change (their tasks get `repeat:
+  daily | weekdays`, as single repeating tasks already have). `routineWords`: "Every day at 07:30",
+  "Every weekday".
+- **My day** (`chat/day.ts`): a daily routine's task carries `daily_routine` (the routine's id),
+  `routine_at` and `added_at` (when it was saved; read with the items).
+- **Planner** (`_shared/dayplan/plan.ts routineSuggestions`): a daily routine's open tasks without a
+  place are **one suggestion**: `title` and `routine` the routine's name, `task_id` its first task,
+  `duration_min` the total, and `tasks` (each task's id, title, minutes, start and end, one after
+  another **in the order they were added**). It takes the first free quarter hour at or after its
+  time (or the earliest) that holds the whole group, counts as one of the 3, and comes first; a group
+  that fits nowhere is counted in `more`. A routine with one such task is offered as that task, at
+  its time. A task with a place stays its own line (Find a time). Still code only, no AI request.
+- **The chat:** `save_routine` takes `daily`, `weekdays` and `at` (the card carries `at`); the
+  instructions say every day (weekends included), every weekday, "at", and "the next day, week or
+  month"; `planForModel` marks a group `daily_routine: true` with its task count, and the note says
+  "daily, weekly or monthly". `save_item` / `update_item` on a routine take the new fields through
+  `normalizeRoutine` (the password check, rule 9, unchanged).
+- **Older apps** (until step 2's build): the app ignores a routine whose repeat it does not know, so
+  a daily routine is missing from its Routines tab; a group line in My day shows the routine's name,
+  and Add places only its first task. Hence deploying with the build.
+- **Tests:** `tests/deno/daily_routines_test.ts` (12): the fields; a whole year of periods for both
+  kinds; done (Friday's weekday one: Monday), missed, done already today; grouping, order, the time,
+  busy at the time, no fit, a place; save, done and a schedule change through the tools (a revision,
+  rule 7) and a password refused (rule 9); My day on the pretend account (yesterday's missed one is
+  today's and written with a revision, never overdue, a restricted space adds nothing, Not today on
+  one task keeps the rest of the line); the model's line; the Save routine card. Two older tests
+  now use "hourly" as the refused repeat. **628 Deno tests pass**; type check clean; lint unchanged
+  from main.
+- **Evaluation:** four cases: `routine-new-daily-at` ("check my email every day, weekends too, at
+  8"), `routine-new-weekdays`, `routine-daily-password-trap` (rule 9), `plan-daily-routine` (the
+  plan offers the morning routine, never overdue, writes nothing). **Run 2026-10-21 (luna, run
+  39608304185): 8/8 passed** (the four new cases and four earlier routine cases: `plan-routine-suggestion`,
+  `routine-new-weekly`, `routine-new-monthly-by-day`, `routine-password-trap`), **0 leaks, 0 unsafe
+  attempts, $0.01.** **Owner:** merge.
+

@@ -14,8 +14,8 @@
 // the address on the map with its own geocoder (or uses where it is) and writes the home_place row
 // on the tap. Nothing is saved on the server here, and the model never sees a point.
 //   show_help({topic?})                         {"type":"help","topic"?}                       🛟 Help topics
-//   save_routine({name, repeat, when?, day?, tasks, suggest?})
-//                                               {"type":"routine_save","name","repeat","when","day"?,"suggest","tasks"}  Save routine
+//   save_routine({name, repeat, when?, day?, at?, tasks, suggest?})
+//                                               {"type":"routine_save","name","repeat","when","day"?,"at"?,"suggest","tasks"}  Save routine
 //
 // save_routine (routines step 4, design D39, docs/routines-plan.md) is a card too: the schedule is
 // checked with the server's own rules (normalizeRoutine) and the app saves the routine and its tasks
@@ -175,9 +175,10 @@ export const PHONE_ACTION_SPECS: ToolSpec[] = [
   {
     name: "save_routine",
     description:
-      "Chat app only. Shows the user a card to save a routine: a named group of tasks that comes back each week, " +
-      "every two weeks or each month (\"make my Saturday chores a weekly routine: laundry, vacuum, groceries\", " +
-      "\"a monthly routine for the HVAC filter and smoke alarms\"). Wilma then offers its tasks in My day when " +
+      "Chat app only. Shows the user a card to save a routine: a named group of tasks that comes back every day, " +
+      "every weekday, each week, every two weeks or each month (\"make my Saturday chores a weekly routine: " +
+      "laundry, vacuum, groceries\", \"a monthly routine for the HVAC filter and smoke alarms\", \"a morning " +
+      "routine every day at 7:30: make bed, vitamins\"). Wilma then offers its tasks in My day when " +
       "there is free time. Nothing is saved until they tap Save routine. The only way to make a new routine in the " +
       "chat: never save_item for it or its tasks. To add a task to an existing routine use save_item (a task with " +
       "metadata.routine_id) instead. Never put a password, PIN or code in it.",
@@ -185,14 +186,19 @@ export const PHONE_ACTION_SPECS: ToolSpec[] = [
       type: "object",
       properties: {
         name: { type: "string", description: `Its name, at most ${MAX_ROUTINE_NAME} characters ("Weekend house reset")` },
-        repeat: { type: "string", enum: ["weekly", "biweekly", "monthly"], description: "biweekly is every two weeks" },
+        repeat: {
+          type: "string",
+          enum: ["daily", "weekdays", "weekly", "biweekly", "monthly"],
+          description: "daily is every day, weekends included; weekdays is Monday to Friday; biweekly is every two weeks",
+        },
         when: {
           type: "string",
           enum: ["any_day", "same_day", "by_day"],
           description: "any_day (default): any day of the week, fortnight or month. same_day (weekly, biweekly): only on " +
-            "`day`, e.g. every Saturday. by_day (monthly): by `day` of the month, e.g. by the 28th",
+            "`day`, e.g. every Saturday. by_day (monthly): by `day` of the month, e.g. by the 28th. Leave out for daily and weekdays",
         },
         day: { type: "integer", description: "same_day: 0 Sunday … 6 Saturday; by_day: 1-31. Only with those" },
+        at: { type: "string", description: "daily and weekdays only, if the user said a time: \"HH:MM\", 24-hour (\"07:30\")" },
         tasks: {
           type: "array",
           minItems: 1,
@@ -491,6 +497,7 @@ export class PhoneActions {
         repeat: input.repeat,
         ...(input.when !== undefined ? { when: input.when } : {}),
         ...(input.day !== undefined ? { day: input.day } : {}),
+        ...(input.at !== undefined ? { at: input.at } : {}),
         ...(input.suggest !== undefined ? { suggest: input.suggest } : {}),
       }, this.nowLocal().slice(0, 10));
     } catch (e) {
@@ -499,7 +506,8 @@ export class PhoneActions {
     return this.card(
       {
         type: "routine_save", name: name.value, repeat: schedule.repeat, when: schedule.when,
-        ...(schedule.day !== undefined ? { day: schedule.day } : {}), suggest: schedule.suggest, tasks,
+        ...(schedule.day !== undefined ? { day: schedule.day } : {}), ...(schedule.at ? { at: schedule.at } : {}),
+        suggest: schedule.suggest, tasks,
       },
       waiting(
         "Save routine",

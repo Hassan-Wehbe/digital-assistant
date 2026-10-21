@@ -1,5 +1,5 @@
-// Routines (docs/routines-plan.md, design D39): a named group of tasks that comes back every week,
-// every two weeks or every month. A routine is an item (item_type "routine") in the Tasks space;
+// Routines (docs/routines-plan.md, design D39): a named group of tasks that comes back every day,
+// every weekday, every week, every two weeks or every month. A routine is an item (item_type "routine") in the Tasks space;
 // its tasks are ordinary tasks with routine_id. The routine holds the schedule; this module works
 // out, in code, which period ("window") a task is in: window_from is the first day it may be done,
 // due_on the last. Its tasks get those dates from here, so the planner and the Tasks screen keep
@@ -7,16 +7,20 @@
 //
 // Owner's answers (2026-10-18): a weekly (or every-2-weeks) routine is "any day that week" or "the
 // same day each time" (Q1); a monthly one is any day of the month, or by a day of the month (Q2); a
-// missed one is passed by, not carried over, as the next one comes up (Q6).
+// missed one is passed by, not carried over, as the next one comes up (Q6). Daily routines (added
+// 2026-10-21, "Daily routines"): every day, weekends included, or weekdays (Q-D1); the period is one
+// day; an optional time, "at" (Q-D3), where My day offers them.
 //
 // Dates are calendar dates (YYYY-MM-DD) in the user's own days; weeks run Sunday to Saturday, as the
 // app's day picker does.
 import { normalizeTask, taskDate, TaskError, type TaskMetadata } from "./tasks.ts";
 
 export const ROUTINE_TYPE = "routine";
-export const ROUTINE_REPEATS = ["weekly", "biweekly", "monthly"] as const;
+export const ROUTINE_REPEATS = ["daily", "weekdays", "weekly", "biweekly", "monthly"] as const;
 export type RoutineRepeat = (typeof ROUTINE_REPEATS)[number];
-/** any_day: the whole week, fortnight or month; same_day: only `day` (weekly, biweekly); by_day: by `day` of the month. */
+/** Every day or every weekday: one day at a time, offered as one line in My day (Q-D2). */
+export const isDailyRepeat = (repeat: string | undefined): boolean => repeat === "daily" || repeat === "weekdays";
+/** any_day: the whole week, fortnight or month (a daily kind: that day); same_day: only `day` (weekly, biweekly); by_day: by `day` of the month. */
 export const ROUTINE_WHENS = ["any_day", "same_day", "by_day"] as const;
 export type RoutineWhen = (typeof ROUTINE_WHENS)[number];
 
@@ -29,6 +33,8 @@ export interface RoutineMetadata {
   starts_on: string;
   /** Offered in My day's From your routines (on unless turned off). */
   suggest: boolean;
+  /** Daily kinds only: when My day offers it, "HH:MM" (Q-D3). */
+  at?: string;
 }
 
 export interface Period {
@@ -38,7 +44,8 @@ export interface Period {
   due_on: string;
 }
 
-const FIELDS = ["repeat", "when", "day", "starts_on", "suggest"];
+const FIELDS = ["repeat", "when", "day", "starts_on", "suggest", "at"];
+const HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 const fail = (msg: string): never => {
   throw new TaskError(`Routine not saved: ${msg}`);
@@ -96,6 +103,8 @@ export function normalizeRoutine(input: Record<string, unknown> | null | undefin
   if (!(ROUTINE_WHENS as readonly string[]).includes(when)) fail(`when must be ${ROUTINE_WHENS.map((w) => `"${w}"`).join(", ")}`);
   if (repeat === "monthly" && when === "same_day") fail('a monthly routine is "any_day" or "by_day"');
   if (repeat !== "monthly" && when === "by_day") fail('"by_day" is for a monthly routine; a weekly one is "any_day" or "same_day"');
+  const daily = isDailyRepeat(repeat);
+  if (daily && when !== "any_day") fail(`a ${repeat} routine has no "when" (it is every ${repeat === "daily" ? "day" : "weekday"})`);
 
   const out: RoutineMetadata = {
     repeat: repeat as RoutineRepeat,
@@ -117,11 +126,20 @@ export function normalizeRoutine(input: Record<string, unknown> | null | undefin
     if (typeof m.suggest !== "boolean") fail("suggest must be true or false");
     out.suggest = m.suggest as boolean;
   }
+  if (m.at !== undefined && m.at !== null && m.at !== "") {
+    if (!daily) fail('"at" is for a daily or weekdays routine');
+    const at = typeof m.at === "string" ? m.at.trim() : "";
+    const hm = /^(\d{1,2}):(\d{2})$/.exec(at);
+    const padded = hm ? `${hm[1].padStart(2, "0")}:${hm[2]}` : "";
+    if (!HHMM.test(padded)) fail('at must be a time of day, "HH:MM" ("07:30")');
+    out.at = padded;
+  }
   return out;
 }
 
-/** "Every Saturday", "Any day each week", "By the 28th each month": for lists and the chat. */
+/** "Every day at 07:30", "Every Saturday", "Any day each week", "By the 28th each month": for lists and the chat. */
 export function routineWords(r: RoutineMetadata): string {
+  if (isDailyRepeat(r.repeat)) return `Every ${r.repeat === "daily" ? "day" : "weekday"}${r.at ? ` at ${r.at}` : ""}`;
   const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const nth = (n: number) => `${n}${n % 10 === 1 && n !== 11 ? "st" : n % 10 === 2 && n !== 12 ? "nd" : n % 10 === 3 && n !== 13 ? "rd" : "th"}`;
   if (r.repeat === "monthly") return r.when === "by_day" ? `By the ${nth(r.day!)} each month` : "Any day each month";
@@ -134,6 +152,12 @@ export function routineWords(r: RoutineMetadata): string {
 /** The period that holds `day`, or the next one when `day` falls between two (same_day, by_day). */
 export function periodOn(r: RoutineMetadata, day: string): Period {
   const from = day < r.starts_on ? r.starts_on : day;
+  if (r.repeat === "daily") return { window_from: from, due_on: from };
+  if (r.repeat === "weekdays") {
+    // Saturday or Sunday: the Monday after.
+    const d = addDays(from, dow(from) === 6 ? 2 : dow(from) === 0 ? 1 : 0);
+    return { window_from: d, due_on: d };
+  }
   if (r.repeat === "monthly") {
     const { first, last, lastDay } = monthBounds(from);
     if (r.when === "any_day") return { window_from: first, due_on: last };
