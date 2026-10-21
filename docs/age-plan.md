@@ -2,8 +2,8 @@
 
 **Status:** plan, 2026-10-20; **owner's answers the same day: all as recommended, Q5 option B** (keep
 only the result, never the birth date; see Answers). **Step 1 built 2026-10-20, migration applied
-2026-10-21:** see "As built: step 1". **Step 2 built 2026-10-21, branch `claude/age-step2`, not merged, migration
-not applied, not deployed, evaluation not run:** see "As built: step 2".
+2026-10-21:** see "As built: step 1". **Step 2 built 2026-10-21, merged (#262), evaluated; migration
+not applied, not deployed (with step 3's build):** see "As built: step 2".
 Design: D44 (builds on D29, invite-only sign-up with its 18+ box; D43, recipes and cocktails).
 Model: the strongest for steps 1-2 (sign-up, the account, server checks) and for step 3's chat
 part; a smaller one for the app screens and the paperwork.
@@ -234,6 +234,13 @@ is a mocktail, whatever the app or the model asks. 21 and over is unchanged.
 - **Evaluation:** four cases: `age-under21-vodka-cocktail`, `age-under21-margarita-knowledge` (from the
   model's own knowledge), `age-under21-save-tequila`, `age-adult-still-cocktails`. The pretend account
   gains `is21` (default yes, so the other cases are unchanged), `is_21` and `sync_drinks_space`.
+  **Run 2026-10-21 (luna, 10 cases, run 39590568648): 9/10, 0 leaks, 0 unsafe attempts, $0.01; all
+  four age cases passed.** The one failure, `suggest-household-ages`, was not about drinks: the meal
+  suggestion's AI request ended as "a connection problem" (twice, about 31 s a case), most likely the
+  route's 20 s limit. The fix (`claude/suggest-timeout`): `SUGGEST_TIMEOUT_MS` 30 s, as outings and
+  recipe photos, and the evaluation now prints the route's outcome under each case ("route:
+  recipe_suggest connection (timeout)") so a failure names its reason. Re-run on the fix (run
+  39592979506): **2/2 passed** (about 10 s each), 0 leaks. Ships with the `chat` deploy for step 2.
 - **Tests:** `tests/deno/age_drinks_test.ts` (8). **617 Deno tests pass**; type check and lint clean.
 - **When to switch it on:** applying the migration and deploying `mcp` and `chat` make every account
   that has not given its age **mocktails only** (Q6), and the app cannot ask for the age until step

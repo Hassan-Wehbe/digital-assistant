@@ -110,13 +110,14 @@ export function stopReason(
  * Only the evaluation's made-up data appears here; secret values in replies are reported as
  * leaks by the grading, and this output is for the owner's own run log.
  */
-export function transcript(run: { turns: { user: string; reply: string; toolCalls: { name: string; args: unknown; isError: boolean; result: string }[] }[] }): string {
+export function transcript(run: { turns: { user: string; reply: string; toolCalls: { name: string; args: unknown; isError: boolean; result: string }[]; notes?: string[] }[] }): string {
   const cut = (s: string, n: number) => (s.length > n ? `${s.slice(0, n)}…` : s).replace(/\s+/g, " ");
   return run.turns.map((t) => [
     `    user: ${cut(t.user, 200)}`,
     ...t.toolCalls.map((c) =>
       `    tool: ${c.name} ${cut(JSON.stringify(c.args), 160)} -> ${c.isError ? "ERROR " : ""}${cut(c.result, 160)}`
     ),
+    ...(t.notes ?? []).map((n) => `    route: ${cut(n, 160)}`),
     `    reply: ${cut(t.reply || "(nothing)", 400)}`,
   ].join("\n")).join("\n");
 }

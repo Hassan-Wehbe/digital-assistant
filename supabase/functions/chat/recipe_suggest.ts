@@ -33,8 +33,8 @@ import { whoWords } from "./outing_plan.ts";
 import { checkRecipeAnswer, type FilledFields } from "./recipe_import.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-/** The model has this long to answer. */
-export const SUGGEST_TIMEOUT_MS = 20_000;
+/** The model has this long to answer (30 s: a kid-friendly meal with ages took longer than 20 s in the evaluation). */
+export const SUGGEST_TIMEOUT_MS = 30_000;
 /** At most this many recipes go to the model. */
 export const MAX_SHORTLIST = 25;
 export const MAX_CHOICES = 3;
