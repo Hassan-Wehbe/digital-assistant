@@ -68,6 +68,9 @@ The new rating is likely higher than "Everyone" in some countries (for example T
 
 **Target audience:** 18 and over (or 13 and over). Not designed for children. **Owner, before the
 recipes build (D43 Q11):** set it to **18 and over only**, as Wilma now has cocktail recipes.
+**Later, teens (D44 step 4):** only after the lawyer (`docs/age-step4-lawyer-pack.md`, "The
+switch"): **13-15, 16-17 and 18 and over**, never under 13 (the Families policy then does not
+apply); the content rating stays "references to alcohol" (cocktails only from 21, enforced).
 
 **News app:** No. **COVID-19 contact tracing:** No. **Government app:** No.
 **Financial features:** None. **Health:** None.

@@ -89,6 +89,12 @@ and is a starting point, not legal advice.
       no location), not kept; the privacy wording; (4) **AI suggestions**: A new idea is marked
       new and not tested; whether the terms need a line on following AI recipes (allergies, food
       safety).
+- [ ] **Teens, 13 and over, and the age check** (D44, `docs/age-plan.md`; the pack with draft
+      wording and questions: `docs/age-step4-lawyer-pack.md`): sign-up opens to 13-17 with a
+      parent's or guardian's agreement; the month and year of birth are asked and not kept (only
+      "21 or over" or the month the person turns 21); cocktails at 21, mocktails before. Check: the
+      consent wording, state teen and AI-chatbot laws, OpenAI's rules for 13-17, alcohol at 21 for a
+      13+ audience, Data safety. **Wilma stays 18 and over until this is ticked.**
 - [ ] **Data breach**: notification duties (Florida and other states where users live).
 - [ ] **Brand**: the name "Wilma" and the mascot (trademark search and registration), app name in
       the stores.
