@@ -1,5 +1,8 @@
 # Routines: weekly and monthly task groups
 
+**Addition, 2026-10-21: daily routines** (plan only, owner's answers awaited): see "Daily routines"
+at the end.
+
 Status: plan, 2026-10-18. **Owner's answers given the same day (Q1-Q9, below "Decided").** **Step 1 built
 (2026-10-18), PR #226; migration applied 2026-10-19; deployed 2026-10-19 (`mcp` and `chat`):** see
 "As built: step 1". **Step 2 built (2026-10-19), merged (#227) and `chat`
@@ -364,3 +367,84 @@ is not routines: `plan-when-to-leave` left out the 15-minute drive (it passed in
 **Owner, in order:** (1) check the privacy sentence; merge; (2) OK to build ("preview" for an .apk
 on your phone, or "production" for Play testers; production also submits to Google Play); (3) the
 phone checklist.
+
+## Daily routines (plan, 2026-10-21)
+
+**The ask (owner, 2026-10-21):** "for routines can we have daily options for tasks". A daily routine
+is a named group done every day, or every weekday: "Morning routine: make bed, vitamins, 10 min
+stretch"; "Evening: dishes, lunches for tomorrow". This changes Q9 (daily and weekdays were left to
+single repeating tasks); those stay as they are.
+
+### What the owner will see
+
+- **New routine / edit:** Repeats gets **Daily** first: Daily · Weekly · Every 2 weeks · Monthly.
+  For Daily, **When** is **Every day** or **Weekdays (Mon-Fri)**, and an optional **At** time
+  ("7:30") (Q-D3).
+- **My day → From your routines:** a daily routine is **one line** for the whole group (Q-D2):
+  "Morning routine · 3 tasks · about 25 min — **Add 7:30** · ✕". Add places its open tasks one
+  after another from that time; ✕ is Not today for all of them (the same server marks as now). A
+  task already done today is left out; a single task can still be ticked, or placed with Find a time
+  under "Not placed yet".
+- **Missed:** not done today, it simply moves on to tomorrow (Q6): never overdue, no pile. The
+  Routines screen shows **"Today: 2 of 3"** for a daily routine and no "Missed" lines (Q-D4).
+- **Your morning:** its count line includes them ("3 routine tasks fit today").
+- **The chat:** "make a morning routine every weekday at 7:30: make bed, vitamins, stretch"
+  (the same Save routine card), "add floss to my evening routine", and "plan my day" words the
+  line ("Your morning routine fits at 7:30").
+
+### How it works (no migration)
+
+1. **Schedules:** `ROUTINE_REPEATS` gains `daily` and `weekdays` (the same words tasks already use
+   for repeating, `TASK_REPEATS`), with `when` always `any_day` and no `day`. The period
+   (`periodOn`) is one day: today (from `starts_on`); for weekdays, today if Monday to Friday, else
+   the next Monday. `periodAfter`, done (`routineTaskDone`) and missed (`settleRoutineTask`) need
+   no change beyond that. Its tasks get `repeat: daily | weekdays` like any repeating task.
+2. **A time:** routine metadata gains an optional `at` ("HH:MM", daily kinds only). The app's copy
+   of these rules (`app/src/lib/routines.ts`) changes the same way and is tested against the
+   server's, as in step 3b.
+3. **Grouped suggestions (planner, code only, no AI):** `routineSuggestions` gathers a daily
+   routine's open, unplaced tasks into one suggestion with their total time (30 min each when none
+   is given, Q7) and the task ids; it takes the earliest free gap at or after `at` (or the first
+   one) that holds the whole group, at a quarter hour. A daily line counts as one of the 3 (Q4) and
+   comes before weekly and monthly ones (it is due today). Add writes each task's `planned_at`, one
+   after another (the same write as Find a time). The planner never places anything by itself.
+4. **Chat:** `save_routine` and `save_item` (item_type routine) accept `daily`, `weekdays` and
+   `at`; `planForModel` sends the group as one line (title, routine, task count, minutes, time),
+   never anything new. The "Routine tasks (weekly or monthly)" note becomes "(daily, weekly or
+   monthly)". The password check (rule 9) on routine names and tasks is unchanged.
+5. **Older apps:** the app before this build ignores a routine whose repeat it does not know (it
+   returns null in `app/src/lib/routines.ts`), so a daily routine would be missing from its Routines
+   tab and My day box, while its tasks still show in Tasks. So the server part is **deployed with
+   the build that has the app part**, not before.
+
+### Rules check
+
+No secrets, sharing or restricted spaces are touched; the Tasks space is never restricted (rule 3).
+Routine tasks are ordinary tasks: revisions on edit (rule 7), soft delete (rule 8), the password
+check (rule 9), RLS unchanged (rule 5). No new table, no new data kept, no AI request (My day stays
+free of AI cost), so the privacy page and Play Data safety need no change (re-checked in step 2).
+
+### Questions (recommendation first)
+
+- **Q-D1. Which days:** **Every day and Weekdays only** (rec.; tasks already repeat this way); or
+  also any chosen days (Mon, Wed, Fri), a bigger change, since tasks cannot yet repeat on chosen
+  days (a later step if wanted).
+- **Q-D2. In My day:** **one line per daily routine** (rec.: a 5-task morning routine would
+  otherwise fill all 3 places every day and push weekly and monthly chores out); or one line per
+  task, as weekly ones are.
+- **Q-D3. A time:** **an optional At time** (rec.): offered then when free, else at the next free
+  time that holds it; or no time, first free gap only.
+- **Q-D4. On the Routines screen:** **"Today: 2 of 3", no Missed lines for daily ones** (rec.; a
+  missed line every day is noise); or "Missed yesterday" lines as for weekly ones.
+
+### Steps
+
+1. **Server and planner (strongest model).** Schedules, `at`, grouped suggestions, `save_routine`
+   and the chat's plan line; Deno tests (periods over a whole year for both kinds, a weekend for
+   weekdays, grouping, the time, two users); evaluation cases ("make a morning routine every
+   weekday", "plan my day" with a daily routine, a password trap in a routine task). **Owner:** OK
+   and a cap for the evaluation, merge. Not deployed yet (see 5 above).
+2. **App, help, checklist, build (strongest model for My day; smaller for the rest).** The editor's
+   Daily choice and At time, My day's grouped line (Add / ✕), the Routines screen's "Today: 2 of
+   3", the Help line and Try it; app tests; the phone checklist. **Owner:** OK to deploy `mcp` and
+   `chat`, and OK to build, together.
