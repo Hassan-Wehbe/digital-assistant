@@ -1,8 +1,8 @@
 # Ages: open Wilma to teens, cocktails at 21, mocktails for everyone else
 
 **Status:** plan, 2026-10-20; **owner's answers the same day: all as recommended, Q5 option B** (keep
-only the result, never the birth date; see Answers). **Step 1 built 2026-10-20, branch `claude/age-step1`,
-not merged, migration not applied:** see "As built: step 1".
+only the result, never the birth date; see Answers). **Step 1 built 2026-10-20, migration applied
+2026-10-21:** see "As built: step 1".
 Design: D44 (builds on D29, invite-only sign-up with its 18+ box; D43, recipes and cocktails).
 Model: the strongest for steps 1-2 (sign-up, the account, server checks) and for step 3's chat
 part; a smaller one for the app screens and the paperwork.
@@ -193,5 +193,9 @@ yet (step 3 sends the date and asks older accounts); nothing changes for drinks 
   hold sign-up bodies, which the owner can confirm in the dashboard's Auth logs after a test sign-up
   in step 3.
 
-**Owner, in order:** (1) run the dry run `tests/sql/dry_runs/23_age_check_dry_run.sql` in the Supabase
-SQL editor (31 checks, all `"ok": true`; nothing kept); (2) OK to apply; (3) merge.
+**Migration applied 2026-10-21 (owner's OK), recorded as 20261021010754 `age_check`.** Checked
+read-only after: the live sign-up trigger matched the version this one replaces; minimum age 18;
+the 3 accounts not asked yet (`alcohol_from` null, so mocktails only once step 2 is live); the hook
+still answers and Supabase Auth can still run it; `is_21` and `set_birth_month` run for signed-in
+users only, the helpers for no one; nobody can write `alcohol_from` directly; the sign-up trigger is
+on. **Next:** step 2, the drinks rules on the server (strongest model).
