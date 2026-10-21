@@ -13,6 +13,10 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **D44 ages step 4 prepared (2026-10-21): branch `claude/age-step4`, docs only, nothing live.** The
+  lawyer pack `docs/age-step4-lawyer-pack.md` (draft wording, seven questions, the switch); a legal
+  checklist item; Play notes. Wilma stays 18+ until the lawyer is done. **Owner:** merge; send the
+  pack to the lawyer.
 - **Release 2026-10-21: daily routines (D39) and ages (D44) are live.** `mcp` v37 and `chat` v47
   deployed from main (#268) after migration 24; versionCode 25 built (EAS
   aaa42245-7a29-4426-814b-2cdf4f2d6e04) and submitted to Google Play (internal track). Every account

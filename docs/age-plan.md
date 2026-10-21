@@ -312,3 +312,23 @@ suggestions, and the space shows as Mocktails.
 suggestion limit) and **OK to build**, together; (4) the phone checklist. Your own account: answer the
 question in the app (or set it as support would, above).
 
+## Step 4, prepared (2026-10-21)
+
+Branch `claude/age-step4`. Docs only; **nothing is live and Wilma stays 18 and over.**
+
+- **`docs/age-step4-lawyer-pack.md`:** what changes for teens, draft wording (terms "Who can take
+  part", the under-18 sign-up line, the privacy page's Children paragraph), seven questions for the
+  lawyer (consent for 13-17, state teen and AI-chatbot laws, OpenAI's rules for 13-17, alcohol at 21,
+  keeping only the result, teen defaults, deletion at a parent's request), and **the switch** in
+  order: pages (a new terms version), an app build (the new `TERMS_VERSION` and the under-18 line),
+  the server setting (one SQL line: the terms version and `min_age = 13`), Play's target audience
+  (13-15, 16-17, 18+), the legal checklist.
+- **Legal checklist:** a "Teens, 13 and over" item; Wilma stays 18+ until it is ticked.
+- **Play notes** (`docs/phase4-play-release.md`): the later target audience, only after the lawyer.
+- **Found while preparing:** a new terms version needs an app build (the app sends its version and
+  the server refuses another), so the switch is a build plus a setting on the same day, not a
+  setting alone.
+
+**Owner:** merge; send the pack (and the two pages) to the lawyer; when the lawyer is done, start
+"the switch" (a new step, smaller model, except the sign-up line: a small app change).
+
