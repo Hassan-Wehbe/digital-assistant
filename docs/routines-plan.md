@@ -1,6 +1,6 @@
 # Routines: weekly and monthly task groups
 
-**Addition, 2026-10-21: daily routines** (plan only, owner's answers awaited): see "Daily routines"
+**Addition, 2026-10-21: daily routines** (plan; Q-D1 answered, Q-D2 to Q-D4 awaited): see "Daily routines"
 at the end.
 
 Status: plan, 2026-10-18. **Owner's answers given the same day (Q1-Q9, below "Decided").** **Step 1 built
@@ -375,6 +375,10 @@ is a named group done every day, or every weekday: "Morning routine: make bed, v
 stretch"; "Evening: dishes, lunches for tomorrow". This changes Q9 (daily and weekdays were left to
 single repeating tasks); those stay as they are.
 
+**Answered (owner, 2026-10-21):** **Q-D1: Daily means every day, weekends included** ("I want to
+check my email every day"), **with Weekdays as the other choice.** A routine of one task ("Check
+email") is fine.
+
 ### What the owner will see
 
 - **New routine / edit:** Repeats gets **Daily** first: Daily · Weekly · Every 2 weeks · Monthly.
@@ -426,7 +430,7 @@ free of AI cost), so the privacy page and Play Data safety need no change (re-ch
 
 ### Questions (recommendation first)
 
-- **Q-D1. Which days:** **Every day and Weekdays only** (rec.; tasks already repeat this way); or
+- **Q-D1. Which days:** (answered: every day, weekends included, or weekdays) **Every day and Weekdays only** (rec.; tasks already repeat this way); or
   also any chosen days (Mon, Wed, Fri), a bigger change, since tasks cannot yet repeat on chosen
   days (a later step if wanted).
 - **Q-D2. In My day:** **one line per daily routine** (rec.: a 5-task morning routine would
