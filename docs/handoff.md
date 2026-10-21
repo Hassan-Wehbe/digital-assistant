@@ -13,6 +13,12 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **D44 ages step 2, the drinks rules (2026-10-21): branch `claude/age-step2`, not merged, migration
+  not applied, not deployed.** Under 21 or age not given: a cocktail with alcohol cannot be saved,
+  suggestions and A new idea are mocktails only, the chat gets a no-alcohol line, the drinks space is
+  named Mocktails (set when spaces are listed). Migration `20261024120000_drinks_space_name.sql` (SQL
+  test 24, dry run 13/13), four evaluation cases, 617 Deno tests. See `docs/age-plan.md` "As built:
+  step 2" (switch it on with step 3's build). **Owner:** OK + cap for the evaluation, merge.
 - **D44 ages step 1, the age check (2026-10-20): migration applied 2026-10-21 (20261021010754
   `age_check`).** `app_user.alcohol_from` (only "21 or over" or the month cocktails open; the month and
   year of birth are never kept), the sign-up hook's month and year with a minimum age (18 for now;

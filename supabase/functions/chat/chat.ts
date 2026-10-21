@@ -69,6 +69,7 @@ import { CAN_OUTING, type OutingLog, outingForChat, outingPlan, PLAN_OUTING } fr
 import { recipeFromImage, recipeFromText, type RecipeTextLog } from "./recipe_import.ts";
 import { recipeSuggest, type SuggestLog } from "./recipe_suggest.ts";
 import { CAN_RECIPES, SUGGEST_NAMES, suggestForChat } from "./recipe_chat.ts";
+import { isAdult21 } from "../mcp/lib/recipes.ts";
 import { CONFIRM_TOOLS, confirmCard } from "./confirm.ts";
 import { isRoutine } from "../mcp/lib/routines.ts";
 import {
@@ -446,13 +447,15 @@ async function runChat(
     const settings = await loadUserSettings(db, userId);
     assistantName = settings.assistantName;
     const distanceUnit = settings.distanceUnit;
-    // What Wilma remembered (memory on), read while the tools connect.
-    const [connected, about] = await Promise.all([
+    // What Wilma remembered (memory on), and whether drinks with alcohol are allowed (D44: 21 and
+    // over), read while the tools connect.
+    const [connected, about, adult] = await Promise.all([
       connectTools({ db, userId, accessToken: token, assistantName, distanceUnit, timeZone: tz }),
       memoriesForPrompt(db, userId),
+      isAdult21(db),
     ]);
     tools = connected;
-    const system = systemPrompt(assistantName, tools.instructions, new Date(), here, tz, about);
+    const system = systemPrompt(assistantName, tools.instructions, new Date(), here, tz, about, !adult);
     // The MCP tools plus the chat-only actions (never offered to the Claude connector).
     const specs = [...tools.specs, ...ACTION_SPECS];
     // plan_outing (D40): the same outing as the app's screens; the day's calendar when the app re-sent it.

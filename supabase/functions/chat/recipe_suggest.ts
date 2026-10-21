@@ -28,7 +28,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { type Llm, LlmError, RoutesConfigError } from "../_shared/llm/index.ts";
 import { findCredential } from "../mcp/lib/credentials.ts";
 import { placeScope } from "../mcp/lib/places.ts";
-import { normalizeRecipe, type RecipeMetadata, type RecipeType } from "../mcp/lib/recipes.ts";
+import { isAdult21, namesAlcohol, normalizeRecipe, type RecipeMetadata, type RecipeType } from "../mcp/lib/recipes.ts";
 import { whoWords } from "./outing_plan.ts";
 import { checkRecipeAnswer, type FilledFields } from "./recipe_import.ts";
 
@@ -212,7 +212,8 @@ export function shortlist(rows: RecipeRow[], ask: SuggestBody, today: string): C
     if (avoid.has(r.id)) continue;
     const f = r.fields;
     if (ask.minutes && f.minutes && f.minutes > ask.minutes) continue;
-    if (ask.mode === "cocktail" && ask.strength === "none" && !noAlcohol(r)) continue;
+    // No alcohol (asked, or always under 21, D44): known to have none, and no alcohol in its words.
+    if (ask.mode === "cocktail" && ask.strength === "none" && (!noAlcohol(r) || namesAlcohol(r.title, ...(f.ingredients ?? [])))) continue;
     if (ask.mode === "cocktail" && ask.strength === "light" && f.strength === "regular") continue;
     let score = 0;
     if (f.ingredients?.length) score += 1;
@@ -318,8 +319,14 @@ const parseJson = (answer: string): Record<string, unknown> | null => {
   }
 };
 
-/** The model's picks: numbers only from the list, each once, at most 3; lines checked. */
-export function checkChoices(answer: string, cands: Candidate[]): { picks: { c: Candidate; why: string; missing?: string[] }[]; dropped: number } | null {
+/** The model's picks: numbers only from the list, each once, at most 3; lines checked (with `noAlcohol`, a line naming alcohol is dropped). */
+export function checkChoices(
+  answer: string, cands: Candidate[], noAlcohol = false,
+): { picks: { c: Candidate; why: string; missing?: string[] }[]; dropped: number } | null {
+  const line = (v: unknown, max: number) => {
+    const t = cleanLine(v, max);
+    return t && noAlcohol && namesAlcohol(t) ? null : t;
+  };
   const a = parseJson(answer);
   if (!a || !Array.isArray(a.choices)) return null;
   let dropped = 0;
@@ -333,23 +340,29 @@ export function checkChoices(answer: string, cands: Candidate[]): { picks: { c: 
       continue;
     }
     seen.add(n);
-    const why = cleanLine(ch.why, 200) ?? "";
+    const why = line(ch.why, 200) ?? "";
     if (typeof ch.why === "string" && !why) dropped += 1;
     const missing = Array.isArray(ch.missing)
-      ? ch.missing.map((m) => cleanLine(m, 60)).filter((m): m is string => !!m).slice(0, 6)
+      ? ch.missing.map((m) => line(m, 60)).filter((m): m is string => !!m).slice(0, 6)
       : [];
     picks.push({ c: cands[n - 1], why, ...(missing.length ? { missing } : {}) });
   }
   return { picks, dropped };
 }
 
-/** A new idea: a title and fields with the save_item checks; null when unusable. */
-export function checkIdea(answer: string, type: RecipeType): { title: string; fields: FilledFields } | null {
+/** A new idea: a title and fields with the save_item checks; null when unusable (with `noAlcohol`, also when it names alcohol). */
+export function checkIdea(answer: string, type: RecipeType, noAlcohol = false): { title: string; fields: FilledFields } | null {
   const a = parseJson(answer);
   const title = a ? cleanLine(a.title, 120) : null;
   if (!a || !title) return null;
   const checked = checkRecipeAnswer(JSON.stringify({ ...a, is_recipe: true }), type);
-  return "fields" in checked ? { title, fields: checked.fields } : null;
+  if (!("fields" in checked)) return null;
+  if (noAlcohol) {
+    const f = checked.fields;
+    if (namesAlcohol(title, ...(f.ingredients ?? []), ...(f.steps ?? []))) return null;
+    return { title, fields: { ...f, strength: "none" } };
+  }
+  return { title, fields: checked.fields };
 }
 
 function toSuggestion(p: { c: Candidate; why: string; missing?: string[] }): Suggestion {
@@ -411,6 +424,12 @@ export async function recipeSuggest(
   const db = deps.clientFor(token);
   let rows: RecipeRow[];
   let cands: Candidate[] = [];
+  // Drinks with alcohol only from 21 (D44; is_21(), not asked yet counts as under 21): under 21 every
+  // drink suggested or invented here has none, whatever was asked.
+  const mocktailsOnly = type === "cocktail" && !(await isAdult21(db));
+  if (mocktailsOnly) ask.strength = "none";
+  const noAlcohol = type === "cocktail" && ask.strength === "none";
+  const under21 = mocktailsOnly ? { mocktails_only: true } : {};
   try {
     rows = await readRecipes(db, type);
     log.recipes = rows.length;
@@ -420,7 +439,7 @@ export async function recipeSuggest(
       if (!cands.length) {
         // Nothing to choose from: not counted, no AI request. The count is of searchable recipes only.
         log.outcome = "none_fit";
-        return done(200, { suggestions: [], reason: "none_fit", recipes: rows.length });
+        return done(200, { suggestions: [], reason: "none_fit", recipes: rows.length, ...under21 });
       }
     }
     const { data: gate, error: gateError } = await db.rpc("use_recipe_suggestion");
@@ -471,30 +490,30 @@ export async function recipeSuggest(
     if (!answer) {
       if (!log.model_calls) throw new Error(log.code ?? "no_answer");
       log.outcome = "no_answer";
-      return done(200, ask.new_idea ? { idea: null, reason: "no_answer", usage } : { suggestions: [], reason: "no_answer", usage });
+      return done(200, ask.new_idea ? { idea: null, reason: "no_answer", usage, ...under21 } : { suggestions: [], reason: "no_answer", usage, ...under21 });
     }
 
     if (ask.new_idea) {
-      const idea = checkIdea(answer, type);
+      const idea = checkIdea(answer, type, noAlcohol);
       if (!idea) {
         log.outcome = "no_answer";
-        return done(200, { idea: null, reason: "no_answer", usage });
+        return done(200, { idea: null, reason: "no_answer", usage, ...under21 });
       }
       log.chosen = 1;
-      return done(200, { idea, new: true, usage });
+      return done(200, { idea, new: true, usage, ...under21 });
     }
-    const checked = checkChoices(answer, cands);
+    const checked = checkChoices(answer, cands, noAlcohol);
     if (!checked) {
       log.outcome = "no_answer";
-      return done(200, { suggestions: [], reason: "no_answer", usage });
+      return done(200, { suggestions: [], reason: "no_answer", usage, ...under21 });
     }
     log.dropped = checked.dropped;
     log.chosen = checked.picks.length;
     if (!checked.picks.length) {
       log.outcome = "none_fit";
-      return done(200, { suggestions: [], reason: "none_fit", recipes: rows.length, usage });
+      return done(200, { suggestions: [], reason: "none_fit", recipes: rows.length, usage, ...under21 });
     }
-    return done(200, { suggestions: checked.picks.map(toSuggestion), usage });
+    return done(200, { suggestions: checked.picks.map(toSuggestion), usage, ...under21 });
   } catch (e) {
     log.outcome = "connection";
     log.code ??= e instanceof Error ? e.message : "unknown";

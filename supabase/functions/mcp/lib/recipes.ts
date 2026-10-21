@@ -214,3 +214,36 @@ export function withRecipe(body: string, recipe: RecipeMetadata | null): string 
   if (!fields) return body;
   return body.trim() ? `${body}\n\n${fields}` : fields;
 }
+
+// ---- Drinks and age (docs/age-plan.md step 2, D44) -------------------------------------------
+// Alcohol only from 21 (is_21() in the database, the caller's own row; not asked yet counts as
+// under 21). Under 21 a drink saves only with strength "none" and with no alcohol named in its
+// title, ingredients or steps; the suggestion route (chat/recipe_suggest.ts) uses the same words.
+
+// Drinks that only sound alcoholic are taken out before looking (ginger beer, non-alcoholic wine).
+const NOT_ALCOHOL = /\b(ginger|root|birch)\s+beer\b|\bginger\s+ale\b|\b(non[- ]?alcoholic|alcohol[- ]free|zero[- ]proof|0\s?%|de[- ]?alcoholi[sz]ed)\s+[a-z]+(\s+[a-z]+)?|\bwine\s+vinegar\b|\b(rum|vanilla|almond|brandy)\s+(extract|essence|flavou?ring)\b|\bbitter\s+lemon\b|\bnon[- ]?alcoholic\b|\balcohol[- ]free\b|\bvirgin\b/gi;
+// Spirits, wine, beer and liqueurs by name.
+const ALCOHOL = /\b(vodka|gin|rum|tequila|mezcal|whisk(e)?y|bourbon|scotch|rye\s+whisk|brandy|cognac|armagnac|calvados|pisco|cacha[cç]a|absinthe|wine|prosecco|champagne|cava|sparkling\s+wine|vermouth|sherry|port|beer|lager|ale|stout|cider|sake|soju|liqueurs?|schnapps|amaretto|kahl[uú]a|baileys|cointreau|triple\s+sec|grand\s+marnier|cura[cç]ao|campari|aperol|chartreuse|limoncello|sambuca|ouzo|arak|raki|pastis|jagermeister|j[aä]germeister|midori|frangelico|drambuie|chambord|st[- ]germain|elderflower\s+liqueur|bitters|spirits?|liquor|alcohol(ic)?|booze)\b/i;
+
+/** Whether a drink's words name alcohol (after taking out ginger beer, non-alcoholic wine and the like). */
+export function namesAlcohol(...texts: (string | undefined | null)[]): boolean {
+  return ALCOHOL.test(texts.filter(Boolean).join("\n").replace(NOT_ALCOHOL, " "));
+}
+
+/** Whether a drink, as saved, is one with alcohol: its strength is not "none", or its words name alcohol. */
+export function drinkHasAlcohol(title: string, m: RecipeMetadata | null): boolean {
+  return m?.strength !== "none" || namesAlcohol(title, ...(m?.ingredients ?? []), ...(m?.steps ?? []));
+}
+
+export const UNDER_21 =
+  "Cocktails with alcohol are for 21 and over. Save it as a mocktail (strength \"none\", no alcohol in it), or not at all.";
+
+/** The caller is 21 or over (is_21(); false when not asked yet or on any error: the safe side). */
+export async function isAdult21(db: { rpc(fn: string): PromiseLike<{ data: unknown; error: unknown }> }): Promise<boolean> {
+  try {
+    const { data, error } = await db.rpc("is_21");
+    return !error && data === true;
+  } catch {
+    return false;
+  }
+}

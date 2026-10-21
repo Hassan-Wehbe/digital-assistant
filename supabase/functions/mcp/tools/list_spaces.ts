@@ -14,6 +14,10 @@ export const registerListSpaces: RegisterTool = (server, { db }) => {
     },
     () =>
       guarded(async () => {
+        // The built-in drinks space is Mocktails under 21 and Cocktails from 21 (D44): set right here,
+        // as the app lists spaces on every open, so a 21st birthday shows by itself. Best effort: a
+        // failure only leaves the name as it was.
+        await Promise.resolve(db.rpc("sync_drinks_space")).catch(() => {});
         const spaces = await loadSpaces(db);
         return ok({
           spaces: spaces.map(({ id, path, description, is_restricted, built_in }) => ({
@@ -21,7 +25,7 @@ export const registerListSpaces: RegisterTool = (server, { db }) => {
             path,
             description,
             restricted: is_restricted,
-            // Tasks, Memories, Recipes and Cocktails: the app marks them BUILT-IN and offers no Delete or rename.
+            // Tasks, Memories, Recipes and Cocktails (Mocktails under 21): the app marks them BUILT-IN and offers no Delete or rename.
             ...(built_in ? { built_in } : {}),
           })),
         });

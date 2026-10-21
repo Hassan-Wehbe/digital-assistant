@@ -7,7 +7,7 @@ import { withLinkLocation } from "../lib/maps_link.ts";
 import { isTask, normalizeTask, setTaskDone, type TaskMetadata, taskDate, withTask } from "../lib/tasks.ts";
 import { isRoutine, normalizeRoutine, type RoutineMetadata, routineTaskDone, routineWords, withRoutine } from "../lib/routines.ts";
 import { bringTasksInStep, findRoutine, loadRoutine, userToday } from "../lib/routine_tasks.ts";
-import { addMade, normalizeRecipe, type RecipeMetadata, recipeType, withRecipe } from "../lib/recipes.ts";
+import { addMade, drinkHasAlcohol, isAdult21, normalizeRecipe, type RecipeMetadata, recipeType, UNDER_21, withRecipe } from "../lib/recipes.ts";
 import { isTasksSpace, taskPlaceTitle } from "./save_item.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
@@ -150,6 +150,12 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
             }
           }
         }
+        // A drink with alcohol only from 21 (D44), when its fields or its type are set; Made it alone
+        // never needs it (an account aged 18-20 keeps the cocktails it saved before, Q9).
+        if (
+          current && rtype === "cocktail" && (metadata !== undefined || item_type !== undefined) &&
+          drinkHasAlcohol(title ?? current.title, recipe) && !(await isAdult21(db))
+        ) throw new Error(UNDER_21);
         // A Maps link with coordinates and no location: the location is read from the link (Q15).
         // Not when the place had a location and keeps the same link: the user removed it on purpose.
         let locationFromLink = false;

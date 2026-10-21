@@ -89,6 +89,8 @@ export class World {
   dayPlansUsed = 0;
   /** Recipe suggestions asked for today (use_recipe_suggestion, D43): 10 a day free, 50 with Pro. */
   suggestionsUsed = 0;
+  /** is_21() (D44): 21 or over unless a case says not (not asked yet counts as under 21 in the real one). */
+  is21 = true;
   /**
    * home_place rows (D36). Left empty, the table holds what the database copies from a Home note
    * in a searchable space (migration home_place, item_home_note), as the default.
@@ -672,6 +674,14 @@ function rpc(w: World, name: string, p: Record<string, unknown>): Result {
       if (w.dayPlansUsed >= 30) return ok({ allowed: false, reason: "fair_use", used: w.dayPlansUsed, limit: 30 });
       w.dayPlansUsed += 1;
       return ok({ allowed: true, used: w.dayPlansUsed, limit: 30 });
+    }
+    case "is_21":
+      return ok(w.is21);
+    case "sync_drinks_space": {
+      // As the migration's function: the built-in drinks space is Mocktails under 21, Cocktails from 21.
+      const s = w.spaces.find((x) => x.built_in === "cocktails");
+      if (s) s.name = w.is21 ? "Cocktails" : "Mocktails";
+      return ok(s?.name ?? null);
     }
     case "use_recipe_suggestion": {
       // As the migration's function: everyone, 10 a day (50 with Pro), counted when allowed.
