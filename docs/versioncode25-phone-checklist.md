@@ -51,8 +51,8 @@ versionCode 24's checklist first if you haven't. The My day checks need **Pro**.
 
 ## Ages (D44)
 
-You need: an invite code for a test sign-up (Settings → Invites, or the SQL editor) and an email you
-can open.
+You need: an invite code for a test sign-up (in the SQL editor: `select create_invite_code('age
+test', 2, 7, 'free');`, never in chat) and an email you can open.
 
 - [ ] (15) The privacy page says the month and year of birth are asked once and **not kept**
   (published when this PR is merged).
