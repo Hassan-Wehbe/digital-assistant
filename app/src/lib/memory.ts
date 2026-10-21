@@ -113,9 +113,10 @@ export const isBuiltIn = (s: Pick<Space, 'built_in'>) => !!s.built_in && BUILT_I
 /** The account's Memories space, from list_spaces. */
 export const memoriesSpace = (spaces: Space[]): Space | undefined => spaces.find((s) => s.built_in === 'memories' && !s.restricted);
 
-/** A space's row title: ✅ Tasks, 🧠 Memories, 🍽️ Recipes, 🍸 Cocktails, others as they are. */
+/** A space's row title: ✅ Tasks, 🧠 Memories, 🍽️ Recipes, 🍸 Cocktails (🍹 Mocktails), others as they are. */
 export function spaceTitle(s: Pick<Space, 'path' | 'built_in'>): string {
-  const icon = s.built_in ? BUILT_IN_ICONS.get(s.built_in) : undefined;
+  // The drinks space is called Mocktails under 21 (D44, named by the server): 🍹.
+  const icon = s.built_in === 'cocktails' && /^mocktails$/i.test(s.path) ? '🍹' : s.built_in ? BUILT_IN_ICONS.get(s.built_in) : undefined;
   return icon ? `${icon} ${s.path}` : s.path;
 }
 

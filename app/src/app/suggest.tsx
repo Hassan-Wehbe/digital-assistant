@@ -6,7 +6,8 @@
 // ages, from Settings → Household; the names never leave the phone, Q12), Kind (Anything ·
 // Vegetarian · Kid-friendly · Light) and I have. Make a cocktail: My bar, Strength (Regular · Light
 // · No alcohol, always offered, Q11) and Mood. "I have" and "My bar" are remembered on this phone
-// only (Q6); text that looks like a password is held here and never sent (rule 9).
+// only (Q6); text that looks like a password is held here and never sent (rule 9). Under 21, or
+// until the age is given (D44): Make a mocktail, no Strength choice, A new idea saves to Mocktails.
 //
 // Suggest: the suggestion route (lib/recipeSuggest.ts) picks up to three of the user's own recipes
 // from searchable spaces (one AI request, counted: 10 a day, 50 with Pro, Q10). The best fit is a
@@ -26,6 +27,8 @@ import { findCredential } from '@/lib/credentials';
 import { deviceSettingsStore } from '@/lib/deviceStorage';
 import { listMembers, type HouseholdDb } from '@/lib/household';
 import { whoFrom } from '@/lib/outing';
+import { drinks, mocktailsOnly } from '@/lib/age';
+import { useAge } from '@/components/useAge';
 import { localDate } from '@/lib/places';
 import type { FilledFields } from '@/lib/recipeImport';
 import {
@@ -50,6 +53,11 @@ export default function Suggest() {
   const mode: SuggestMode = params.mode === 'cocktail' ? 'cocktail' : 'meal';
   const meal = mode === 'meal';
   const { session, suggest, wilma, signOut } = useAuth();
+  // Under 21, or until the age is given (D44): mocktails only, no Strength choice; the server
+  // enforces the same whatever is sent.
+  const age = useAge().status;
+  const mocktails = !meal && mocktailsOnly(age);
+  const d = drinks(age);
   const userId = session?.user.id ?? '';
   const [today] = useState(() => localDate(new Date()));
 
@@ -74,7 +82,7 @@ export default function Suggest() {
   const who = homeWho
     ? { adults: withAdults ? homeWho.adults : 0, child_ages: withKids ? homeWho.child_ages : [] }
     : undefined;
-  const choices: SuggestChoices = meal ? { have, minutes, kind, who } : { have, strength, mood };
+  const choices: SuggestChoices = meal ? { have, minutes, kind, who } : { have, strength: mocktails ? 'none' : strength, mood };
 
   const [shown, setShown] = useState<Shown>({ step: 'choose' });
   // Every recipe shown since the last Suggest: Another idea leaves them out.
@@ -144,7 +152,7 @@ export default function Suggest() {
   };
 
   const label = (t: string) => <Text style={{ color: c.muted, fontSize: 12, fontWeight: '600', letterSpacing: 0.6 }}>{t}</Text>;
-  const title = meal ? "What's for dinner?" : 'Make a cocktail';
+  const title = meal ? "What's for dinner?" : d.button;
 
   const form = (
     <View style={{ gap: space.s }}>
@@ -190,14 +198,20 @@ export default function Suggest() {
       {credential ? <PasswordHold kind={credential} onEdit={() => haveInput.current?.focus()} /> : null}
       {meal ? null : (
         <>
-          {label('STRENGTH')}
-          <Chips options={STRENGTHS.map((s) => ({ value: s, label: STRENGTH_LABELS[s] }))} selected={(v) => v === strength} onPress={setStrength} />
+          {mocktails ? (
+            <Muted>Mocktails only: no alcohol. Cocktails are for 21 and over.</Muted>
+          ) : (
+            <>
+              {label('STRENGTH')}
+              <Chips options={STRENGTHS.map((s) => ({ value: s, label: STRENGTH_LABELS[s] }))} selected={(v) => v === strength} onPress={setStrength} />
+            </>
+          )}
           {label('MOOD')}
           <Chips options={MOODS} selected={(v) => v === mood} onPress={setMood} />
         </>
       )}
       <Button title={shown.step === 'asking' ? 'Thinking…' : 'Suggest'} disabled={busy || !!credential} onPress={() => void ask(false)} />
-      <Muted>{`From your own ${meal ? 'recipes' : 'cocktails'}. Uses one AI request.`}</Muted>
+      <Muted>{`From your own ${meal ? 'recipes' : `${d.one}s`}. Uses one AI request.`}</Muted>
     </View>
   );
 
@@ -227,7 +241,7 @@ export default function Suggest() {
         <Text style={{ color: c.text, fontSize: 15 }}>{shown.text}</Text>
         <Muted>This didn’t count toward today’s suggestions.</Muted>
         <Button title="A new idea" kind="plain" disabled={busy || !!credential} onPress={() => void newIdea()} />
-        <Muted>{`Wilma suggests one ${meal ? 'recipe' : 'cocktail'} that isn't in your spaces. Uses one AI request.`}</Muted>
+        <Muted>{`Wilma suggests one ${meal ? 'recipe' : d.one} that isn't in your spaces. Uses one AI request.`}</Muted>
       </View>
     );
   } else if (shown.step === 'idea') {
@@ -237,7 +251,7 @@ export default function Suggest() {
         <IdeaCard
           title={ideaTitle}
           fields={fields}
-          saveTo={meal ? 'Recipes' : 'Cocktails'}
+          saveTo={meal ? 'Recipes' : d.space}
           saving={saving}
           onSave={() => void saveNewIdea(ideaTitle, fields)}
           onAnother={() => void newIdea()}

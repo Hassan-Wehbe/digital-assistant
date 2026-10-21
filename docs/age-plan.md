@@ -3,7 +3,8 @@
 **Status:** plan, 2026-10-20; **owner's answers the same day: all as recommended, Q5 option B** (keep
 only the result, never the birth date; see Answers). **Step 1 built 2026-10-20, migration applied
 2026-10-21:** see "As built: step 1". **Step 2 built 2026-10-21, merged (#262), evaluated; migration
-not applied, not deployed (with step 3's build):** see "As built: step 2".
+not applied, not deployed (with step 3's build):** see "As built: step 2". **Step 3 (the app) built
+2026-10-21, branch `claude/age-step3`, not merged:** see "As built: step 3".
 Design: D44 (builds on D29, invite-only sign-up with its 18+ box; D43, recipes and cocktails).
 Model: the strongest for steps 1-2 (sign-up, the account, server checks) and for step 3's chat
 part; a smaller one for the app screens and the paperwork.
@@ -253,3 +254,49 @@ is a mocktail, whatever the app or the model asks. 21 and over is unchanged.
 `suggest-` ones, about a cent); (2) merge; (3) step 3; then the dry run
 `tests/sql/dry_runs/24_drinks_space_name_dry_run.sql`, OK to apply, OK to deploy `mcp` and `chat`,
 with step 3's build.
+
+## As built: step 3 (2026-10-21)
+
+Branch `claude/age-step3`. **Not merged; not built.** The app; nothing on the server.
+
+- **Sign-up** (`app/src/app/create-account.tsx`, `lib/signup.ts`, `components/BirthMonthFields.tsx`):
+  **Month and year of birth** (twelve month chips and a year box) instead of the 18+ box; the box is
+  now "I agree to the Privacy policy and Testing terms". Sent with the sign-up as `birth_month` and
+  `birth_year` (no `age_confirmed`); the server checks the minimum age (18 for now) and says so in its
+  own words; the app only checks a real month and year (not in the future, not over 120 years ago),
+  so the minimum can move to 13 (step 4) without an app update. A note under the fields: used once,
+  not kept, only 21-or-over (or the month you turn 21) kept.
+- **The one-time question** (`components/AgeCard.tsx`): on Home for an account not asked yet (Q6):
+  "🎂 What’s your month and year of birth?", Save or Not now (until the app is opened again);
+  `set_birth_month` once; the server's "already set" message shown as is.
+- **The status** (`lib/age.ts`, `components/useAge.ts`): `my_age_status()` read once per sign-in and
+  shared; only asked, 21-or-over and the month cocktails open come back. Mocktails when under 21, not
+  asked, or not known (the server decides the same). **The month and year are never kept on the
+  phone or logged** (a test reads the files).
+- **Make a mocktail:** Home's Cook row says 🍹 **Make a mocktail**; the screen's title, its words
+  and A new idea's Save to Mocktails follow; **no Strength choice** ("Mocktails only: no alcohol.
+  Cocktails are for 21 and over."), strength always sent as none.
+- **A drink note** (`components/RecipeFields.tsx`): under 21 only **No alcohol**, and a new drink
+  starts as No alcohol once the status is known; an older drink with alcohol says its fields can't be
+  changed until 21 (the server refuses it, Q9).
+- **The space:** the server names it; the app shows 🍹 for **Mocktails** (`spaceTitle`).
+- **Settings → Account:** "Age-limited parts: Cocktails: yes (21 or over). Wrong? Contact us.", or
+  "Cocktails from March 2028; mocktails until then.", or, not asked yet, "Tap to answer" (the same
+  question). No birth date is shown, none is kept (Q7).
+- **Help** (Recipes): "Under 21: Mocktails, no alcohol."
+- **Privacy page updated** (the plan had it for step 4; this build already asks): the account
+  bullet says the month and year are asked once, used to check the age and not kept; only 21-or-over
+  or the month you turn 21 is kept, deleted with the account. Children: "18 or older (checked from
+  your month and year of birth, which are not kept)". "Last updated 21 October 2026". The 13+ wording
+  stays for step 4, after the lawyer. **The owner checks the wording**, and Play **Data safety**
+  (probably nothing new: no date of birth is kept or shared; the lawyer confirms in step 4).
+- **Tests:** `app/src/lib/age.test.ts` (8) and the sign-up tests (month and year sent, no
+  `age_confirmed`). **1016 app tests pass**; lint and type check clean.
+- **Phone checklist:** the Ages section of `docs/versioncode25-phone-checklist.md`.
+
+**Owner, in order:** (1) check the privacy wording; merge; (2) the dry run
+`tests/sql/dry_runs/24_drinks_space_name_dry_run.sql`, then **OK to apply** `20261024120000`; (3)
+**OK to deploy `mcp` and `chat`** (step 2's drinks rules, daily routines step 1, the 30-second
+suggestion limit) and **OK to build**, together; (4) the phone checklist. Your own account: answer the
+question in the app (or set it as support would, above).
+

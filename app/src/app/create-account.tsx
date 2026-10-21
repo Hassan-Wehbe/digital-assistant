@@ -1,10 +1,12 @@
-// Create account with an invite code (docs/signup-plan.md step 2). The server checks the code,
-// 18+ and the terms before any account exists; then a confirmation email, then sign in.
+// Create account with an invite code (docs/signup-plan.md step 2). The server checks the code, the
+// month and year of birth (D44: the minimum age; it keeps only "21 or over" or the month cocktails
+// open) and the terms before any account exists; then a confirmation email, then sign in.
 import { router } from 'expo-router';
 import { isAuthRetryableFetchError } from '@supabase/supabase-js';
 import { useEffect, useRef, useState } from 'react';
 import { Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
+import { BirthMonthFields } from '@/components/BirthMonthFields';
 import { PassphraseInput } from '@/components/PassphraseInput';
 import { Button, Card, KeyboardScreen, Muted, styles, useColors } from '@/components/ui';
 import { MIN_PASSWORD_LENGTH } from '@/lib/password';
@@ -19,6 +21,8 @@ export default function CreateAccount() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [again, setAgain] = useState('');
+  const [birthMonth, setBirthMonth] = useState<number | null>(null);
+  const [birthYear, setBirthYear] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +37,7 @@ export default function CreateAccount() {
     setError(null);
     const problem = await createAccount(
       { signUp: (args) => supabase.auth.signUp(args), isConnectionError: isAuthRetryableFetchError },
-      { code, email, password, again, agreed },
+      { code, email, password, again, birthMonth, birthYear, agreed },
       mode,
     );
     setBusy(false);
@@ -43,6 +47,8 @@ export default function CreateAccount() {
     }
     setPassword('');
     setAgain('');
+    setBirthMonth(null);
+    setBirthYear('');
     setSentTo(email.trim().toLowerCase());
   };
 
@@ -108,6 +114,7 @@ export default function CreateAccount() {
           />
           <PassphraseInput value={password} onChangeText={setPassword} placeholder={`Password (at least ${MIN_PASSWORD_LENGTH} characters)`} disabled={busy} />
           <PassphraseInput value={again} onChangeText={setAgain} placeholder="The password again" disabled={busy} />
+          <BirthMonthFields month={birthMonth} year={birthYear} onMonth={setBirthMonth} onYear={setBirthYear} disabled={busy} />
           <Pressable
             accessibilityRole="checkbox"
             accessibilityState={{ checked: agreed }}
@@ -118,7 +125,7 @@ export default function CreateAccount() {
             <Text style={{ fontSize: 22, color: agreed ? c.accent : c.muted }}>{agreed ? '☑' : '☐'}</Text>
             <View style={{ flex: 1 }}>
               <Text style={{ color: c.text, fontSize: 15 }}>
-                {'I am 18 or older and agree to the '}
+                {'I agree to the '}
                 {link('Privacy policy', PRIVACY_URL)}
                 {' and '}
                 {link('Testing terms', TERMS_URL)}

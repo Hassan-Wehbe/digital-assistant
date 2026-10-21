@@ -6,6 +6,8 @@ import { router } from 'expo-router';
 import type { ReactElement } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 
+import { useAge } from '@/components/useAge';
+import { drinks } from '@/lib/age';
 import { COOKS, pairs, PLANNERS, type Planner } from '@/lib/planners';
 
 import { Badge, space, styles, useColors } from './ui';
@@ -96,10 +98,13 @@ export function PlanRow({
 }
 
 export function CookRow() {
+  // Under 21, or until the age is given: Make a mocktail (D44; the server gives mocktails only).
+  const d = drinks(useAge().status);
+  const list = COOKS.map((x) => (x.mode === 'cocktail' ? { ...x, icon: d.icon, title: d.button } : x));
   return (
     <Rows
       title="Cook with Wilma"
-      list={COOKS}
+      list={list}
       button={(x) => (
         <RowButton key={x.mode} icon={x.icon} title={x.title} onPress={() => router.push({ pathname: '/suggest', params: { mode: x.mode } })} />
       )}

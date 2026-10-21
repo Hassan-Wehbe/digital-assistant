@@ -11,8 +11,11 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Appearance, Platform, ScrollView, Text } from 'react-native';
 
+import { AgeQuestion } from '@/components/AgeCard';
+import { useAge } from '@/components/useAge';
 import { UsageMeter } from '@/components/UsageMeter';
 import { Button, Card, GroupList, GroupRow, Muted, space, styles, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
+import { cocktailsLine } from '@/lib/age';
 import { useAuth } from '@/lib/auth';
 import { briefingSummary, loadBriefing } from '@/lib/briefingSettings';
 import { loadChoice } from '@/lib/calendarSettings';
@@ -29,6 +32,8 @@ export default function Settings() {
   const c = useColors();
   const { session, signOut, wilma } = useAuth();
   const openSpace = useOpenSpace();
+  const age = useAge();
+  const [askAge, setAskAge] = useState(false);
   const usage = useLoad(`usage:${session?.user.id ?? ''}`, async () => {
     const a = await loadAllowance((fn) => supabase.rpc(fn));
     return a ? usageSummary(a) : null;
@@ -192,10 +197,17 @@ export default function Settings() {
       {heading('Account')}
       <GroupList>
         <GroupRow first title="Signed in as" subtitle={session?.user.email ?? 'you'} />
+        {/* D44: only "21 or over" or the month cocktails open is kept, never a birth date; set once (Q7). */}
+        <GroupRow
+          title="Age-limited parts"
+          subtitle={`${cocktailsLine(age.status)}${age.status?.asked ? ' Wrong? Contact us.' : ' Tap to answer.'}`}
+          onPress={age.status && !age.status.asked ? () => setAskAge((a) => !a) : undefined}
+        />
         <GroupRow title="Change sign-in password" onPress={() => router.push('/account')} />
         <GroupRow title="Recycle bin" subtitle="Deleted notes" onPress={() => router.push('/bin')} />
         <GroupRow title="Delete account" subtitle="Everything in it, for good" onPress={() => router.push('/delete-account')} />
       </GroupList>
+      {askAge && age.status && !age.status.asked ? <AgeQuestion onDone={() => setAskAge(false)} /> : null}
 
       <Button title="Sign out" kind="danger" onPress={signOut} />
       <Muted>{versionLabel(Application.nativeApplicationVersion, Application.nativeBuildVersion)}</Muted>

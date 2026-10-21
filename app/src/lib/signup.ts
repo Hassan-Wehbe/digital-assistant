@@ -1,7 +1,11 @@
 // Invite-only sign-up (docs/signup-plan.md step 2, design D29). The server decides: its Before
-// User Created hook (20261011120000_invite_signup.sql) refuses a sign-up without a valid invite
-// code or without 18+ and the current terms, and its message is shown as is. The checks here only
-// save a round trip. Never log or report a password.
+// User Created hook (20261011120000_invite_signup.sql, 20261023120000_age_check.sql) refuses a
+// sign-up without a valid invite code, under the minimum age, or without the current terms, and its
+// message is shown as is. The month and year of birth (D44, docs/age-plan.md step 3) go with the
+// sign-up once: the server keeps only "21 or over" or the month cocktails open, and removes them
+// from the account. The checks here only save a round trip. Never log or report a password or the
+// month and year.
+import { birthProblem } from './age';
 import { MIN_PASSWORD_LENGTH } from './password';
 
 /** The terms a new account accepts; the same value as signup_setting.terms_version. */
@@ -20,17 +24,23 @@ export interface SignupForm {
   email: string;
   password: string;
   again: string;
-  /** "I am 18 or older and agree to the Privacy policy and Testing terms." */
+  /** Month of birth, 1-12; null until picked. */
+  birthMonth: number | null;
+  /** Year of birth, as typed. */
+  birthYear: string;
+  /** "I agree to the Privacy policy and Testing terms." */
   agreed: boolean;
 }
 
 /** What is missing or wrong in the form, or null when it can be sent. */
-export function signupProblem(form: SignupForm, mode: SignupMode): string | null {
+export function signupProblem(form: SignupForm, mode: SignupMode, today = new Date()): string | null {
   if (mode === 'invite' && !form.code.trim()) return 'Enter your invite code.';
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return 'Enter your email address.';
   if (form.password.length < MIN_PASSWORD_LENGTH) return `Use at least ${MIN_PASSWORD_LENGTH} characters for your password.`;
   if (form.password !== form.again) return 'The two passwords are different.';
-  if (!form.agreed) return 'Tick the box to confirm you are 18 or older and agree to the privacy policy and testing terms.';
+  const birth = birthProblem(form.birthMonth, form.birthYear, today);
+  if (birth) return birth;
+  if (!form.agreed) return 'Tick the box to agree to the privacy policy and testing terms.';
   return null;
 }
 
@@ -51,15 +61,16 @@ export interface SignupDeps {
 }
 
 /** Sends the sign-up. Null means "check your email"; otherwise what to show. */
-export async function createAccount(deps: SignupDeps, form: SignupForm, mode: SignupMode): Promise<string | null> {
-  const problem = signupProblem(form, mode);
+export async function createAccount(deps: SignupDeps, form: SignupForm, mode: SignupMode, today = new Date()): Promise<string | null> {
+  const problem = signupProblem(form, mode, today);
   if (problem) return problem;
   const code = form.code.trim();
   const { error } = await deps.signUp({
     email: form.email.trim().toLowerCase(),
     password: form.password,
     options: {
-      data: { ...(code ? { invite_code: code } : {}), age_confirmed: true, terms_version: TERMS_VERSION },
+      // The server checks the age from these and keeps only the result (Q5 option B).
+      data: { ...(code ? { invite_code: code } : {}), birth_month: form.birthMonth, birth_year: Number(form.birthYear.trim()), terms_version: TERMS_VERSION },
       emailRedirectTo: EMAIL_CONFIRMED_URL,
     },
   });
