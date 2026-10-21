@@ -10,6 +10,12 @@ you are doing in plain terms, prefer small reviewable steps, and say clearly
 when the owner must do something themselves (sign up, paste a value into a
 settings screen, approve a deploy).
 
+Whenever the owner must run SQL (a dry run, a check, a support fix), give it as a **clickable link**
+to the file on GitHub (`https://github.com/Hassan-Wehbe/digital-assistant/blob/main/<path>`, which has
+a one-click copy button), or the query itself in a code block when it is a few lines. Never only a
+path. Say where to paste it (Supabase → SQL Editor → New query → Run) and what a good result looks
+like.
+
 At the start of each step, recommend which Claude model to use (the owner switches with
 `/model`; Claude cannot). Strongest model: new code or design touching secrets, sharing,
 restricted spaces, auth, RLS or the chat loop. Smaller model (e.g. Sonnet): merging reviewed
