@@ -217,10 +217,13 @@ export function planForModel(plan: DayPlan, titles: Map<string, string>): Record
           ...(s.duration_assumed ? { minutes_assumed: true } : {}),
           ...(s.start ? { fits_at: s.start, until: s.end } : { needs_a_drive: "Find a time in My day works out the drive" }),
           ...(s.due_on ? { do_by: s.due_on } : {}),
+          // A daily routine's line (Q-D2): the routine's name, how many of its tasks, one after another.
+          ...(s.tasks ? { daily_routine: true, tasks: s.tasks.length } : {}),
         })),
         ...(plan.suggestions.more ? { more_routine_tasks_waiting: plan.suggestions.more } : {}),
-        routine_suggestions_note: "Routine tasks (weekly or monthly) that fit the free time, worked out by code. Offer " +
-          "them in a short sentence (\"vacuuming fits at 9:45\"); never add them to the day or change a task yourself: " +
+        routine_suggestions_note: "Routine tasks (daily, weekly or monthly) that fit the free time, worked out by code. " +
+          "A daily_routine line is the whole routine (its title is the routine's name; tasks is how many). Offer " +
+          "them in a short sentence (\"vacuuming fits at 9:45\", \"your morning routine fits at 7:30\"); never add them to the day or change a task yourself: " +
           "the user adds them in My day (Open my day). Never call one overdue.",
       }
       : {}),

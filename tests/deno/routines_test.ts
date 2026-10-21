@@ -35,7 +35,7 @@ Deno.test("normalizeRoutine: defaults, tidying and the two weekly kinds (Q1)", (
   assertEquals(R({ repeat: "monthly", when: "by_day", day: "28" }).day, 28);
   for (const bad of [
     {},
-    { repeat: "daily" },
+    { repeat: "hourly" },
     { repeat: "weekly", when: "sometimes" },
     { repeat: "weekly", when: "same_day" },
     { repeat: "weekly", when: "same_day", day: 7 },
@@ -196,7 +196,7 @@ Deno.test("save_item: a routine goes to Tasks (never another space); its task ge
   const elsewhere = await call(w, "save_item", routine("Work prep", { repeat: "weekly" }, "Work"));
   assertEquals(elsewhere.isError, true);
   assert(elsewhere.text.includes("kept in the Tasks space"), elsewhere.text);
-  const bad = await call(w, "save_item", routine("Odd", { repeat: "daily" }));
+  const bad = await call(w, "save_item", routine("Odd", { repeat: "hourly" }));
   assertEquals(bad.isError, true);
 
   const t = await call(w, "save_item", { title: "Wash the car", body: "", item_type: "task", metadata: { routine_id: r.json.id, duration_min: 45 } });

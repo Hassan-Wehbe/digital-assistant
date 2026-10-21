@@ -31,7 +31,7 @@ import { localTime } from "../_shared/dayplan/time.ts";
 import { HOME_KIND, PLACE_TYPE, placePoint, placeScope } from "../mcp/lib/places.ts";
 import { normalizeTask, TASK_TYPE } from "../mcp/lib/tasks.ts";
 import { atDayEnd, MAX_SETTLES_PER_PLAN, saveDayEnd } from "../mcp/lib/day_end.ts";
-import { periodOn, settleRoutineTask } from "../mcp/lib/routines.ts";
+import { isDailyRepeat, periodOn, settleRoutineTask } from "../mcp/lib/routines.ts";
 import { loadRoutines, saveTaskFields } from "../mcp/lib/routine_tasks.ts";
 import { type Agenda, type ChatPlan, choicesSchema, DAY, eventSchema, isTimeZone, LOCAL_TIME, MAX_AGENDA_EVENTS } from "./agenda.ts";
 
@@ -89,6 +89,8 @@ interface Row {
   item_type: string;
   metadata: Record<string, unknown> | null;
   deleted_at: string | null;
+  /** When it was saved: a daily routine's tasks are offered in this order (Q-D2). */
+  created_at?: string;
 }
 
 const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
@@ -101,7 +103,7 @@ async function readItems(db: SupabaseClient): Promise<{ places: Row[]; tasks: Ro
   const read = async (type: string) => {
     const { data, error } = await db
       .from("item")
-      .select("id, title, space_id, item_type, metadata, deleted_at")
+      .select("id, title, space_id, item_type, metadata, deleted_at, created_at")
       .eq("item_type", type)
       .is("deleted_at", null)
       .in("space_id", allowed)
@@ -298,6 +300,13 @@ async function makePlan(deps: DayDeps, db: SupabaseClient, req: PlanRequest, log
       ...(plannedToday ? { planned_at: plannedLocal } : {}),
       ...(routine ? { routine: routine.title } : {}),
       ...(routine && inWindow && routine.routine.suggest && !notToday.has(r.id) && !plannedToday ? { suggest: true as const } : {}),
+      // A daily or weekdays routine: its tasks are offered together, at its time (Q-D2, Q-D3).
+      ...(routine && isDailyRepeat(routine.routine.repeat)
+        ? {
+          daily_routine: routine.id, ...(routine.routine.at ? { routine_at: routine.routine.at } : {}),
+          ...(r.created_at ? { added_at: r.created_at } : {}),
+        }
+        : {}),
       ...(leftOpen && plannedLocal ? { left_from: end.left_from, planned_time: plannedLocal.slice(11, 16) } : {}),
       place: placeRow ? asPlace(placeRow) : null,
     });

@@ -58,17 +58,18 @@ is a place with kind "home", where day plans start; there is only one, so when a
   // Routines (D39, routines step 4): in the chat a new one is saved only from its card.
   const routines = opts.chat
     ? `
-Routines: a named group of tasks that comes back each week, every two weeks or each month ("make my Saturday
-chores a weekly routine: laundry, vacuum, groceries", "a monthly routine for the HVAC filter") is saved only
+Routines: a named group of tasks that comes back every day (weekends included), every weekday, each week, every
+two weeks or each month ("make my Saturday chores a weekly routine: laundry, vacuum, groceries", "a monthly
+routine for the HVAC filter", "a morning routine every day at 7:30: make bed, vitamins") is saved only
 with save_routine, a card the user taps; never with save_item. Its tasks are ordinary tasks: find_tasks shows
 each one's routine (id and title), its window (window_from to due_on: any day in it is fine, never call it
 overdue then) and missed_on when the last one was passed by. "Add mop the floors to my weekend routine": find the
 routine's id (find_tasks, or search_items with item_type "routine"), then save_item a task with metadata
 {"routine_id": that id} (and duration_min if they said); the server gives it the routine's dates. Changing
 the schedule ("make it every other Saturday") is update_item on the routine (get_item first; send repeat,
-when, day and suggest). "What's left this week/month?": find_tasks; a routine's task whose window_from is on or
+when, day, at and suggest). "What's left this week/month?": find_tasks; a routine's task whose window_from is on or
 before today is still to do, one starting later is done until then (last_done_on says when) or not due yet.
-Ticking one done moves it to the next week or month. Deleting a routine also bins its tasks.
+Ticking one done moves it to the next day, week or month. Deleting a routine also bins its tasks.
 A date or a family day ("plan a date night Friday", "a coffee date Tuesday at 10", "lunch date tomorrow", "a family
 day Saturday, outdoors"), any day: plan_outing with the day, occasion for a date (coffee, lunch, drinks, activity;
 dinner when not said), and a time, budget, mood or indoor/outdoor only if they said. It plans around their

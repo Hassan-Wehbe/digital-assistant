@@ -102,6 +102,12 @@ export interface PlanTask {
   routine?: string;
   /** Offer it in "From your routines": in its window today, the routine's Suggest on, not dismissed today. */
   suggest?: true;
+  /** A daily or weekdays routine's task: its routine's id, so its tasks are offered as one line (Q-D2). */
+  daily_routine?: string;
+  /** That routine's time, "HH:MM": offered then, or at the next free time that holds it (Q-D3). */
+  routine_at?: string;
+  /** When the task was saved: a daily routine's tasks keep the order they were added in. */
+  added_at?: string;
 }
 
 export interface Leg {
@@ -184,6 +190,20 @@ export interface Suggestion {
   /** Where it fits, local time; absent for a task with a place (Find a time). */
   start?: string;
   end?: string;
+  /**
+   * A daily routine's line (Q-D2): its tasks one after another from `start`. Then `title` is the
+   * routine's name, `task_id` its first task's, and `duration_min` the whole group's.
+   */
+  tasks?: GroupTask[];
+}
+
+export interface GroupTask {
+  task_id: string;
+  title: string;
+  duration_min: number;
+  duration_assumed?: true;
+  start: string;
+  end: string;
 }
 
 export interface DayPlan {
@@ -561,6 +581,12 @@ function typical(l: Leg): { typical_minutes?: number } {
  * a quarter hour, never two in the same minutes. A task with a place gets no time (its drive is
  * worked out by Find a time). At most MAX_SUGGESTIONS; a task that fits nowhere today is counted in
  * `more` with the rest. Null when there is nothing to offer.
+ *
+ * A daily or weekdays routine (Q-D2, Q-D3) is one line: its open tasks without a place, one after
+ * another, in the first free time at or after its time that holds them all (the earliest when it has
+ * no time), in the order they were added. It counts as one of the MAX_SUGGESTIONS and comes first
+ * (it is due today). A routine
+ * with a single such task is offered as that task, at its time.
  */
 export function routineSuggestions(
   tasks: PlanTask[], notPlaced: Set<string>, gaps: [number, number][], at: (min: number) => string,
@@ -573,27 +599,88 @@ export function routineSuggestions(
       a.routine!.localeCompare(b.routine!) || a.title.localeCompare(b.title)
     );
   if (!offered.length) return null;
-  const free = gaps.map(([s, e]): [number, number] => [s, e]);
-  const items: Suggestion[] = [];
+  // What is offered: daily routines' groups first, then each other task, in the order above.
+  type Unit = { group: PlanTask[]; routineAt?: number } | { task: PlanTask };
+  const groups = new Map<string, PlanTask[]>();
+  const units: Unit[] = [];
+  const singles: Unit[] = [];
   for (const t of offered) {
+    if (t.daily_routine && !t.place) {
+      let g = groups.get(t.daily_routine);
+      if (!g) {
+        g = [];
+        groups.set(t.daily_routine, g);
+        units.push({ group: g, routineAt: hhmm(t.routine_at) });
+      }
+      g.push(t);
+    } else {
+      singles.push({ task: t });
+    }
+  }
+  units.push(...singles);
+  // A daily routine's tasks in the order they were added ("make bed, vitamins, stretch").
+  for (const g of groups.values()) g.sort((a, b) => (a.added_at ?? "").localeCompare(b.added_at ?? "") || a.title.localeCompare(b.title));
+
+  const free = gaps.map(([s, e]): [number, number] => [s, e]);
+  /** The first quarter hour at or after `from` where `duration` fits; taken out of the free time. */
+  const take = (duration: number, from = 0): number | null => {
+    const i = free.findIndex(([s, e]) => Math.ceil(Math.max(s, from) / 15) * 15 + duration <= e);
+    if (i < 0) return null;
+    const [s, e] = free[i];
+    const start = Math.ceil(Math.max(s, from) / 15) * 15;
+    free.splice(i, 1, ...([[s, start], [start + duration, e]] as [number, number][]).filter(([a, b]) => b > a));
+    return start;
+  };
+  const one = (t: PlanTask): Suggestion => ({
+    task_id: t.id, title: t.title, routine: t.routine!, duration_min: t.duration_min ?? ROUTINE_DEFAULT_MIN,
+    ...(t.duration_min ? {} : { duration_assumed: true as const }), ...(t.due_on ? { due_on: t.due_on } : {}),
+  });
+  const items: Suggestion[] = [];
+  for (const u of units) {
     if (items.length >= MAX_SUGGESTIONS) break;
-    const duration = t.duration_min ?? ROUTINE_DEFAULT_MIN;
-    const base: Suggestion = {
-      task_id: t.id, title: t.title, routine: t.routine!, duration_min: duration,
-      ...(t.duration_min ? {} : { duration_assumed: true as const }), ...(t.due_on ? { due_on: t.due_on } : {}),
-    };
-    if (t.place) {
-      items.push(base);
+    if ("task" in u) {
+      const base = one(u.task);
+      if (u.task.place) {
+        items.push(base);
+        continue;
+      }
+      const start = take(base.duration_min);
+      if (start !== null) items.push({ ...base, start: at(start), end: at(start + base.duration_min) });
       continue;
     }
-    const i = free.findIndex(([s, e]) => Math.ceil(s / 15) * 15 + duration <= e);
-    if (i < 0) continue;
-    const [s, e] = free[i];
-    const start = Math.ceil(s / 15) * 15;
-    free.splice(i, 1, ...([[s, start], [start + duration, e]] as [number, number][]).filter(([a, b]) => b > a));
-    items.push({ ...base, start: at(start), end: at(start + duration) });
+    const duration = u.group.reduce((n, t) => n + (t.duration_min ?? ROUTINE_DEFAULT_MIN), 0);
+    const start = take(duration, u.routineAt);
+    if (start === null) continue;
+    if (u.group.length === 1) {
+      const base = one(u.group[0]);
+      items.push({ ...base, start: at(start), end: at(start + duration) });
+      continue;
+    }
+    let cursor = start;
+    const list: GroupTask[] = u.group.map((t) => {
+      const d = t.duration_min ?? ROUTINE_DEFAULT_MIN;
+      const g: GroupTask = {
+        task_id: t.id, title: t.title, duration_min: d, ...(t.duration_min ? {} : { duration_assumed: true as const }),
+        start: at(cursor), end: at(cursor + d),
+      };
+      cursor += d;
+      return g;
+    });
+    const first = u.group[0];
+    items.push({
+      task_id: first.id, title: first.routine!, routine: first.routine!, duration_min: duration,
+      ...(list.some((g) => g.duration_assumed) ? { duration_assumed: true as const } : {}),
+      ...(first.due_on ? { due_on: first.due_on } : {}),
+      start: at(start), end: at(start + duration), tasks: list,
+    });
   }
-  return items.length ? { items, more: offered.length - items.length } : null;
+  return items.length ? { items, more: units.length - items.length } : null;
+}
+
+/** "07:30" as minutes from midnight; undefined when absent or not a time. */
+function hhmm(v: string | undefined): number | undefined {
+  const m = v ? /^(\d{2}):(\d{2})$/.exec(v) : null;
+  return m ? Number(m[1]) * 60 + Number(m[2]) : undefined;
 }
 
 /** Gaps of at least MIN_GAP minutes between `from` and `to` that nothing in `busy` covers. */
