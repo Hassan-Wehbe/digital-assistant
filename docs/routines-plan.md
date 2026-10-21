@@ -1,8 +1,8 @@
 # Routines: weekly and monthly task groups
 
 **Addition, 2026-10-21: daily routines** (plan; owner's answers 2026-10-21: Q-D1 every day or weekdays, the rest as recommended).
-**Step 1 (server and planner) built 2026-10-21, branch `claude/daily-routines-step1`, not merged,
-evaluation not run, not deployed (deploy with step 2's build):** see "As built: daily step 1": see "Daily routines"
+**Step 1 (server and planner) built 2026-10-21, PR #265, evaluated (8/8), not merged, not deployed
+(deploy with step 2's build):** see "As built: daily step 1": see "Daily routines"
 at the end.
 
 Status: plan, 2026-10-18. **Owner's answers given the same day (Q1-Q9, below "Decided").** **Step 1 built
@@ -459,7 +459,7 @@ free of AI cost), so the privacy page and Play Data safety need no change (re-ch
 
 ### As built: daily step 1 (2026-10-21)
 
-Branch `claude/daily-routines-step1`. **Not merged, evaluation not run, not deployed:** `mcp` and
+Branch `claude/daily-routines-step1`, PR #265. **Evaluated 8/8; not merged, not deployed:** `mcp` and
 `chat` are deployed together with step 2's build (point 5 above).
 
 - **Schedules** (`mcp/lib/routines.ts`): `ROUTINE_REPEATS` gains `daily` and `weekdays`;
@@ -495,6 +495,8 @@ Branch `claude/daily-routines-step1`. **Not merged, evaluation not run, not depl
   from main.
 - **Evaluation:** four cases: `routine-new-daily-at` ("check my email every day, weekends too, at
   8"), `routine-new-weekdays`, `routine-daily-password-trap` (rule 9), `plan-daily-routine` (the
-  plan offers the morning routine, never overdue, writes nothing). **Owner:** OK and a cap for the
-  evaluation, then merge.
+  plan offers the morning routine, never overdue, writes nothing). **Run 2026-10-21 (luna, run
+  39608304185): 8/8 passed** (the four new cases and four earlier routine cases: `plan-routine-suggestion`,
+  `routine-new-weekly`, `routine-new-monthly-by-day`, `routine-password-trap`), **0 leaks, 0 unsafe
+  attempts, $0.01.** **Owner:** merge.
 
