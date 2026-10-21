@@ -60,9 +60,9 @@ export const HELP_TOPICS: HelpTopic[] = [
       'Wilma reads the calendars you choose, on your phone, only when you ask.',
       'She adds drive times, when to leave, and rain.',
       'Any day: Today, Tomorrow, or Pick a day.',
-      'Routines (Tasks → 🔁 Routines): weekly or monthly chores she offers when you have free time.',
+      'Routines (Tasks → 🔁 Routines): daily, weekly or monthly tasks offered in free time.',
     ],
-    tryIt: ['Plan my day', 'What do I have tomorrow afternoon?', 'Make my Saturday chores a weekly routine: laundry, vacuum'],
+    tryIt: ['Plan my day', 'Make my Saturday chores a weekly routine: laundry, vacuum', 'A morning routine every day at 7:30: make bed, vitamins'],
     more: { label: 'Settings → Calendars', path: '/calendars' },
   },
   {

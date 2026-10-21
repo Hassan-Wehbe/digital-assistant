@@ -3,13 +3,20 @@
 // server, no AI). Add puts one at its time (the same write as picking a Find a time option);
 // ✕ Not today is kept on the server for that day (task_not_today, Q5), so it holds on every device,
 // and writes no revision. Up to 3 show; the others wait their turn and come in as one is added or
-// dismissed (Q4), because the plan is asked for again after each.
+// dismissed (Q4), because the plan is asked for again after each. A daily routine is one line
+// ("Daily routines", Q-D2): Add puts each of its tasks at its own time, ✕ is Not today for all of them.
 import type { DayPlan, NotPlacedTask, RoutineSuggestion } from './dayPlan';
 import { clock, minutesText } from './dayView';
 
-/** "Weekend reset · about 30 min" (Q7: no duration given means 30 min, said as "about"). */
+/** "Weekend reset · about 30 min" (Q7: no duration given means 30 min, said as "about"); a daily routine's line: "Make bed, Vitamins, Stretch · 20 min". */
 export function suggestionDetail(s: RoutineSuggestion): string {
-  return `${s.routine} · ${s.duration_assumed ? 'about ' : ''}${minutesText(s.duration_min)}`;
+  const what = s.tasks ? s.tasks.map((t) => t.title).join(', ') : s.routine;
+  return `${what} · ${s.duration_assumed ? 'about ' : ''}${minutesText(s.duration_min)}`;
+}
+
+/** The tasks a line stands for, each at its time: a daily routine's, or the one task. */
+export function suggestionTasks(s: RoutineSuggestion): { task_id: string; title: string; start?: string }[] {
+  return s.tasks ? s.tasks.map((t) => ({ task_id: t.task_id, title: t.title, start: t.start })) : [{ task_id: s.task_id, title: s.title, start: s.start }];
 }
 
 /** "Add 9:45 am", or "Find a time" for a task with a place (its drive is worked out there). */
@@ -30,13 +37,13 @@ export function moreText(more: number): string | null {
 
 /** "Not placed yet" without the tasks already offered above it (each shows once). */
 export function notSuggested(tasks: NotPlacedTask[], plan: DayPlan): NotPlacedTask[] {
-  const offered = new Set((plan.suggestions?.items ?? []).map((s) => s.task_id));
+  const offered = new Set((plan.suggestions?.items ?? []).flatMap((s) => suggestionTasks(s).map((t) => t.task_id)));
   return tasks.filter((t) => !offered.has(t.id));
 }
 
 /** Your morning's line (Q3): a count only, no titles. Null when nothing fits today. */
 export function routineCountLine(plan: DayPlan): string | null {
-  const n = addable(plan).length;
+  const n = addable(plan).reduce((k, s) => k + suggestionTasks(s).length, 0);
   if (!n) return null;
   return `${n} routine task${n === 1 ? '' : 's'} fit${n === 1 ? 's' : ''} today.`;
 }

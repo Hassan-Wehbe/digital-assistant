@@ -94,6 +94,20 @@ export interface RoutineSuggestion {
   due_on?: string;
   start?: string;
   end?: string;
+  /**
+   * A daily routine's line ("Daily routines", Q-D2): its tasks one after another from `start`; then
+   * `title` is the routine's name and `duration_min` the whole line's.
+   */
+  tasks?: RoutineGroupTask[];
+}
+
+export interface RoutineGroupTask {
+  task_id: string;
+  title: string;
+  duration_min: number;
+  duration_assumed?: true;
+  start: string;
+  end: string;
 }
 
 export interface DayPlan {
@@ -220,6 +234,22 @@ function toOption(raw: unknown): TaskOption | null {
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
+/** A daily routine's tasks, checked: each with an id, a title, minutes and a time; at most 20. */
+function toGroup(raw: unknown): { tasks?: RoutineGroupTask[] } {
+  if (!Array.isArray(raw)) return {};
+  const tasks = raw
+    .filter((t): t is Record<string, unknown> & { task_id: string; title: string; duration_min: number; start: string; end: string } =>
+      isObject(t) && text(t.task_id) && text(t.title) && count(t.duration_min, 1440) && t.duration_min > 0 &&
+      when(t.start) && when(t.end) && String(t.start).includes('T') && String(t.end).includes('T'))
+    .slice(0, 20)
+    .map((t) => ({
+      task_id: t.task_id, title: t.title, duration_min: t.duration_min, start: t.start, end: t.end,
+      ...opt('duration_assumed', t.duration_assumed === true, true as const),
+    }));
+  // Only a whole line: a task dropped would leave the rest at the wrong times.
+  return tasks.length && tasks.length === raw.length ? { tasks } : {};
+}
+
 /** "From your routines", checked: at most 3 items; a time only as a start and end pair. */
 function toSuggestions(raw: unknown): { suggestions?: { items: RoutineSuggestion[]; more: number } } {
   if (!isObject(raw) || !Array.isArray(raw.items)) return {};
@@ -232,6 +262,7 @@ function toSuggestions(raw: unknown): { suggestions?: { items: RoutineSuggestion
       ...opt('duration_assumed', s.duration_assumed === true, true as const),
       ...opt('due_on', typeof s.due_on === 'string' && DAY.test(s.due_on), s.due_on as string),
       ...(when(s.start) && when(s.end) && s.start.includes('T') && s.end.includes('T') ? { start: s.start, end: s.end } : {}),
+      ...toGroup(s.tasks),
     }));
   if (!items.length) return {};
   return { suggestions: { items, more: count(raw.more, 1000) ? raw.more : 0 } };
