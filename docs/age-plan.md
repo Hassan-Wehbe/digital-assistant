@@ -372,7 +372,9 @@ Branch `claude/age-off`.
 signup_setting set age_check = true;`; the privacy page's month-and-year wording back; the phone
 checklist's Ages section.
 
-**Owner, in order:** (1) merge; (2) the dry run
-`tests/sql/dry_runs/25_age_check_off_dry_run.sql`, then OK to apply; (3) OK to build (the 18+ box;
-no server deploy needed).
+**Merged (#271). Migration applied 2026-10-22 (owner's OK), recorded as 20261022003830
+`age_check_off`.** Checked read-only after: the check is off, the minimum age is still 18, all three
+accounts' drinks spaces are **Cocktails** again, signed-in users can run `is_21()` and
+`my_age_status()` (anon cannot), nobody can call `_age_check_on()`, the sign-up hook is in place.
+**Owner:** OK to build (the 18+ box; no server deploy needed).
 

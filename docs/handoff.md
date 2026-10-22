@@ -13,11 +13,12 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **D44 ages switched off (owner, 2026-10-22): branch `claude/age-off`, not merged.** Wilma stays
+- **D44 ages switched off (owner, 2026-10-22): merged (#271), migration applied 2026-10-22
+  (20261022003830 `age_check_off`); every drinks space is Cocktails again.** Wilma stays
   18+, sign-up is the 18+ box again, everyone gets cocktails, no age question; step 4 (teens) parked.
   Code kept behind `signup_setting.age_check` (migration `20261025120000`, SQL test 25, dry run
   18/18 locally) and the app's `AGE_CHECK`. Privacy page back to the 18+ box with one line about
-  versionCode 25. **Owner:** merge; dry run 25, OK to apply; OK to build.
+  versionCode 25. **Owner:** OK to build (the 18+ box at sign-up).
 - **D44 ages step 4 prepared (2026-10-21): branch `claude/age-step4`, docs only, nothing live.** The
   lawyer pack `docs/age-step4-lawyer-pack.md` (draft wording, seven questions, the switch); a legal
   checklist item; Play notes. Wilma stays 18+ until the lawyer is done. **Owner:** merge; send the
