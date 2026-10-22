@@ -1,7 +1,8 @@
 # Usage tracking and the admin page (D34)
 
 Status: plan, 2026-10-22; **owner's answers the same day: all as recommended** (Q1-Q8 below).
-**Next:** step 1, the server (strongest model, fresh session). Design: D34 (decided
+**Step 1 built 2026-10-22, branch `claude/usage-step1`, not merged, migration not applied:** see
+"As built: step 1". Design: D34 (decided
 2026-10-10: what is counted, never content; the admin page on GitHub Pages, not in the app; the
 analysis it shows). Model: the strongest for steps 1-2 (a new table every request writes to, admin
 functions, RLS, the chat loop); a smaller one for the page itself (steps 3-4) and step 5.
@@ -131,7 +132,8 @@ one SQL line.
 2. **The functions write usage (strongest model).** `_shared/usage.ts`; tokens and the model added to
    the log lines; `chat` and `mcp` call `record_usage` after answering; Deno tests (each kind's rows,
    a failed write never breaks a reply, no text); an evaluation run to show nothing regressed
-   (owner's OK and a cap). **Owner:** merge, OK to deploy `chat` and `mcp`.
+   (owner's OK and a cap); **the privacy page's sentence** (it goes live before counts are written).
+   **Owner:** check the wording, merge, OK to deploy `chat` and `mcp`.
 3. **The admin page, part 1 (mockups first; smaller model).** Sign-in, the admin check, tiles, over
    time, the spread, the per-user table; CSP and vendored libraries as the vault pages. **Owner:**
    pick the mockup; merge (GitHub Pages publishes it).
@@ -140,3 +142,35 @@ one SQL line.
 5. **Privacy page and checks (smaller model).** The privacy sentence; the legal checklist line; a
    short checklist for the page. **Owner:** check the wording; set your account as admin (one SQL
    line, given then).
+
+## As built: step 1 (2026-10-22)
+
+Branch `claude/usage-step1`. **Migration `20261026120000_usage_tracking.sql`, not applied.** Nothing
+writes to it yet (step 2), so applying it changes nothing anyone sees.
+
+- **Tables:** `usage_day` (user, UTC day, kind, detail; count, model calls, input / cached / output
+  tokens, cost, failures), `user_day` (active days, Free or Pro), `usage_snapshot` (notes, memories,
+  attachment bytes per month). RLS on, own rows readable, nobody writes directly; anon nothing; gone
+  with the account. `kind` is one of 17 fixed names; `detail` must be a short lower-case name (a
+  model, a tool, an error code), never a sentence.
+- **`record_usage(rows)`:** the caller's own rows for today (UTC), at most 20 per call, all or
+  nothing: unknown kinds or fields, text in place of a number, fractions, counts over 100, tokens
+  over 2,000,000 or more than 5 cents in a row are refused.
+- **Admin only** (`require_admin()`, `app_user.is_admin`): `am_i_admin()` (yes or no, for the page's
+  first screen), `admin_usage_overview()` (users, Pro, active today / 7 / 30 days, this month's cost
+  and days, the months already in `ai_usage`, Q7), `admin_usage_daily(from, to)` (totals by kind and
+  detail per day, users per day; at most 400 days), `admin_usage_users(month)` (per user: short id,
+  plan, active days, cost, each kind's counts, the snapshot; never an email), `admin_user_email(id)`
+  (one at a time, on tap, Q2), `admin_usage_maintenance()` (this month's snapshot once, rows older
+  than 13 months deleted, Q3/Q4).
+- **SQL test 26 (37 checks):** adding up, the UTC day, every refusal above, all or nothing, own rows
+  only, no direct writes, non-admins refused everywhere, the admin figures (never an email in the
+  per-user list), maintenance once a month, the old rows deleted, gone with the account, anon
+  refused. Every other SQL test still passes (06 as before). **Dry run 37/37** locally on a copy
+  without the migration, nothing kept.
+- **Privacy:** the page's sentence goes live with step 2 (when counts start being written).
+
+**Owner, in order:** (1) merge; (2) the dry run
+`tests/sql/dry_runs/26_usage_tracking_dry_run.sql`, then OK to apply. **Next:** step 2, the server
+writes the counts (strongest model).
+
