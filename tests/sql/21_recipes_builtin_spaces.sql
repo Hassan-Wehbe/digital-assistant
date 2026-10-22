@@ -9,10 +9,11 @@
 select pg_temp.check('a new account gets a built-in Recipes space',
   (select count(*) = 1 from space where owner_user_id = '00000000-0000-4000-a000-00000000000a' and built_in = 'recipes'
      and name = 'Recipes' and description = 'Meals to cook: full recipes or links' and parent_id is null and not is_restricted));
--- Named Mocktails until the age is given (20261024120000_drinks_space_name.sql, docs/age-plan.md step 2).
-select pg_temp.check('and a built-in Cocktails space (named Mocktails until the age is given)',
+-- Named Cocktails while the age check is off (20261025120000_age_check_off.sql; Mocktails until the
+-- age is given when it is on, test 24).
+select pg_temp.check('and a built-in Cocktails space',
   (select count(*) = 1 from space where owner_user_id = '00000000-0000-4000-a000-00000000000a' and built_in = 'cocktails'
-     and name = 'Mocktails' and description = 'Drinks to make: full recipes or links' and parent_id is null and not is_restricted));
+     and name = 'Cocktails' and description = 'Drinks to make: full recipes or links' and parent_id is null and not is_restricted));
 select pg_temp.check('with Tasks and Memories still there: four built-in spaces per account',
   (select count(*) = 4 from space where owner_user_id = '00000000-0000-4000-a000-00000000000a' and built_in is not null)
   and (select count(*) = 4 from space where owner_user_id = '00000000-0000-4000-a000-00000000000b' and built_in is not null));

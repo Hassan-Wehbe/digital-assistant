@@ -1,5 +1,9 @@
 # Teens on Wilma: the pack for the lawyer (ages step 4, D44)
 
+> **Parked (owner, 2026-10-22):** Wilma stays 18 and over and the age part is switched off
+> (`docs/age-plan.md`, "Switched off"). Do not send this to the lawyer for now; it is kept for if teens
+> come back.
+
 For the owner to send to the lawyer (Q10: teens sign up only after the lawyer has read the new terms
 and privacy page). **Nothing here is live.** Wilma stays 18 and over until the owner says the
 lawyer is done; then the drafts below (with the lawyer's changes) go into the real pages, a small

@@ -10,6 +10,7 @@ import { BirthMonthFields } from '@/components/BirthMonthFields';
 import { PassphraseInput } from '@/components/PassphraseInput';
 import { Button, Card, KeyboardScreen, Muted, styles, useColors } from '@/components/ui';
 import { MIN_PASSWORD_LENGTH } from '@/lib/password';
+import { AGE_CHECK } from '@/lib/age';
 import { createAccount, loadSignupMode, PRIVACY_URL, TERMS_URL, type SignupMode } from '@/lib/signup';
 import { supabase } from '@/lib/supabase';
 
@@ -114,7 +115,7 @@ export default function CreateAccount() {
           />
           <PassphraseInput value={password} onChangeText={setPassword} placeholder={`Password (at least ${MIN_PASSWORD_LENGTH} characters)`} disabled={busy} />
           <PassphraseInput value={again} onChangeText={setAgain} placeholder="The password again" disabled={busy} />
-          <BirthMonthFields month={birthMonth} year={birthYear} onMonth={setBirthMonth} onYear={setBirthYear} disabled={busy} />
+          {AGE_CHECK ? <BirthMonthFields month={birthMonth} year={birthYear} onMonth={setBirthMonth} onYear={setBirthYear} disabled={busy} /> : null}
           <Pressable
             accessibilityRole="checkbox"
             accessibilityState={{ checked: agreed }}
@@ -125,7 +126,7 @@ export default function CreateAccount() {
             <Text style={{ fontSize: 22, color: agreed ? c.accent : c.muted }}>{agreed ? '☑' : '☐'}</Text>
             <View style={{ flex: 1 }}>
               <Text style={{ color: c.text, fontSize: 15 }}>
-                {'I agree to the '}
+                {AGE_CHECK ? 'I agree to the ' : 'I am 18 or older and agree to the '}
                 {link('Privacy policy', PRIVACY_URL)}
                 {' and '}
                 {link('Testing terms', TERMS_URL)}

@@ -41,23 +41,29 @@ describe('the form', () => {
     expect(signupProblem({ ...FORM, code: '' }, 'open')).toBeNull();
   });
 
-  it('checks the email, the password length and match, the month and year of birth, and the box', () => {
+  it('checks the email, the password length and match, and the 18+ box (the age check is off)', () => {
     expect(signupProblem({ ...FORM, email: 'tess' }, 'invite')).toBe('Enter your email address.');
     expect(signupProblem({ ...FORM, password: 'short', again: 'short' }, 'invite')).toMatch(/at least 10 characters/);
     expect(signupProblem({ ...FORM, again: 'correct horsE' }, 'invite')).toBe('The two passwords are different.');
-    expect(signupProblem({ ...FORM, agreed: false }, 'invite')).toBe('Tick the box to agree to the privacy policy and testing terms.');
+    expect(signupProblem({ ...FORM, agreed: false }, 'invite')).toBe('Tick the box to confirm you are 18 or older and agree to the privacy policy and testing terms.');
+    // No month or year needed while it is off.
+    expect(signupProblem({ ...FORM, birthMonth: null, birthYear: '' }, 'invite')).toBeNull();
+  });
+
+  it('with the age check on: the month and year of birth, and the terms box', () => {
     const today = new Date(2026, 9, 21);
-    expect(signupProblem({ ...FORM, birthMonth: null }, 'invite', today)).toBe('Enter your month and year of birth.');
-    expect(signupProblem({ ...FORM, birthYear: '90' }, 'invite', today)).toBe('Enter your month and year of birth.');
-    expect(signupProblem({ ...FORM, birthMonth: 11, birthYear: '2026' }, 'invite', today)).toBe('Please enter a real month and year of birth.');
-    expect(signupProblem({ ...FORM, birthYear: '1890' }, 'invite', today)).toBe('Please enter a real month and year of birth.');
+    expect(signupProblem({ ...FORM, agreed: false }, 'invite', today, true)).toBe('Tick the box to agree to the privacy policy and testing terms.');
+    expect(signupProblem({ ...FORM, birthMonth: null }, 'invite', today, true)).toBe('Enter your month and year of birth.');
+    expect(signupProblem({ ...FORM, birthYear: '90' }, 'invite', today, true)).toBe('Enter your month and year of birth.');
+    expect(signupProblem({ ...FORM, birthMonth: 11, birthYear: '2026' }, 'invite', today, true)).toBe('Please enter a real month and year of birth.');
+    expect(signupProblem({ ...FORM, birthYear: '1890' }, 'invite', today, true)).toBe('Please enter a real month and year of birth.');
     // The minimum age is the server's: a 15-year-old's form is sent, and the server says no.
-    expect(signupProblem({ ...FORM, birthYear: '2011' }, 'invite', today)).toBeNull();
+    expect(signupProblem({ ...FORM, birthYear: '2011' }, 'invite', today, true)).toBeNull();
   });
 });
 
 describe('creating the account', () => {
-  it('sends the code, the month and year of birth and the terms version as sign-up metadata, and the confirmation page', async () => {
+  it('sends the code, 18+ and the terms version as sign-up metadata, and the confirmation page; never a month or year', async () => {
     const { deps, calls } = fakeDeps();
     expect(await createAccount(deps, FORM, 'invite')).toBeNull();
     expect(calls).toEqual([
@@ -65,11 +71,17 @@ describe('creating the account', () => {
         email: 'tess@example.com',
         password: 'correct horse',
         options: {
-          data: { invite_code: 'wilma-7k3q-p9xd', birth_month: 4, birth_year: 1990, terms_version: TERMS_VERSION },
+          data: { invite_code: 'wilma-7k3q-p9xd', age_confirmed: true, terms_version: TERMS_VERSION },
           emailRedirectTo: EMAIL_CONFIRMED_URL,
         },
       },
     ]);
+  });
+
+  it('with the age check on: the month and year instead of 18+', async () => {
+    const { deps, calls } = fakeDeps();
+    expect(await createAccount(deps, FORM, 'invite', new Date(2026, 9, 21), true)).toBeNull();
+    expect(calls[0].options.data).toEqual({ invite_code: 'wilma-7k3q-p9xd', birth_month: 4, birth_year: 1990, terms_version: TERMS_VERSION });
   });
 
   it('sends no code field when there is none (open mode)', async () => {

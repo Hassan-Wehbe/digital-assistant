@@ -5,6 +5,9 @@
 -- account's metadata; set_birth_month() works once for older accounts; is_21() and my_age_status()
 -- read only the caller's own row; nobody writes alcohol_from directly; anon gets nothing.
 
+-- The age check is switched off since 20261025120000_age_check_off.sql; these checks are for when it is on.
+update signup_setting set age_check = true;
+
 create temp table _code (code text);
 insert into _code values (create_invite_code('test: ages', 10, 14, 'free'));
 

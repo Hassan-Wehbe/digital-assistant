@@ -3,6 +3,13 @@
 // over", or the month cocktails open; Q5 option B). The app never stores or logs the month and year:
 // they go to the server once and are dropped. Under 21, or until it is answered, drinks are
 // mocktails (Q6): the server enforces it; the app only names things to match.
+//
+// Switched off (owner, 2026-10-22; D44 changed): Wilma stays 18 and over, sign-up is the 18+ box
+// again, and everyone gets cocktails. The code stays, behind AGE_CHECK here and the server's
+// signup_setting.age_check (20261025120000_age_check_off.sql); both must be turned on together.
+/** The age check for drinks, with the month and year at sign-up. Off: the 18+ box, cocktails for all. */
+export const AGE_CHECK = false;
+
 export const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 export interface AgeStatus {
@@ -74,12 +81,12 @@ export async function giveBirthMonth(rpc: Rpc, month: number | null, year: strin
   }
 }
 
-/** Mocktails only: under 21, not answered yet, or not known (Q6; the server decides the same). */
-export const mocktailsOnly = (s: AgeStatus | null): boolean => !s?.is21;
+/** Mocktails only: under 21, not answered yet, or not known (Q6; the server decides the same). Never while the check is off. */
+export const mocktailsOnly = (s: AgeStatus | null, ageCheck = AGE_CHECK): boolean => ageCheck && !s?.is21;
 
 /** The drinks words for this account: Make a cocktail / Make a mocktail, and the space's name. */
-export function drinks(s: AgeStatus | null): { icon: string; button: string; space: string; one: string } {
-  return mocktailsOnly(s)
+export function drinks(s: AgeStatus | null, ageCheck = AGE_CHECK): { icon: string; button: string; space: string; one: string } {
+  return mocktailsOnly(s, ageCheck)
     ? { icon: '🍹', button: 'Make a mocktail', space: 'Mocktails', one: 'mocktail' }
     : { icon: '🍸', button: 'Make a cocktail', space: 'Cocktails', one: 'cocktail' };
 }
