@@ -13,6 +13,10 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **D34 usage tracking and the admin page (2026-10-22): plan written, owner's answers awaited**
+  (`docs/usage-tracking-plan.md`, Q1-Q8). Counts per user per day (AI by purpose with tokens and
+  model, Mapbox, weather, features, errors), never content; an admin page on GitHub Pages. Five
+  steps; server first.
 - **D44 ages switched off (owner, 2026-10-22): merged (#271), migration applied 2026-10-22
   (20261022003830 `age_check_off`); every drinks space is Cocktails again.** Wilma stays
   18+, sign-up is the 18+ box again, everyone gets cocktails, no age question; step 4 (teens) parked.
