@@ -13,8 +13,8 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **D34 usage tracking and the admin page (2026-10-22): plan written, owner's answers awaited**
-  (`docs/usage-tracking-plan.md`, Q1-Q8). Counts per user per day (AI by purpose with tokens and
+- **D34 usage tracking and the admin page (2026-10-22): plan written; owner's answers: all as
+  recommended** (`docs/usage-tracking-plan.md`, Q1-Q8). **Next:** step 1, the server (strongest model). Counts per user per day (AI by purpose with tokens and
   model, Mapbox, weather, features, errors), never content; an admin page on GitHub Pages. Five
   steps; server first.
 - **D44 ages switched off (owner, 2026-10-22): merged (#271), migration applied 2026-10-22

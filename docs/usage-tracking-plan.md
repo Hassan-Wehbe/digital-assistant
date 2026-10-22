@@ -1,6 +1,7 @@
 # Usage tracking and the admin page (D34)
 
-Status: plan, 2026-10-22; **owner's answers awaited** (Q1-Q8 below). Design: D34 (decided
+Status: plan, 2026-10-22; **owner's answers the same day: all as recommended** (Q1-Q8 below).
+**Next:** step 1, the server (strongest model, fresh session). Design: D34 (decided
 2026-10-10: what is counted, never content; the admin page on GitHub Pages, not in the app; the
 analysis it shows). Model: the strongest for steps 1-2 (a new table every request writes to, admin
 functions, RLS, the chat loop); a smaller one for the page itself (steps 3-4) and step 5.
@@ -93,7 +94,15 @@ months, deleted with the account; never content).
   security definer behind `require_admin()`; anon gets nothing; no service-role key in a request.
 - **No new AI cost**, no change to what the model sees.
 
-## Questions (recommendation first)
+## Answers (owner, 2026-10-22): all as recommended
+
+Q1 UTC days; Q2 a short user id, the email on tap; Q3 rows older than 13 months deleted when the
+admin page is opened; Q4 a monthly snapshot plus today's numbers; Q5 Mapbox in dollars with an
+editable price, the free tier first; Q6 one small charts library copied into the repo; Q7 the
+months already in `ai_usage` shown, daily detail from deploy; Q8 the owner's account only, set by
+one SQL line.
+
+## Questions as asked (recommendation first)
 
 - **Q1. A "day":** **UTC, as the monthly allowance** (rec.: one clock for everyone, simple charts);
   or each user's own time zone.
