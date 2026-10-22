@@ -18,7 +18,9 @@ tokens or keys in chat.
   18+, sign-up is the 18+ box again, everyone gets cocktails, no age question; step 4 (teens) parked.
   Code kept behind `signup_setting.age_check` (migration `20261025120000`, SQL test 25, dry run
   18/18 locally) and the app's `AGE_CHECK`. Privacy page back to the 18+ box with one line about
-  versionCode 25. **Owner:** OK to build (the 18+ box at sign-up).
+  versionCode 25. **versionCode 26 built 2026-10-22 (EAS 6235019e), submitted to Google Play
+  (internal track)**: the 18+ box at sign-up again. **Owner:** check it on the phone (see
+  `docs/age-plan.md`, "Switched off").
 - **D44 ages step 4 prepared (2026-10-21): branch `claude/age-step4`, docs only, nothing live.** The
   lawyer pack `docs/age-step4-lawyer-pack.md` (draft wording, seven questions, the switch); a legal
   checklist item; Play notes. Wilma stays 18+ until the lawyer is done. **Owner:** merge; send the

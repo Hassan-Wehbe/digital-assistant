@@ -376,5 +376,7 @@ checklist's Ages section.
 `age_check_off`.** Checked read-only after: the check is off, the minimum age is still 18, all three
 accounts' drinks spaces are **Cocktails** again, signed-in users can run `is_21()` and
 `my_age_status()` (anon cannot), nobody can call `_age_check_on()`, the sign-up hook is in place.
-**Owner:** OK to build (the 18+ box; no server deploy needed).
+**Built 2026-10-22: versionCode 26 (EAS 6235019e-2a43-489c-b131-823f5e01ccc3), submitted to Google
+Play (internal track).** **Owner:** on the phone: Create account shows the 18+ box (no month or
+year); no 🎂 question; Settings → Account has no age line; Make a cocktail with Strength.
 
