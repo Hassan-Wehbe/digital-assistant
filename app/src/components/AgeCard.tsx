@@ -7,7 +7,7 @@ import { Text, View } from 'react-native';
 
 import { BirthMonthFields } from '@/components/BirthMonthFields';
 import { setAgeStatus, useAge } from '@/components/useAge';
-import { giveBirthMonth } from '@/lib/age';
+import { AGE_CHECK, giveBirthMonth } from '@/lib/age';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { Button, Card, Muted, space, styles, useColors } from './ui';
@@ -18,7 +18,8 @@ let notNow = false;
 export function AgeCard() {
   const { status } = useAge();
   const [hidden, setHidden] = useState(notNow);
-  if (!status || status.asked || hidden) return null;
+  // Switched off (owner, 2026-10-22): never asked.
+  if (!AGE_CHECK || !status || status.asked || hidden) return null;
   return (
     <AgeQuestion
       onDone={() => setHidden(true)}

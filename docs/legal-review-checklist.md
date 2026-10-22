@@ -94,7 +94,8 @@ and is a starting point, not legal advice.
       parent's or guardian's agreement; the month and year of birth are asked and not kept (only
       "21 or over" or the month the person turns 21); cocktails at 21, mocktails before. Check: the
       consent wording, state teen and AI-chatbot laws, OpenAI's rules for 13-17, alcohol at 21 for a
-      13+ audience, Data safety. **Wilma stays 18 and over until this is ticked.**
+      13+ audience, Data safety. **Wilma stays 18 and over until this is ticked.** **Parked (owner,
+      2026-10-22):** the age part is switched off and Wilma stays 18+; nothing to review for now.
 - [ ] **Data breach**: notification duties (Florida and other states where users live).
 - [ ] **Brand**: the name "Wilma" and the mascot (trademark search and registration), app name in
       the stores.

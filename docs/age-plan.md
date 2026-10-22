@@ -1,5 +1,10 @@
 # Ages: open Wilma to teens, cocktails at 21, mocktails for everyone else
 
+> **Switched off (owner, 2026-10-22):** "hide the age part; we will keep it above 18; keep the code
+> for now." Wilma stays **18 and over** (sign-up is the 18+ box again), **everyone gets cocktails**,
+> nobody is asked their age, and step 4 (teens) is parked. The code stays, behind one switch on each
+> side. See "Switched off" at the end.
+
 **Status:** plan, 2026-10-20; **owner's answers the same day: all as recommended, Q5 option B** (keep
 only the result, never the birth date; see Answers). **Step 1 built 2026-10-20, migration applied
 2026-10-21:** see "As built: step 1". **Step 2 built 2026-10-21, merged (#262), evaluated; migration
@@ -331,4 +336,43 @@ Branch `claude/age-step4`. Docs only; **nothing is live and Wilma stays 18 and o
 
 **Owner:** merge; send the pack (and the two pages) to the lawyer; when the lawyer is done, start
 "the switch" (a new step, smaller model, except the sign-up line: a small app change).
+
+## Switched off (2026-10-22)
+
+The owner's words: "I would like to hide the age part, we will keep it above 18, update everything
+to reflect that, keep the code for it for now." Answers the same day: **everyone 18 and over gets
+cocktails** (as before this plan), and **sign-up is the 18+ box again**.
+
+Branch `claude/age-off`.
+
+- **Server: migration `20261025120000_age_check_off.sql`.** `signup_setting.age_check` (false): while
+  off, `is_21()` is true for everyone (the edge functions' drinks rules let cocktails through with no
+  code change), `my_age_status()` says asked and 21 or over (so the app never asks, the versionCode
+  25 app included, with no update), and `_sync_drinks_space()` names every drinks space Cocktails
+  (all renamed back by the migration). The sign-up hook is unchanged: the 18+ box and versionCode
+  25's month and year both still check 18 and over. A helper `_age_check_on()`, callable by no one.
+  SQL test 25 (18 checks: off by default, sign-up both ways, a 19-year-old gets cocktails, users
+  cannot switch it or call the helper, on brings the rules back, anon refused); tests 23 and 24 now
+  switch it on first; test 21 expects Cocktails. Dry run 18/18 locally on a copy without it, nothing
+  kept.
+- **App: `AGE_CHECK = false` in `app/src/lib/age.ts`.** Sign-up is "I am 18 or older and agree to
+  the Privacy policy and Testing terms" and sends `age_confirmed` again (no month or year); the 🎂
+  question and Settings → Account's line are hidden; Make a cocktail, Strength and 🍸 Cocktails for
+  everyone; Help's Recipes line back to "No alcohol is always a choice." The code for the age check
+  stays and is tested both ways. 1019 app tests pass; lint and type check clean.
+- **Pages:** the privacy page is back to "you confirmed you are 18 or older", with one honest line
+  that one test version (versionCode 25) asked the month and year instead, kept only the result, which
+  is no longer used. Terms unchanged (they always said 18 or older).
+- **Parked:** step 4 (`docs/age-step4-lawyer-pack.md`, the legal checklist's Teens item, Play's later
+  target audience). Play stays **18 and over**, content rating "references to alcohol".
+- **Data:** accounts that answered in versionCode 25 keep `alcohol_from` (only the 21+ result),
+  unused while off, deleted with the account.
+
+**To switch it back on later** (all together): `AGE_CHECK = true` and a build; then `update
+signup_setting set age_check = true;`; the privacy page's month-and-year wording back; the phone
+checklist's Ages section.
+
+**Owner, in order:** (1) merge; (2) the dry run
+`tests/sql/dry_runs/25_age_check_off_dry_run.sql`, then OK to apply; (3) OK to build (the 18+ box;
+no server deploy needed).
 

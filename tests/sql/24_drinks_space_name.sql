@@ -4,6 +4,9 @@
 -- notes; another space of that name is never clashed with; users still cannot rename it; only the
 -- caller's own; anon gets nothing.
 
+-- The age check is switched off since 20261025120000_age_check_off.sql; these checks are for when it is on.
+update signup_setting set age_check = true;
+
 create function pg_temp.drinks(p_user uuid) returns text language sql as $$
   select name from space where owner_user_id = p_user and built_in = 'cocktails';
 $$;

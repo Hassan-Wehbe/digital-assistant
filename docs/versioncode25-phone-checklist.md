@@ -49,28 +49,14 @@ versionCode 24's checklist first if you haven't. The My day checks need **Pro**.
 - [ ] (14) Help → My day: "daily, weekly or monthly tasks offered in free time"; the Try it "A
   morning routine every day at 7:30: make bed, vitamins" makes a card.
 
-## Ages (D44)
+## Ages (D44): switched off on 2026-10-22
 
-You need: an invite code for a test sign-up (in the SQL editor: `select create_invite_code('age
-test', 2, 7, 'free');`, never in chat) and an email you can open.
+The age part is switched off (`docs/age-plan.md`, "Switched off"), so skip the old checks 15-21.
+Once migration `20261025120000` is applied, in versionCode 25:
 
-- [ ] (15) The privacy page says the month and year of birth are asked once and **not kept**
-  (published when this PR is merged).
-- [ ] (16) Your own account: Home shows **🎂 What’s your month and year of birth?** Not now hides it;
-  reopen the app and it is back. Answer it: the card goes; Settings → Account → **Age-limited parts**
-  says "Cocktails: yes (21 or over). Wrong? Contact us." Answering again is not offered.
-- [ ] (17) 21 or over: Home says 🍸 **Make a cocktail**, with Strength; the drinks space is
-  🍸 **Cocktails**.
-- [ ] (18) Create account: **Month and year of birth** (month chips, year box) and "I agree to the
-  Privacy policy and Testing terms" (no 18+ box). A year in the future: "Please enter a real month
-  and year of birth." A birth year that makes you 15: the server says "Wilma is for people 18 and
-  over." and no email comes.
-- [ ] (19) A test account aged 19 (sign up with a birth year 19 years ago and a test email): after
-  confirming, the drinks space is 🍹 **Mocktails**; Home says 🍹 **Make a mocktail**, with no
-  Strength; Settings → Account says "Cocktails from <month and year>; mocktails until then."
-- [ ] (20) As the 19-year-old: New note in Mocktails: Strength shows only **No alcohol**, already
-  picked. In the chat, "What cocktail can I make with vodka and lime?" gives mocktails and one line
-  that cocktails are for 21 and over; never a recipe with alcohol.
-- [ ] (21) Supabase dashboard → Authentication → Users → the test account: its metadata has **no**
-  birth_month or birth_year. Then delete the test account (Settings → Delete account).
-
+- [ ] (15) Home shows **no** 🎂 question; Home says 🍸 **Make a cocktail**, with Strength; the drinks
+  space is 🍸 **Cocktails**.
+- [ ] (16) Settings → Account still shows an "Age-limited parts" line saying "Cocktails: yes (21 or
+  over)" in this build (it is gone in the next build); nothing to do.
+- [ ] (17) Create account in this build still asks the month and year (the next build is back to the
+  18+ box); a birth year making you 17 is refused with "Wilma is for people 18 and over."

@@ -6,7 +6,7 @@ import { describe, expect, it } from '@jest/globals';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
-import { birthProblem, cocktailsLine, drinks, giveBirthMonth, loadAgeStatus, mocktailsOnly, toAgeStatus } from './age';
+import { AGE_CHECK, birthProblem, cocktailsLine, drinks, giveBirthMonth, loadAgeStatus, mocktailsOnly, toAgeStatus } from './age';
 import { spaceTitle } from './memory';
 
 const TODAY = new Date(2026, 9, 21); // October 21, 2026
@@ -72,11 +72,18 @@ describe('the month and year', () => {
 });
 
 describe('drinks under 21', () => {
-  it('mocktails until answered, under 21, or when unknown; cocktails at 21', () => {
-    expect(mocktailsOnly(null)).toBe(true);
-    expect(mocktailsOnly({ asked: false, is21: false })).toBe(true);
-    expect(drinks({ asked: true, is21: false })).toEqual({ icon: '🍹', button: 'Make a mocktail', space: 'Mocktails', one: 'mocktail' });
-    expect(drinks({ asked: true, is21: true })).toEqual({ icon: '🍸', button: 'Make a cocktail', space: 'Cocktails', one: 'cocktail' });
+  it('switched off (owner, 2026-10-22): cocktails for everyone, whatever the status', () => {
+    expect(AGE_CHECK).toBe(false);
+    expect(mocktailsOnly(null)).toBe(false);
+    expect(mocktailsOnly({ asked: false, is21: false })).toBe(false);
+    expect(drinks({ asked: true, is21: false })).toEqual({ icon: '🍸', button: 'Make a cocktail', space: 'Cocktails', one: 'cocktail' });
+  });
+
+  it('on: mocktails until answered, under 21, or when unknown; cocktails at 21', () => {
+    expect(mocktailsOnly(null, true)).toBe(true);
+    expect(mocktailsOnly({ asked: false, is21: false }, true)).toBe(true);
+    expect(drinks({ asked: true, is21: false }, true)).toEqual({ icon: '🍹', button: 'Make a mocktail', space: 'Mocktails', one: 'mocktail' });
+    expect(drinks({ asked: true, is21: true }, true)).toEqual({ icon: '🍸', button: 'Make a cocktail', space: 'Cocktails', one: 'cocktail' });
   });
 
   it('Settings → Account says it without a birth date', () => {

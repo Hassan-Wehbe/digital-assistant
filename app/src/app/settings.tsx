@@ -15,7 +15,7 @@ import { AgeQuestion } from '@/components/AgeCard';
 import { useAge } from '@/components/useAge';
 import { UsageMeter } from '@/components/UsageMeter';
 import { Button, Card, GroupList, GroupRow, Muted, space, styles, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
-import { cocktailsLine } from '@/lib/age';
+import { AGE_CHECK, cocktailsLine } from '@/lib/age';
 import { useAuth } from '@/lib/auth';
 import { briefingSummary, loadBriefing } from '@/lib/briefingSettings';
 import { loadChoice } from '@/lib/calendarSettings';
@@ -198,16 +198,18 @@ export default function Settings() {
       <GroupList>
         <GroupRow first title="Signed in as" subtitle={session?.user.email ?? 'you'} />
         {/* D44: only "21 or over" or the month cocktails open is kept, never a birth date; set once (Q7). */}
-        <GroupRow
-          title="Age-limited parts"
-          subtitle={`${cocktailsLine(age.status)}${age.status?.asked ? ' Wrong? Contact us.' : ' Tap to answer.'}`}
-          onPress={age.status && !age.status.asked ? () => setAskAge((a) => !a) : undefined}
-        />
+        {AGE_CHECK ? (
+          <GroupRow
+            title="Age-limited parts"
+            subtitle={`${cocktailsLine(age.status)}${age.status?.asked ? ' Wrong? Contact us.' : ' Tap to answer.'}`}
+            onPress={age.status && !age.status.asked ? () => setAskAge((a) => !a) : undefined}
+          />
+        ) : null}
         <GroupRow title="Change sign-in password" onPress={() => router.push('/account')} />
         <GroupRow title="Recycle bin" subtitle="Deleted notes" onPress={() => router.push('/bin')} />
         <GroupRow title="Delete account" subtitle="Everything in it, for good" onPress={() => router.push('/delete-account')} />
       </GroupList>
-      {askAge && age.status && !age.status.asked ? <AgeQuestion onDone={() => setAskAge(false)} /> : null}
+      {AGE_CHECK && askAge && age.status && !age.status.asked ? <AgeQuestion onDone={() => setAskAge(false)} /> : null}
 
       <Button title="Sign out" kind="danger" onPress={signOut} />
       <Muted>{versionLabel(Application.nativeApplicationVersion, Application.nativeBuildVersion)}</Muted>
