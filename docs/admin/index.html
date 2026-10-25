@@ -7,12 +7,12 @@
   <meta name="robots" content="noindex">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src https://motvckmpusxiuelpwqxy.supabase.co; base-uri 'none'; form-action 'none'">
   <title>Wilma usage</title>
-  <link rel="stylesheet" href="admin.css" integrity="sha384-FgqbEUtowfcB2qmhAvWIJcpQyK5xviweSWshMlFKOvWy92U/FJP5i3cMbAGdcd4e">
+  <link rel="stylesheet" href="admin.css" integrity="sha384-KB3GgLHI52Gh8E2HHkWRNlQXqi2J2Ru3zPIfN5Bz0mjMXqsNxXx1VP5fZSfUHP/y">
   <script src="../vault/vendor/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok"></script>
   <link rel="modulepreload" href="../oauth/config.js" integrity="sha384-tckR0YVWc/lyRMtHEWFlyrxg0ZC4AOhWm1kfxHt0TsK7zPgiBFsDl7jqCaEjhHWQ">
-  <link rel="modulepreload" href="figures.js" integrity="sha384-UDOx9HJx87MLnYx65E1U+y3Ms4anztNrRIok/21/TecnkEqmeLX8HFCzYoD0vO0P">
+  <link rel="modulepreload" href="figures.js" integrity="sha384-wH1N3D37VpSuMIQN4jFqste+GHKQ46FCkEEj798pSP+H1qq+Shp7JKy7k49pbAxD">
   <link rel="modulepreload" href="charts.js" integrity="sha384-IOG617YlQuxM28IvaThW3PW8Dg8kiDZfkTLv7pM0cND+uSnbU8iD1QMiEs5reLEi">
-  <script type="module" src="admin.js" integrity="sha384-3KPzT9IENSwaGLG0gwHPO+J2FgjXgn+uZKnPLKqYkKqLwzP1Kmp/Yzks69Cb8drC"></script>
+  <script type="module" src="admin.js" integrity="sha384-4viCXCXsdpbn86n9G0YlrEZPmOw7jd3z2jDXsqRrRVAXv5F3fcrvX1rYxHnnjiHi"></script>
 </head>
 <body>
 <main>
@@ -41,6 +41,8 @@
       <button role="tab" id="tab-overview" aria-controls="overview" aria-selected="true">Overview</button>
       <button role="tab" id="tab-costs" aria-controls="costs" aria-selected="false" tabindex="-1">Costs</button>
       <button role="tab" id="tab-users" aria-controls="users" aria-selected="false" tabindex="-1">Users</button>
+      <button role="tab" id="tab-pricing" aria-controls="pricing" aria-selected="false" tabindex="-1">Pricing</button>
+      <button role="tab" id="tab-reports" aria-controls="reports" aria-selected="false" tabindex="-1">Reports</button>
     </div>
 
     <div id="range" class="chips" role="group" aria-label="Period">
@@ -92,7 +94,7 @@
 
     <div id="users" role="tabpanel" aria-labelledby="tab-users" class="panel" hidden>
       <div class="filters">
-        <label for="month">Month <select id="month"></select></label>
+        <label for="month">Month <select id="month" class="month"></select></label>
         <label for="plan">Plan
           <select id="plan">
             <option value="all">Everyone</option>
@@ -104,6 +106,58 @@
       </div>
       <p class="note"><span id="user-count"></span> Tap a row to show that user's email; tap again to hide it. Notes, memories and storage are the month's snapshot.</p>
       <div class="tablewrap"><table id="table-users"></table></div>
+    </div>
+
+    <div id="pricing" role="tabpanel" aria-labelledby="tab-pricing" class="panel" hidden>
+      <div class="card explorer">
+        <h2>Pro price explorer</h2>
+        <div class="fields">
+          <label for="pe-price">Pro price per month <output id="pe-price-out" for="pe-price"></output>
+            <input id="pe-price" type="range" min="0.99" max="19.99" step="0.5" value="4.99"></label>
+          <label for="pe-users">Pro users <output id="pe-users-out" for="pe-users"></output>
+            <input id="pe-users" type="range" min="1" max="1000" step="1" value="50"></label>
+          <label for="pe-fee">Store's fee (%) <input id="pe-fee" type="number" min="0" max="99" step="1" value="15" inputmode="numeric"></label>
+          <label for="pe-basis">A Pro user costs what
+            <select id="pe-basis"></select></label>
+          <label for="pe-month">from the numbers of <select id="pe-month" class="month"></select></label>
+          <label class="check" for="pe-maps"><input id="pe-maps" type="checkbox"> Count Mapbox drive times as paid (past the free tier)</label>
+        </div>
+        <div id="pe-out" class="outs"></div>
+        <p id="pe-note" class="note"></p>
+      </div>
+      <div class="card">
+        <h2>Mapbox's price</h2>
+        <div class="fields">
+          <label for="mb-free">Free drive-time requests a month <input id="mb-free" type="number" min="0" step="1000" inputmode="numeric"></label>
+          <label for="mb-price">Then, dollars per 1,000 <input id="mb-price" type="number" min="0" step="0.01" inputmode="decimal"></label>
+        </div>
+        <p class="note">Used for this visit by the tiles, the Costs tab, the explorer and the report. To change the
+           starting values for good, ask for them to be changed in the page's code (<code>figures.js</code>).
+           Weather (api.weather.gov) is free.</p>
+      </div>
+    </div>
+
+    <div id="reports" role="tabpanel" aria-labelledby="tab-reports" class="panel" hidden>
+      <div class="card">
+        <h2>Downloads</h2>
+        <p class="note">CSV files for a spreadsheet: figures and short user ids only, never an email.</p>
+        <div class="filters">
+          <label for="rp-month">Month <select id="rp-month" class="month"></select></label>
+        </div>
+        <div class="buttons">
+          <button type="button" id="dl-users">Per user (month)</button>
+          <button type="button" id="dl-daily">Daily totals (12 months)</button>
+          <button type="button" id="dl-months">AI cost per month</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="cardhead">
+          <h2>Monthly report</h2>
+          <button type="button" class="primary" id="print">Print or save as PDF</button>
+        </div>
+        <p class="note">The month chosen above. In the print window, pick "Save as PDF" to keep a file.</p>
+        <article id="report"></article>
+      </div>
     </div>
   </section>
 </main>

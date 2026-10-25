@@ -2,7 +2,8 @@
 // database: every Supabase call is answered here, so no account is needed and nothing live is
 // touched. Checks: sign-in, an admin sees the tabs, tiles and charts with no page or CSP errors and
 // no sideways scrolling on a phone, the email appears only on tap (one admin_user_email call) and
-// hides again, the filter, and a non-admin sees "Not available" after am_i_admin alone. From the
+// hides again, the filter; the price explorer, Mapbox's price, the report (on screen and printed)
+// and the CSV files (never an email); and a non-admin sees "Not available" after am_i_admin alone. From the
 // repo root:
 //   python3 tests/browser/serve.py docs &
 //   node tests/browser/admin_page.mjs            (SHOTS=/some/dir to keep screenshots)
@@ -56,7 +57,7 @@ async function mock(page, admin) {
 const browser = await chromium.launch();
   const errors = [];
   for (const [admin, scheme, w] of [[true, "light", 1200], [true, "dark", 390], [false, "light", 390]]) {
-    const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, colorScheme: scheme });
+    const ctx = await browser.newContext({ acceptDownloads: true, viewport: { width: w, height: 900 }, colorScheme: scheme });
     const page = await ctx.newPage();
     page.on("pageerror", (e) => errors.push(e.message));
     page.on("console", (m) => { if (m.type() === "error" && !(m.text().includes("403") && !admin)) errors.push(m.text()); });
@@ -91,6 +92,36 @@ const browser = await chromium.launch();
     ok((await page.$$("#table-users td.email")).length === 0, `${tag}: hidden again on a second tap`);
     await page.fill("#find", "400a");
     ok((await page.textContent("#user-count")).startsWith("1 of 25"), `${tag}: filter by user id`);
+
+    // Step 4: the price explorer, Mapbox's price, the report and the CSV files.
+    await page.click("#tab-pricing");
+    ok((await page.$$("#pe-out b")).length === 6, `${tag}: explorer shows six results`);
+    const margin = async () => page.textContent("#pe-out div:nth-child(4) b");
+    const before = await margin();
+    await page.fill("#pe-price", "19.99");
+    ok((await margin()) !== before, `${tag}: a higher price changes the margin per month`);
+    await page.selectOption("#pe-basis", "power");
+    ok((await page.textContent("#pe-note")).includes("power users"), `${tag}: cost from the power users`);
+    if (OUT) await page.screenshot({ path: `${OUT}/${tag}-pricing.png`, fullPage: true });
+    await page.fill("#mb-free", "0"); await page.dispatchEvent("#mb-free", "change");
+    await page.click("#tab-overview");
+    ok((await page.textContent(".tile:nth-child(3) .d")).includes("maps $"), `${tag}: Mapbox's edited free tier reaches the tiles`);
+    await page.click("#tab-reports");
+    const report = await page.textContent("#report");
+    ok(report.includes("Wilma usage · October 2026") && report.includes("The ten costliest users"), `${tag}: the month's report`);
+    ok(!report.includes("@"), `${tag}: no email in the report`);
+    const [dl] = await Promise.all([page.waitForEvent("download"), page.click("#dl-users")]);
+    const text = await (await import("node:fs/promises")).readFile(await dl.path(), "utf8");
+    ok(dl.suggestedFilename() === "wilma-users-2026-10.csv" && text.startsWith("user,plan,joined") &&
+      text.trim().split("\r\n").length === 26 && !text.includes("@"), `${tag}: per-user CSV, 25 rows, no email`);
+    const [dl2] = await Promise.all([page.waitForEvent("download"), page.click("#dl-daily")]);
+    ok(dl2.suggestedFilename() === "wilma-daily-to-2026-10-25.csv", `${tag}: daily CSV`);
+    await page.emulateMedia({ media: "print" });
+    ok(await page.isVisible("#report") && !(await page.isVisible("#tiles")) && !(await page.isVisible(".tabs")) &&
+      !(await page.isVisible("#dl-users")), `${tag}: printing shows the report alone`);
+    if (OUT) await page.screenshot({ path: `${OUT}/${tag}-print.png`, fullPage: true });
+    await page.emulateMedia({ media: "screen" });
+    if (OUT) await page.screenshot({ path: `${OUT}/${tag}-reports.png`, fullPage: true });
     await ctx.close();
   }
 await browser.close();

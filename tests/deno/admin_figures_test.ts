@@ -1,9 +1,10 @@
 // The admin page's arithmetic (docs/admin/figures.js): tiles, the daily and monthly series, the
-// spread, side by side, and the per-user table's filter and sort.
+// spread, side by side, the per-user table's filter and sort; step 4: Mapbox's price, the Pro price
+// explorer, the month's totals and the CSV files.
 import { assertAlmostEquals, assertEquals } from "jsr:@std/assert@1";
 import {
-  dailySeries, daysBetween, daysBefore, mapboxCents, money, monthChoices, monthlySeries, sideBySide, spread,
-  tiles, userRows,
+  csv, dailyCsv, dailySeries, daysBetween, daysBefore, explore, mapboxCents, money, monthChoices, monthlySeries,
+  monthsCsv, monthTotals, proCost, sideBySide, spread, tiles, userRows, usersCsv,
 } from "../../docs/admin/figures.js";
 
 const user = (id: string, cost: number, days: number, plan = "free", kinds: Record<string, number> = {}) => ({
@@ -123,4 +124,74 @@ Deno.test("month choices: from the first tracked month to this one, newest first
   assertEquals(monthChoices({ month: "2027-01-01", tracking_since: "2026-11-03" }), ["2027-01-01", "2026-12-01", "2026-11-01"]);
   assertEquals(monthChoices({ month: "2026-10-01", tracking_since: null }), ["2026-10-01"]);
   assertEquals(monthChoices({ month: "2028-10-01", tracking_since: "2026-01-01" }).length, 13);
+});
+
+Deno.test("Mapbox: an edited price and free tier", () => {
+  assertEquals(mapboxCents(15_000, { free: 10_000, centsPer1000: 50 }), 250);
+  assertEquals(mapboxCents(5_000, { free: 10_000, centsPer1000: 50 }), 0);
+});
+
+const overview = { month: "2026-10-01", month_days: 31, month_days_so_far: 10 };
+
+Deno.test("Pro cost: the chosen group's average, the month in progress scaled to a whole month", () => {
+  const users = [
+    user("p1", 30, 5, "pro", { mapbox: 100 }), user("p2", 10, 2, "pro", { mapbox: 300 }), user("p3", 99, 0, "pro"),
+    user("f1", 5, 3), user("f2", 1, 1),
+  ];
+  const pro = proCost(users, { basis: "pro", month: "2026-10-01", overview });
+  assertEquals(pro.users, 2); // p3 was not active
+  assertAlmostEquals(pro.aiCents, 20 * 3.1);
+  assertEquals(pro.mapCents, 0);
+  const paid = proCost(users, { basis: "pro", month: "2026-10-01", overview, payMapbox: true, price: { free: 0, centsPer1000: 200 } });
+  assertAlmostEquals(paid.mapboxCalls, 200 * 3.1);
+  assertAlmostEquals(paid.cents, 20 * 3.1 + 0.62 * 200);
+  // A past month is a whole month already.
+  assertEquals(proCost(users, { basis: "pro", month: "2026-09-01", overview }).aiCents, 20);
+  assertEquals(proCost(users, { basis: "power", month: "2026-09-01", overview }).aiCents, 30); // top 10% of 4: one user
+  assertEquals(proCost(users, { basis: "everyone", month: "2026-09-01", overview }).aiCents, 11.5);
+  assertEquals(proCost([], { basis: "pro", month: "2026-09-01", overview }).cents, 0);
+});
+
+Deno.test("price explorer: fee, margin per user, month and year, break-even", () => {
+  const r = explore({ price: 5, users: 100, feePercent: 15, costCents: 50 });
+  assertAlmostEquals(r.fee, 75);
+  assertAlmostEquals(r.net, 425);
+  assertAlmostEquals(r.margin, 375);
+  assertAlmostEquals(r.marginPercent, 0.75);
+  assertAlmostEquals(r.month, 37_500);
+  assertAlmostEquals(r.year, 450_000);
+  assertAlmostEquals(r.breakEven, 50 / 0.85);
+  const loss = explore({ price: 0.99, users: 10, feePercent: 30, costCents: 200 });
+  assertEquals(loss.margin < 0 && loss.month < 0, true);
+});
+
+Deno.test("month totals: one month from the series, an empty month as zeros", () => {
+  const s = dailySeries({ rows: [
+    { day: "2026-09-30", kind: "chat", count: 1, cost_cents: 1 },
+    { day: "2026-10-02", kind: "classify", count: 2, cost_cents: 2 },
+    { day: "2026-10-03", kind: "mapbox", count: 7 },
+  ] }, "2026-09-30", "2026-10-03");
+  const t = monthTotals(s, "2026-10-01");
+  assertEquals([t.aiCost, t.cost.classify, t.cost.chat, t.requests, t.mapbox], [2, 2, 0, 2, 7]);
+  assertEquals(monthTotals(s, "2026-08-01").aiCost, 0);
+});
+
+Deno.test("CSV: quoted where needed, numbers as numbers, formulas defused", () => {
+  assertEquals(csv(["a", "b"], [["x,y", 'say "hi"'], [1.5, null], ["=SUM(A1)", "-2"], ["@x", "+1"]]),
+    'a,b\r\n"x,y","say ""hi"""\r\n1.5,\r\n\'=SUM(A1),\'-2\r\n\'@x,\'+1\r\n');
+});
+
+Deno.test("CSV files: per user without emails, daily totals, months", () => {
+  const u = { ...user("3f2a", 12.5, 4, "pro", { message: 9, mapbox: 2 }), email: "someone@example.com",
+    snapshot: { notes: 3, memories: 1, storage_bytes: 2048 } };
+  const text = usersCsv([u]);
+  const [head, row] = text.trim().split("\r\n");
+  assertEquals(head.split(",").slice(0, 6), ["user", "plan", "joined", "active_days", "ai_cost_cents", "message"]);
+  assertEquals(row.split(",").slice(0, 6), ["3f2a", "pro", "2026-10-01", "4", "12.5", "9"]);
+  assertEquals(row.split(",").slice(-3), ["3", "1", "2048"]);
+  assertEquals(text.includes("@") || text.includes("user_id") || text.includes("-0000"), false);
+  const daily = dailyCsv({ rows: [{ day: "2026-10-25", kind: "chat", detail: "some-model", cost_cents: 1.25, users: 2 }] });
+  assertEquals(daily.trim().split("\r\n")[1], "2026-10-25,chat,some-model,0,0,0,0,0,1.25,0,2");
+  assertEquals(monthsCsv([{ month: "2026-09-01", cost_cents: 1800, requests: 3000 }]),
+    "month,ai_cost_cents,chat_requests\r\n2026-09,1800,3000\r\n");
 });
