@@ -146,3 +146,26 @@ describe('cold start (owner, 2026-10-19: a share with Wilma closed opened nothin
     expect(layout).toContain('askAgain();');
   });
 });
+
+describe('shares from apps that send styled text (Amazon; owner, 2026-10-25)', () => {
+  it('the share module is patched to read styled text, the clip data and the subject', () => {
+    const patch = readFileSync(resolve(__dirname, '../../patches/expo-share-intent+8.0.1.patch'), 'utf8');
+    expect(patch).toContain('getCharSequenceExtra(Intent.EXTRA_TEXT)');
+    expect(patch).toContain('clip?.text');
+    expect(patch).toContain('EXTRA_SUBJECT');
+    const pkg = JSON.parse(readFileSync(resolve(__dirname, '../../package.json'), 'utf8')) as { scripts: Record<string, string>; dependencies: Record<string, string> };
+    expect(pkg.scripts.postinstall).toBe('patch-package');
+    // The patch is for this exact version: an upgrade must redo it.
+    expect(pkg.dependencies['expo-share-intent']).toMatch(/8\.0\.1$/);
+  });
+
+  it('an Amazon share becomes a note with the product as title and the link kept', () => {
+    const shared = parseShared({ text: 'Check out this item on Amazon\nLodge Cast Iron Skillet, 10.25"\nhttps://a.co/d/0abcDEF', type: 'text', meta: { title: null } });
+    expect(nothingUsable(shared)).toBe(false);
+    const draft = draftFromShared(shared);
+    expect(draft.title).toBe('Check out this item on Amazon');
+    expect(draft.body).toContain('https://a.co/d/0abcDEF');
+    const titled = draftFromShared(parseShared({ text: 'https://a.co/d/0abcDEF', meta: { title: 'Lodge Cast Iron Skillet' } }));
+    expect(titled.title).toBe('Lodge Cast Iron Skillet');
+  });
+});
