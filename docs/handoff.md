@@ -13,8 +13,14 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **D34 usage tracking step 3, the admin page part 1 (2026-10-25): branch
-  `claude/usage-step3-admin`, not merged; nothing to deploy.** Layout B (tabs: Overview, Costs,
+- **D34 usage tracking step 4, the admin page part 2 (2026-10-25): branch
+  `claude/usage-step4-admin`, not merged; nothing to deploy.** Pricing tab (the Pro price explorer,
+  Mapbox's price for the visit) and Reports tab (the monthly report to print or save as PDF; CSV of
+  per user, daily totals and AI cost per month, never an email). Browser check 36/36. See
+  `docs/usage-tracking-plan.md`, "As built: step 4". **Owner:** merge, try the two tabs. **Next:**
+  step 5 (checklist).
+- **D34 usage tracking step 3, the admin page part 1 (2026-10-25): merged (#280); nothing to
+  deploy.** Layout B (tabs: Overview, Costs,
   Users) in `docs/admin/`, built like the vault pages; `am_i_admin` gate, tiles, charts drawn by the
   page, the spread, the per-user table with the email only on tap. 651 Deno tests; browser check
   `tests/browser/admin_page.mjs` 18/18. See `docs/usage-tracking-plan.md`, "As built: step 3".

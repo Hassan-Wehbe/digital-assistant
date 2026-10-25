@@ -2,8 +2,9 @@
 
 Status: plan, 2026-10-22; **owner's answers the same day: all as recommended** (Q1-Q8 below).
 **Step 1 merged (#275); migration applied 2026-10-25:** see "As built: step 1". **Step 2 merged
-(#277) and deployed 2026-10-25:** see "As built: step 2". **Step 3 built 2026-10-25 (layout B, tabs),
-branch `claude/usage-step3-admin`, not merged:** see "As built: step 3". Design: D34 (decided
+(#277) and deployed 2026-10-25:** see "As built: step 2". **Step 3 merged (#280), layout B (tabs):** see
+"As built: step 3". **Step 4 built 2026-10-25, branch `claude/usage-step4-admin`, not merged:** see
+"As built: step 4". Design: D34 (decided
 2026-10-10: what is counted, never content; the admin page on GitHub Pages, not in the app; the
 analysis it shows). Model: the strongest for steps 1-2 (a new table every request writes to, admin
 functions, RLS, the chat loop); a smaller one for the page itself (steps 3-4) and step 5.
@@ -221,7 +222,7 @@ evaluation finished; counting has started.**
 
 ## As built: step 3 (2026-10-25)
 
-Branch `claude/usage-step3-admin`, **not merged**. The owner chose **layout B, tabs** (mockups:
+**Merged (#280) 2026-10-25.** The owner chose **layout B, tabs** (mockups:
 https://claude.ai/artifact/XecEuk7wuqvcSbHQtJvtKs). No database change, nothing to deploy: merging
 publishes the page on GitHub Pages at `https://hassan-wehbe.github.io/digital-assistant/admin/`.
 
@@ -262,6 +263,35 @@ publishes the page on GitHub Pages at `https://hassan-wehbe.github.io/digital-as
   sideways scrolling; the email only on tap, with one call, hidden again; the id filter; a non-admin
   gets "Not available" after `am_i_admin` alone.
 
-**Owner:** merge (GitHub Pages publishes it), then open the page on the laptop and the phone and say
-what to change. **Next:** step 4 (price explorer, report, CSV).
+## As built: step 4 (2026-10-25)
+
+Branch `claude/usage-step4-admin`, **not merged**. No database change, nothing to deploy. Two more
+tabs on the admin page:
+
+- **Pricing tab: the Pro price explorer.** A Pro price (slider, $0.99 to $19.99) and a number of Pro
+  users (1 to 1,000), the store's fee (15% to start), and whose cost a Pro user is expected to have:
+  the Pro users, the power users (the costliest 10%) or everyone active, in a month you choose. A
+  month in progress is scaled up to a whole month at its pace so far. Out: cost per Pro user, the
+  store's fee, margin per user (and %), per month, per year, and the break-even price. Mapbox can be
+  counted as paid (each drive time at the per-1,000 price) with a tick.
+- **Pricing tab: Mapbox's price (Q5).** The free requests a month (100,000) and the price per 1,000
+  ($2.00) can be changed; the tiles, the Costs tab, the explorer and the report use them at once.
+  They last for the visit only (the page keeps nothing in the browser); new starting values are a
+  one-line change in `docs/admin/figures.js`.
+- **Reports tab: the monthly report**, shown on the page and printed (or saved as PDF from the print
+  window) on its own: the month's figures, AI cost by purpose with shares, who costs what, side by
+  side, and the ten costliest users by short id. Never an email.
+- **Reports tab: CSV downloads**, made in the page (nothing is sent anywhere): per user for the chosen
+  month (short ids and counts, never an email), the daily totals of the last 12 months, and the AI
+  cost per month. A text cell a spreadsheet would read as a formula gets a leading apostrophe.
+- One month list for the Users, Pricing and Reports tabs and the spread: changing any of them changes
+  all.
+- **Tests:** `tests/deno/admin_figures_test.ts` 17 (six more: Mapbox's edited price, the Pro cost per
+  group and the month in progress, the explorer's sums, a month's totals, CSV quoting and formulas,
+  the three files with no email). `tests/browser/admin_page.mjs` 36/36 (the explorer reacts, the
+  edited Mapbox tier reaches the tiles, the report, the per-user and daily downloads without an
+  email, printing shows the report alone).
+
+**Owner:** merge (GitHub Pages publishes it), then try the Pricing and Reports tabs. **Next:** step 5
+(the checklist; the privacy sentence is already live since step 2).
 

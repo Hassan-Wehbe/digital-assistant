@@ -1,4 +1,4 @@
-// The admin page (usage tracking step 3; docs/usage-tracking-plan.md, D34), layout B: three tabs.
+// The admin page (usage tracking steps 3-4; docs/usage-tracking-plan.md, D34), layout B: tabs.
 // Sign in with a Wilma account; am_i_admin() decides what is shown, and every admin_* function
 // refuses a non-admin on its own (the database, not this page, keeps the numbers private).
 // Figures and short user ids only; an email is fetched one at a time, on tap (Q2), and lives only
@@ -7,8 +7,9 @@
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "../oauth/config.js";
 import { hbars, legend, lines, stackedBars } from "./charts.js";
 import {
-  AI_SOURCES, count, dailySeries, daysBefore, mapboxCents, MAPBOX_FREE_PER_MONTH, money, monthChoices,
-  monthlySeries, monthName, shortDay, sideBySide, spread, tiles, USER_COLUMNS, userRows,
+  AI_SOURCES, COST_BASES, count, dailyCsv, dailySeries, daysBefore, explore, MAPBOX_DEFAULT, mapboxCents, money,
+  monthChoices, monthlySeries, monthName, monthsCsv, monthTotals, proCost, shortDay, sideBySide, spread, tiles,
+  USER_COLUMNS, userRows, usersCsv,
 } from "./figures.js";
 
 // Refuse to run inside a frame (GitHub Pages cannot send frame-ancestors headers).
@@ -24,8 +25,10 @@ const db = globalThis.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_K
 });
 
 const state = {
-  overview: null, series: [], users: [], month: null, days: 30,
+  overview: null, daily: null, series: [], users: [], month: null, days: 30,
   sort: { key: "cost", dir: -1 }, plan: "all", text: "",
+  // Mapbox's price for this visit (Q5): the Pricing tab changes it, nothing keeps it.
+  mapbox: { ...MAPBOX_DEFAULT },
 };
 
 function status(message, kind = "muted") {
@@ -84,7 +87,10 @@ $("signout").addEventListener("click", async (e) => {
   e.preventDefault();
   await db.auth.signOut();
   // Take the numbers off the page, not just out of sight.
-  state.overview = null;
+  state.overview = state.daily = null;
+  $("report").replaceChildren();
+  $("pe-out").replaceChildren();
+  $("pe-note").textContent = "";
   state.users = state.thisMonthUsers = [];
   for (const id of ["tiles", "table-months", "chart-active", "chart-cost", "chart-requests", "chart-lookups",
                     "chart-spread", "table-side", "table-users"]) $(id).replaceChildren();
@@ -119,6 +125,7 @@ async function load() {
     rpc("admin_usage_users", { p_month: overview.month }),
   ]);
   state.overview = overview;
+  state.daily = daily;
   state.series = dailySeries(daily, from, to);
   state.month = overview.month;
   state.users = users ?? [];
@@ -129,13 +136,16 @@ async function load() {
     : upkeep?.snapshots_taken ? ` · this month's snapshot taken for ${count(upkeep.snapshots_taken)} accounts` : "";
   $("asof").textContent = `Figures to ${shortDay(to)} (UTC), ${since}${kept}.`;
 
-  const sel = $("month");
-  sel.replaceChildren(...monthChoices(overview).map((m) => {
-    const o = node("option", monthName(m));
-    o.value = m;
-    return o;
-  }));
-  sel.value = state.month;
+  for (const sel of document.querySelectorAll("select.month")) {
+    sel.replaceChildren(...monthChoices(overview).map((m) => {
+      const o = node("option", monthName(m));
+      o.value = m;
+      return o;
+    }));
+    sel.value = state.month;
+  }
+  $("mb-free").value = String(state.mapbox.free);
+  $("mb-price").value = (state.mapbox.centsPer1000 / 100).toFixed(2);
 
   status(null);
   show("dash");
@@ -144,12 +154,14 @@ async function load() {
   drawSeries();
   drawSpread();
   drawUsers();
+  drawExplorer();
+  drawReport();
   selectTab(location.hash.slice(1) || "overview", false);
 }
 
 // ---------------------------------------------------------------- tabs and the period
 
-const TABS = ["overview", "costs", "users"];
+const TABS = ["overview", "costs", "users", "pricing", "reports"];
 
 function selectTab(name, focus = true) {
   if (!TABS.includes(name)) name = "overview";
@@ -160,7 +172,7 @@ function selectTab(name, focus = true) {
     $(t).hidden = t !== name;
   }
   // The period chips sit just above the first chart of the open tab (the tiles do not depend on them).
-  $("range").hidden = name === "users";
+  $("range").hidden = !["overview", "costs"].includes(name);
   $(name).querySelector(".card")?.before($("range"));
   // Charts in a hidden tab were drawn without a width: draw the open tab's again.
   if (state.overview) {
@@ -193,7 +205,7 @@ for (const b of $("range").querySelectorAll("button")) {
 // ---------------------------------------------------------------- overview
 
 function drawTiles() {
-  const t = tiles(state.overview, state.thisMonthUsers, state.series);
+  const t = tiles(state.overview, state.thisMonthUsers, state.series, state.mapbox);
   const list = [
     ["Users", count(t.users), `${count(t.pro)} on Pro`],
     ["Active · 30 days", count(t.active30), `${count(t.activeToday)} today · ${count(t.active7)} in 7 days`],
@@ -266,8 +278,9 @@ function drawSeries() {
 
   const month = state.overview.month;
   const used = state.series.filter((d) => d.day >= month).reduce((s, d) => s + d.mapbox, 0);
-  $("mapbox-note").textContent = `Mapbox drive times this month: ${count(used)} of ${count(MAPBOX_FREE_PER_MONTH)} free` +
-    ` (${money(mapboxCents(used))}; then about $2.00 per 1,000). Weather (api.weather.gov) is free.`;
+  $("mapbox-note").textContent = `Mapbox drive times this month: ${count(used)} of ${count(state.mapbox.free)} free` +
+    ` (${money(mapboxCents(used, state.mapbox))}; then ${money(state.mapbox.centsPer1000)} per 1,000, as set on the` +
+    " Pricing tab). Weather (api.weather.gov) is free.";
 }
 
 // ---------------------------------------------------------------- the spread
@@ -372,20 +385,175 @@ $("find").addEventListener("input", () => {
   state.text = $("find").value;
   drawUsers();
 });
-$("month").addEventListener("change", async () => {
-  const m = $("month").value;
-  status("Loading…");
-  try {
-    state.users = (await rpc("admin_usage_users", { p_month: m })) ?? [];
-    state.month = m;
-    status(null);
-  } catch (err) {
-    $("month").value = state.month;
-    status(`Could not load that month: ${err?.message ?? err}`, "error");
+// One month for the Users, Pricing and Reports tabs and the spread: any of their month lists sets it.
+for (const sel of document.querySelectorAll("select.month")) {
+  sel.addEventListener("change", async () => {
+    const m = sel.value;
+    status("Loading…");
+    try {
+      state.users = (await rpc("admin_usage_users", { p_month: m })) ?? [];
+      state.month = m;
+      status(null);
+    } catch (err) {
+      status(`Could not load that month: ${err?.message ?? err}`, "error");
+    }
+    for (const other of document.querySelectorAll("select.month")) other.value = state.month;
+    drawSpread();
+    drawUsers();
+    drawExplorer();
+    drawReport();
+  });
+}
+
+// ---------------------------------------------------------------- pricing (step 4)
+
+$("pe-basis").replaceChildren(...COST_BASES.map(([v, name]) => {
+  const o = node("option", name);
+  o.value = v;
+  return o;
+}));
+for (const id of ["pe-price", "pe-users", "pe-fee", "pe-basis", "pe-maps"]) $(id).addEventListener("input", drawExplorer);
+
+function drawExplorer() {
+  if (!state.overview) return;
+  const price = Number($("pe-price").value);
+  const users = Number($("pe-users").value);
+  $("pe-price-out").textContent = `$${price.toFixed(2)}`;
+  $("pe-users-out").textContent = count(users);
+  const basis = $("pe-basis").value || "pro";
+  const cost = proCost(state.users, { basis, month: state.month, overview: state.overview, price: state.mapbox,
+    payMapbox: $("pe-maps").checked });
+  const r = explore({ price, users, feePercent: $("pe-fee").value, costCents: cost.cents });
+  const pct = `${Math.round(r.marginPercent * 100)}%`;
+  const outs = [
+    ["Cost per Pro user", money(cost.cents), false],
+    ["Store's fee", money(r.fee), false],
+    ["Margin per user", `${money(r.margin)} · ${pct}`, r.margin < 0],
+    ["Margin per month", money(r.month), r.month < 0],
+    ["Margin per year", money(r.year), r.year < 0],
+    ["Break-even price", money(r.breakEven), false],
+  ];
+  $("pe-out").replaceChildren(...outs.map(([k, v, neg]) => {
+    const d = node("div", k);
+    d.prepend(node("b", v, neg ? "neg" : undefined));
+    return d;
+  }));
+  const who = COST_BASES.find(([v]) => v === basis)[2];
+  const scaled = cost.scale > 1.001 ? ` ${monthName(state.month)} is not over yet, so it is scaled up to a whole month at its pace so far.` : "";
+  const maps = $("pe-maps").checked
+    ? ` Mapbox: ${count(cost.mapboxCalls)} drive times a month each, ${money(cost.mapCents)}.`
+    : ` Mapbox not counted (${count(cost.mapboxCalls)} drive times a month each, free while everyone together stays under ${count(state.mapbox.free)}).`;
+  $("pe-note").textContent = cost.users
+    ? `Cost: the average AI cost of the ${count(cost.users)} ${who} in ${monthName(state.month)}.${scaled}${maps}`
+    : `Nobody in that group was active in ${monthName(state.month)} yet, so the cost shows as $0.00: pick another group or month.`;
+}
+
+for (const id of ["mb-free", "mb-price"]) {
+  $(id).addEventListener("change", () => {
+    const free = Number($("mb-free").value);
+    const dollars = Number($("mb-price").value);
+    if (Number.isFinite(free) && free >= 0) state.mapbox.free = Math.round(free);
+    if (Number.isFinite(dollars) && dollars >= 0) state.mapbox.centsPer1000 = Math.round(dollars * 10000) / 100;
+    $("mb-free").value = String(state.mapbox.free);
+    $("mb-price").value = (state.mapbox.centsPer1000 / 100).toFixed(2);
+    drawTiles();
+    drawSeries();
+    drawExplorer();
+    drawReport();
+  });
+}
+
+// ---------------------------------------------------------------- reports (step 4)
+
+function table(head, rows) {
+  const t = node("table");
+  const thead = node("thead");
+  const tr = node("tr");
+  for (const h of head) tr.append(node("th", h));
+  thead.append(tr);
+  const body = node("tbody");
+  for (const r of rows) {
+    const row = node("tr");
+    for (const c of r) row.append(node("td", c));
+    body.append(row);
   }
-  drawSpread();
-  drawUsers();
-});
+  t.append(thead, body);
+  const wrap = node("div", undefined, "tablewrap");
+  wrap.append(t);
+  return wrap;
+}
+
+/** The month's report, shown on the Reports tab and printed from it. Figures and short ids only. */
+function drawReport() {
+  if (!state.overview) return;
+  const m = state.month;
+  const totals = monthTotals(state.series, m);
+  const inProgress = m === state.overview.month;
+  const active = state.users.filter((u) => Number(u.active_days) > 0);
+  const pro = active.filter((u) => u.plan === "pro").length;
+  const mapCents = mapboxCents(totals.mapbox, state.mapbox);
+  const all = totals.aiCost + mapCents;
+  const t = tiles(state.overview, state.thisMonthUsers, state.series, state.mapbox);
+  const facts = [
+    ["Active users", count(active.length)],
+    ["of them on Pro", count(pro)],
+    ["Accounts now", count(state.overview.users)],
+    ["AI cost", money(totals.aiCost)],
+    ["Mapbox", `${count(totals.mapbox)} · ${money(mapCents)}`],
+    ["Weather lookups", count(totals.weather)],
+    ["Cost in all", money(all)],
+    ["Per active user", money(active.length ? all / active.length : 0)],
+    ["AI requests", count(totals.requests)],
+    ["Messages", count(totals.messages)],
+    ["Errors", count(totals.errors)],
+    ["Limits hit", count(totals.limits)],
+  ];
+  if (inProgress) facts.push(["Projected month", money(t.projectedMonth)]);
+  const dl = node("dl");
+  for (const [k, v] of facts) {
+    const d = node("div");
+    d.append(node("dt", k), node("dd", v));
+    dl.append(d);
+  }
+  const pct = (x, of) => (of ? `${Math.round((x / of) * 100)}%` : "–");
+  const sp = spread(state.users);
+  const top = [...active].sort((a, b) => (Number(b.cost_cents) || 0) - (Number(a.cost_cents) || 0)).slice(0, 10);
+  const made = new Date().toISOString().slice(0, 16).replace("T", " ");
+  $("report").replaceChildren(
+    node("h3", `Wilma usage · ${monthName(m)}`),
+    node("p", `Made ${made} UTC. ${inProgress ? `Month in progress: figures to ${shortDay(state.overview.today)}.` : "Whole month."}` +
+      " Figures and short user ids only.", "muted"),
+    dl,
+    node("h4", "AI cost by purpose"),
+    table(["Purpose", "Cost", "Share"], AI_SOURCES.map(([k, name]) => [name, money(totals.cost[k]), pct(totals.cost[k], totals.aiCost)])),
+    node("h4", "Who costs what"),
+    table(["Group", "Users", "Average", "Share of cost"], sp.groups.map((g) => [g.name, count(g.users), money(g.average), pct(g.share, 1)])),
+    node("h4", "Side by side"),
+    table(["Group", "Users", "AI cost", "Average", "Active days", "Messages"], sideBySide(state.users)
+      .map((r) => [r.name, count(r.users), money(r.total), money(r.average), r.activeDays.toFixed(1), r.messages.toFixed(1)])),
+    node("h4", "The ten costliest users"),
+    table(["User", "Plan", "Active days", "Messages", "AI cost"], top.map((u) => [u.short_id, u.plan === "pro" ? "Pro" : "Free",
+      count(u.active_days), count(u.kinds?.message?.count ?? 0), money(u.cost_cents)])),
+  );
+}
+
+$("print").addEventListener("click", () => print());
+
+/** Hand the browser a CSV file to save. The text is made here; nothing is sent anywhere. */
+function download(name, text) {
+  const url = URL.createObjectURL(new Blob([text], { type: "text/csv;charset=utf-8" }));
+  const a = node("a");
+  a.href = url;
+  a.download = name;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+$("dl-users").addEventListener("click", () => download(`wilma-users-${state.month.slice(0, 7)}.csv`, usersCsv(state.users)));
+$("dl-daily").addEventListener("click", () => download(`wilma-daily-to-${state.overview.today}.csv`, dailyCsv(state.daily)));
+$("dl-months").addEventListener("click", () => download("wilma-ai-cost-per-month.csv", monthsCsv(state.overview.ai_months)));
 
 // Redraw the charts at the new width when the window changes size (a phone turned, say).
 let resizing = 0;
