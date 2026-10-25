@@ -13,8 +13,14 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **D34 usage tracking step 4, the admin page part 2 (2026-10-25): branch
-  `claude/usage-step4-admin`, not merged; nothing to deploy.** Pricing tab (the Pro price explorer,
+- **D34 usage tracking step 5, checks (2026-10-25): branch `claude/usage-step5-checklist`, docs
+  only, not merged.** `docs/admin-page-checklist.md` (admin check query, 15 checks on laptop and
+  phone); a legal checklist line; Play Data safety needs *App activity → App interactions*
+  (required, app functionality and analytics). **Owner:** merge; do the checklist; add the Data
+  safety line in Play Console. Then D34 is done. **Next:** the owner's pick (D32 sharing is next in
+  D30's order).
+- **D34 usage tracking step 4, the admin page part 2 (2026-10-25): merged (#281); nothing to
+  deploy.** Pricing tab (the Pro price explorer,
   Mapbox's price for the visit) and Reports tab (the monthly report to print or save as PDF; CSV of
   per user, daily totals and AI cost per month, never an email). Browser check 36/36. See
   `docs/usage-tracking-plan.md`, "As built: step 4". **Owner:** merge, try the two tabs. **Next:**
