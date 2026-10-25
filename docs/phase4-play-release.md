@@ -111,6 +111,11 @@ reviewer account (`+playreview` email alias), never the owner's own sign-in or S
     the chat function and the AI service for that answer, not stored or logged. Passing it to the
     AI service that answers on our behalf is not "sharing" in Google's terms, and "processed
     ephemerally" stays **No** because Save where I am stores it. No change in Play Console.
+  - *App activity → App interactions* (usage counts, D34 step 2, live 2026-10-25 on the server, no
+    app build needed). Collected, **required** (counted for every account), not shared,
+    **processed ephemerally: No** (kept per day for about 13 months). Purposes: **App
+    functionality** and **Analytics**. Counts only, never content. **Owner, in Play Console:**
+    add this line (`docs/admin-page-checklist.md`, item 16).
   - *Automatic memory* (memory steps 1-4, from versionCode 19): memories are notes in the
     built-in Memories space, so they are **Other user-generated content**, already declared
     (collected, optional, app functionality, not shared; sending them to the AI service that

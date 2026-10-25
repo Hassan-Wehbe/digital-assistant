@@ -96,6 +96,13 @@ and is a starting point, not legal advice.
       consent wording, state teen and AI-chatbot laws, OpenAI's rules for 13-17, alcohol at 21 for a
       13+ audience, Data safety. **Wilma stays 18 and over until this is ticked.** **Parked (owner,
       2026-10-22):** the age part is switched off and Wilma stays 18+; nothing to review for now.
+- [ ] **Usage counts and the admin page** (D34, `docs/usage-tracking-plan.md`): per account and
+      UTC day, counts only (messages, saves, searches, day plans, the AI's cost and tokens per
+      feature, map and weather lookups, errors), never content; kept about 13 months, deleted with
+      the account; read only by the owner on an admin page that shows short ids and one email at a
+      time on a tap. Check: the privacy page's "Usage counts" wording (live since 25 October 2026),
+      whether "used to run Wilma and set its prices" is enough notice, and the Play Data safety line
+      (App interactions: app functionality and analytics).
 - [ ] **Data breach**: notification duties (Florida and other states where users live).
 - [ ] **Brand**: the name "Wilma" and the mascot (trademark search and registration), app name in
       the stores.

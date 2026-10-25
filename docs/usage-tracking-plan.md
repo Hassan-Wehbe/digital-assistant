@@ -3,8 +3,8 @@
 Status: plan, 2026-10-22; **owner's answers the same day: all as recommended** (Q1-Q8 below).
 **Step 1 merged (#275); migration applied 2026-10-25:** see "As built: step 1". **Step 2 merged
 (#277) and deployed 2026-10-25:** see "As built: step 2". **Step 3 merged (#280), layout B (tabs):** see
-"As built: step 3". **Step 4 built 2026-10-25, branch `claude/usage-step4-admin`, not merged:** see
-"As built: step 4". Design: D34 (decided
+"As built: step 3". **Step 4 merged (#281):** see "As built: step 4". **Step 5 written 2026-10-25,
+branch `claude/usage-step5-checklist`, not merged:** see "As built: step 5". Design: D34 (decided
 2026-10-10: what is counted, never content; the admin page on GitHub Pages, not in the app; the
 analysis it shows). Model: the strongest for steps 1-2 (a new table every request writes to, admin
 functions, RLS, the chat loop); a smaller one for the page itself (steps 3-4) and step 5.
@@ -265,7 +265,7 @@ publishes the page on GitHub Pages at `https://hassan-wehbe.github.io/digital-as
 
 ## As built: step 4 (2026-10-25)
 
-Branch `claude/usage-step4-admin`, **not merged**. No database change, nothing to deploy. Two more
+**Merged (#281) 2026-10-25.** No database change, nothing to deploy. Two more
 tabs on the admin page:
 
 - **Pricing tab: the Pro price explorer.** A Pro price (slider, $0.99 to $19.99) and a number of Pro
@@ -292,6 +292,19 @@ tabs on the admin page:
   edited Mapbox tier reaches the tiles, the report, the per-user and daily downloads without an
   email, printing shows the report alone).
 
-**Owner:** merge (GitHub Pages publishes it), then try the Pricing and Reports tabs. **Next:** step 5
-(the checklist; the privacy sentence is already live since step 2).
+## As built: step 5 (2026-10-25)
+
+Branch `claude/usage-step5-checklist`, **not merged**. Docs only.
+
+- **`docs/admin-page-checklist.md`:** checking the admin is your account (one read-only query),
+  then 15 checks on the laptop and the phone (sign-in and sign-out, the tiles against the AI
+  provider's console, charts, the email on tap, the explorer, Mapbox's price, the report and the
+  CSV), and one Play Console change (item 16).
+- **Privacy page:** nothing more; its "Usage counts" sentence went live with step 2.
+- **Legal checklist:** a "Usage counts and the admin page" line for the lawyer.
+- **Play Data safety:** usage counts are *App activity → App interactions* (required, not shared,
+  app functionality and analytics), written into `docs/phase4-play-release.md`; **the owner adds it
+  in Play Console**.
+
+**Owner:** merge; do the checklist; add the Data safety line in Play Console. With that, D34 is done.
 
