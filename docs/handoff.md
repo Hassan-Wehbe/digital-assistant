@@ -13,8 +13,17 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **Owner's items (2026-10-25): sharing from Amazon, and a quick new note. Branch
-  `claude/share-text-note-tile`, not merged; needs a full build.** (1) Amazon shares opened Wilma with
+- **State on 2026-10-25 (handed to a new session).** Live: `mcp` and `chat` with the usage meter
+  (#277); migrations through 20261025131746 `usage_tracking`. App: versionCode 27 built and submitted
+  to Play internal (EAS f643fa17, submission 4a902987), carrying #278 (Amazon share fix, 📝 Note tile).
+  Branch `claude/eval-restricted-bar-check` (not merged): the eval's hidden bar gets its own street
+  (Rue Pharaon) so the restricted-bar checks stop flagging Tawlet; step 2's evaluation recorded in
+  `docs/usage-tracking-plan.md` (175/177 then 8/8, 0 leaks). **Next:** usage step 3, the admin page in
+  `docs/admin/` (mockups https://claude.ai/artifact/XecEuk7wuqvcSbHQtJvtKs; owner picks layout A, one
+  scrolling page, or B, tabs). **Owner on the phone:** versionCode 27 (Amazon share, Note tile), 26
+  (18+ box), daily routines checklist 1-14 in `docs/versioncode25-phone-checklist.md`.
+- **Owner's items (2026-10-25): sharing from Amazon, and a quick new note. Merged (#278); built as
+  versionCode 27.** (1) Amazon shares opened Wilma with
   "nothing to save": the share module read the text with `getStringExtra`, which is null when an app
   sends styled text (a CharSequence); patched (`app/patches/expo-share-intent+8.0.1.patch`, applied by
   `patch-package` on install) to read the text as a CharSequence, then the ClipData, then the subject;
