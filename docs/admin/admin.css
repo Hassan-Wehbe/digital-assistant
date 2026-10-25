@@ -1,0 +1,90 @@
+:root { --bg:#f6f7f4; --card:#fff; --text:#1d2420; --muted:#5d6a63; --line:#dfe4df; --soft:#e3efe9;
+        --accent:#2f6f5e; --accent-text:#fff; --danger:#b3402e; --ok:#2e7d4f;
+        --c1:#2f6f5e; --c2:#7a9e3a; --c3:#c08a2e; --c4:#8a5a9e; --c5:#3c7fb0; --c6:#b85c4a; --c7:#5f8f8a; --c8:#9a7b4f; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#121614; --card:#1a201d; --text:#e6ece8; --muted:#9aa8a0; --line:#2c3530; --soft:#1f3129;
+          --accent:#6fc2a6; --accent-text:#0b1512; --danger:#f08a76; --ok:#6fcf95;
+          --c1:#6fc2a6; --c2:#a9cc6a; --c3:#e0b25c; --c4:#c193d6; --c5:#78b4e0; --c6:#e48a76; --c7:#8fc7c0; --c8:#cfae7c; }
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--text);
+       font:15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width:1100px; margin:0 auto; padding:20px 16px 48px; display:grid; gap:16px; }
+h1 { font-size:1.5rem; margin:0; }
+h2 { font-size:1rem; margin:0; }
+p { margin:0; }
+a { color:var(--accent); }
+.muted, .note { color:var(--muted); font-size:.88rem; }
+.error { color:var(--danger); }
+.ok { color:var(--ok); }
+[hidden] { display:none !important; }
+
+.topbar { display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; }
+.narrow { max-width:420px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; }
+label { display:block; margin:12px 0 4px; font-weight:600; font-size:.9rem; }
+input, select { padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:var(--card);
+                color:inherit; font:inherit; }
+.narrow input { width:100%; }
+button { font:inherit; padding:8px 14px; border-radius:8px; border:1px solid var(--line);
+         background:transparent; color:inherit; cursor:pointer; }
+button.primary { background:var(--accent); color:var(--accent-text); border-color:var(--accent); font-weight:600; }
+button:disabled { opacity:.6; cursor:default; }
+.row { display:flex; gap:8px; margin-top:16px; }
+.row button { flex:1; }
+button:focus-visible, tr:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+  outline:2px solid var(--accent); outline-offset:2px; }
+
+#dash { display:grid; gap:14px; min-width:0; }
+.tabs { display:flex; gap:2px; border-bottom:1px solid var(--line); overflow-x:auto; }
+.tabs button { border:0; border-bottom:3px solid transparent; border-radius:0; padding:8px 14px;
+               color:var(--muted); font-weight:700; }
+.tabs button[aria-selected="true"] { color:var(--text); border-bottom-color:var(--accent); }
+.chips { display:flex; gap:6px; flex-wrap:wrap; }
+.chips button { border-radius:999px; padding:4px 12px; font-size:.85rem; font-weight:600; background:var(--card); }
+.chips button[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:var(--accent-text); }
+.panel { display:grid; gap:16px; min-width:0; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px;
+        display:grid; gap:10px; min-width:0; }
+.grid2 { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap:16px; }
+
+.tiles { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; }
+.tile { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px; display:grid; gap:2px; }
+.tile .k { font-size:.74rem; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); }
+.tile .v { font:600 1.45rem/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-variant-numeric:tabular-nums; }
+.tile .d { font-size:.8rem; color:var(--muted); }
+
+.legend { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:.8rem; color:var(--muted); }
+.legend .sw { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:-1px; }
+.chart svg { display:block; width:100%; height:auto; }
+.chart text { fill:var(--muted); font:10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.chart text.name { fill:var(--text); font:12px system-ui, -apple-system, "Segoe UI", sans-serif; }
+.chart .grid { stroke:var(--line); }
+.chart .hit { fill:transparent; }
+.chart .hit:hover { fill:var(--soft); fill-opacity:.35; }
+.chart .line { fill:none; stroke-width:2; }
+.chart .area { stroke:none; fill-opacity:.15; }
+.c1 { fill:var(--c1); stroke:var(--c1); background:var(--c1); }
+.c2 { fill:var(--c2); stroke:var(--c2); background:var(--c2); }
+.c3 { fill:var(--c3); stroke:var(--c3); background:var(--c3); }
+.c4 { fill:var(--c4); stroke:var(--c4); background:var(--c4); }
+.c5 { fill:var(--c5); stroke:var(--c5); background:var(--c5); }
+.c6 { fill:var(--c6); stroke:var(--c6); background:var(--c6); }
+.c7 { fill:var(--c7); stroke:var(--c7); background:var(--c7); }
+.c8 { fill:var(--c8); stroke:var(--c8); background:var(--c8); }
+.chart rect { stroke:none; }
+
+.filters { display:flex; gap:12px; flex-wrap:wrap; align-items:end; }
+.filters label { margin:0; display:grid; gap:4px; font-size:.82rem; color:var(--muted); }
+.tablewrap { overflow-x:auto; border:1px solid var(--line); border-radius:10px; background:var(--card); }
+table { border-collapse:collapse; width:100%; font-size:.85rem; font-variant-numeric:tabular-nums; }
+th, td { padding:7px 10px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+th:first-child, td:first-child, th.left, td.left { text-align:left; }
+th { font-weight:700; color:var(--muted); font-size:.74rem; text-transform:uppercase; letter-spacing:.04em; }
+th button { border:0; padding:0; font:inherit; color:inherit; text-transform:inherit; letter-spacing:inherit; }
+tbody tr:last-child td { border-bottom:0; }
+#table-users tbody tr { cursor:pointer; }
+#table-users tbody tr:hover { background:var(--soft); }
+td.id { font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+td.email { color:var(--accent); }
+.pill { font-size:.72rem; font-weight:700; padding:1px 7px; border-radius:999px; border:1px solid var(--line); }
+.pill.pro { color:var(--accent); border-color:var(--accent); }

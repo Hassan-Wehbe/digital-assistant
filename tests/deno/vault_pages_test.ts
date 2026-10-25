@@ -1,5 +1,5 @@
 // Static checks on the vault pages (docs/vault/), the sign-in page (docs/oauth/)
-// and the upload page (docs/files/): the hardening the plan asks for stays in
+// the upload page (docs/files/) and the admin page (docs/admin/): the hardening the plan asks for stays in
 // place as the pages change.
 import { assert, assertEquals } from "jsr:@std/assert@1";
 import { crypto } from "jsr:@std/crypto@1";
@@ -11,9 +11,10 @@ const DIR = join(DOCS, "vault");
 const PAGES = ["vault/setup.html", "vault/enter.html", "vault/reveal.html", "vault/recover.html",
                "vault/index.html", "oauth/consent.html", "files/upload.html",
                "legal/privacy.html", "legal/delete-account.html", "legal/email-confirmed.html",
-               "legal/testing-terms.html"];
+               "legal/testing-terms.html", "admin/index.html"];
 const SCRIPTS = ["vault/app.js", "vault/crypto.js", "vault/setup.js", "vault/enter.js", "vault/reveal.js",
-                 "vault/recover.js", "oauth/consent.js", "files/upload.js", "files/filetypes.js"];
+                 "vault/recover.js", "oauth/consent.js", "files/upload.js", "files/filetypes.js",
+                 "admin/admin.js", "admin/charts.js", "admin/figures.js"];
 
 async function sha384(path: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-384", await Deno.readFile(path));
