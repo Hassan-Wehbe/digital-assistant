@@ -13,6 +13,13 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **D34 usage tracking step 3, the admin page part 1 (2026-10-25): branch
+  `claude/usage-step3-admin`, not merged; nothing to deploy.** Layout B (tabs: Overview, Costs,
+  Users) in `docs/admin/`, built like the vault pages; `am_i_admin` gate, tiles, charts drawn by the
+  page, the spread, the per-user table with the email only on tap. 651 Deno tests; browser check
+  `tests/browser/admin_page.mjs` 18/18. See `docs/usage-tracking-plan.md`, "As built: step 3".
+  **Owner:** merge, then open https://hassan-wehbe.github.io/digital-assistant/admin/ and say what
+  to change. **Next:** step 4 (price explorer, report, CSV).
 - **State on 2026-10-25 (handed to a new session).** Live: `mcp` and `chat` with the usage meter
   (#277); migrations through 20261025131746 `usage_tracking`. App: versionCode 27 built and submitted
   to Play internal (EAS f643fa17, submission 4a902987), carrying #278 (Amazon share fix, 📝 Note tile).

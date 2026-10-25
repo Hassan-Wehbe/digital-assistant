@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src https://motvckmpusxiuelpwqxy.supabase.co; base-uri 'none'; form-action 'none'">
+  <title>Wilma usage</title>
+  <link rel="stylesheet" href="admin.css" integrity="sha384-FgqbEUtowfcB2qmhAvWIJcpQyK5xviweSWshMlFKOvWy92U/FJP5i3cMbAGdcd4e">
+  <script src="../vault/vendor/supabase.js" integrity="sha384-Rj26LVGvoeRVR6+mwQmFfcR3QOBEwT+ZmuCWpuiqeTzJpCs0ER4ITAWGb4Hiy3Ok"></script>
+  <link rel="modulepreload" href="../oauth/config.js" integrity="sha384-tckR0YVWc/lyRMtHEWFlyrxg0ZC4AOhWm1kfxHt0TsK7zPgiBFsDl7jqCaEjhHWQ">
+  <link rel="modulepreload" href="figures.js" integrity="sha384-UDOx9HJx87MLnYx65E1U+y3Ms4anztNrRIok/21/TecnkEqmeLX8HFCzYoD0vO0P">
+  <link rel="modulepreload" href="charts.js" integrity="sha384-IOG617YlQuxM28IvaThW3PW8Dg8kiDZfkTLv7pM0cND+uSnbU8iD1QMiEs5reLEi">
+  <script type="module" src="admin.js" integrity="sha384-3KPzT9IENSwaGLG0gwHPO+J2FgjXgn+uZKnPLKqYkKqLwzP1Kmp/Yzks69Cb8drC"></script>
+</head>
+<body>
+<main>
+  <header class="topbar">
+    <h1>Wilma usage</h1>
+    <p id="account" class="muted" hidden>Signed in as <span id="who"></span> · <a href="#" id="signout">Sign out</a></p>
+  </header>
+  <p id="status" class="muted">Loading…</p>
+
+  <form id="login" class="narrow" hidden>
+    <p>Sign in with your Wilma account.</p>
+    <label for="email">Email</label>
+    <input id="email" type="email" autocomplete="username" required>
+    <label for="password">Password</label>
+    <input id="password" type="password" autocomplete="current-password" required>
+    <div class="row"><button class="primary" type="submit">Sign in</button></div>
+  </form>
+
+  <section id="denied" class="narrow" hidden>
+    <p><strong>Not available.</strong> This page is for Wilma's administrators only.</p>
+  </section>
+
+  <section id="dash" hidden>
+    <p id="asof" class="muted"></p>
+    <div class="tabs" role="tablist" aria-label="Sections">
+      <button role="tab" id="tab-overview" aria-controls="overview" aria-selected="true">Overview</button>
+      <button role="tab" id="tab-costs" aria-controls="costs" aria-selected="false" tabindex="-1">Costs</button>
+      <button role="tab" id="tab-users" aria-controls="users" aria-selected="false" tabindex="-1">Users</button>
+    </div>
+
+    <div id="range" class="chips" role="group" aria-label="Period">
+      <button type="button" data-days="30" aria-pressed="true">30 days</button>
+      <button type="button" data-days="90" aria-pressed="false">90 days</button>
+      <button type="button" data-days="365" aria-pressed="false">12 months</button>
+    </div>
+
+    <div id="overview" role="tabpanel" aria-labelledby="tab-overview" class="panel">
+      <div id="tiles" class="tiles"></div>
+      <div class="card">
+        <h2>Active users</h2>
+        <div id="legend-active" class="legend"></div>
+        <div id="chart-active" class="chart"></div>
+      </div>
+      <div id="before" class="card" hidden>
+        <h2>AI cost per month</h2>
+        <p class="note">From the monthly allowance counter, which ran before the daily counts started.</p>
+        <div class="tablewrap"><table id="table-months"></table></div>
+      </div>
+    </div>
+
+    <div id="costs" role="tabpanel" aria-labelledby="tab-costs" class="panel" hidden>
+      <div class="card">
+        <h2>AI cost by purpose</h2>
+        <div id="legend-cost" class="legend"></div>
+        <div id="chart-cost" class="chart"></div>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <h2>Requests and errors</h2>
+          <div id="legend-requests" class="legend"></div>
+          <div id="chart-requests" class="chart"></div>
+        </div>
+        <div class="card">
+          <h2>Map and weather lookups</h2>
+          <div id="legend-lookups" class="legend"></div>
+          <div id="chart-lookups" class="chart"></div>
+          <p id="mapbox-note" class="note"></p>
+        </div>
+      </div>
+      <div class="card">
+        <h2 id="spread-title">Who costs what</h2>
+        <div id="chart-spread" class="chart"></div>
+        <p class="note">Users active that month, cheapest to costliest, in four groups: the average AI cost each, how many, and the group's share of the month's AI cost.</p>
+        <div class="tablewrap"><table id="table-side"></table></div>
+      </div>
+    </div>
+
+    <div id="users" role="tabpanel" aria-labelledby="tab-users" class="panel" hidden>
+      <div class="filters">
+        <label for="month">Month <select id="month"></select></label>
+        <label for="plan">Plan
+          <select id="plan">
+            <option value="all">Everyone</option>
+            <option value="free">Free</option>
+            <option value="pro">Pro</option>
+          </select>
+        </label>
+        <label for="find">User id <input id="find" type="search" inputmode="text" autocomplete="off" spellcheck="false" placeholder="e.g. 3f2a"></label>
+      </div>
+      <p class="note"><span id="user-count"></span> Tap a row to show that user's email; tap again to hide it. Notes, memories and storage are the month's snapshot.</p>
+      <div class="tablewrap"><table id="table-users"></table></div>
+    </div>
+  </section>
+</main>
+</body>
+</html>

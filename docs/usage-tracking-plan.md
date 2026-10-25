@@ -1,8 +1,9 @@
 # Usage tracking and the admin page (D34)
 
 Status: plan, 2026-10-22; **owner's answers the same day: all as recommended** (Q1-Q8 below).
-**Step 1 merged (#275); migration applied 2026-10-25:** see "As built: step 1". **Step 2 built
-2026-10-25, branch `claude/usage-step2`, not merged, not deployed:** see "As built: step 2". Design: D34 (decided
+**Step 1 merged (#275); migration applied 2026-10-25:** see "As built: step 1". **Step 2 merged
+(#277) and deployed 2026-10-25:** see "As built: step 2". **Step 3 built 2026-10-25 (layout B, tabs),
+branch `claude/usage-step3-admin`, not merged:** see "As built: step 3". Design: D34 (decided
 2026-10-10: what is counted, never content; the admin page on GitHub Pages, not in the app; the
 analysis it shows). Model: the strongest for steps 1-2 (a new table every request writes to, admin
 functions, RLS, the chat loop); a smaller one for the page itself (steps 3-4) and step 5.
@@ -218,6 +219,49 @@ evaluation finished; counting has started.**
   (`claude/eval-restricted-bar-check`). Re-run of those cases and two related ones, twice each (run
   40200404655): **8/8, 0 leaks, $0.01.**
 
-**Next:** step 3, the admin page (mockups: https://claude.ai/artifact/XecEuk7wuqvcSbHQtJvtKs; the
-owner picks layout A or B).
+## As built: step 3 (2026-10-25)
+
+Branch `claude/usage-step3-admin`, **not merged**. The owner chose **layout B, tabs** (mockups:
+https://claude.ai/artifact/XecEuk7wuqvcSbHQtJvtKs). No database change, nothing to deploy: merging
+publishes the page on GitHub Pages at `https://hassan-wehbe.github.io/digital-assistant/admin/`.
+
+- **The page** (`docs/admin/`): built like the vault pages: the same copy of supabase-js
+  (`../vault/vendor/supabase.js`), `../oauth/config.js` for sign-in, a strict Content-Security-Policy
+  (scripts from the site only, talks only to Supabase), every file pinned with an integrity hash
+  (`scripts/vault-sri.mjs` now covers `docs/admin/`), no inline script or style, nothing parsed as
+  HTML, refuses to run inside a frame. Light and dark, phone and laptop.
+- **Who sees what:** sign in with a Wilma account; `am_i_admin()` decides. Anyone else sees "Not
+  available" and the page asks for nothing more; every `admin_*` function refuses them anyway.
+- **On open:** `admin_usage_maintenance()` (this month's snapshot, rows older than 13 months deleted;
+  a failure is noted and the numbers still load), then the overview, a year of daily totals and
+  this month's per-user list.
+- **Overview tab:** six tiles (users and Pro; active today, 7 and 30 days; cost this month; per
+  active user; projected month and year at this month's pace), active users per day (and on Pro),
+  and the AI cost per month from the older allowance counter (Q7).
+- **Costs tab:** AI cost by purpose (stacked bars), requests with errors and limits hit, map and
+  weather lookups with this month's Mapbox use against its free tier (100,000 drive-time requests,
+  then about $2.00 per 1,000; weather is free), all for 30 days, 90 days or 12 months (by month);
+  who costs what (bottom half, middle, top 10%, top 1%; average, how many, share of cost) and side
+  by side (Free vs Pro, power users vs everyone else).
+- **Users tab:** one month at a time (the months since counting began), filter by plan or part of a
+  user id, sort any column: active days, messages, saves, searches, day plans, AI cost, map and
+  weather calls, limits hit, errors, and the month's snapshot of notes, memories and storage. A
+  user's email appears only when their row is tapped (`admin_user_email`, one at a time; Q2) and
+  hides on a second tap; it is never kept anywhere.
+- **Charts drawn by the page itself** (small SVG drawings in `charts.js`) rather than a copied charts
+  library (Q6): no third-party code at all, and nothing that needs inline styles under the CSP. The
+  figures (`figures.js`) are plain functions, tested on their own.
+- **Not in this step:** the Pro price explorer, the editable Mapbox price, the monthly report and
+  CSV downloads (step 4); the checklist (step 5).
+- **Tests:** `tests/deno/admin_figures_test.ts` (11: days in UTC, money, Mapbox's free tier, the
+  daily and monthly series, tiles and projections, the spread with 0, 1, 2 and 20 users, side by
+  side, the table's filter and sort, the month list); `vault_pages_test.ts` now checks the admin page
+  too (CSP, hashes, preloads, no innerHTML, eval or storage). **651 Deno tests pass.**
+  `tests/browser/admin_page.mjs` (a real browser against a pretend database, no account needed; 18
+  checks): an admin sees the tabs with no page or CSP errors, laptop light and phone dark, no
+  sideways scrolling; the email only on tap, with one call, hidden again; the id filter; a non-admin
+  gets "Not available" after `am_i_admin` alone.
+
+**Owner:** merge (GitHub Pages publishes it), then open the page on the laptop and the phone and say
+what to change. **Next:** step 4 (price explorer, report, CSV).
 
