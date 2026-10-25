@@ -245,7 +245,8 @@ export class World {
     });
     // In the restricted Private space, a few metres from Tawlet: never listed by "near" (rule 3).
     place(IDS.hiddenBar, "Hidden courtyard bar", "Only for us.", {
-      status: "want", address: "Mar Mikhael, Beirut", kind: "bar", lat: 33.896, lng: 35.5251,
+      // A street only this place has: Tawlet, which may be shown, is in Mar Mikhael too.
+      status: "want", address: "Rue Pharaon 14, Mar Mikhael, Beirut", kind: "bar", lat: 33.896, lng: 35.5251,
     }, IDS.private);
 
     const se = (id: string, space_id: string, name: string, secret_type: string, url: string | null) =>
