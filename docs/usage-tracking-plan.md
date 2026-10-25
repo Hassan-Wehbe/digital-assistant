@@ -1,8 +1,8 @@
 # Usage tracking and the admin page (D34)
 
 Status: plan, 2026-10-22; **owner's answers the same day: all as recommended** (Q1-Q8 below).
-**Step 1 built 2026-10-22, branch `claude/usage-step1`, not merged, migration not applied:** see
-"As built: step 1". Design: D34 (decided
+**Step 1 merged (#275); migration applied 2026-10-25:** see "As built: step 1". **Next:** step 2,
+the server writes the counts (strongest model). Design: D34 (decided
 2026-10-10: what is counted, never content; the admin page on GitHub Pages, not in the app; the
 analysis it shows). Model: the strongest for steps 1-2 (a new table every request writes to, admin
 functions, RLS, the chat loop); a smaller one for the page itself (steps 3-4) and step 5.
@@ -170,7 +170,11 @@ writes to it yet (step 2), so applying it changes nothing anyone sees.
   without the migration, nothing kept.
 - **Privacy:** the page's sentence goes live with step 2 (when counts start being written).
 
-**Owner, in order:** (1) merge; (2) the dry run
-`tests/sql/dry_runs/26_usage_tracking_dry_run.sql`, then OK to apply. **Next:** step 2, the server
-writes the counts (strongest model).
+**Merged (#275). Applied 2026-10-25** after the owner's dry run: the connector's apply timed out
+twice with nothing changed, so the owner ran the migration in the SQL Editor ("Success. No rows
+returned") and it was then recorded in the migration history as 20261025131746 `usage_tracking`.
+Checked read-only after: the three tables exist with RLS on and no rows; the eight functions exist;
+signed-in users may run `record_usage` and read their own rows but not insert; anon gets nothing;
+one account is an admin already (`is_admin`, from the AI allowance work), so step 5's SQL line may
+not be needed. **Next:** step 2, the server writes the counts (strongest model).
 

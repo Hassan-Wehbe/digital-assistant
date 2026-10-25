@@ -13,10 +13,10 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
-- **D34 usage tracking step 1, the database (2026-10-22): branch `claude/usage-step1`, not merged,
-  migration not applied.** `usage_day`, `user_day`, `usage_snapshot`, `record_usage()` (own rows,
+- **D34 usage tracking step 1, the database (2026-10-22): merged (#275), applied 2026-10-25
+  (the owner in the SQL Editor after two connector timeouts; recorded as 20261025131746).** `usage_day`, `user_day`, `usage_snapshot`, `record_usage()` (own rows,
   checked, all or nothing), admin-only reading functions and maintenance. SQL test 26 (37 checks),
-  dry run 37/37 locally. **Owner:** merge; dry run 26, OK to apply. **Next:** step 2.
+  dry run 37/37. **Next:** step 2, the server writes the counts.
 - **D34 usage tracking and the admin page (2026-10-22): plan written; owner's answers: all as
   recommended** (`docs/usage-tracking-plan.md`, Q1-Q8). **Next:** step 1, the server (strongest model). Counts per user per day (AI by purpose with tokens and
   model, Mapbox, weather, features, errors), never content; an admin page on GitHub Pages. Five
