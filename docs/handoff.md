@@ -13,6 +13,15 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **Owner's items (2026-10-25): sharing from Amazon, and a quick new note. Branch
+  `claude/share-text-note-tile`, not merged; needs a full build.** (1) Amazon shares opened Wilma with
+  "nothing to save": the share module read the text with `getStringExtra`, which is null when an app
+  sends styled text (a CharSequence); patched (`app/patches/expo-share-intent+8.0.1.patch`, applied by
+  `patch-package` on install) to read the text as a CharSequence, then the ClipData, then the subject;
+  the subject also becomes the title when there is none. (2) A 📝 Note tile on Home beside Chat (the ＋
+  menu stays). 1021 app tests. **Owner:** merge; OK to build; then share an Amazon item again.
+- **D34 usage tracking step 2 merged (#277) and deployed 2026-10-25 (`mcp` and `chat`), with the
+  owner's OK before the evaluation finished; counting has started.**
 - **D34 usage tracking step 2, the server writes the counts (2026-10-25): branch
   `claude/usage-step2`, not merged, not deployed.** One meter per request in `chat` and `mcp`
   (`_shared/usage.ts`), written after the reply; never content. Privacy page "Usage counts". 639 Deno

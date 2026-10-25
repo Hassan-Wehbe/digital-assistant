@@ -1,0 +1,27 @@
+diff --git a/node_modules/expo-share-intent/android/src/main/java/expo/modules/shareintent/ExpoShareIntentModule.kt b/node_modules/expo-share-intent/android/src/main/java/expo/modules/shareintent/ExpoShareIntentModule.kt
+index ff5b100..3c373ad 100644
+--- a/node_modules/expo-share-intent/android/src/main/java/expo/modules/shareintent/ExpoShareIntentModule.kt
++++ b/node_modules/expo-share-intent/android/src/main/java/expo/modules/shareintent/ExpoShareIntentModule.kt
+@@ -125,11 +125,20 @@ class ExpoShareIntentModule : Module() {
+             if (intent.type!!.startsWith("text/plain")) {
+                 // text / urls
+                 if (intent.action == Intent.ACTION_SEND) {
++                    // Wilma: many apps (Amazon among them) send the text as a CharSequence, which
++                    // getStringExtra returns as null; some put the link only in the ClipData or the
++                    // subject. Read all three, in that order.
++                    val clip = intent.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)
++                    val text = intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()
++                        ?: clip?.text?.toString()
++                        ?: clip?.uri?.toString()
++                        ?: intent.getCharSequenceExtra(Intent.EXTRA_SUBJECT)?.toString()
+                     notifyShareIntent(mapOf(
+-                        "text" to intent.getStringExtra(Intent.EXTRA_TEXT),
++                        "text" to text,
+                         "type" to "text",
+                         "meta" to mapOf(
+-                            "title" to intent.getCharSequenceExtra(Intent.EXTRA_TITLE),
++                            "title" to (intent.getCharSequenceExtra(Intent.EXTRA_TITLE)?.toString()
++                                ?: intent.getCharSequenceExtra(Intent.EXTRA_SUBJECT)?.toString()),
+                         )
+                     ))
+                 } else if (intent.action == Intent.ACTION_VIEW) {

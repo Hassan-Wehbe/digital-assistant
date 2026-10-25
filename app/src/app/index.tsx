@@ -2,7 +2,7 @@
 // here with no model call, anything else goes to Wilma. When Wilma can't answer (allowance used
 // up, or the chat's Search button), the old note search runs on the text instead, never the model
 // (restricted spaces are never searched). Under the box: Chat, My day, Tasks and Vault (D38; Save
-// here is in the ＋ menu). Below: Plan with Wilma (PlanRow.tsx), then the favourite spaces, or the
+// here is in the ＋ menu; a 📝 Note tile too, since 2026-10-25). Below: Plan with Wilma (PlanRow.tsx), then the favourite spaces, or the
 // ones opened most recently on this phone until a favourite is chosen, and All spaces
 // (homeSpaces.ts; the Tasks space is reached by the ✅ Tasks tile). With the morning briefing on,
 // Home makes 🌅 Your morning at the briefing time (useMorning.ts, day planner step 4); since recipes
@@ -209,6 +209,8 @@ export default function Home() {
           accessibilityLabel={asked ? 'Continue the conversation' : 'Open the conversation'}
           onPress={() => router.push('/chat')}
         />
+        {/* A new note in one tap (owner, 2026-10-25: the ＋ menu was easy to miss; it stays too). */}
+        <Tile icon="📝" title="Note" accessibilityLabel="New note" onPress={() => go()} />
         {/* Opens the timeline straight away: no typing and no AI request (day planner step 4). */}
         <Tile
           icon="🌅"
