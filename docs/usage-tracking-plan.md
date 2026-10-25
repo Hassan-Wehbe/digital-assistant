@@ -1,8 +1,8 @@
 # Usage tracking and the admin page (D34)
 
 Status: plan, 2026-10-22; **owner's answers the same day: all as recommended** (Q1-Q8 below).
-**Step 1 merged (#275); migration applied 2026-10-25:** see "As built: step 1". **Next:** step 2,
-the server writes the counts (strongest model). Design: D34 (decided
+**Step 1 merged (#275); migration applied 2026-10-25:** see "As built: step 1". **Step 2 built
+2026-10-25, branch `claude/usage-step2`, not merged, not deployed:** see "As built: step 2". Design: D34 (decided
 2026-10-10: what is counted, never content; the admin page on GitHub Pages, not in the app; the
 analysis it shows). Model: the strongest for steps 1-2 (a new table every request writes to, admin
 functions, RLS, the chat loop); a smaller one for the page itself (steps 3-4) and step 5.
@@ -177,4 +177,39 @@ Checked read-only after: the three tables exist with RLS on and no rows; the eig
 signed-in users may run `record_usage` and read their own rows but not insert; anon gets nothing;
 one account is an admin already (`is_admin`, from the AI allowance work), so step 5's SQL line may
 not be needed. **Next:** step 2, the server writes the counts (strongest model).
+
+## As built: step 2 (2026-10-25)
+
+Branch `claude/usage-step2`. **Not merged, not deployed.**
+
+- **The meter** (`supabase/functions/_shared/usage.ts`): one per request. Every model answer passes
+  through `meterLlm` (tokens, cost, and the model's name from the routes; the memory route falls back
+  to the router's), every log line through `logged`. The answers since the last log line belong to
+  that line's feature, so a suggestion or outing made inside a chat message counts as itself and the
+  rest as chat. Kinds: chat and message (with save and search from the tools used), day_plan
+  (`my_day` or `chat`), classify, memory and memory_kept, outing, recipe_suggest, recipe_import
+  (`text` / `image`), mapbox and weather (requests, failures), fair_use_hit (`day_plan`, `outing`,
+  `recipe_suggest`, `ai_allowance`), error (`chat:connection`, ...). Rows merged by kind and detail and
+  clipped to the database's limits (100 a count, 2,000,000 tokens, 5 cents, 20 rows).
+- **The chat function** (`chat/chat.ts`): the meter wraps `llm` and `log` for each request; the
+  counts are written as the user **after** the reply (after the memory noticing, for a message),
+  kept alive with `EdgeRuntime.waitUntil`; a failed write is a log line `{"event":"usage","outcome":
+  "failed","rows":n,"code":...}` and never changes the reply.
+- **The MCP server** (`mcp/index.ts`): `mcp_call` per tool by name (the Claude connector and the
+  app's own saves and searches), plus save and search; only the JSON-RPC method and the tool's name
+  are read, never the arguments; written after the answer.
+- **Privacy page:** a "Usage counts" bullet (numbers per day, never content, about 13 months, deleted
+  with the account) and "no outside analytics or tracking services" in place of "no analytics";
+  "Last updated 25 October 2026". **The owner checks the wording.**
+- **Tests:** `tests/deno/usage_test.ts` (11): the attribution, app or chat, outside services, fair
+  use and errors, merging and clipping, the model's name, MCP names without arguments, a failed write
+  never throws; a whole chat message on the pretend account writes counts and never its words; a
+  message held as a password writes only that a message was sent; a failed write is logged and the
+  reply is unchanged. Four older tests now allow the one usage write (chat and classify held messages
+  still read and write nothing else; memory noticing is kept alive along with the usage write). The
+  pretend account gains `record_usage`. **639 Deno tests pass**; type check and lint clean.
+
+**Owner, in order:** (1) check the privacy wording; (2) OK and a cap for one evaluation run (to show
+nothing regressed; about a cent); (3) merge; (4) OK to deploy `chat` and `mcp`. **Next:** step 3,
+the admin page (mockups first).
 
