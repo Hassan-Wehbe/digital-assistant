@@ -81,6 +81,7 @@ import {
   TOO_MANY_STEPS,
 } from "./messages.ts";
 import { connectTools, type ToolSession } from "./tools.ts";
+import { meterLlm, UsageMeter } from "../_shared/usage.ts";
 import { type ChatPlan, dayPlan, type DayDeps, type DayLog, planForChat } from "./day.ts";
 import { type MemoryLog, noticeMemories, type RememberedEvent, todayIn } from "./memory.ts";
 
@@ -121,6 +122,15 @@ export interface LogEntry {
   day_plan?: "made" | "pro_required" | "fair_use" | "connection";
 }
 
+/** Usage tracking (D34): a request's counts could not be written (counts only; never stops a reply). */
+export interface UsageLog {
+  event: "usage";
+  user: string;
+  outcome: "failed";
+  rows: number;
+  code?: string;
+}
+
 export interface ChatDeps {
   /** The user id for a valid, unexpired access token; null otherwise. */
   verifyToken(token: string): Promise<string | null>;
@@ -132,7 +142,7 @@ export interface ChatDeps {
   drives?: DayDeps["drives"];
   /** Weather for one day plan (US National Weather Service; none without NWS_CONTACT). */
   weather?: DayDeps["weather"];
-  log(entry: LogEntry | ClassifyLog | DayLog | MemoryLog | OutingLog | RecipeTextLog | SuggestLog): void;
+  log(entry: LogEntry | ClassifyLog | DayLog | MemoryLog | OutingLog | RecipeTextLog | SuggestLog | UsageLog): void;
   /** Keeps the instance alive for work after the answer (EdgeRuntime.waitUntil): noticing memories. */
   background?(work: Promise<unknown>): void;
   /** The clock for day plans (tests set it; DayDeps["now"]). */
@@ -209,14 +219,33 @@ export function screenCredentials(messages: Message[]): { held: CredentialKind |
   return { held, messages: screened };
 }
 
-export function createHandler(deps: ChatDeps): (req: Request) => Promise<Response> {
+export function createHandler(outer: ChatDeps): (req: Request) => Promise<Response> {
   return async (req) => {
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
     const token = (req.headers.get("Authorization") ?? "").match(/^Bearer\s+(.+)$/i)?.[1];
     if (!token) return jsonError(401, "unauthorized", "sign-in required");
-    const userId = await deps.verifyToken(token);
+    const userId = await outer.verifyToken(token);
     if (!userId) return jsonError(401, "unauthorized", "invalid or expired token");
     if (req.method !== "POST") return jsonError(405, "method_not_allowed", "use POST");
+
+    // Usage tracking (D34): every model answer and log line of this request is counted, and the
+    // counts are written as the user after the reply (never content; a failure never stops it).
+    const meter = new UsageMeter();
+    const deps: ChatDeps = {
+      ...outer,
+      llm: () => meterLlm(outer.llm(), meter),
+      log: (entry) => {
+        outer.log(entry);
+        if (entry.event !== "usage") meter.logged(entry);
+      },
+    };
+    const flushUsage = () => {
+      const work = meter.flush(outer.clientFor(token)).then((r) => {
+        if (!r.ok) outer.log({ event: "usage", user: userId, outcome: "failed", rows: r.rows, ...(r.code ? { code: r.code } : {}) });
+      });
+      if (outer.background) outer.background(work);
+    };
+
 
     let raw: unknown;
     try {
@@ -228,26 +257,32 @@ export function createHandler(deps: ChatDeps): (req: Request) => Promise<Respons
       const body = classifyBody.safeParse(raw);
       if (!body.success) return jsonError(400, "bad_request", "send {classify: \"...\"} (1-500 characters)");
       const verdict = await classify(deps, token, userId, body.data.classify, req.signal);
+      flushUsage();
       return Response.json(verdict, { headers: { ...CORS, "Cache-Control": "no-store" } });
     }
     if (raw && typeof raw === "object" && (raw as Record<string, unknown>).mode === "day") {
       const out = await dayPlan(deps, token, userId, raw);
+      flushUsage();
       return Response.json(out.body, { status: out.status, headers: { ...CORS, "Cache-Control": "no-store" } });
     }
     if (raw && typeof raw === "object" && (raw as Record<string, unknown>).mode === "outing") {
       const out = await outingPlan(deps, token, userId, raw, req.signal);
+      flushUsage();
       return Response.json(out.body, { status: out.status, headers: { ...CORS, "Cache-Control": "no-store" } });
     }
     if (raw && typeof raw === "object" && (raw as Record<string, unknown>).mode === "recipe_from_text") {
       const out = await recipeFromText(deps, token, userId, raw, req.signal);
+      flushUsage();
       return Response.json(out.body, { status: out.status, headers: { ...CORS, "Cache-Control": "no-store" } });
     }
     if (raw && typeof raw === "object" && ["meal", "cocktail"].includes(String((raw as Record<string, unknown>).mode))) {
       const out = await recipeSuggest(deps, token, userId, raw, req.signal);
+      flushUsage();
       return Response.json(out.body, { status: out.status, headers: { ...CORS, "Cache-Control": "no-store" } });
     }
     if (raw && typeof raw === "object" && (raw as Record<string, unknown>).mode === "recipe_from_image") {
       const out = await recipeFromImage(deps, token, userId, raw, req.signal);
+      flushUsage();
       return Response.json(out.body, { status: out.status, headers: { ...CORS, "Cache-Control": "no-store" } });
     }
     const parsed = bodySchema.safeParse(raw);
@@ -257,9 +292,11 @@ export function createHandler(deps: ChatDeps): (req: Request) => Promise<Respons
         event: "chat", request: crypto.randomUUID(), user: userId, outcome: "bad_request",
         model_calls: 0, tools: [], cost_cents: 0, counted: false,
       });
+      flushUsage();
       return jsonError(400, "bad_request", "send {messages: [...]} ending with the user's message");
     }
 
+    meter.origin = "chat";
     const abort = new AbortController();
     req.signal?.addEventListener("abort", () => abort.abort());
     const encoder = new TextEncoder();
@@ -299,6 +336,8 @@ export function createHandler(deps: ChatDeps): (req: Request) => Promise<Respons
             });
           }
         }
+        // After the answer and the memory noticing: this message's counts.
+        flushUsage();
         try {
           controller.close();
         } catch { /* already closed by the client */ }

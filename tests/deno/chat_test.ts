@@ -619,7 +619,8 @@ Deno.test("chat: a message that looks like a password gets the decided answer, w
     const s = setup([{ text: ["should not be asked"] }]);
     const events = await chat(s, message);
     assertEquals(s.model.requests.length, 0, "the model is never called");
-    assertEquals(s.account.rpcs, [], "nothing is read or written");
+    // Only the message's usage counts (D34), never the message: nothing else is read or written.
+    assertEquals(s.account.rpcs.filter((n) => n !== "record_usage"), [], "nothing is read or written");
     assertEquals(reply(events), heldText(kind.replace(/^an? /, "")));
     assert(reply(events).includes(kind), reply(events));
     assertEquals(events.at(-1), { type: "done", counted: false });

@@ -96,6 +96,8 @@ export class World {
    * in a searchable space (migration home_place, item_home_note), as the default.
    */
   homes: { id: string; label: string; address?: string; lat: number; lng: number; is_default: boolean }[] = [];
+  /** Rows sent to record_usage (usage tracking, D34): counts only. */
+  usage: Record<string, unknown>[] = [];
   /** My day's "Not today" (task_not_today, routines Q5): one pretend user, so every row is theirs. */
   notToday: { task_id: string; day: string }[] = [];
   /** Settings → Household (household_member, D40): labels, adult or child, a child's birth year. */
@@ -682,6 +684,11 @@ function rpc(w: World, name: string, p: Record<string, unknown>): Result {
       const s = w.spaces.find((x) => x.built_in === "cocktails");
       if (s) s.name = w.is21 ? "Cocktails" : "Mocktails";
       return ok(s?.name ?? null);
+    }
+    case "record_usage": {
+      // As the migration's function (usage tracking, D34): the caller's own counts, added up.
+      w.usage.push(...((p.p_rows as Record<string, unknown>[]) ?? []));
+      return ok(null);
     }
     case "use_recipe_suggestion": {
       // As the migration's function: everyone, 10 a day (50 with Pro), counted when allowed.

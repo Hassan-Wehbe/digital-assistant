@@ -238,7 +238,8 @@ Deno.test("memory: a fact is noticed after done, saved in Memories, and its cost
   assertEquals(m.map((i) => [i.title, i.space_id]), [["Lexi swims on Tuesdays", MEMORIES]]);
   assertEquals(events[2], { type: "remembered", memories: [{ id: m[0].id, fact: "Lexi swims on Tuesdays", updated: false }] });
   assertEquals((m[0].metadata as { source: string }).source, "chat");
-  assertEquals(s.background.length, 1, "kept alive with EdgeRuntime.waitUntil");
+  // The noticing, and then the message's usage counts (D34).
+  assertEquals(s.background.length, 2, "kept alive with EdgeRuntime.waitUntil");
 
   // The memory call: no tools, the newest message and its context, and the answer counted once.
   const call = s.model.of("memory")[0].req;

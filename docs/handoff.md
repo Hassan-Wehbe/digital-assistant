@@ -13,6 +13,10 @@ tokens or keys in chat.
 ## Where things stand (2026-10-06)
 
 **Newest first (2026-10-07):**
+- **D34 usage tracking step 2, the server writes the counts (2026-10-25): branch
+  `claude/usage-step2`, not merged, not deployed.** One meter per request in `chat` and `mcp`
+  (`_shared/usage.ts`), written after the reply; never content. Privacy page "Usage counts". 639 Deno
+  tests. **Owner:** check the privacy wording; OK + cap for an evaluation; merge; OK to deploy.
 - **D34 usage tracking step 1, the database (2026-10-22): merged (#275), applied 2026-10-25
   (the owner in the SQL Editor after two connector timeouts; recorded as 20261025131746).** `usage_day`, `user_day`, `usage_snapshot`, `record_usage()` (own rows,
   checked, all or nothing), admin-only reading functions and maintenance. SQL test 26 (37 checks),

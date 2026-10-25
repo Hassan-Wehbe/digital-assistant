@@ -142,7 +142,8 @@ Deno.test("classify: wilma is passed through", async () => {
 Deno.test("classify: its cost is recorded without counting a request", async () => {
   const s = setup({ answer: '{"route":"search","query":"roof"}', cost: 0.0021 });
   await classify(s, "roof quote");
-  assertEquals(s.account.rpcs.map((r) => r.name), ["my_ai_allowance", "record_ai_cost"]);
+  // Then its usage counts (D34), after the answer.
+  assertEquals(s.account.rpcs.map((r) => r.name), ["my_ai_allowance", "record_ai_cost", "record_usage"]);
   assertEquals(s.account.rpcs[1].params, { p_cost_cents: 0.0021 });
   assertEquals(s.account.requests, 0);
   assertFalse(s.account.rpcs.some((r) => r.name === "record_ai_usage"));
@@ -223,7 +224,9 @@ Deno.test("classify: a message about passwords, PINs or codes never reaches the 
     const s = setup({ answer: '{"route":"search","query":"x"}' });
     assertEquals(await classify(s, text), { route: "wilma" }, text);
     assertEquals(s.model.calls.length, 0, text);
-    assertEquals(s.account.rpcs.length, 0, text);
+    // Only the usage counts (D34): never the words.
+    assertEquals(s.account.rpcs.filter((r) => r.name !== "record_usage").length, 0, text);
+    assertFalse(JSON.stringify(s.account.rpcs).includes(text), text);
     assertEquals(s.logs[0].code, "vault_words", text);
   }
 });

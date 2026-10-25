@@ -17,6 +17,7 @@ import { supabaseUrl, userClient, verifyAccessToken } from "./lib/db.ts";
 import { embedPending, scheduleEmbedPending } from "./lib/embed.ts";
 import type { ToolContext } from "./tools/_shared.ts";
 import { ALL_TOOLS } from "./tools/all.ts";
+import { recordRows, toolCallRows } from "../_shared/usage.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -86,6 +87,10 @@ Deno.serve(async (req: Request) => {
     return Response.json(result, { status: 202, headers: CORS });
   }
 
+  // Usage tracking (D34): which tools were called (names only, never their arguments), written as
+  // the user after the answer; a failure is logged and never changes the answer.
+  const body: unknown = req.method === "POST" ? await req.clone().json().catch(() => null) : null;
+
   // Stateless: a fresh server and transport per request, bound to this user.
   const { assistantName, distanceUnit } = await loadUserSettings(db, userId);
   const server = buildServer({ db, userId, accessToken: token, assistantName, distanceUnit });
@@ -96,5 +101,11 @@ Deno.serve(async (req: Request) => {
   await server.connect(transport);
   const response = await transport.handleRequest(req);
   for (const [k, v] of Object.entries(CORS)) response.headers.set(k, v);
+  const rows = toolCallRows(body);
+  if (rows.length) {
+    EdgeRuntime.waitUntil(recordRows(db, rows).then((r) => {
+      if (!r.ok) console.log(JSON.stringify({ event: "usage", user: userId, outcome: "failed", rows: r.rows, code: r.code }));
+    }));
+  }
   return response;
 });
