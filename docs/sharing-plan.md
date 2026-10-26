@@ -1,7 +1,8 @@
 # Sharing spaces and notes (D32)
 
 Status: plan, 2026-10-25; **owner's answers 2026-10-26: all as recommended** (Q1-Q14 below). Design: D32 (owner,
-2026-10-10), built on D14 (`item_share`, view or edit, optional expiry). Nothing is built yet. **Next:** step 1, the database.
+2026-10-10), built on D14 (`item_share`, view or edit, optional expiry). **Step 1 built 2026-10-26, branch `claude/sharing-step1`, not merged, migration not
+applied:** see "As built: step 1".
 Model: **the strongest** for every step (sharing, RLS, the chat loop, the app's access rules).
 
 ## Why
@@ -208,3 +209,52 @@ space or note, 20 invitations a day; Q14 every plan.
 4. **Release.** Privacy page, legal checklist line, Play content rating and Data safety (owner in
    Play Console), CLAUDE.md rule 4 wording and D12 marked replaced, a phone checklist for two
    accounts (you and a tester). **Owner:** check the wording, Play forms, try it with a tester.
+
+## As built: step 1 (2026-10-26)
+
+Branch `claude/sharing-step1`. **Migration `20261026130000_sharing.sql`, not applied.** Nothing in
+the app or the chat calls it yet (steps 2-3), so applying it changes nothing anyone sees.
+
+- **Tables:** `space_share` (new) and `item_share` (now with an invitation status), kept **by email**:
+  an invitation waits for whoever has (or later makes) an account with that email, and the sharer
+  reads "invited" until it is accepted, whether the email has no account, has not answered,
+  declined or blocked them (Q2). Invitations lapse after 30 days. `share_block`, `share_report`.
+  `item.created_by` / `updated_by` and `item_revision.edited_by` say who added, changed and wrote
+  each version (set by triggers and functions only; a direct write can't put another name on a note).
+- **Access is checked in functions, not by widening table policies.** A recipient reads and edits
+  only through `search_items`, `get_item`, `get_attachment`, `save_item`, `update_item`, `delete_item`
+  (one helper, `_item_access`: owner, edit, view or nothing). Every other query, planners,
+  suggestions, memory, routines, favourites, the recycle bin, still sees only the user's own rows,
+  which is Q7 for free. The September policy that showed an `item_share` note at once is dropped
+  (no share ever existed: checked on the live project, 0 rows).
+- **What each function does now:** `search_items` adds what is shared with you, each result with
+  `access` (owner, edit, view) and `shared_from` (name, email); `get_item` adds `access`, `shared`
+  (from whom, via a space or the note), `added_by` / `changed_by` (someone other than the owner),
+  and shows links only to the owner; `save_item` into a space shared to edit (the note is the
+  owner's; no tags); `update_item` by an editor (no moving, no tags, no routines); `delete_item` by an
+  editor into the owner's bin (`list_deleted_items` says "deleted_by"); `get_attachment` and a
+  Storage policy for the files of notes you can read.
+- **Sharing:** `share_space`, `share_item` (same answer whatever the email; sharing again changes the
+  permission and end date; after an end date it is a new invitation), `my_shares`, `shared_with_me`
+  (invitations and accepted shares, a space with its sub-spaces), `respond_to_share` (accept,
+  decline, leave, block), `change_share`, `stop_share`, `my_blocks`, `unblock_sharer`,
+  `report_share`, `admin_share_reports`. Refused: restricted spaces and anything under one,
+  Memories, Tasks (and under them), routines, your own email, a past end date, more than 20 people
+  per space or note, more than 20 invitations a day.
+- **Triggers:** restricting a space, or moving it (or a shared note) under a restricted space,
+  Memories or Tasks, ends those shares for good; access is re-checked on every read anyway. A Home
+  note written by someone else never changes the owner's homes.
+- **Security:** every new function runs as its owner with explicit checks and a fixed search path;
+  the helpers are not callable by users; nothing new reads `secret` (a test checks the function
+  bodies); anon gets nothing.
+- **SQL test 27 (80 checks):** three people (sharer, recipient, outsider) on every path above,
+  including rule 3 by keyword and by meaning, rule 4, end dates, decline, leave, stop, block,
+  report, lapsed invitations, someone who signs up later, the limits, files, direct writes, account
+  deletion and anon. Every other SQL test still passes (684 checks in all, test 06 included), on a
+  local Postgres 16 with pgvector and a Supabase stand-in. **Dry run 80/80** locally on a copy
+  without the migration, nothing kept. The live project runs Postgres 17.6.
+- **Between step 1 and step 2:** the server still shows only the owner's things; a recipient's
+  search results from shared spaces would come back without a space name until step 2 labels them.
+  No share can exist before the app offers it (step 3), so nothing changes in practice.
+
+**Owner:** dry run, OK to apply, merge. **Next:** step 2, the server.

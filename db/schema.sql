@@ -371,3 +371,25 @@ create policy secret_log_insert on secret_access_log
 --   Family day; never an item, never searched or shared; the planner sends the AI roles and ages,
 --   never a label. RLS own rows; users read, add (label, kind, birth_year), change (those and
 --   position) and remove; never the owner; anon nothing.
+
+-- =========================================================
+-- Sharing spaces and notes (20261026130000_sharing.sql; design.md D32, docs/sharing-plan.md)
+-- =========================================================
+-- space_share: id, space_id (cascade), shared_by_user_id (owner of the space), shared_with_email
+--   (lower-case), shared_with_user_id (null until an account has that email; fixed on accept),
+--   permission view | edit, status invited | accepted | declined, expires_at, revoked_at,
+--   ended_reason stopped | left | blocked | restricted | expired, responded_at, created_at. One open
+--   share per space and email. Covers the space and its non-restricted sub-spaces.
+-- item_share (above) gains shared_with_email, status, ended_reason, responded_at;
+--   shared_with_user_id may be null. Same rules for one note.
+-- share_block: user_id, blocked_user_id (both cascade). share_report: reporter, reported (set null),
+--   share_kind space | note, share_id, reason (at most 500), created_at.
+-- item.created_by, item.updated_by (set null on account deletion), item_revision.edited_by (no key):
+--   who added, last changed, wrote each earlier version. Set by triggers and functions only.
+-- Users never read or write these tables: share_space / share_item / my_shares / shared_with_me /
+--   respond_to_share (accept, decline, leave, block) / change_share / stop_share / my_blocks /
+--   unblock_sharer / report_share / admin_share_reports. Recipients reach notes only through
+--   search_items, get_item, get_attachment, save_item, update_item, delete_item (_item_access); no
+--   table policy lets them read another user's rows. Never shared: restricted spaces and anything
+--   under one, Memories, Tasks, routines, secrets. Restricting ends sharing (space_share_guard,
+--   item_share_guard). Storage: attachments_select_shared (files of notes you can read).
