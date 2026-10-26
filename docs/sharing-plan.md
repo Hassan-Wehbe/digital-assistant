@@ -1,7 +1,7 @@
 # Sharing spaces and notes (D32)
 
-Status: **plan, 2026-10-25, waiting for the owner's answers** (Q1-Q14 below). Design: D32 (owner,
-2026-10-10), built on D14 (`item_share`, view or edit, optional expiry). Nothing is built yet.
+Status: plan, 2026-10-25; **owner's answers 2026-10-26: all as recommended** (Q1-Q14 below). Design: D32 (owner,
+2026-10-10), built on D14 (`item_share`, view or edit, optional expiry). Nothing is built yet. **Next:** step 1, the database.
 Model: **the strongest** for every step (sharing, RLS, the chat loop, the app's access rules).
 
 ## Why
@@ -134,7 +134,18 @@ belongs to one person and only that person can see it (rule 5, D11, D12).
   how to stop. **Lawyer:** a sharing line in `docs/legal-review-checklist.md` (shared content you do
   not own, a shared space someone else adds to, abuse reports, deletion of shared content).
 
-## Questions (recommendation first)
+## Answers (owner, 2026-10-26): all as recommended
+
+Q1 a whole space (with its sub-spaces) and single notes; Q2 by email, never saying whether an
+account exists; Q3 an invitation to accept first; Q4 Can edit adds, changes and moves to the owner's
+recycle bin, no files at first; Q5 added notes belong to the space's owner, "Added by"; Q6 an
+optional end date; Q7 Shared with me, search and the chat, not the planners, suggestions or memory
+at first; Q8 Recipes and Cocktails can be shared, Memories and Tasks cannot; Q9 restricting ends
+sharing after a warning; Q10 an invitation card and a count, no push at first; Q11 Block and
+Report; Q12 "Share with someone…", "Shared with me", "Stop sharing", "Leave"; Q13 20 people per
+space or note, 20 invitations a day; Q14 every plan.
+
+## Questions as asked (recommendation first)
 
 - **Q1. Share what:** **a whole space (with its sub-spaces) and single notes** (rec., as D32 says);
   or spaces only; or notes only.

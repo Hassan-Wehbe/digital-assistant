@@ -17,8 +17,8 @@ tokens or keys in chat.
   not merged.** `docs/sharing-plan.md`: share a space or a note by email, view or edit, an invitation
   to accept, everything enforced in the database; never secrets, restricted spaces, Memories or
   Tasks; the model cannot share; Block and Report for Play's user-generated content policy. Four
-  steps (database, server, app with mockups, release). **Owner:** answer Q1-Q14 (or "all as
-  recommended"). Before that: D34 finished (#282); the owner does `docs/admin-page-checklist.md` and
+  steps (database, server, app with mockups, release). **Owner's answers (2026-10-26): all as
+  recommended.** **Next:** step 1, the database (strongest model, fresh session). Before that: D34 finished (#282); the owner does `docs/admin-page-checklist.md` and
   the Data safety line.
 - **D34 usage tracking step 5, checks (2026-10-25): branch `claude/usage-step5-checklist`, docs
   only, not merged.** `docs/admin-page-checklist.md` (admin check query, 15 checks on laptop and
