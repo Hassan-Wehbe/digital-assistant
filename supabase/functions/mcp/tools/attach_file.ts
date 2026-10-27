@@ -50,7 +50,7 @@ export const registerAttachFile: RegisterTool = (server, { db, accessToken, assi
           const { data, error } = await db.rpc("get_item", { p_item_id: item_id });
           if (error) throw dbError("Could not load the item", error);
           if (!data) throw new Error("Item not found. Use search_items to find it.");
-          const path = (await loadSpaces(db)).find((s) => s.id === data.space.id)?.path;
+          const path = data.space ? (await loadSpaces(db)).find((s) => s.id === data.space.id)?.path : undefined;
           item = { id: data.id, title: data.title, space: path, created: false };
         } else {
           const target = resolveSpace(await loadSpaces(db), space!);

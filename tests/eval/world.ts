@@ -74,6 +74,14 @@ export const IDS = {
 
 const T0 = "2026-09-01T12:00:00Z";
 
+/** A space another Wilma user shared with the pretend user, accepted (sharing, D32). */
+export interface SharedSpace {
+  share_id: string;
+  space: Space;
+  from: { name: string; email: string };
+  permission: "view" | "edit";
+}
+
 export class World {
   spaces: Space[] = [];
   items: Item[] = [];
@@ -104,6 +112,13 @@ export class World {
   household: { label: string; kind: "adult" | "child"; birth_year: number | null }[] = [];
   /** The month's AI allowance used so far (my_ai_allowance), for planners that check it. */
   aiUsed = 0;
+  /**
+   * Shared with the user by someone else (D32): the spaces, and the notes in them. Kept apart from
+   * `spaces` and `items` as the database keeps them apart: only search_items, get_item, save_item,
+   * update_item and delete_item reach them (the planners and table reads never do, Q7).
+   */
+  shared: SharedSpace[] = [];
+  sharedItems: Item[] = [];
   /** What the tools handed out: vault entry links, reveal links, upload links. */
   secretEntries: { secret_id: string; name: string; space_id: string; secret_type: string }[] = [];
   reveals: string[] = [];
@@ -130,6 +145,8 @@ export class World {
 
   pathOf(id: string): string {
     const s = this.spaceById(id);
+    const sh = s ? undefined : this.shared.find((x) => x.space.id === id);
+    if (sh) return `${sh.space.name} (shared by ${sh.from.name})`;
     if (!s) return "";
     return s.parent_id ? `${this.pathOf(s.parent_id)}/${s.name}` : s.name;
   }
@@ -160,6 +177,11 @@ export class World {
       }
     }
     return out;
+  }
+
+  /** A shared note's permission: its space's share. */
+  sharedPermission(i: Item): "view" | "edit" | undefined {
+    return this.shared.find((x) => x.space.id === i.space_id)?.permission;
   }
 
   liveItems(): Item[] {
@@ -472,11 +494,26 @@ function metadataText(v: unknown): string {
   return "";
 }
 
+/** get_item for a note in a space shared with the user (D32), as the migration answers it. */
+function sharedItemJson(w: World, i: Item) {
+  const sh = w.shared.find((x) => x.space.id === i.space_id)!;
+  return {
+    id: i.id, title: i.title, item_type: i.item_type, summary: i.summary, body_markdown: i.body_markdown,
+    metadata: i.metadata, source: "chat", created_at: i.created_at, updated_at: i.updated_at,
+    access: sh.permission,
+    space: { id: sh.space.id, name: sh.space.name, is_restricted: false },
+    shared: { from: sh.from, permission: sh.permission, via: "space" },
+    added_by: null, changed_by: null,
+    tags: [...i.tags].sort(), attachments: [], links: [], revision_count: i.revisions,
+  };
+}
+
 function itemJson(w: World, i: Item) {
   const s = w.spaceById(i.space_id)!;
   return {
     id: i.id, title: i.title, item_type: i.item_type, summary: i.summary, body_markdown: i.body_markdown,
     metadata: i.metadata, source: "chat", created_at: i.created_at, updated_at: i.updated_at,
+    access: "owner",
     space: { id: s.id, name: s.name, is_restricted: s.is_restricted },
     tags: [...i.tags].sort(),
     attachments: [],
@@ -503,6 +540,19 @@ function rpc(w: World, name: string, p: Record<string, unknown>): Result {
   const live = (id: unknown) => w.liveItems().find((i) => i.id === id);
   switch (name) {
     case "save_item": {
+      // Into a space shared with the user to edit (D32): theirs, without the user's tags.
+      const sh = w.shared.find((x) => x.space.id === p.p_space_id);
+      if (sh) {
+        if (sh.permission !== "edit") return err("space not found", "P0002");
+        const i: Item = {
+          id: w.newId(), space_id: sh.space.id, title: String(p.p_title), item_type: String(p.p_item_type).trim().toLowerCase(),
+          summary: (p.p_summary as string | null) ?? null, body_markdown: String(p.p_body),
+          metadata: (p.p_metadata as Record<string, unknown>) ?? {}, tags: [], created_at: now(), updated_at: now(),
+          deleted_at: null, revisions: 0,
+        };
+        w.sharedItems.push(i);
+        return ok(i.id);
+      }
       if (!w.spaceById(p.p_space_id as string)) return err("space not found", "P0002");
       const i: Item = {
         id: w.newId(), space_id: p.p_space_id as string, title: String(p.p_title),
@@ -514,6 +564,20 @@ function rpc(w: World, name: string, p: Record<string, unknown>): Result {
       return ok(i.id);
     }
     case "update_item": {
+      const si = w.sharedItems.find((x) => x.id === p.p_item_id && !x.deleted_at);
+      if (si) {
+        // As the migration: view only is "not found"; an editor never moves it or changes its tags.
+        if (w.sharedPermission(si) !== "edit") return err("item not found", "P0002");
+        if (p.p_space_id && p.p_space_id !== si.space_id) return err("Only the owner can move this note.");
+        si.revisions += 1;
+        if (p.p_title != null) si.title = String(p.p_title);
+        if (p.p_body != null) si.body_markdown = String(p.p_body);
+        if (p.p_summary != null) si.summary = String(p.p_summary);
+        if (p.p_metadata != null) si.metadata = p.p_metadata as Record<string, unknown>;
+        if (p.p_item_type != null) si.item_type = String(p.p_item_type).trim().toLowerCase();
+        si.updated_at = now();
+        return ok(null);
+      }
       const i = live(p.p_item_id);
       if (!i) return err("item not found", "P0002");
       if (p.p_space_id && !w.spaceById(p.p_space_id as string)) return err("space not found", "P0002");
@@ -529,9 +593,17 @@ function rpc(w: World, name: string, p: Record<string, unknown>): Result {
       return ok(null);
     }
     case "get_item": {
+      const si = w.sharedItems.find((x) => x.id === p.p_item_id && !x.deleted_at);
+      if (si) return ok(sharedItemJson(w, si));
       const i = live(p.p_item_id);
       return ok(i ? itemJson(w, i) : null);
     }
+    case "shared_with_me":
+      return ok(w.shared.map((sh) => ({
+        share_id: sh.share_id, kind: "space", status: "accepted", permission: sh.permission,
+        space: { id: sh.space.id, name: sh.space.name, description: sh.space.description }, spaces: [],
+        from: sh.from, created_at: T0, expires_at: null,
+      })));
     case "search_items": {
       const query = ((p.p_query as string | null) ?? "").trim();
       const scope = p.p_space_id ? w.scope(p.p_space_id as string) : null;
@@ -545,17 +617,40 @@ function rpc(w: World, name: string, p: Record<string, unknown>): Result {
         .map((i) => ({ i, s: query ? score(i, query, w.pathOf(i.space_id)) : 1 }))
         .filter((r) => r.s > 0)
         .sort((a, b) => b.s - a.s || b.i.updated_at.localeCompare(a.i.updated_at))
-        .slice(0, (p.p_limit as number) ?? 10)
         .map(({ i, s }) => ({
           item_id: i.id, title: i.title, item_type: i.item_type, space_id: i.space_id,
           snippet: i.body_markdown.slice(0, 200), tags: i.tags, score: s, updated_at: i.updated_at,
-          place: i.item_type === "place" ? i.metadata : null,
+          place: i.item_type === "place" ? i.metadata : null, access: "owner", shared_from: null,
         }));
-      return ok(rows);
+      // What others shared with the user (D32), marked as theirs.
+      const shared = w.sharedItems
+        .filter((i) => !i.deleted_at && i.item_type !== "routine")
+        .filter((i) => !p.p_space_id || i.space_id === p.p_space_id)
+        .filter((i) => !type || i.item_type === type)
+        .filter((i) => wanted.every((t) => i.tags.includes(t)))
+        .map((i) => ({ i, s: query ? score(i, query, w.pathOf(i.space_id)) : 1 }))
+        .filter((r) => r.s > 0)
+        .map(({ i, s }) => {
+          const sh = w.shared.find((x) => x.space.id === i.space_id)!;
+          return {
+            item_id: i.id, title: i.title, item_type: i.item_type, space_id: i.space_id,
+            snippet: i.body_markdown.slice(0, 200), tags: i.tags, score: s, updated_at: i.updated_at,
+            place: i.item_type === "place" ? i.metadata : null, access: sh.permission, shared_from: sh.from,
+          };
+        });
+      return ok([...rows, ...shared]
+        .sort((a, b) => b.score - a.score || b.updated_at.localeCompare(a.updated_at))
+        .slice(0, (p.p_limit as number) ?? 10));
     }
     case "searchable_space_ids":
       return ok(w.spaces.filter((s) => w.searchable(s.id)).map((s) => s.id));
     case "delete_item": {
+      const si = w.sharedItems.find((x) => x.id === p.p_item_id && !x.deleted_at);
+      if (si) {
+        if (w.sharedPermission(si) !== "edit") return err("item not found (or already in the recycle bin)", "P0002");
+        si.deleted_at = now();
+        return ok({ item_id: si.id, title: si.title, in_recycle_bin: true });
+      }
       const i = live(p.p_item_id);
       if (!i) return err("item not found", "P0002");
       const at = now();

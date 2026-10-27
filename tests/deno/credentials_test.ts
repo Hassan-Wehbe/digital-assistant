@@ -181,6 +181,7 @@ for (const [tool, args, secret] of REFUSED) {
 
 Deno.test("update_item with only harmless fields passes the check (reaches the database)", async () => {
   const out = await call("update_item", { item_id: ITEM, tags: ["weeknight"], change_note: "password rules updated" });
-  assertEquals(out.calls, ["update_item"]);
+  // New tags load the note first: a note someone shared keeps its owner's tags (D32).
+  assertEquals(out.calls, ["get_item"]);
   assert(!out.text.startsWith("Not saved:"));
 });

@@ -10,6 +10,8 @@
 //   * no memory call at all for a turn that touched the vault (any *_secret tool), a restricted
 //     space (named in the conversation, or in a tool's input or result), or whose newest message
 //     talks about passwords, PINs, codes or keys, or looks like one (classify.ts's guard);
+//   * no memory call for a turn that read a note someone else shared (D32): their words are not the
+//     user's facts;
 //   * every fact is checked again: nothing value-like (a 4+ digit number that is not a year, a
 //     word mixing letters and digits), no vault words, no credential (findCredential, and
 //     rejectCredentials inside saveMemory), and some of its words must be the user's own;
@@ -142,6 +144,8 @@ export function turnGuard(said: Message[], answer: Message[], spaces: Space[]): 
   if (!newest || newest.role !== "user") return "no_message";
   const blocked = vaultGuard(newest.content);
   if (blocked) return blocked;
+  // A turn that read something shared by someone else (D32): their words are not the user's facts.
+  if (answer.some((m) => m.role === "tool" && m.results.some((r) => r.content.includes('"shared_from"')))) return "shared";
   const restricted = restrictedSpaces(spaces);
   if (restricted.length) {
     const texts = turnTexts(said, answer);

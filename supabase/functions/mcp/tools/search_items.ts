@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { embed } from "../lib/embed.ts";
-import { loadSpaces, resolveSpace } from "../lib/spaces.ts";
+import { loadAllSpaces, OTHERS_WORDS, resolveSpace, sharerName } from "../lib/spaces.ts";
 import { addressedAs } from "../lib/assistant.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
@@ -37,7 +37,7 @@ export const registerSearchItems: RegisterTool = (server, { db, assistantName })
     },
     ({ query, tags, space, item_type, limit, close_matches_only }) =>
       guarded(async () => {
-        const spaces = await loadSpaces(db);
+        const spaces = await loadAllSpaces(db);
         const scope = space ? resolveSpace(spaces, space) : null;
         const q = query?.trim() || null;
         const { data, error } = await db.rpc("search_items", {
@@ -51,18 +51,25 @@ export const registerSearchItems: RegisterTool = (server, { db, assistantName })
         });
         if (error) throw dbError("Search failed", error);
         const pathOf = new Map(spaces.map((s) => [s.id, s.path]));
+        const rows = data as Array<Record<string, unknown>>;
+        // Shared with the user by someone else (D32): whose it is, and whether the user may change it.
+        const isShared = (r: Record<string, unknown>) => typeof r.access === "string" && r.access !== "owner";
         return ok({
-          results: (data as Array<Record<string, unknown>>).map((r) => ({
+          results: rows.map((r) => ({
             id: r.item_id,
             title: r.title,
             item_type: r.item_type,
-            space: pathOf.get(r.space_id as string),
+            space: pathOf.get(r.space_id as string) ?? (isShared(r) ? "(a note shared with you)" : undefined),
             tags: r.tags,
             snippet: r.snippet,
             updated_at: r.updated_at,
             // A place's fields (status, rating, cuisine, visits...), so lists need no get_item.
             ...(r.place ? { place: r.place } : {}),
+            ...(isShared(r)
+              ? { shared_from: sharerName(r.shared_from as { name?: string; email?: string } | null), can_edit: r.access === "edit" }
+              : {}),
           })),
+          ...(rows.some(isShared) ? { about_shared: OTHERS_WORDS } : {}),
         });
       }),
   );
