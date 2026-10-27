@@ -262,5 +262,5 @@ in the app or the chat calls it yet (steps 2-3), so nothing anyone sees has chan
   search results from shared spaces would come back without a space name until step 2 labels them.
   No share can exist before the app offers it (step 3), so nothing changes in practice.
 
-**Owner:** record the migration (one line in the SQL Editor, if not done), merge. **Next:** step 2,
-the server.
+Recorded in `supabase_migrations.schema_migrations` as 20261026130000 `sharing` (owner, 2026-10-27).
+**Owner:** merge. **Next:** step 2, the server.

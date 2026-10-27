@@ -18,8 +18,8 @@ tokens or keys in chat.
   accept; access checked in functions (`_item_access`), no table policy widened; never restricted
   spaces, Memories, Tasks, routines or secrets; restricting ends sharing; block, report, limits.
   SQL test 27 (80 checks), all SQL tests pass locally (684), dry run 80/80. See
-  `docs/sharing-plan.md`, "As built: step 1". **Owner:** record the migration in
-  `supabase_migrations.schema_migrations` (if not done), merge. **Next:** step 2, the server.
+  `docs/sharing-plan.md`, "As built: step 1". Migration recorded (20261026130000).
+  **Owner:** merge. **Next:** step 2, the server.
 - **D32 sharing spaces and notes: plan written (2026-10-25), branch `claude/sharing-plan`, docs only,
   not merged.** `docs/sharing-plan.md`: share a space or a note by email, view or edit, an invitation
   to accept, everything enforced in the database; never secrets, restricted spaces, Memories or
