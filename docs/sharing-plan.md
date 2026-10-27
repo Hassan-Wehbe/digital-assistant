@@ -1,8 +1,8 @@
 # Sharing spaces and notes (D32)
 
 Status: plan, 2026-10-25; **owner's answers 2026-10-26: all as recommended** (Q1-Q14 below). Design: D32 (owner,
-2026-10-10), built on D14 (`item_share`, view or edit, optional expiry). **Step 1 built 2026-10-26, branch `claude/sharing-step1`, not merged, migration not
-applied:** see "As built: step 1".
+2026-10-10), built on D14 (`item_share`, view or edit, optional expiry). **Step 1 built 2026-10-26, branch `claude/sharing-step1`, not merged; migration applied
+2026-10-27** (the owner in the SQL Editor after two connector timeouts): see "As built: step 1".
 Model: **the strongest** for every step (sharing, RLS, the chat loop, the app's access rules).
 
 ## Why
@@ -212,8 +212,13 @@ space or note, 20 invitations a day; Q14 every plan.
 
 ## As built: step 1 (2026-10-26)
 
-Branch `claude/sharing-step1`. **Migration `20261026130000_sharing.sql`, not applied.** Nothing in
-the app or the chat calls it yet (steps 2-3), so applying it changes nothing anyone sees.
+Branch `claude/sharing-step1`. **Migration `20261026130000_sharing.sql` applied 2026-10-27** by the
+owner in the SQL Editor (the connector's approval prompt timed out twice). Checked by Claude
+(read-only): the three tables, the new columns, all 22 new functions, the six note functions
+share-aware, the old `item_shared_read` policy gone, the Storage policy and triggers in place,
+helpers not callable by users, nothing for anon, no share rows; as the owner, search returns only
+the owner's notes marked "owner" and get_item says "owner" (in a rolled-back transaction). Nothing
+in the app or the chat calls it yet (steps 2-3), so nothing anyone sees has changed.
 
 - **Tables:** `space_share` (new) and `item_share` (now with an invitation status), kept **by email**:
   an invitation waits for whoever has (or later makes) an account with that email, and the sharer
@@ -257,4 +262,5 @@ the app or the chat calls it yet (steps 2-3), so applying it changes nothing any
   search results from shared spaces would come back without a space name until step 2 labels them.
   No share can exist before the app offers it (step 3), so nothing changes in practice.
 
-**Owner:** dry run, OK to apply, merge. **Next:** step 2, the server.
+**Owner:** record the migration (one line in the SQL Editor, if not done), merge. **Next:** step 2,
+the server.
