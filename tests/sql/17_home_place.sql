@@ -136,7 +136,8 @@ end $$;
 delete from home_place where label like 'Home %';
 
 -- ---------- An older app saves Home as a note: the default follows it ----------
-insert into space (name) values ('Places');
+-- Every account has a built-in Places space (20261028120000_places_builtin_space.sql).
+insert into space (name) values ('Places') on conflict do nothing;
 insert into space (name, is_restricted) values ('Hidden', true);
 select save_item((select id from space where name = 'Places'), 'place', 'Home', '', null,
                  '{"kind":"home","lat":28.70,"lng":-81.20,"address":"9 New Rd"}', '{}', pg_temp.chunks('Home', 1));
@@ -153,7 +154,7 @@ select pg_temp.check('the default is still the searchable Home',
 reset role;
 delete from home_place where user_id = '00000000-0000-4000-a000-00000000000b';
 alter table item disable trigger item_home_note;
-insert into space (owner_user_id, name) values ('00000000-0000-4000-a000-00000000000b', 'Places');
+insert into space (owner_user_id, name) values ('00000000-0000-4000-a000-00000000000b', 'Places') on conflict do nothing;
 insert into item (space_id, item_type, title, metadata)
 values ((select id from space where owner_user_id = '00000000-0000-4000-a000-00000000000b' and name = 'Places'),
         'place', 'Home', '{"kind":"home","lat":40.71,"lng":-74.01,"address":"1 Main St"}');
@@ -161,7 +162,7 @@ alter table item enable trigger item_home_note;
 -- A third person whose Home note has an address but no point (as some real notes do).
 insert into auth.users (id, email, aud, role) values
   ('00000000-0000-4000-a000-00000000000c', 'test-user-c@example.invalid', 'authenticated', 'authenticated');
-insert into space (owner_user_id, name) values ('00000000-0000-4000-a000-00000000000c', 'Places');
+insert into space (owner_user_id, name) values ('00000000-0000-4000-a000-00000000000c', 'Places') on conflict do nothing;
 insert into item (space_id, item_type, title, metadata)
 values ((select id from space where owner_user_id = '00000000-0000-4000-a000-00000000000c' and name = 'Places'),
         'place', 'Home', '{"kind":"home","address":"5 Pine Ct"}');

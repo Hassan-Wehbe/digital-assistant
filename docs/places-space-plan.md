@@ -1,8 +1,9 @@
 # A Places space, and Wilma's spaces on Home (D45)
 
-Status: **plan, 2026-10-28.** Owner's answers so far (2026-10-28): **Q1 yes, an existing "Places"
-space becomes the built-in one; Q2 every note marked as a place moves into Places.** Q3-Q9 open; Q9
-with the cost estimate below. Raised by the owner
+Status: plan, 2026-10-28. **Owner's answers (2026-10-28): Q1 yes, an existing "Places" space becomes
+the built-in one; Q2 every note marked as a place moves into Places; Q3-Q9 all as recommended ("I
+want to see it in action").** **Step 1 built 2026-10-28, branch `claude/places-step1`, not merged,
+migration not applied:** see "As built: step 1". Raised by the owner
 after a tester could not find her place when adding it to a task. Before sharing step 3 (D32).
 Model: the strongest for steps 1-2 (a built-in space, the server's place rules); a smaller one for
 the app screens (step 3).
@@ -150,3 +151,28 @@ With Google's search (Q9), steps 2 and 3 also carry a small `find_place` lookup 
 **Right away, before any of this (no build):** Denisse can open her place, tap Edit, choose the
 📍 Place kind if it is a plain note, and add a Google Maps link (Share → Copy link in Google Maps)
 or tap Save where I am while there; it then shows in the picker.
+
+## As built: step 1 (2026-10-28)
+
+Branch `claude/places-step1`. **Migration `20261028120000_places_builtin_space.sql`, not applied.**
+
+- **Places is a built-in space** (`space.built_in = 'places'`) for every account and at sign-up:
+  an existing top-level, not restricted "Places" (any case) is adopted with its notes; a restricted
+  one is left alone and none is made beside it (rule 3). Like the other built-in spaces it can't be
+  renamed, deleted, moved or restricted; its description can change; sub-spaces are allowed.
+- **Every live place moves into Places** (`_move_places_into_places`, run once per account in the
+  migration): from any space that is not restricted and not under a restricted one. Not moved: a
+  place in a restricted space (rule 3), a place already in Places or under it, old Home notes (D36),
+  places in the recycle bin. Only the space changes, so no revision is written; a place shared on
+  its own (D32) keeps its share. The emptied spaces stay; the user can delete them.
+- **On the live project (read-only, counts only, 2026-10-28):** 3 accounts; 2 already have a
+  top-level "Places" space (both adopted; both hold no notes today); 10 live places, 9 will move
+  into Places, 1 old Home note stays; none in a restricted space.
+- **SQL test 28 (18 checks):** one Places per account; adopting "places"; a restricted "Places" left
+  alone; the move (top-level and nested spaces in; restricted, Places/Kids, Home, binned and plain
+  notes not; only the account's own; no revision; share kept; twice moves nothing); the built-in
+  guard; users can't run the move. Tests 16, 17, 21 and 23 updated (five built-in spaces per account;
+  test 17 reuses the built-in Places). **Every SQL test passes** (702 checks, local Postgres 16 with
+  pgvector). **Dry run 18/18** on a copy without the migration, nothing kept.
+
+**Owner:** dry run, OK to apply. **Next:** step 2, the server.

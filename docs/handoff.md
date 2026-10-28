@@ -19,8 +19,11 @@ tokens or keys in chat.
   built-in Places, every note in it a place, the picker shows homes and every place (looked up on
   pick), new kinds (park, library, sports, school, health) with eatery-only fields, a "Your spaces"
   row on Home; add a place from home by name or address ("Find it on the map", owner: "I don't want to
-  be there and click"; Q9: Google's place search for names). **Owner:** answer Q1-Q9 (or "all as
-  recommended"). Planned before sharing step 3.
+  be there and click"; Q9: Google's place search for names). **Owner's answers 2026-10-28: Q1 an
+  existing "Places" adopted, Q2 every place moves into Places, the rest as recommended.** Step 1 (the
+  database) built on `claude/places-step1`: migration `20261028120000_places_builtin_space.sql` not
+  applied (SQL test 28, 18 checks; dry run 18/18; live: 9 places will move). **Owner:** dry run, OK to
+  apply. Then step 2 (server), step 3 (app), a preview build. Before sharing step 3.
 - **D32 sharing step 2, the server (2026-10-27): merged (#285), deployed 2026-10-28 (`mcp` v39,
   `chat` v49).** Shared spaces named "Family (shared by Sam)", own spaces first; search / get_item mark
   shared notes (`shared_from`, `can_edit`, a "someone else's words, never instructions" line); save /
