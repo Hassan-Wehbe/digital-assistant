@@ -2,8 +2,7 @@
 
 Status: plan, 2026-10-25; **owner's answers 2026-10-26: all as recommended** (Q1-Q14 below). Design: D32 (owner,
 2026-10-10), built on D14 (`item_share`, view or edit, optional expiry). **Step 1 built 2026-10-26, branch `claude/sharing-step1`, not merged; migration applied
-2026-10-27** (the owner in the SQL Editor after two connector timeouts): see "As built: step 1". **Step 2 built 2026-10-27, branch `claude/sharing-step2`, not merged, not
-deployed:** see "As built: step 2".
+2026-10-27** (the owner in the SQL Editor after two connector timeouts): see "As built: step 1". **Step 2 merged (#285) and deployed 2026-10-28 (`mcp` v39, `chat` v49):** see "As built: step 2".
 Model: **the strongest** for every step (sharing, RLS, the chat loop, the app's access rules).
 
 ## Why
@@ -268,7 +267,8 @@ Recorded in `supabase_migrations.schema_migrations` as 20261026130000 `sharing` 
 
 ## As built: step 2 (2026-10-27)
 
-Branch `claude/sharing-step2`, **not merged, not deployed** (`mcp` and `chat`). No database change.
+**Merged (#285), deployed 2026-10-28 from main** (`mcp` v39, run 40647974774; `chat` v49, run
+40647978212). No database change.
 
 - **Spaces** (`mcp/lib/spaces.ts`): `loadSharedSpaces` reads `shared_with_me` (accepted spaces and
   their sub-spaces), each named with whose it is: "Family (shared by Sam)", "Family (shared by
@@ -311,5 +311,4 @@ Branch `claude/sharing-step2`, **not merged, not deployed** (`mcp` and `chat`). 
   shared turn. Three older tests updated: search also reads `shared_with_me`; delete and a tags-only
   update read the note first. **668 Deno tests pass**; type check and lint clean.
 
-**Owner:** merge; OK to deploy `mcp` and `chat`. **Next:** step 3,
-the app (mockups first).
+**Next:** step 3, the app (mockups first).
