@@ -1,6 +1,8 @@
 # A Places space, and Wilma's spaces on Home (D45)
 
-Status: **plan, 2026-10-28, waiting for the owner's answers** (Q1-Q9 below). Raised by the owner
+Status: **plan, 2026-10-28.** Owner's answers so far (2026-10-28): **Q1 yes, an existing "Places"
+space becomes the built-in one; Q2 every note marked as a place moves into Places.** Q3-Q9 open; Q9
+with the cost estimate below. Raised by the owner
 after a tester could not find her place when adding it to a task. Before sharing step 3 (D32).
 Model: the strongest for steps 1-2 (a built-in space, the server's place rules); a smaller one for
 the app screens (step 3).
@@ -56,8 +58,9 @@ Both are easy to do and nothing on screen tells you. That is the clunkiness, not
   Places/Kids).
 - **A note in Places is a place:** New note opened from Places starts as a 📍 Place; a plain note
   saved there (by the app, the chat or the Claude connector) is kept as a place of kind "other",
-  so it is never invisible again. Places saved elsewhere before today stay where they are and still
-  count (Q2).
+  so it is never invisible again. **Every note marked as a place, wherever it is today, moves into
+  Places** (owner, Q2); a place in a restricted space stays where it is, so it never becomes
+  visible (rule 3).
 - **No more invisible places:** the picker lists every saved place, with or without a map spot;
   one without a spot shows its address, and picking it looks the address up on the phone then (as
   "Type an address" does), and offers to keep the spot on the place. A place with neither address
@@ -75,11 +78,38 @@ Both are easy to do and nothing on screen tells you. That is the clunkiness, not
   holds a gate code or alarm PIN (rule 9, as today); homes stay in Settings → Homes (D36), never a
   place.
 
+## What Google's place search would cost (Q9)
+
+The cheapest way to add a place by name is Google's **Autocomplete**: suggestions as the user types
+("Coral Gables lib…" → "Coral Gables Branch Library, 3443 Segovia St"), then one **Place Details**
+lookup of the one they pick, for its spot and address. Google bills this per "session" (the typing
+plus the one pick). Prices from Google's price list (October 2026; to confirm on the live page
+before switching it on):
+
+| Piece | Price | Free each month (whole app) |
+|---|---|---|
+| Autocomplete, per request while typing | $2.83 per 1,000 | 10,000 requests |
+| Place Details Essentials (spot and address), per pick | $5.00 per 1,000 | 10,000 |
+| or Place Details Pro (adds Google's name and kind): then the typing is free | about $17 per 1,000 | about 5,000 |
+
+- **One place added: about 1.5 to 2 cents** (about 4 suggestion requests while typing, waiting for 3
+  letters and a pause, plus the pick), either way.
+- **A regular user** adds most places in the first weeks: say **10 places the first month (about 20
+  cents), then 2-3 a month (about 5 cents)**. A Pro user who also uses it from the planners, a bit
+  more; the 20-a-day limit caps anyone at well under a dollar a month.
+- **For the app as a whole it is free until about 2,500 sessions a month** (the free 10,000
+  requests and 10,000 picks), so about 1,000 users adding 2-3 places a month cost nothing. Past
+  that, about $15-20 per 1,000 places added.
+- Text Search (one search, a list of results, as planned for Discover nearby, D42) would be about
+  **3.2 cents a search** (5,000 free): Autocomplete is cheaper for adding one known place.
+- A $10 monthly budget alert in Google Cloud, as D42 planned, and usage tracking counts every
+  lookup (`google_places`, D34).
+
 ## Questions (recommendation first)
 
-- **Q1. A built-in Places space:** **yes, for every account; an existing top-level "Places" is
+- **Q1 (answered: yes, an existing "Places" adopted). A built-in Places space:** **yes, for every account; an existing top-level "Places" is
   adopted** (rec.); or only for new accounts.
-- **Q2. Places saved in other spaces today** (testers have Restaurants spaces): **leave them where
+- **Q2 (answered: every place moves into Places). Places saved in other spaces today** (testers have Restaurants spaces): **leave them where
   they are; they still count everywhere** (rec.: nothing moves under anyone); or move them all into
   Places once (Places/<old space name>), or ask each user in the app ("Move 6 places into Places?").
 - **Q3. A plain note in Places:** **kept as a place of kind "other"** (rec.); or refused with "save
@@ -92,9 +122,9 @@ Both are easy to do and nothing on screen tells you. That is the clunkiness, not
   or without Memories; or the Vault too.
 - **Q7. Sharing (D32):** **Places can be shared, like Recipes** (rec.: "our family's places"); or
   never.
-- **Q9. Finding a place by name from home:** **the phone's free lookup for everyone, and Google's
-  place search for Pro (a few searches a day for Free)** (rec.: names work reliably, cost stays
-  small; it reuses D42's work); or the phone's free lookup only (addresses work, names sometimes);
+- **Q9. Finding a place by name from home:** **Google's Autocomplete for everyone, 20 lookups a day,
+  the phone's free lookup when typing a full street address** (rec.: about 1.5-2 cents a place, free
+  for the whole app up to ~2,500 places a month; it reuses D42's setup); or the phone's free lookup only (addresses work, names sometimes);
   or Google's search for everyone with no limit.
 - **Q8. When:** **before sharing step 3** (rec.: it changes the spaces the share screen lists); or
   after.
