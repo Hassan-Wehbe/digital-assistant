@@ -137,7 +137,8 @@ Deno.test("list_spaces marks the built-in spaces (the app shows BUILT-IN), and o
   const spaces = JSON.parse(out.text).spaces as { path: string; built_in?: string }[];
   assertEquals(spaces.find((x) => x.path === "Tasks")?.built_in, "tasks");
   assertEquals(spaces.find((x) => x.path === "Memories")?.built_in, "memories");
-  assertEquals(spaces.filter((x) => "built_in" in x).length, 2);
+  assertEquals(spaces.find((x) => x.path === "Places")?.built_in, "places");
+  assertEquals(spaces.filter((x) => "built_in" in x).length, 3);
   await s.close();
 });
 

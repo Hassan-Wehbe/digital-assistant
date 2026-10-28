@@ -3,7 +3,10 @@ import { chunkAndEmbed, hasPending, scheduleEmbedPending } from "../lib/embed.ts
 import { loadSharedSpaces, loadSpaces, resolveSpace, type Space } from "../lib/spaces.ts";
 import { addressedAs } from "../lib/assistant.ts";
 import { rejectCredentials } from "../lib/credentials.ts";
-import { assertOnlyHome, HOME_KIND, isPlace, normalizePlace, PLACE_KINDS, visiblePlaces, withPlace } from "../lib/places.ts";
+import {
+  assertOnlyHome, droppedWords, eateryFieldsOnly, HOME_KIND, inPlaces, isPlace, KEPT_AS_PLACE, normalizePlace, ONLY_PLACES,
+  PLACE_KINDS, PLACE_TYPE, PLACES_SPACE, placesSpace, placeTarget, PLAIN_NOTE_KIND, redirectWords, visiblePlaces, withPlace,
+} from "../lib/places.ts";
 import { isTask, normalizeTask, type TaskMetadata, TASKS_SPACE, tasksSpace, withTask } from "../lib/tasks.ts";
 import { withLinkLocation } from "../lib/maps_link.ts";
 import { isRoutine, normalizeRoutine, type RoutineMetadata, routineWords, withRoutine } from "../lib/routines.ts";
@@ -20,9 +23,11 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
         "Store a new piece of knowledge (a design, recipe, note, how-to, ...) in a space. " +
         "The text is indexed for search. Never use this for passwords, API keys or other " +
         "credentials: those belong in the vault (save_secret). " +
-        `For a restaurant or a place to visit use item_type "place" with metadata: address, maps_url ` +
+        `For a place (a restaurant, a park, the library, the pool, a doctor's) use item_type "place" (space optional: ` +
+        `places are kept in ${PLACES_SPACE} or a sub-space of it) with metadata: address, maps_url ` +
         `(Google Maps links only), kind (${PLACE_KINDS.join(", ")}), status ("want" or "been"), ` +
-        "rating (1-5), visited_on (YYYY-MM-DD), cuisine [words], price_level (1-4), dishes_liked [..], " +
+        "rating (1-5), visited_on (YYYY-MM-DD), cuisine [words], price_level (1-4), dishes_liked [..] " +
+        "(these three only for a restaurant, cafe or bar), " +
         "would_return, occasions (date_night, kids, business, quick_lunch, group, special), " +
         'visits [{on, with, note}]. Kind "home" is the user\'s one Home, where day plans start. The server checks these fields. ' +
         `For something the user has to do use item_type "task" (space optional, default ${TASKS_SPACE}) with ` +
@@ -36,7 +41,8 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
         "made [{on, rating 1-5}]. The server checks these fields." +
         addressedAs(assistantName, "save this recipe"),
       inputSchema: {
-        space: z.string().optional().describe(`Space name, path (Work/Gartner) or id; for a task, default ${TASKS_SPACE}`),
+        space: z.string().optional()
+          .describe(`Space name, path (Work/Gartner) or id; for a task, default ${TASKS_SPACE}; for a place, default ${PLACES_SPACE}`),
         title: z.string().trim().min(1).max(300),
         body: z.string().max(40_000).describe("The content, in Markdown"),
         item_type: z.string().trim().min(1).max(50).describe("design, recipe, note, how-to, ..."),
@@ -81,7 +87,23 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
             // "Tasks" before it exists: made on the first task.
             if (!task || space.trim().toLowerCase() !== TASKS_SPACE.toLowerCase()) throw e;
           }
-        } else if (!task && !routine) throw new Error("Say which space to save it in (space).");
+        } else if (!task && !routine && !(place && place.kind !== HOME_KIND && placesSpace(spaces))) {
+          throw new Error("Say which space to save it in (space).");
+        }
+        // Places (D45): a place goes to Places (or a sub-space of it); a plain note in Places is
+        // kept as a place, so it is never invisible to the place lists (Q3).
+        let itemType = item_type;
+        const asked = target;
+        let redirected = false;
+        let keptAsPlace = false;
+        if (place && place.kind !== HOME_KIND) ({ space: target, redirected } = placeTarget(spaces, target));
+        else if (!place && target && inPlaces(target, spaces)) {
+          if (task || routine || rtype) throw new Error(ONLY_PLACES);
+          place = normalizePlace({ ...(metadata ?? {}), kind: metadata?.kind ?? PLAIN_NOTE_KIND });
+          itemType = PLACE_TYPE;
+          keptAsPlace = true;
+          if (place.kind === HOME_KIND) await assertOnlyHome(db);
+        }
         if (routine && target && !isTasksSpace(target, spaces)) {
           throw new Error(`A routine is kept in the ${TASKS_SPACE} space; save it without a space.`);
         }
@@ -93,13 +115,16 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
         // A Maps link with coordinates and no location: the location is read from the link (Q15).
         let locationFromLink = false;
         if (place) ({ place, filled: locationFromLink } = withLinkLocation(place));
+        // Cuisine, price and dishes only for somewhere to eat or drink (Q5).
+        let dropped: string[] = [];
+        if (place) ({ place, dropped } = eateryFieldsOnly(place));
         const searchable = routine
           ? `${body.trim() ? `${body}\n\n` : ""}Routine: ${routineWords(routine)}`
           : withRecipe(withTask(withPlace(body, place), task), recipe);
         const chunks = await chunkAndEmbed({ title, summary, body: searchable });
         const { data, error } = await db.rpc("save_item", {
           p_space_id: target.id,
-          p_item_type: item_type,
+          p_item_type: itemType,
           p_title: title,
           p_body: body,
           p_summary: summary ?? null,
@@ -117,6 +142,9 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
           chunks: chunks.length,
           search_index: pending ? "keyword search now; meaning search within a few seconds" : "ready",
           ...(locationFromLink ? { location: "read from the Google Maps link" } : {}),
+          ...(redirected && asked ? { places: redirectWords(asked, target) } : {}),
+          ...(keptAsPlace ? { saved_as: KEPT_AS_PLACE } : {}),
+          ...(dropped.length ? { place_fields: droppedWords(dropped, place?.kind) } : {}),
           ...(task ? { task: { ...task, ...(placeTitle ? { place: placeTitle } : {}) } } : {}),
           ...(routine ? { routine: { ...routine, schedule: routineWords(routine) } } : {}),
           ...(createdTasksSpace ? { created_space: TASKS_SPACE } : {}),

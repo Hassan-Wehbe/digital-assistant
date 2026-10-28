@@ -65,6 +65,7 @@ export const IDS = {
   netflix: "00000000-0000-4000-8000-0000000000c4",
   lawyerPortal: "00000000-0000-4000-8000-0000000000c5",
   restaurants: "00000000-0000-4000-8000-0000000000a8",
+  places: "00000000-0000-4000-8000-0000000000a9",
   tawlet: "00000000-0000-4000-8000-0000000000d1",
   trattoria: "00000000-0000-4000-8000-0000000000d2",
   sushiBar: "00000000-0000-4000-8000-0000000000d3",
@@ -203,7 +204,9 @@ export class World {
     sp(IDS.logins, "Logins");
     sp(IDS.finance, "Finance");
     sp(IDS.private, "Private", null, true);
+    // Restaurants is empty since its places moved into the built-in Places space (D45 step 1).
     sp(IDS.restaurants, "Restaurants");
+    this.spaces.push({ id: IDS.places, name: "Places", description: "Spots you go to: restaurants, parks, the library, the pool", parent_id: null, is_restricted: false, built_in: "places" });
 
     const it = (id: string, space_id: string, title: string, item_type: string, tags: string[], body: string) =>
       this.items.push({
@@ -237,7 +240,7 @@ export class World {
       "To read:\n- The Overstory\n- Piranesi\n- A Psalm for the Wild-Built");
 
     // Places (docs/places-plan.md): metadata as the server stores it after its checks.
-    const place = (id: string, title: string, body: string, metadata: Record<string, unknown>, space_id: string = IDS.restaurants) =>
+    const place = (id: string, title: string, body: string, metadata: Record<string, unknown>, space_id: string = IDS.places) =>
       this.items.push({
         id, space_id, title, item_type: "place", summary: null, body_markdown: body, metadata,
         tags: [], created_at: T0, updated_at: T0, deleted_at: null, revisions: 0,
