@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { chunkAndEmbed, hasPending, scheduleEmbedPending } from "../lib/embed.ts";
-import { loadSpaces, resolveSpace, type Space } from "../lib/spaces.ts";
+import { loadSharedSpaces, loadSpaces, resolveSpace, type Space } from "../lib/spaces.ts";
 import { addressedAs } from "../lib/assistant.ts";
 import { rejectCredentials } from "../lib/credentials.ts";
 import { assertOnlyHome, HOME_KIND, isPlace, normalizePlace, PLACE_KINDS, visiblePlaces, withPlace } from "../lib/places.ts";
@@ -74,7 +74,9 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
         let createdTasksSpace = false;
         if (space?.trim()) {
           try {
-            target = resolveSpace(spaces, space);
+            // A space someone shared with the user counts only when none of their own matches (D32).
+            const shared: Space[] = await loadSharedSpaces(db).catch(() => []);
+            target = resolveSpace([...spaces, ...shared], space);
           } catch (e) {
             // "Tasks" before it exists: made on the first task.
             if (!task || space.trim().toLowerCase() !== TASKS_SPACE.toLowerCase()) throw e;
@@ -84,6 +86,10 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
           throw new Error(`A routine is kept in the ${TASKS_SPACE} space; save it without a space.`);
         }
         if (!target) ({ space: target, created: createdTasksSpace } = await tasksSpace(db, spaces));
+        if (target.shared?.permission === "view") {
+          throw new Error(`${target.shared.from} shared "${target.path}" with the user to view only, so nothing can be added to it.`);
+        }
+        if (target.shared && routine) throw new Error("A routine can't be added to a shared space.");
         // A Maps link with coordinates and no location: the location is read from the link (Q15).
         let locationFromLink = false;
         if (place) ({ place, filled: locationFromLink } = withLinkLocation(place));
@@ -114,6 +120,10 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
           ...(task ? { task: { ...task, ...(placeTitle ? { place: placeTitle } : {}) } } : {}),
           ...(routine ? { routine: { ...routine, schedule: routineWords(routine) } } : {}),
           ...(createdTasksSpace ? { created_space: TASKS_SPACE } : {}),
+          // In a space someone shared (D32): it belongs to them; their tags are theirs.
+          ...(target.shared
+            ? { shared_space: `It belongs to ${target.shared.from}, who shared this space.`, ...(tags?.length ? { tags: "not kept: tags in a shared space are its owner's" } : {}) }
+            : {}),
         });
       }),
   );

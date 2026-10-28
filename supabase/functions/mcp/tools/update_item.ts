@@ -8,6 +8,7 @@ import { isTask, normalizeTask, setTaskDone, type TaskMetadata, taskDate, withTa
 import { isRoutine, normalizeRoutine, type RoutineMetadata, routineTaskDone, routineWords, withRoutine } from "../lib/routines.ts";
 import { bringTasksInStep, findRoutine, loadRoutine, userToday } from "../lib/routine_tasks.ts";
 import { addMade, drinkHasAlcohol, isAdult21, normalizeRecipe, type RecipeMetadata, recipeType, UNDER_21, withRecipe } from "../lib/recipes.ts";
+import { sharerName } from "../lib/spaces.ts";
 import { isTasksSpace, taskPlaceTitle } from "./save_item.ts";
 import { dbError, guarded, ok, type RegisterTool } from "./_shared.ts";
 
@@ -62,14 +63,21 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
         const textChanged = title !== undefined || body !== undefined || summary !== undefined;
         const fieldsChanged = metadata !== undefined || item_type !== undefined || add_visit !== undefined ||
           task_done !== undefined || made_it !== undefined;
-        let current: { title: string; summary: string | null; body_markdown: string; item_type: string; metadata: Record<string, unknown> } | null = null;
-        // A move loads it too: a routine stays in the Tasks space.
-        if (textChanged || fieldsChanged || targetSpace) {
+        let current: {
+          title: string; summary: string | null; body_markdown: string; item_type: string; metadata: Record<string, unknown>;
+          access?: string; shared?: { from?: { name?: string; email?: string } } | null;
+        } | null = null;
+        // A move loads it too: a routine stays in the Tasks space. Tags too: a shared note's are its owner's.
+        if (textChanged || fieldsChanged || targetSpace || tags !== undefined) {
           const { data, error } = await db.rpc("get_item", { p_item_id: args.item_id });
           if (error) throw dbError("Could not load the item", error);
           if (!data) throw new Error("Item not found");
           current = data;
         }
+        // A note someone shared with the user (D32): view only can't change; with edit, it stays where it is.
+        const owner = current?.shared ? sharerName(current.shared.from) : null;
+        if (current?.access === "view") throw new Error(`${owner} shared this note with the user to view only, so it can't be changed.`);
+        if (owner && targetSpace) throw new Error(`Only ${owner}, who shared this note, can move it.`);
 
         // A place's fields are checked by the server whenever they or the type change.
         const finalType = item_type ?? current?.item_type;
@@ -209,6 +217,7 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
         return ok({
           id: args.item_id,
           updated: true,
+          ...(owner ? { shared_note: `It stays ${owner}'s.`, ...(tags !== undefined ? { tags: "not changed: a shared note's tags are its owner's" } : {}) } : {}),
           reindexed: chunks !== null,
           ...(place && fieldsChanged ? { place: newMetadata } : {}),
           ...(task && fieldsChanged ? { task: newMetadata } : {}),

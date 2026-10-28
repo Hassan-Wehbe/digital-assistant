@@ -13,8 +13,9 @@ async function search(args: Record<string, unknown>) {
   const calls: Record<string, unknown>[] = [];
   const db = {
     from: () => ({ select: () => Promise.resolve({ data: [], error: null }) }),
-    rpc: (_name: string, params: Record<string, unknown>) => {
-      calls.push(params);
+    rpc: (name: string, params: Record<string, unknown>) => {
+      // shared_with_me (D32) is read too, for the paths of shared spaces.
+      if (name === "search_items") calls.push(params);
       return Promise.resolve({ data: [], error: null });
     },
   } as unknown as SupabaseClient;

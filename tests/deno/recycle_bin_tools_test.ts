@@ -87,6 +87,8 @@ Deno.test("delete_item, restore_item and delete_space pass the ids through", asy
   await call(db, "restore_item", { item_id: ITEM });
   await call(db, "delete_space", { space: "Recipes" });
   assertEquals(log, [
+    // A note someone shared with the user is checked first (D32: view only can't be deleted).
+    `rpc get_item {"p_item_id":"${ITEM}"}`,
     `rpc delete_item {"p_item_id":"${ITEM}"}`,
     `rpc restore_item {"p_item_id":"${ITEM}"}`,
     `rpc delete_space {"p_space_id":"${SPACE}"}`,
