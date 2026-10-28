@@ -46,7 +46,7 @@ create table space (
   is_restricted  boolean not null default false,
   -- Made by Wilma, one of each per account, never deleted, renamed, moved or restricted
   -- (space_built_in_guard): 20261012120000_memory_builtin_spaces.sql, 20261021120000_recipes_builtin_spaces.sql.
-  built_in       text check (built_in in ('tasks', 'memories', 'recipes', 'cocktails')),
+  built_in       text check (built_in in ('tasks', 'memories', 'recipes', 'cocktails', 'places')),  -- places: 20261028120000_places_builtin_space.sql
   created_at     timestamptz not null default now(),
   unique nulls not distinct (owner_user_id, parent_id, name)
 );

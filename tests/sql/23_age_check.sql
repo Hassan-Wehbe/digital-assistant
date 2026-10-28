@@ -69,7 +69,7 @@ select pg_temp.check('the birth year is nowhere in the account rows',
   and not exists (select 1 from auth.users a where a.id = '00000000-0000-4000-a000-0000000000d1'
               and a.raw_user_meta_data::text like '%' || extract(year from current_date - interval '30 years')::int || '%'));
 select pg_temp.check('the new accounts still get their built-in spaces',
-  (select count(*) = 4 from space where owner_user_id = '00000000-0000-4000-a000-0000000000d1' and built_in is not null));
+  (select count(*) = 5 from space where owner_user_id = '00000000-0000-4000-a000-0000000000d1' and built_in is not null));
 
 -- ---------- A (made before; not asked yet) ----------
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-a000-00000000000a","role":"authenticated"}', true);

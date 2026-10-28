@@ -12,8 +12,8 @@ select pg_temp.check('a new account gets a built-in Tasks space',
 select pg_temp.check('and a built-in Memories space',
   (select count(*) = 1 from space where owner_user_id = '00000000-0000-4000-a000-00000000000a' and built_in = 'memories'
      and name = 'Memories' and description = 'What Wilma remembered about you' and parent_id is null and not is_restricted));
-select pg_temp.check('the other account gets its own four (with Recipes and Cocktails, test 21)',
-  (select count(*) = 4 from space where owner_user_id = '00000000-0000-4000-a000-00000000000b' and built_in is not null));
+select pg_temp.check('the other account gets its own five (with Recipes and Cocktails, test 21; Places, test 28)',
+  (select count(*) = 5 from space where owner_user_id = '00000000-0000-4000-a000-00000000000b' and built_in is not null));
 select pg_temp.check('memory is off by default',
   (select bool_and(not memory_on) from app_user));
 
@@ -54,7 +54,7 @@ select set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-a000-0000000
 set local role authenticated;
 
 select pg_temp.check('A sees only their own built-in spaces, with the mark',
-  (select count(*) = 4 and bool_and(owner_user_id = '00000000-0000-4000-a000-00000000000a') from space where built_in is not null));
+  (select count(*) = 5 and bool_and(owner_user_id = '00000000-0000-4000-a000-00000000000a') from space where built_in is not null));
 
 create temp table _ids as
 select (select id from space where built_in = 'tasks') tasks,

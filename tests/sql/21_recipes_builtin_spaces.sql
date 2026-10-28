@@ -14,9 +14,9 @@ select pg_temp.check('a new account gets a built-in Recipes space',
 select pg_temp.check('and a built-in Cocktails space',
   (select count(*) = 1 from space where owner_user_id = '00000000-0000-4000-a000-00000000000a' and built_in = 'cocktails'
      and name = 'Cocktails' and description = 'Drinks to make: full recipes or links' and parent_id is null and not is_restricted));
-select pg_temp.check('with Tasks and Memories still there: four built-in spaces per account',
-  (select count(*) = 4 from space where owner_user_id = '00000000-0000-4000-a000-00000000000a' and built_in is not null)
-  and (select count(*) = 4 from space where owner_user_id = '00000000-0000-4000-a000-00000000000b' and built_in is not null));
+select pg_temp.check('with Tasks and Memories still there: five built-in spaces per account (Places, test 28)',
+  (select count(*) = 5 from space where owner_user_id = '00000000-0000-4000-a000-00000000000a' and built_in is not null)
+  and (select count(*) = 5 from space where owner_user_id = '00000000-0000-4000-a000-00000000000b' and built_in is not null));
 
 -- ---- The migration's backfill, for accounts made before it (run as the owner) ----
 insert into auth.users (id, email, aud, role) values
