@@ -2,8 +2,8 @@
 
 Status: plan, 2026-10-28. **Owner's answers (2026-10-28): Q1 yes, an existing "Places" space becomes
 the built-in one; Q2 every note marked as a place moves into Places; Q3-Q9 all as recommended ("I
-want to see it in action").** **Step 1 built 2026-10-28, branch `claude/places-step1`, not merged,
-migration not applied:** see "As built: step 1". Raised by the owner
+want to see it in action").** **Step 1 built 2026-10-28, branch `claude/places-step1`, not merged;
+migration applied 2026-10-28** (recorded as 20261028193355): see "As built: step 1". Raised by the owner
 after a tester could not find her place when adding it to a task. Before sharing step 3 (D32).
 Model: the strongest for steps 1-2 (a built-in space, the server's place rules); a smaller one for
 the app screens (step 3).
@@ -154,7 +154,10 @@ or tap Save where I am while there; it then shows in the picker.
 
 ## As built: step 1 (2026-10-28)
 
-Branch `claude/places-step1`. **Migration `20261028120000_places_builtin_space.sql`, not applied.**
+Branch `claude/places-step1`. **Migration `20261028120000_places_builtin_space.sql` applied 2026-10-28**
+with the Supabase connector (recorded as 20261028193355 `places_builtin_space`). Checked read-only
+(counts only): 3 accounts, each with one Places space and its five built-in spaces; 9 places in
+Places; the one left elsewhere is the old Home note; users can't run the move.
 
 - **Places is a built-in space** (`space.built_in = 'places'`) for every account and at sign-up:
   an existing top-level, not restricted "Places" (any case) is adopted with its notes; a restricted
@@ -175,4 +178,4 @@ Branch `claude/places-step1`. **Migration `20261028120000_places_builtin_space.s
   test 17 reuses the built-in Places). **Every SQL test passes** (702 checks, local Postgres 16 with
   pgvector). **Dry run 18/18** on a copy without the migration, nothing kept.
 
-**Owner:** dry run, OK to apply. **Next:** step 2, the server.
+**Owner:** merge. **Next:** step 2, the server.
