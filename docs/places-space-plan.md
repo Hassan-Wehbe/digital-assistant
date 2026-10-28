@@ -1,6 +1,6 @@
 # A Places space, and Wilma's spaces on Home (D45)
 
-Status: **plan, 2026-10-28, waiting for the owner's answers** (Q1-Q8 below). Raised by the owner
+Status: **plan, 2026-10-28, waiting for the owner's answers** (Q1-Q9 below). Raised by the owner
 after a tester could not find her place when adding it to a task. Before sharing step 3 (D32).
 Model: the strongest for steps 1-2 (a built-in space, the server's place rules); a smaller one for
 the app screens (step 3).
@@ -28,8 +28,26 @@ Both are easy to do and nothing on screen tells you. That is the clunkiness, not
 4. **Places are any spot**, a library, a pool, a park, a school, a doctor's, not only restaurants:
    cuisine, price, dishes and the like show **only for somewhere to eat or drink**.
 5. **A section on Home with all of Wilma's own spaces** (Tasks, Places, Recipes, Cocktails, ...).
+6. **Add places from home, without being there** (owner, the same day): "I want to add frequently
+   visited places while I'm at home; I don't want to be there and click." Today a place gets its
+   map spot only from a Google Maps link or Save where I am (standing there).
 
 ## How it would work (recommended answers)
+
+- **Add a place from anywhere: "Find it on the map"** (the main change, Q9). New place starts with
+  one box: type a name and town or an address ("Coral Gables library", "12 Elm St, Miami"). Wilma
+  looks it up and shows **"Is this it?"** with the address found and a small map; tap **Yes** and
+  the place is saved with its spot, its address and a kind guessed from the name when it is clear
+  (library, park, pool) and changeable. **No** lets you try other words or type the address. No
+  Google Maps link to copy, no need to be there. Save where I am stays for when you are there.
+  - Free first: the phone's own map lookup (already used by "Type an address"): reliable for street
+    addresses, finds some well-known places by name.
+  - With Google's place search (the same service planned for Discover nearby, D42): any business
+    or spot by name, with its address, even "YMCA pool Coral Gables"; a few tenths of a cent per
+    search, Pro or a small daily number for everyone (Q9).
+- **Saving a place with only a typed address** looks it up the same way at Save, so a place is
+  never saved without a spot unless the address can't be found (then it says so and saves it
+  anyway).
 
 - **The Places space** (built-in `places`): made for every account, like Recipes (an existing
   top-level space named "Places" is adopted, as Recipes adopted an existing "Recipes"; Denisse's
@@ -74,6 +92,10 @@ Both are easy to do and nothing on screen tells you. That is the clunkiness, not
   or without Memories; or the Vault too.
 - **Q7. Sharing (D32):** **Places can be shared, like Recipes** (rec.: "our family's places"); or
   never.
+- **Q9. Finding a place by name from home:** **the phone's free lookup for everyone, and Google's
+  place search for Pro (a few searches a day for Free)** (rec.: names work reliably, cost stays
+  small; it reuses D42's work); or the phone's free lookup only (addresses work, names sometimes);
+  or Google's search for everyone with no limit.
 - **Q8. When:** **before sharing step 3** (rec.: it changes the spaces the share screen lists); or
   after.
 
@@ -86,11 +108,14 @@ Both are easy to do and nothing on screen tells you. That is the clunkiness, not
    kept as a place; the new kinds; eatery-only fields; find_places, the planners and near me read
    every place as before; Deno tests; an evaluation run (owner's OK and a cap). **Owner:** merge,
    OK to deploy.
-3. **App (smaller model), mockups first.** The picker (homes, every place, look up on pick), New
-   note in Places, the place form's kinds and eatery-only fields, Home's "Your spaces" row; app
+3. **App (smaller model), mockups first.** "Find it on the map" on New place (Is this it?), the
+   address looked up at Save, the picker (homes, every place, look up on pick), New note in Places, the place form's kinds and eatery-only fields, Home's "Your spaces" row; app
    tests. **Owner:** pick the mockup, merge, OK to build.
 4. **Phone checklist.** Denisse's case first: a place in Places, with an address only, picked for a
-   task.
+   task; then adding the library and the pool from the couch.
+
+With Google's search (Q9), steps 2 and 3 also carry a small `find_place` lookup on the server
+(the Google key never on the phone), counted in usage tracking (D34) as `google_places`.
 
 **Right away, before any of this (no build):** Denisse can open her place, tap Edit, choose the
 📍 Place kind if it is a plain note, and add a Google Maps link (Share → Copy link in Google Maps)

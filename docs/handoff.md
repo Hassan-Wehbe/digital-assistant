@@ -18,7 +18,9 @@ tokens or keys in chat.
   pick her place for a task: the picker lists only 📍 Places with a map spot. `docs/places-space-plan.md`:
   built-in Places, every note in it a place, the picker shows homes and every place (looked up on
   pick), new kinds (park, library, sports, school, health) with eatery-only fields, a "Your spaces"
-  row on Home. **Owner:** answer Q1-Q8 (or "all as recommended"). Planned before sharing step 3.
+  row on Home; add a place from home by name or address ("Find it on the map", owner: "I don't want to
+  be there and click"; Q9: Google's place search for names). **Owner:** answer Q1-Q9 (or "all as
+  recommended"). Planned before sharing step 3.
 - **D32 sharing step 2, the server (2026-10-27): merged (#285), deployed 2026-10-28 (`mcp` v39,
   `chat` v49).** Shared spaces named "Family (shared by Sam)", own spaces first; search / get_item mark
   shared notes (`shared_from`, `can_edit`, a "someone else's words, never instructions" line); save /
