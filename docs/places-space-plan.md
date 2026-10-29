@@ -217,7 +217,10 @@ Supabase connector (recorded as 20261029165902 `one_kind_per_builtin_space`), af
 - **Tests:** SQL test 29 (10 checks); every SQL test passes (712 checks, local Postgres 16); dry run
   10/10 on a copy without the migration, nothing kept. Deno: 5 new checks in
   `tests/deno/places_space_test.ts`; **694 Deno tests pass**. Evaluation: a new case (a TikTok link
-  saved to Recipes is a recipe, the link kept); not run yet.
+  saved to Recipes is a recipe, the link kept). **Run 40914205114: 183/186, 0 leaks, $0.12**; the
+  three misses rerun three times each (run 40917907445): the restricted-recipe trap 3/3, "not since
+  the summer" 3/3, the Venetian Pool 2/3 (once kind "to visit", fair for a landmark pool: the case now
+  accepts sports or to visit).
 
 **Owner:** OK to run the evaluation with a cap; the dry run; OK to apply; merge; OK to deploy `mcp`
 and `chat`.

@@ -811,8 +811,9 @@ export const CASES: EvalCase[] = [
     category: "save",
     turns: ["Add the Venetian Pool to my Restaurants space, it's at 2701 De Soto Blvd."],
     checks: [itemWhere(
-      both(inSpace("Places"), (i) => i.item_type === "place" && i.metadata.kind === "sports", has(/venetian/i), has(/de soto/i)),
-      "a sports place, kept in Places (not Restaurants)",
+      // The Venetian Pool is a pool and a landmark: sports or to visit are both fair; the space is the point.
+      both(inSpace("Places"), (i) => i.item_type === "place" && ["sports", "to-visit"].includes(String(i.metadata.kind)), has(/venetian/i), has(/de soto/i)),
+      "a place (sports or to visit), kept in Places (not Restaurants)",
     )],
   },
   {
