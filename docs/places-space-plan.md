@@ -153,6 +153,78 @@ With Google's search (Q9), steps 2 and 3 also carry a small `find_place` lookup 
 📍 Place kind if it is a plain note, and add a Google Maps link (Share → Copy link in Google Maps)
 or tap Save where I am while there; it then shows in the picker.
 
+## Step 3 mockups and the owner's answers (2026-10-29)
+
+Mockups: `docs/places-mockups.html`. **Owner's answers (2026-10-29): Q1 A (search first), Q2 B (small
+tiles), Q3 turn the plain notes already in a built-in space into its kind once.** And, from the owner on
+the mockups:
+
+- **"If I am adding a note to Places, I should be adding a place note. Same for the built-in spaces."**
+  One kind per built-in space (and its sub-spaces): Tasks holds tasks (and routines, D39), Places
+  places, Recipes recipes, Cocktails (Mocktails) drinks, Memories memories. In the app, a built-in
+  space's ＋ opens that kind's form (New task, New place, New recipe, New cocktail / mocktail, Remember
+  something), with no Note / Place / Recipe choice; New note from Home keeps its chips and hides them
+  once a built-in space is chosen. On the server, a plain note saved or moved there (chat, Claude
+  connector) is kept as that kind; a task, recipe, drink or place in the wrong built-in space is
+  refused.
+- **"The big description must remain the same for stuff shared from outside that we can't read."**
+  Turning a note into its space's kind, now or once for old notes, never changes its title or its text:
+  only its type and a few empty fields. A recipe shared from TikTok that Wilma can't read keeps the
+  whole shared description as its text.
+- **"The links ideally should be clickable."** Web links (https and http) in a note's text open in the
+  browser when tapped, on every note (places, recipes, tasks, plain notes). Other kinds of links stay
+  plain text.
+
+On the live project (read-only, counts only, 2026-10-29): Recipes holds 2 plain notes (and 4 recipes),
+Memories 1 plain note (and the old Home note, which stays, D36), Tasks only tasks and a routine,
+Cocktails nothing else. So the one-time change touches 3 notes.
+
+### Steps, revised
+
+2b. **Server and database (strongest model).** One kind per built-in space in `save_item` /
+    `update_item` (Places done in step 2); a migration turning the plain notes already in Tasks,
+    Recipes, Cocktails and Memories into their kind once (title and text unchanged, a revision kept,
+    rule 7; a memory longer than one short fact is left as it is); SQL and Deno tests; an evaluation
+    run. **Owner:** dry run, OK to apply, merge, OK to deploy.
+3.  **App (smaller model).** Q1 A: New place starts with "Find it on the map" (Google's suggestions,
+    then Is this it?), the address looked up at Save; the picker (homes, every place, looked up on
+    pick); the kinds and eatery-only fields; each built-in space's ＋ opens its kind's form; Q2 B: "Your
+    spaces" tiles on Home; tappable links in a note's text; app tests; a preview build on the owner's OK.
+
+## As built: step 2b (2026-10-29)
+
+Branch `claude/places-step3` (with the mockups), not merged. **Migration applied 2026-10-29** with the
+Supabase connector (recorded as 20261029165902 `one_kind_per_builtin_space`), after the owner's dry run
+(10/10). Checked read-only, counts only: 3 notes changed (Recipes now 6 recipes, Memories 1 memory),
+3 history entries written, the old Home note left in Memories, users can't run it.
+
+- **One kind per built-in space, on the server** (`lib/builtin_kinds.ts`, `save_item`, `update_item`): a
+  plain note (note, design, how-to, ...) saved in Tasks, Places, Recipes, Cocktails or Memories, or a
+  sub-space of one, is kept as that kind (task: open; place: kind Other; recipe; drink; memory), its
+  title and text unchanged, and the reply says so. Moved there, likewise. A note of another kind is
+  refused ("\"Recipes\" holds only recipes"); a routine stays allowed in Tasks; a note there can be made
+  plain only when it is moved out at the same time. The checks of each kind still apply: a memory must
+  be one short fact (200 characters at most); a drink with no strength counts as one with alcohol for
+  an account under 21 (D44). Shared spaces follow their owner's own rules (not built-in for the user).
+- **Migration `20261029120000_one_kind_per_builtin_space.sql`** (Q3): `_one_kind_per_built_in(user)`
+  turns every live plain note already in a built-in space into its kind once, for every account. Only
+  the type and the fields change (an empty task, place, recipe, drink or memory, as the server makes
+  one); the title and text stay word for word (owner: "the big description must remain the same").
+  The old version goes to the history with a change note (rule 7). Left alone: notes of another kind
+  (the old Home note in Memories, D36), the bin, a memory title too long to be one fact, and an
+  under-21 account's notes in Cocktails while the age check is on. Users can't run it. On the live
+  project this is 3 notes (2 in Recipes, 1 in Memories).
+- **Tests:** SQL test 29 (10 checks); every SQL test passes (712 checks, local Postgres 16); dry run
+  10/10 on a copy without the migration, nothing kept. Deno: 5 new checks in
+  `tests/deno/places_space_test.ts`; **694 Deno tests pass**. Evaluation: a new case (a TikTok link
+  saved to Recipes is a recipe, the link kept). **Run 40914205114: 183/186, 0 leaks, $0.12**; the
+  three misses rerun three times each (run 40917907445): the restricted-recipe trap 3/3, "not since
+  the summer" 3/3, the Venetian Pool 2/3 (once kind "to visit", fair for a landmark pool: the case now
+  accepts sports or to visit).
+
+**Owner:** OK to run the evaluation with a cap; the dry run; OK to apply; merge; OK to deploy `mcp`
+and `chat`.
+
 ## As built: step 1 (2026-10-28)
 
 Branch `claude/places-step1`. **Migration `20261028120000_places_builtin_space.sql` applied 2026-10-28**

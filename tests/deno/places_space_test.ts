@@ -25,7 +25,18 @@ const ITEM = "11111111-1111-4111-8111-111111111111";
 const row = (id: string, name: string, parent_id: string | null = null, extra: Record<string, unknown> = {}) =>
   ({ id, name, description: null, parent_id, is_restricted: false, built_in: null, ...extra });
 
+const TASKS = "00000000-0000-4000-8000-0000000000e1";
+const RECIPES = "00000000-0000-4000-8000-0000000000e2";
+const DESSERTS = "00000000-0000-4000-8000-0000000000e3";
+const MEMORIES = "00000000-0000-4000-8000-0000000000e4";
+const COCKTAILS = "00000000-0000-4000-8000-0000000000e5";
+
 const SPACES = [
+  row(TASKS, "Tasks", null, { built_in: "tasks" }),
+  row(RECIPES, "Recipes", null, { built_in: "recipes" }),
+  row(DESSERTS, "Desserts", RECIPES),
+  row(MEMORIES, "Memories", null, { built_in: "memories" }),
+  row(COCKTAILS, "Mocktails", null, { built_in: "cocktails" }),
   row(PLACES, "Places", null, { built_in: "places" }),
   row(KIDS, "Kids", PLACES),
   row(PLACES_LUNCH, "Lunch", PLACES),
@@ -34,7 +45,7 @@ const SPACES = [
   row(PRIVATE, "Private", null, { is_restricted: true }),
 ];
 
-function fakeDb(opts: { current?: Record<string, unknown>; spaces?: Record<string, unknown>[] } = {}) {
+function fakeDb(opts: { current?: Record<string, unknown>; spaces?: Record<string, unknown>[]; adult?: boolean } = {}) {
   const rpcs: { name: string; params: Record<string, unknown> }[] = [];
   const chain = (data: unknown[]) => {
     const q: Record<string, unknown> = {};
@@ -49,6 +60,7 @@ function fakeDb(opts: { current?: Record<string, unknown>; spaces?: Record<strin
       if (name === "get_item") return Promise.resolve({ data: opts.current ?? null, error: null });
       if (name === "save_item") return Promise.resolve({ data: ITEM, error: null });
       if (name === "shared_with_me") return Promise.resolve({ data: [], error: null });
+      if (name === "is_21") return Promise.resolve({ data: !!opts.adult, error: null });
       return Promise.resolve({ data: null, error: null });
     },
   } as unknown as SupabaseClient;
@@ -141,7 +153,7 @@ Deno.test("save_item: a plain note in Places is kept as a place of kind other", 
   assert(!out.isError, out.text);
   assertEquals(saved()!.p_item_type, "place");
   assertEquals((saved()!.p_metadata as Record<string, unknown>).kind, "other");
-  assertStringIncludes(JSON.parse(out.text).saved_as, "every note in Places is a place");
+  assertStringIncludes(JSON.parse(out.text).saved_as, 'every note in "Places" is a place');
 });
 
 Deno.test("save_item: a recipe or a task in Places is refused, not turned into a place", async () => {
@@ -149,7 +161,7 @@ Deno.test("save_item: a recipe or a task in Places is refused, not turned into a
     const { db, saved } = fakeDb();
     const out = await call(db, "save_item", { space: "Places", title: "Soup", body: "x", item_type });
     assert(out.isError, item_type);
-    assertStringIncludes(out.text, "Places holds only places");
+    assertStringIncludes(out.text, '"Places" holds only places');
     assertEquals(saved(), undefined);
   }
 });
@@ -211,7 +223,7 @@ Deno.test("update_item: a plain note moved into Places becomes a place; a place 
 
   const back = await call(fakeDb({ current: current("place", PLACES) }).db, "update_item", { item_id: ITEM, item_type: "note" });
   assert(back.isError);
-  assertStringIncludes(back.text, "Every note in Places is a place");
+  assertStringIncludes(back.text, 'Every note in "Places" is a place');
   // Made a plain note and moved out together: fine.
   const both = fakeDb({ current: current("place", PLACES) });
   const ok = await call(both.db, "update_item", { item_id: ITEM, item_type: "note", space: "Work" });
@@ -228,4 +240,69 @@ Deno.test("update_item: text-only edits and a place in a restricted space stay w
   const out2 = await call(r.db, "update_item", { item_id: ITEM, item_type: "place" });
   assert(!out2.isError, out2.text);
   assertEquals(r.updated()!.p_space_id, null);
+});
+
+// ---- One kind per built-in space (owner, 2026-10-29) ---------------------------------------------
+
+Deno.test("save_item: a plain note in Recipes (or Recipes/Desserts) is kept as a recipe, its text unchanged", async () => {
+  const text = "Saw this on TikTok, can't read the video: https://www.tiktok.com/@chef/video/123 — the long description as shared.";
+  for (const space of ["Recipes", "Recipes/Desserts"]) {
+    const w = fakeDb();
+    const out = await call(w.db, "save_item", { space, title: "Lemon cake", body: text, item_type: "note" });
+    assert(!out.isError, out.text);
+    assertEquals([w.saved()!.p_item_type, w.saved()!.p_body, w.saved()!.p_title], ["recipe", text, "Lemon cake"]);
+    assertStringIncludes(JSON.parse(out.text).saved_as, "Kept as a recipe");
+  }
+});
+
+Deno.test("save_item: a plain note in Tasks is an open task; in Mocktails a drink; in Memories a memory", async () => {
+  const t = fakeDb();
+  assert(!(await call(t.db, "save_item", { space: "Tasks", title: "Call the plumber", body: "", item_type: "note" })).isError);
+  assertEquals(t.saved()!.p_item_type, "task");
+  assertEquals((t.saved()!.p_metadata as Record<string, unknown>).status, "open");
+
+  const d = fakeDb({ adult: true });
+  const drink = await call(d.db, "save_item", { space: "Mocktails", title: "Lime cooler", body: "lime, mint, soda water", item_type: "note" });
+  assert(!drink.isError, drink.text);
+  assertEquals(d.saved()!.p_item_type, "cocktail");
+  // Under 21 (D44): a drink with no strength given counts as one with alcohol, so it is refused.
+  const young = await call(fakeDb().db, "save_item", { space: "Mocktails", title: "Lime cooler", body: "x", item_type: "note" });
+  assert(young.isError);
+  assertStringIncludes(young.text, "21 and over");
+
+  const m = fakeDb();
+  const ok = await call(m.db, "save_item", { space: "Memories", title: "Lexi swims on Tuesdays", body: "", item_type: "note", metadata: { x: 1 } });
+  assert(!ok.isError, ok.text);
+  assertEquals([m.saved()!.p_item_type, m.saved()!.p_metadata], ["memory", {}]);
+  const long = await call(fakeDb().db, "save_item", { space: "Memories", title: "x ".repeat(150), body: "", item_type: "note" });
+  assert(long.isError);
+  assertStringIncludes(long.text, "one short fact");
+});
+
+Deno.test("save_item: a note of another kind is refused in a built-in space; a routine still goes to Tasks", async () => {
+  for (const [space, item_type, words] of [["Recipes", "task", "holds only recipes"], ["Tasks", "recipe", "holds only tasks"], ["Memories", "recipe", "holds only memories"]]) {
+    const w = fakeDb();
+    const out = await call(w.db, "save_item", { space, title: "X", body: "x", item_type });
+    assert(out.isError, `${item_type} in ${space}`);
+    assertStringIncludes(out.text, words);
+    assertEquals(w.saved(), undefined);
+  }
+  const ok = fakeDb();
+  assert(!(await call(ok.db, "save_item", { space: "Recipes", title: "Soup", body: "x", item_type: "recipe" })).isError);
+  assert(!(await call(fakeDb().db, "save_item", { space: "Work", title: "Plan", body: "x", item_type: "design" })).isError);
+});
+
+Deno.test("update_item: a plain note moved into Recipes becomes a recipe (text unchanged); a recipe there can't become plain in place", async () => {
+  const w = fakeDb({ current: { ...current("note", WORK, { anything: 1 }), body_markdown: "Long description" } });
+  const out = await call(w.db, "update_item", { item_id: ITEM, space: "Recipes" });
+  assert(!out.isError, out.text);
+  assertEquals([w.updated()!.p_item_type, w.updated()!.p_space_id, w.updated()!.p_body], ["recipe", RECIPES, null]);
+  assertEquals(w.updated()!.p_metadata, {});
+
+  const back = await call(fakeDb({ current: current("recipe", RECIPES) }).db, "update_item", { item_id: ITEM, item_type: "note" });
+  assert(back.isError);
+  assertStringIncludes(back.text, 'Every note in "Recipes" is a recipe');
+  const task = await call(fakeDb({ current: current("task", TASKS) }).db, "update_item", { item_id: ITEM, space: "Recipes" });
+  assert(task.isError);
+  assertStringIncludes(task.text, "holds only recipes");
 });
