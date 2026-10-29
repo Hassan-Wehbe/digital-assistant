@@ -193,7 +193,7 @@ Cocktails nothing else. So the one-time change touches 3 notes.
 
 ## As built: step 2b (2026-10-29)
 
-Branch `claude/places-step3` (with the mockups), not merged. **Migration applied 2026-10-29** with the
+Merged (#290), **deployed 2026-10-29: `mcp` v41, `chat` v51**. **Migration applied 2026-10-29** with the
 Supabase connector (recorded as 20261029165902 `one_kind_per_builtin_space`), after the owner's dry run
 (10/10). Checked read-only, counts only: 3 notes changed (Recipes now 6 recipes, Memories 1 memory),
 3 history entries written, the old Home note left in Memories, users can't run it.
@@ -222,8 +222,7 @@ Supabase connector (recorded as 20261029165902 `one_kind_per_builtin_space`), af
   the summer" 3/3, the Venetian Pool 2/3 (once kind "to visit", fair for a landmark pool: the case now
   accepts sports or to visit).
 
-**Owner:** OK to run the evaluation with a cap; the dry run; OK to apply; merge; OK to deploy `mcp`
-and `chat`.
+**Next:** step 3, the app (smaller model, a fresh session).
 
 ## As built: step 1 (2026-10-28)
 
