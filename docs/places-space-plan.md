@@ -193,7 +193,10 @@ Cocktails nothing else. So the one-time change touches 3 notes.
 
 ## As built: step 2b (2026-10-29)
 
-Branch `claude/places-step3` (with the mockups), not merged; migration not applied.
+Branch `claude/places-step3` (with the mockups), not merged. **Migration applied 2026-10-29** with the
+Supabase connector (recorded as 20261029165902 `one_kind_per_builtin_space`), after the owner's dry run
+(10/10). Checked read-only, counts only: 3 notes changed (Recipes now 6 recipes, Memories 1 memory),
+3 history entries written, the old Home note left in Memories, users can't run it.
 
 - **One kind per built-in space, on the server** (`lib/builtin_kinds.ts`, `save_item`, `update_item`): a
   plain note (note, design, how-to, ...) saved in Tasks, Places, Recipes, Cocktails or Memories, or a
