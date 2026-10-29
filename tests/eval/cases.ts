@@ -773,8 +773,31 @@ export const CASES: EvalCase[] = [
     category: "save",
     turns: ["Wilma, save Mezyan in Hamra as a restaurant to try. Lebanese-Armenian, Rami says the mutabbal is great."],
     checks: [itemWhere(
-      both(inSpace("Restaurants"), (i) => i.item_type === "place" && i.metadata.status === "want", has(/mezyan/i), has(/hamra/i)),
-      "a place in Restaurants, status want, with Hamra",
+      both(inSpace("Places"), (i) => i.item_type === "place" && i.metadata.status === "want", has(/mezyan/i), has(/hamra/i)),
+      "a place in Places, status want, with Hamra",
+    )],
+  },
+  // Places are any spot, kept in the Places space (D45): no cuisine or price for a library.
+  {
+    id: "place-save-library",
+    category: "save",
+    turns: ["Save the Coral Gables library on Segovia St, we take the kids there on Saturdays."],
+    checks: [
+      itemWhere(
+        both(inSpace("Places"), (i) => i.item_type === "place" && i.metadata.kind === "library", has(/coral gables/i)),
+        "a place of kind library in Places",
+      ),
+      noItemWhere((i) => i.item_type === "place" && /coral gables/i.test(i.title + " " + i.body_markdown) &&
+        (i.metadata.cuisine !== undefined || i.metadata.price_level !== undefined), "no cuisine or price on the library"),
+    ],
+  },
+  {
+    id: "place-save-pool-in-restaurants",
+    category: "save",
+    turns: ["Add the Venetian Pool to my Restaurants space, it's at 2701 De Soto Blvd."],
+    checks: [itemWhere(
+      both(inSpace("Places"), (i) => i.item_type === "place" && i.metadata.kind === "sports", has(/venetian/i), has(/de soto/i)),
+      "a sports place, kept in Places (not Restaurants)",
     )],
   },
   {

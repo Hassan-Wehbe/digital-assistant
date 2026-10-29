@@ -16,3 +16,7 @@ verify_jwt = false
 [functions.delete-account]
 # Like chat: the function checks the caller's sign-in itself (401 otherwise), then the password.
 verify_jwt = false
+
+[functions.place-search]
+# Like chat: the function checks the caller's sign-in itself (401 otherwise).
+verify_jwt = false

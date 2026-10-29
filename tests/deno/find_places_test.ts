@@ -37,7 +37,7 @@ Deno.test("placePoint: only a real lat/lng pair counts", () => {
 });
 
 // ---- find_places on the pretend account (tests/eval/world.ts) -----------------------------------
-// Restaurants: Tawlet (Mar Mikhael), Trattoria Sud (Gemmayze, ~0.8 km away), Café Younes (Hamra,
+// Places: Tawlet (Mar Mikhael), Trattoria Sud (Gemmayze, ~0.8 km away), Café Younes (Hamra,
 // ~3.9 km) with locations; Kampai sushi bar with an address only. Private (restricted): Hidden
 // courtyard bar, a few metres from Tawlet.
 
@@ -82,7 +82,7 @@ Deno.test("find_places: nearest first, with a distance in miles, from a point th
   assertAlmostEquals(trattoria.distance, 0.5, 0.1, "about 0.8 km");
   assertAlmostEquals(younes.distance, 2.4, 0.15, "about 3.9 km");
   assertEquals("distance_km" in trattoria, false);
-  assertEquals(trattoria.space, "Restaurants");
+  assertEquals(trattoria.space, "Places");
   assertEquals(trattoria.place.cuisine, ["italian"], "the place's fields come along");
   assertEquals(out.json.from, TAWLET);
   assertEquals(out.json.within, { distance: 10, unit: "mi" }, "near means 10 miles by default");

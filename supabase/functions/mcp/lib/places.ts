@@ -9,7 +9,12 @@ import { loadSpaces, type Space } from "./spaces.ts";
 
 export const PLACE_TYPE = "place";
 
-export const PLACE_KINDS = ["restaurant", "cafe", "bar", "shop", "to-visit", "hotel", "home", "other"] as const;
+export const PLACE_KINDS = [
+  "restaurant", "cafe", "bar", "shop", "to-visit", "hotel", "park", "library", "sports", "school", "health", "home", "other",
+] as const;
+/** Somewhere to eat or drink: only these keep cuisine, price and dishes (D45, Q5). */
+export const EATERY_KINDS = ["restaurant", "cafe", "bar"] as const;
+const EATERY_FIELDS = ["cuisine", "price_level", "dishes_liked"] as const;
 /** The user's Home: where the day planner times drives from (docs/phase6-day-planner-step2-plan.md). At most one. */
 export const HOME_KIND = "home";
 export const OCCASIONS = ["date_night", "kids", "business", "quick_lunch", "group", "special"] as const;
@@ -120,7 +125,10 @@ export function isMapsLink(url: string): boolean {
 function kind(v: unknown): PlaceMetadata["kind"] {
   if (v === undefined || v === null || v === "") return undefined;
   if (typeof v !== "string") return fail("kind must be text");
-  const k = slug(v).replace(/_/g, "-").replace("café", "cafe").replace(/^(visit|to-see|sight|attraction)$/, "to-visit");
+  const k = slug(v).replace(/_/g, "-").replace("café", "cafe").replace(/^(visit|to-see|sight|attraction)$/, "to-visit")
+    .replace(/^(pool|swimming-pool|gym|field|court|sport|stadium)$/, "sports")
+    .replace(/^(doctor|dentist|pharmacy|clinic|hospital|vet)$/, "health")
+    .replace(/^(playground|garden|beach)$/, "park");
   if (!(PLACE_KINDS as readonly string[]).includes(k)) return fail(`kind must be one of ${PLACE_KINDS.join(", ")}`);
   return k as PlaceMetadata["kind"];
 }
@@ -231,6 +239,97 @@ export function normalizePlace(input: Record<string, unknown> | null | undefined
   }
   return out;
 }
+
+export function isEatery(kind: string | undefined): boolean {
+  return kind === undefined || (EATERY_KINDS as readonly string[]).includes(kind);
+}
+
+/**
+ * Cuisine, price and dishes belong to somewhere to eat or drink (D45, Q5): a park or a library
+ * keeps none. A place with no kind yet keeps them (it may well be a restaurant). Returns the place
+ * without them and the fields left out, so the reply can say so.
+ */
+export function eateryFieldsOnly(place: PlaceMetadata): { place: PlaceMetadata; dropped: string[] } {
+  if (isEatery(place.kind)) return { place, dropped: [] };
+  const out = { ...place };
+  const dropped = EATERY_FIELDS.filter((f) => out[f] !== undefined);
+  for (const f of dropped) delete out[f];
+  return { place: out, dropped };
+}
+
+/** The reply's note when eateryFieldsOnly left fields out. */
+export function droppedWords(dropped: string[], kind: string | undefined): string | undefined {
+  return dropped.length
+    ? `not kept: ${dropped.join(", ")} (only for a restaurant, cafe or bar; this place is a ${kind})`
+    : undefined;
+}
+
+// ---- The Places space (D45) -----------------------------------------------------------------------
+
+export const PLACES_SPACE = "Places";
+
+/** A plain note in Places is kept as a place of this kind (Q3). */
+export const PLAIN_NOTE_KIND = "other";
+
+/** The reply's note when a plain note in Places was kept as a place. */
+export const KEPT_AS_PLACE = `Kept as a place (kind "${PLAIN_NOTE_KIND}"): every note in ${PLACES_SPACE} is a place.`;
+
+/** The account's built-in Places space, or undefined (an older database, or a restricted "Places"). */
+export function placesSpace(spaces: Space[]): Space | undefined {
+  return spaces.find((s) => s.built_in === "places" && !s.shared);
+}
+
+/** True when `s` is Places or one of its sub-spaces (Places/Kids). */
+export function inPlaces(s: Space, spaces: Space[]): boolean {
+  const places = placesSpace(spaces);
+  if (!places || s.shared) return false;
+  const byId = new Map(spaces.filter((x) => !x.shared).map((x) => [x.id, x]));
+  const seen = new Set<string>();
+  for (let cur: Space | undefined = s; cur && !seen.has(cur.id); cur = cur.parent_id ? byId.get(cur.parent_id) : undefined) {
+    if (cur.id === places.id) return true;
+    seen.add(cur.id);
+  }
+  return false;
+}
+
+/** True when `s` is restricted or under a restricted space: what general search never looks in (rule 3). */
+export function inRestricted(s: Space, spaces: Space[]): boolean {
+  const byId = new Map(spaces.filter((x) => !x.shared).map((x) => [x.id, x]));
+  const seen = new Set<string>();
+  for (let cur: Space | undefined = s; cur && !seen.has(cur.id); cur = cur.parent_id ? byId.get(cur.parent_id) : undefined) {
+    if (cur.is_restricted) return true;
+    seen.add(cur.id);
+  }
+  return false;
+}
+
+/**
+ * Where a place is saved (D45, owner 2026-10-28: "everything marked as a place goes to Places"):
+ * Places itself, or the space asked for when it is already Places or under it, a space someone
+ * shared with the user (D32: their places stay theirs), or restricted (rule 3: a place there stays
+ * out of every list). Otherwise Places, or its sub-space of the same name when there is one
+ * ("Restaurants" -> Places/Restaurants). No Places space: the space asked for, as before.
+ */
+export function placeTarget(spaces: Space[], asked: Space | undefined): { space: Space | undefined; redirected: boolean } {
+  const places = placesSpace(spaces);
+  if (!places) return { space: asked, redirected: false };
+  if (!asked) return { space: places, redirected: false };
+  if (asked.shared || inPlaces(asked, spaces) || inRestricted(asked, spaces)) return { space: asked, redirected: false };
+  const sub = spaces.find((s) => !s.shared && s.parent_id === places.id && s.name.trim().toLowerCase() === asked.name.trim().toLowerCase());
+  return { space: sub ?? places, redirected: true };
+}
+
+/** The reply's note when a place asked for elsewhere went to Places. */
+export function redirectWords(asked: Space, to: Space): string {
+  return `Places are kept in ${PLACES_SPACE}, so it went to "${to.path}" rather than "${asked.path}". ` +
+    `Sub-spaces of ${PLACES_SPACE} (${PLACES_SPACE}/${asked.name}) can group them.`;
+}
+
+/**
+ * The refusal for a task, a routine, a recipe or a drink in Places: they mean something of their
+ * own, so they are never turned into a place.
+ */
+export const ONLY_PLACES = `${PLACES_SPACE} holds only places; save it in another space.`;
 
 /** "We went again last Friday with Sarah": the visit goes first, and the place counts as been. */
 export function addVisit(

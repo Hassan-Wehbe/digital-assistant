@@ -2,8 +2,9 @@
 
 Status: plan, 2026-10-28. **Owner's answers (2026-10-28): Q1 yes, an existing "Places" space becomes
 the built-in one; Q2 every note marked as a place moves into Places; Q3-Q9 all as recommended ("I
-want to see it in action").** **Step 1 built 2026-10-28, branch `claude/places-step1`, not merged;
-migration applied 2026-10-28** (recorded as 20261028193355): see "As built: step 1". Raised by the owner
+want to see it in action").** **Step 1 merged and applied 2026-10-28** (recorded as
+20261028193355): see "As built: step 1". **Step 2 built 2026-10-28, branch `claude/places-step2`, not
+merged or deployed:** see "As built: step 2". Raised by the owner
 after a tester could not find her place when adding it to a task. Before sharing step 3 (D32).
 Model: the strongest for steps 1-2 (a built-in space, the server's place rules); a smaller one for
 the app screens (step 3).
@@ -179,3 +180,62 @@ Places; the one left elsewhere is the old Home note; users can't run the move.
   pgvector). **Dry run 18/18** on a copy without the migration, nothing kept.
 
 **Owner:** merge. **Next:** step 2, the server.
+
+## As built: step 2 (2026-10-28)
+
+Branch `claude/places-step2`, not merged, not deployed. Server only; the app does not use any of it
+until step 3.
+
+- **A place is kept in Places** (`save_item`, `update_item`): saved without a space, it goes to
+  Places; asked for in another space ("save it in Restaurants"), it goes to Places, or to the
+  sub-space of Places with that name when there is one (Places/Restaurants), and the reply says so.
+  Kept where asked: Places and its sub-spaces, a restricted space (rule 3, as in step 1), a space
+  someone shared with the user (D32: theirs), and a Home (D36). A place can't be moved out of Places
+  (except into a restricted space); a note made a place moves into Places. Without a Places space
+  (an older database) nothing changes.
+- **Every note in Places is a place (Q3):** a plain note saved or moved there is kept as a place of
+  kind "other" (its old fields are kept in its history, rule 7); a task, routine, recipe or drink is
+  refused there ("Places holds only places"); a place in Places can be made a plain note only when it
+  is moved out at the same time.
+- **New kinds (Q5):** park, library, sports, school, health, with everyday words (pool, gym →
+  sports; doctor, dentist, pharmacy → health; playground → park). **Cuisine, price and dishes only
+  for a restaurant, cafe or bar** (or a place with no kind yet); otherwise left out, and the reply
+  says which.
+- **Wilma's instructions:** places are any spot, kept in Places; save without a space.
+- **Find a place by name (Q9): a new small server function, `place-search`**, for the app only (the
+  chat model and the Claude connector never see it). The app sends what the user types; it asks
+  Google's Autocomplete (New) and returns up to 5 suggestions: Google's place id, the name, the
+  address line and a kind guessed from Google's types (library, park, ...). Only suggestions, never
+  Google's place details: the app keeps the id and the confirmed name, and the spot comes from the
+  phone's own map lookup of the address (Google's terms let only the id be kept for good). Sign-in
+  checked (rule 5; no service-role key); nothing that looks like a password is sent (the same check
+  as save_item); nothing typed is logged; every request counted in usage tracking (`google_places`,
+  about 0.28 cents each); **at most 100 requests a user a day** (about 20 places), then
+  `daily_limit`; without the Google key it answers `not_set_up` and the app offers the address box.
+  Deployed with the "deploy chat" workflow (function `place-search`).
+- **Evaluation world:** a built-in Places space holding the saved places (as after step 1); the
+  Mezyan case now expects Places; two new cases (a library: kind library, no cuisine or price; "add
+  the Venetian Pool to my Restaurants space": a sports place, in Places).
+- **Tests:** `tests/deno/places_space_test.ts` (13), `tests/deno/place_search_test.ts` (8); two
+  older tests updated for the Places space in the pretend world. **690 Deno tests pass.**
+
+**Owner:** OK to run the evaluation (with a cap), merge, OK to deploy `mcp`, `chat` and
+`place-search`; and switch on Google's place search (below) whenever ready: the app works without it.
+
+### Owner: switching on Google's place search (about 15 minutes)
+
+Never paste the key into the chat or the repo (rule 6).
+
+1. **Google Cloud console** (console.cloud.google.com) → create a project, e.g. "Wilma".
+2. **Billing** → link a billing account (Google asks for a card; the free monthly amounts apply first).
+3. **APIs & Services → Library** → search **"Places API (New)"** → **Enable**. (Not the older "Places API".)
+4. **APIs & Services → Credentials → Create credentials → API key.** Then **Edit the key**:
+   - **API restrictions → Restrict key → Places API (New)** only.
+   - Application restrictions: **None** (the key is used by Supabase's servers, whose addresses change;
+     the API restriction and the daily limit keep it safe).
+   - Name it "Wilma place-search". Copy the key.
+5. **Billing → Budgets & alerts → Create budget:** $10 a month, alerts at 50%, 90% and 100% to your email.
+6. Optional cap: **APIs & Services → Places API (New) → Quotas** → "Autocomplete requests per day" →
+   e.g. 3,000 (a hard stop for the whole app).
+7. **Supabase → Project Settings → Edge Functions → Secrets → Add new secret:** name
+   `GOOGLE_PLACES_API_KEY`, value: the key. Save. (No redeploy needed for a new secret.)

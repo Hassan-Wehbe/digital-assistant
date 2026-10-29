@@ -1,8 +1,12 @@
 import { z } from "zod";
 import { type Chunk, chunkAndEmbed, hasPending, scheduleEmbedPending } from "../lib/embed.ts";
-import { loadSpaces, resolveSpace } from "../lib/spaces.ts";
+import { loadSpaces, resolveSpace, type Space } from "../lib/spaces.ts";
 import { rejectCredentials } from "../lib/credentials.ts";
-import { addVisit, assertOnlyHome, HOME_KIND, isPlace, normalizePlace, type PlaceMetadata, placePoint, withPlace } from "../lib/places.ts";
+import {
+  addVisit, assertOnlyHome, droppedWords, eateryFieldsOnly, HOME_KIND, inPlaces, inRestricted, isPlace, KEPT_AS_PLACE,
+  normalizePlace, ONLY_PLACES, type PlaceMetadata, placePoint, PLACE_TYPE, PLACES_SPACE, placesSpace, placeTarget,
+  PLAIN_NOTE_KIND, withPlace,
+} from "../lib/places.ts";
 import { withLinkLocation } from "../lib/maps_link.ts";
 import { isTask, normalizeTask, setTaskDone, type TaskMetadata, taskDate, withTask } from "../lib/tasks.ts";
 import { isRoutine, normalizeRoutine, type RoutineMetadata, routineTaskDone, routineWords, withRoutine } from "../lib/routines.ts";
@@ -25,7 +29,8 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
         "(\"I picked up the dry cleaning\") and false opens it again, keeping its other fields; a repeating task " +
         "moves to its next date instead. To give a task a time (\"move my lunch to 1\"), pass its metadata with " +
         "planned_at, the local time (\"2026-10-09T13:00\"). For a recipe or cocktail, made_it records that the " +
-        "user made it (\"I made the shrimp again, 5 stars\"), keeping its other fields.",
+        "user made it (\"I made the shrimp again, 5 stars\"), keeping its other fields. " +
+        `A place stays in ${PLACES_SPACE} or a sub-space of it; a note made a place moves into ${PLACES_SPACE}.`,
       inputSchema: {
         item_id: z.string().uuid(),
         title: z.string().trim().min(1).max(300).optional(),
@@ -57,15 +62,16 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
         // The phone's date (the app sends it; Q12): without it, today in UTC.
         const today = taskDate(args.today, "today");
         rejectCredentials({ title, body, summary, tags, metadata, item_type, change_note, add_visit, made_it }, assistantName);
-        const spaces = args.space ? await loadSpaces(db) : null;
-        const targetSpace = args.space ? resolveSpace(spaces!, args.space) : null;
+        // Spaces are needed for a move, and for a new type (Places, D45).
+        const spaces = args.space || item_type !== undefined ? await loadSpaces(db) : null;
+        let targetSpace: Space | null = args.space ? resolveSpace(spaces!, args.space) : null;
 
         const textChanged = title !== undefined || body !== undefined || summary !== undefined;
-        const fieldsChanged = metadata !== undefined || item_type !== undefined || add_visit !== undefined ||
+        let fieldsChanged = metadata !== undefined || item_type !== undefined || add_visit !== undefined ||
           task_done !== undefined || made_it !== undefined;
         let current: {
           title: string; summary: string | null; body_markdown: string; item_type: string; metadata: Record<string, unknown>;
-          access?: string; shared?: { from?: { name?: string; email?: string } } | null;
+          access?: string; shared?: { from?: { name?: string; email?: string } } | null; space?: { id: string } | null;
         } | null = null;
         // A move loads it too: a routine stays in the Tasks space. Tags too: a shared note's are its owner's.
         if (textChanged || fieldsChanged || targetSpace || tags !== undefined) {
@@ -79,8 +85,48 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
         if (current?.access === "view") throw new Error(`${owner} shared this note with the user to view only, so it can't be changed.`);
         if (owner && targetSpace) throw new Error(`Only ${owner}, who shared this note, can move it.`);
 
+        // Places (D45): every place is kept in Places (or a sub-space of it, or a restricted space,
+        // rule 3), and every note in Places is a place. A shared note follows its owner's spaces.
+        let newType = item_type;
+        let keptAsPlace = false;
+        let movedToPlaces: string | null = null;
+        if (current && !owner && spaces && (targetSpace || item_type !== undefined)) {
+          const from = spaces.find((s) => s.id === current!.space?.id);
+          const to = targetSpace ?? from;
+          const kind = (metadata ?? current.metadata)?.kind;
+          const places = placesSpace(spaces);
+          if (places && to && isPlace(newType ?? current.item_type) && kind !== HOME_KIND) {
+            if (targetSpace) {
+              const { space, redirected } = placeTarget(spaces, targetSpace);
+              if (redirected && space?.id === places.id) {
+                throw new Error(
+                  `A place is kept in ${PLACES_SPACE}, so it can't move to "${targetSpace.path}". ` +
+                    `A sub-space of ${PLACES_SPACE} (${PLACES_SPACE}/${targetSpace.name}) can group places.`,
+                );
+              }
+              if (redirected) movedToPlaces = space!.path;
+              targetSpace = space ?? targetSpace;
+            } else if (!isPlace(current.item_type) && !inPlaces(to, spaces) && !inRestricted(to, spaces)) {
+              // A note made a place moves into Places.
+              targetSpace = places;
+              movedToPlaces = places.path;
+            }
+          } else if (places && to && inPlaces(to, spaces) && !isPlace(newType ?? current.item_type)) {
+            if (isPlace(current.item_type) && item_type !== undefined && !targetSpace) {
+              throw new Error(`Every note in ${PLACES_SPACE} is a place; to make it a plain note, move it to another space too.`);
+            }
+            if (!isPlace(current.item_type)) {
+              const t = newType ?? current.item_type;
+              if (isTask(t) || isRoutine(t) || recipeType(t)) throw new Error(ONLY_PLACES);
+              // A plain note moved into Places is kept as a place (Q3).
+              newType = PLACE_TYPE;
+              keptAsPlace = true;
+              fieldsChanged = true;
+            }
+          }
+        }
         // A place's fields are checked by the server whenever they or the type change.
-        const finalType = item_type ?? current?.item_type;
+        const finalType = newType ?? current?.item_type;
         let place: PlaceMetadata | null = null;
         if (add_visit && !isPlace(finalType)) throw new Error("add_visit is only for places (item_type \"place\")");
         if (task_done !== undefined && !isTask(finalType)) throw new Error("task_done is only for tasks (item_type \"task\")");
@@ -134,7 +180,15 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
         }
         if (current && isPlace(finalType)) {
           const base = metadata ?? current.metadata;
-          if (fieldsChanged) place = add_visit ? addVisit(base, add_visit) : normalizePlace(base);
+          if (keptAsPlace && metadata === undefined) {
+            // A note's own fields that a place doesn't have are left behind (kept in its history, rule 7).
+            try {
+              place = normalizePlace({ ...base, kind: base?.kind ?? PLAIN_NOTE_KIND });
+            } catch {
+              place = normalizePlace({ kind: PLAIN_NOTE_KIND });
+            }
+          } else if (keptAsPlace) place = normalizePlace({ ...base, kind: base?.kind ?? PLAIN_NOTE_KIND });
+          else if (fieldsChanged) place = add_visit ? addVisit(base, add_visit) : normalizePlace(base);
           else {
             // Only the text changed: a place saved before these checks still gets its fields
             // into search when they are valid, and its text edit never fails because of them.
@@ -172,6 +226,9 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
           if (!removed) ({ place, filled: locationFromLink } = withLinkLocation(place));
         }
         if (place && fieldsChanged && place.kind === HOME_KIND) await assertOnlyHome(db, args.item_id);
+        // Cuisine, price and dishes only for somewhere to eat or drink (Q5).
+        let dropped: string[] = [];
+        if (place && fieldsChanged) ({ place, dropped } = eateryFieldsOnly(place));
         const newMetadata = place && fieldsChanged
           ? place
           : task && fieldsChanged
@@ -200,7 +257,7 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
           p_body: body ?? null,
           p_summary: summary ?? null,
           p_metadata: newMetadata,
-          p_item_type: item_type ?? null,
+          p_item_type: newType ?? null,
           p_space_id: targetSpace?.id ?? null,
           p_tags: tags ?? null,
           p_change_note: change_note ?? null,
@@ -224,6 +281,9 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
           ...(recipe && fieldsChanged ? { [rtype!]: newMetadata } : {}),
           ...(routine && fieldsChanged ? { routine: { ...routine, schedule: routineWords(routine) }, tasks_in_step: inStep } : {}),
           ...(locationFromLink ? { location: "read from the Google Maps link" } : {}),
+          ...(movedToPlaces ? { space: movedToPlaces, places: `Places are kept in ${PLACES_SPACE}: it is in "${movedToPlaces}".` } : {}),
+          ...(keptAsPlace ? { saved_as: KEPT_AS_PLACE } : {}),
+          ...(dropped.length ? { place_fields: droppedWords(dropped, place?.kind) } : {}),
         });
       }),
   );
