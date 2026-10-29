@@ -118,7 +118,7 @@ section > header { display: grid; gap: 6px; }
     <span class="eyebrow">Places · step 3 · mockups for review (D45)</span>
     <h1>Places: add one from the couch, pick any of them</h1>
     <p class="lede">The app side of the Places space. Pick <b>one layout for adding a place (A or B)</b> and <b>one for Home’s “Your spaces” row (A or B)</b>; the rest is the same in both. Names and addresses are <b>made-up examples</b>.</p>
-    <nav><a href="#add">1 · Add a place</a><a href="#isit">2 · Is this it?</a><a href="#form">3 · Kinds and fields</a><a href="#pick">4 · Picking a place</a><a href="#home">5 · Your spaces</a><a href="#questions">Questions</a></nav>
+    <nav><a href="#add">1 · Add a place</a><a href="#isit">2 · Is this it?</a><a href="#form">3 · Kinds and fields</a><a href="#pick">4 · Picking a place</a><a href="#home">5 · Your spaces</a><a href="#builtin">6 · One kind per built-in space</a><a href="#questions">Questions</a></nav>
   </header>
 
   <section id="add">
@@ -263,7 +263,7 @@ section > header { display: grid; gap: 6px; }
         <ul>
           <li>New kinds: <b>park, library, sports</b> (pool, gym, field), <b>school, health</b> (doctor, dentist, pharmacy).</li>
           <li><b>Cuisine, dishes and price</b> show only for restaurant, café and bar (and before a kind is chosen). Good for, rating, been / want to go and visits stay for every kind.</li>
-          <li><b>New note opened from Places</b> starts as a 📍 Place. A plain note saved there is kept as a place of kind Other (the server already does this).</li>
+          <li><b>Adding to Places is always a place</b> (section 6): its ＋ opens New place, with no Note / Place / Recipe choice. A plain note the chat or the Claude connector saves there is kept as a place of kind Other (the server already does this).</li>
         </ul>
       </div>
     </div>
@@ -361,12 +361,66 @@ section > header { display: grid; gap: 6px; }
     </div>
   </section>
 
+  <section id="builtin">
+    <header><span class="tag">6 · One kind per built-in space (owner, 2026-10-29)</span><h2>Adding to a built-in space adds its kind</h2>
+      <p class="lede">“If I am adding a note to Places, I should be adding a place note. Same for the other built-in spaces.”</p></header>
+    <div class="row">
+      <div class="col">
+        <span class="tag">Places</span>
+        <div class="phone short">
+          <div class="bar"><span class="lnk">‹</span>Places<span class="sp"></span></div>
+          <div class="scroll">
+            <button class="btn pri" type="button">＋ New place</button>
+            <div class="ev"><b>📚 Coral Gables Branch Library</b><span class="muted">3443 Segovia St</span></div>
+            <div class="ev"><b>🍽 Tawlet</b><span class="muted">Mar Mikhael</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <span class="tag">Recipes</span>
+        <div class="phone short">
+          <div class="bar"><span class="lnk">‹</span>Recipes<span class="sp"></span></div>
+          <div class="scroll">
+            <button class="btn pri" type="button">＋ New recipe</button>
+            <div class="ev"><b>🍳 Red lentil soup</b><span class="muted">35 min · serves 4</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <span class="tag">New recipe (no kind choice)</span>
+        <div class="phone short">
+          <div class="bar"><span class="lnk">‹</span>New recipe<span class="sp"></span><span class="lnk">Save</span></div>
+          <div class="scroll">
+            <span class="muted">In 🍳 Recipes</span>
+            <div class="field"><label>Name of the recipe</label><input aria-label="Name"></div>
+            <div class="field"><label>Ingredients</label><input aria-label="Ingredients"></div>
+            <div class="field"><label>Steps</label><input aria-label="Steps"></div>
+          </div>
+        </div>
+      </div>
+      <div class="notes">
+        <h3>The rule</h3>
+        <ul>
+          <li><b>✅ Tasks</b>: ＋ New task opens the task form. A plain note saved there by the chat or the Claude connector is kept as a task (open, no date).</li>
+          <li><b>📍 Places</b>: ＋ New place (section 1). A plain note is kept as a place, kind Other (live since step 2).</li>
+          <li><b>🍳 Recipes</b>: ＋ New recipe. A plain note is kept as a recipe, its text as the recipe.</li>
+          <li><b>🍸 Cocktails</b> (🍹 Mocktails under 21): ＋ New cocktail / mocktail. A plain note is kept as a drink; the 21-and-over check still applies.</li>
+          <li><b>🧠 Memories</b>: ＋ Remember something, one short line (no title, no files). A plain note there is kept as a memory, with the memory checks (nothing that looks like a password).</li>
+          <li><b>Sub-spaces</b> follow their built-in space (Recipes/Desserts holds recipes).</li>
+          <li><b>New note from Home</b>: the kind chips stay; choosing a built-in space hides them and uses its kind.</li>
+          <li>A task, a recipe or a drink saved in the wrong built-in space is refused, as Places does now (“Places holds only places”).</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
   <section id="questions">
     <header><span class="tag">Questions</span><h2>Two picks, recommendation first</h2></header>
     <div class="notes">
       <p class="q"><b>Q1. Adding a place:</b> <b>A, search first</b> (rec.: the main way is the first thing you see), or B, today’s form with a 🔎 button.</p>
       <p class="q"><b>Q2. Your spaces on Home:</b> <b>A, a row of chips</b> (rec.: one line), or B, small tiles.</p>
-      <p class="muted">Then: the app changes, its tests, and a preview build on your OK.</p>
+      <p class="q"><b>Q3. Plain notes already in Tasks, Recipes, Cocktails or Memories</b> (few or none today): <b>leave them as they are</b> (rec.: they still show and open; only new ones follow the rule), or turn each into its space’s kind once.</p>
+      <p class="muted">The server part of section 6 (Tasks, Recipes, Cocktails, Memories) is a small server change with its own tests and evaluation run before the app build; Places is already done. Then: the app changes, their tests, and a preview build on your OK.</p>
     </div>
   </section>
 </div>
