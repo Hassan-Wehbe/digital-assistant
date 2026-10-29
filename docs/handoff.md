@@ -23,12 +23,11 @@ tokens or keys in chat.
   existing "Places" adopted, Q2 every place moves into Places, the rest as recommended.** Step 1 (the
   database) built on `claude/places-step1`: migration `20261028120000_places_builtin_space.sql` applied
   2026-10-28 (recorded 20261028193355; checked: 3 accounts with Places, 9 places moved, the old Home
-  note stays), merged (#287). **Step 2 (the server) built on `claude/places-step2`, not merged or
-  deployed:** places kept in Places (or a sub-space; restricted and shared spaces keep theirs), a plain
+  note stays), merged (#287). **Step 2 (the server) merged (#288), deployed 2026-10-29 (`mcp` v40,
+  `chat` v50, `place-search` v1; eval 183/185, 0 leaks, rerun 8/8):** places kept in Places (or a sub-space; restricted and shared spaces keep theirs), a plain
   note in Places kept as a place, new kinds, cuisine/price/dishes only for eateries, and a new app-only
   function `place-search` (Google Autocomplete, key `GOOGLE_PLACES_API_KEY` as a Supabase secret, 100
-  requests a user a day, `not_set_up` without the key); 690 Deno tests pass. **Owner:** OK to run the
-  evaluation with a cap, merge, OK to deploy `mcp`, `chat`, `place-search`; the Google key steps are in
+  requests a user a day, `not_set_up` without the key); 690 Deno tests pass. **Owner:** the Google key steps are in
   the plan ("Owner: switching on Google's place search"). Then step 3 (app), a preview build. Before
   sharing step 3.
 - **D32 sharing step 2, the server (2026-10-27): merged (#285), deployed 2026-10-28 (`mcp` v39,

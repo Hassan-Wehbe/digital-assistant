@@ -3,8 +3,8 @@
 Status: plan, 2026-10-28. **Owner's answers (2026-10-28): Q1 yes, an existing "Places" space becomes
 the built-in one; Q2 every note marked as a place moves into Places; Q3-Q9 all as recommended ("I
 want to see it in action").** **Step 1 merged and applied 2026-10-28** (recorded as
-20261028193355): see "As built: step 1". **Step 2 built 2026-10-28, branch `claude/places-step2`, not
-merged or deployed:** see "As built: step 2". Raised by the owner
+20261028193355): see "As built: step 1". **Step 2 merged (#288) and deployed 2026-10-29**
+(`mcp` v40, `chat` v50, `place-search` v1): see "As built: step 2". Raised by the owner
 after a tester could not find her place when adding it to a task. Before sharing step 3 (D32).
 Model: the strongest for steps 1-2 (a built-in space, the server's place rules); a smaller one for
 the app screens (step 3).
@@ -183,8 +183,10 @@ Places; the one left elsewhere is the old Home note; users can't run the move.
 
 ## As built: step 2 (2026-10-28)
 
-Branch `claude/places-step2`, not merged, not deployed. Server only; the app does not use any of it
-until step 3.
+Merged (#288), **deployed 2026-10-29: `mcp` v40, `chat` v50, `place-search` v1** (no Google key yet:
+it answers `not_set_up`). Server only; the app does not use any of it until step 3. **Evaluation:** run
+40892435538 183/185, 0 leaks, $0.12 (the library case's own check was wrong, fixed; `home-no-card-trap`
+missed once); rerun 40895916230 of the place cases and that one, twice each: 8/8, under a cent.
 
 - **A place is kept in Places** (`save_item`, `update_item`): saved without a space, it goes to
   Places; asked for in another space ("save it in Restaurants"), it goes to Places, or to the
@@ -219,8 +221,14 @@ until step 3.
 - **Tests:** `tests/deno/places_space_test.ts` (13), `tests/deno/place_search_test.ts` (8); two
   older tests updated for the Places space in the pretend world. **690 Deno tests pass.**
 
-**Owner:** OK to run the evaluation (with a cap), merge, OK to deploy `mcp`, `chat` and
-`place-search`; and switch on Google's place search (below) whenever ready: the app works without it.
+**Owner:** switch on Google's place search (below) whenever ready: the app works without it.
+**Next:** step 3, the app (mockups first).
+
+**What Google's place search costs (as built: suggestions only, no place details):** $2.83 per 1,000
+requests, about 0.28 cents each; about 4-5 requests per place added, so **about 1.1-1.4 cents a
+place**. A regular user: about 12-14 cents the first month (10 places), then 3-4 cents a month; the
+100-a-day limit caps one user at 28 cents a day. The whole app: the first 10,000 requests a month are
+free (about 2,000-2,500 places), so 100 users cost nothing and 1,000 users about $14 a month.
 
 ### Owner: switching on Google's place search (about 15 minutes)
 
