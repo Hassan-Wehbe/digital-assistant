@@ -3,10 +3,11 @@ import { type Chunk, chunkAndEmbed, hasPending, scheduleEmbedPending } from "../
 import { loadSpaces, resolveSpace, type Space } from "../lib/spaces.ts";
 import { rejectCredentials } from "../lib/credentials.ts";
 import {
-  addVisit, assertOnlyHome, droppedWords, eateryFieldsOnly, HOME_KIND, inPlaces, inRestricted, isPlace, KEPT_AS_PLACE,
-  normalizePlace, ONLY_PLACES, type PlaceMetadata, placePoint, PLACE_TYPE, PLACES_SPACE, placesSpace, placeTarget,
-  PLAIN_NOTE_KIND, withPlace,
+  addVisit, assertOnlyHome, droppedWords, eateryFieldsOnly, HOME_KIND, inPlaces, inRestricted, isPlace, normalizePlace,
+  type PlaceMetadata, placePoint, PLACES_SPACE, placesSpace, placeTarget, PLAIN_NOTE_KIND, withPlace,
 } from "../lib/places.ts";
+import { type BuiltIn, builtInOf, fitsBuiltIn, KIND_TYPE, keptAs, onlyKind, staysKind } from "../lib/builtin_kinds.ts";
+import { cleanFact } from "../lib/memory.ts";
 import { withLinkLocation } from "../lib/maps_link.ts";
 import { isTask, normalizeTask, setTaskDone, type TaskMetadata, taskDate, withTask } from "../lib/tasks.ts";
 import { isRoutine, normalizeRoutine, type RoutineMetadata, routineTaskDone, routineWords, withRoutine } from "../lib/routines.ts";
@@ -88,7 +89,8 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
         // Places (D45): every place is kept in Places (or a sub-space of it, or a restricted space,
         // rule 3), and every note in Places is a place. A shared note follows its owner's spaces.
         let newType = item_type;
-        let keptAsPlace = false;
+        let keptKind: BuiltIn | null = null;
+        let keptNote: string | null = null;
         let movedToPlaces: string | null = null;
         if (current && !owner && spaces && (targetSpace || item_type !== undefined)) {
           const from = spaces.find((s) => s.id === current!.space?.id);
@@ -111,20 +113,32 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
               targetSpace = places;
               movedToPlaces = places.path;
             }
-          } else if (places && to && inPlaces(to, spaces) && !isPlace(newType ?? current.item_type)) {
-            if (isPlace(current.item_type) && item_type !== undefined && !targetSpace) {
-              throw new Error(`Every note in ${PLACES_SPACE} is a place; to make it a plain note, move it to another space too.`);
-            }
-            if (!isPlace(current.item_type)) {
-              const t = newType ?? current.item_type;
-              if (isTask(t) || isRoutine(t) || recipeType(t)) throw new Error(ONLY_PLACES);
-              // A plain note moved into Places is kept as a place (Q3).
-              newType = PLACE_TYPE;
-              keptAsPlace = true;
+          } else if (to) {
+            // One kind per built-in space (owner, 2026-10-29): a plain note moved into one, or made
+            // plain there, is kept as its kind (title and text unchanged); another kind is refused.
+            const b = builtInOf(to, spaces);
+            const fit = b ? fitsBuiltIn(b, newType ?? current.item_type) : "fits";
+            if (b && fit === "wrong") throw new Error(onlyKind(b, to));
+            if (b && fit === "plain") {
+              if (fitsBuiltIn(b, current.item_type) === "fits" && !targetSpace) throw new Error(staysKind(b, to));
+              newType = KIND_TYPE[b];
+              keptKind = b;
+              keptNote = keptAs(b, to);
               fieldsChanged = true;
             }
           }
         }
+        const keptAsPlace = keptKind === "places";
+        // A memory is one short fact, its title (memory.ts).
+        if (keptKind === "memories") cleanFact(title ?? current!.title);
+        // A note turned into its space's kind keeps the fields that kind has, else starts empty.
+        const converted = <T,>(norm: (m: Record<string, unknown>) => T): T => {
+          try {
+            return norm(current?.metadata ?? {});
+          } catch {
+            return norm({});
+          }
+        };
         // A place's fields are checked by the server whenever they or the type change.
         const finalType = newType ?? current?.item_type;
         let place: PlaceMetadata | null = null;
@@ -153,7 +167,11 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
         if (current && isTask(finalType)) {
           const base = metadata ?? current.metadata;
           if (fieldsChanged) {
-            task = task_done !== undefined ? setTaskDone(base, task_done, new Date(), today) : normalizeTask(base, new Date(), timeZone);
+            task = keptKind && metadata === undefined
+              ? converted((m) => normalizeTask(m, new Date(), timeZone))
+              : task_done !== undefined
+              ? setTaskDone(base, task_done, new Date(), today)
+              : normalizeTask(base, new Date(), timeZone);
             if (task.place_id && metadata !== undefined) await taskPlaceTitle(db, task.place_id);
             // A routine's task: the routine (the user's own) sets its schedule; done moves it to
             // the routine's next period, not the plain repeat's next date.
@@ -203,7 +221,8 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
         let recipe: RecipeMetadata | null = null;
         if (current && rtype) {
           const base = metadata ?? current.metadata;
-          if (fieldsChanged) recipe = made_it ? addMade(base, made_it, rtype, day) : normalizeRecipe(base, rtype, day);
+          if (keptKind && metadata === undefined) recipe = converted((m) => normalizeRecipe(m, rtype, day));
+          else if (fieldsChanged) recipe = made_it ? addMade(base, made_it, rtype, day) : normalizeRecipe(base, rtype, day);
           else {
             try {
               recipe = normalizeRecipe(base, rtype, day);
@@ -215,7 +234,7 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
         // A drink with alcohol only from 21 (D44), when its fields or its type are set; Made it alone
         // never needs it (an account aged 18-20 keeps the cocktails it saved before, Q9).
         if (
-          current && rtype === "cocktail" && (metadata !== undefined || item_type !== undefined) &&
+          current && rtype === "cocktail" && (metadata !== undefined || item_type !== undefined || keptKind) &&
           drinkHasAlcohol(title ?? current.title, recipe) && !(await isAdult21(db))
         ) throw new Error(UNDER_21);
         // A Maps link with coordinates and no location: the location is read from the link (Q15).
@@ -237,6 +256,8 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
           ? routine
           : recipe && fieldsChanged
           ? recipe
+          : keptKind === "memories"
+          ? metadata ?? {}
           : metadata ?? null;
 
         // Text or place fields changed: re-chunk the new current version (only it is searchable).
@@ -282,7 +303,7 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
           ...(routine && fieldsChanged ? { routine: { ...routine, schedule: routineWords(routine) }, tasks_in_step: inStep } : {}),
           ...(locationFromLink ? { location: "read from the Google Maps link" } : {}),
           ...(movedToPlaces ? { space: movedToPlaces, places: `Places are kept in ${PLACES_SPACE}: it is in "${movedToPlaces}".` } : {}),
-          ...(keptAsPlace ? { saved_as: KEPT_AS_PLACE } : {}),
+          ...(keptNote ? { saved_as: keptNote } : {}),
           ...(dropped.length ? { place_fields: droppedWords(dropped, place?.kind) } : {}),
         });
       }),

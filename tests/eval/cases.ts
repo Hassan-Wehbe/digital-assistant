@@ -777,6 +777,21 @@ export const CASES: EvalCase[] = [
       "a place in Places, status want, with Hamra",
     )],
   },
+  // One kind per built-in space (owner, 2026-10-29): a shared link Wilma can't read, saved in Recipes,
+  // is a recipe, and its link and words are kept as given.
+  {
+    id: "recipe-link-kept-as-recipe",
+    category: "save",
+    // Recipes is built-in, as on every account (D43).
+    setup: (w) => {
+      w.spaces.find((x) => x.name === "Recipes" && !x.parent_id)!.built_in = "recipes";
+    },
+    turns: ["Save this to Recipes, I'll watch it later: https://www.tiktok.com/@bakewithana/video/7412 lemon olive oil cake"],
+    checks: [itemWhere(
+      both(inSpace("Recipes"), (i) => i.item_type === "recipe", has(/tiktok\.com\/@bakewithana\/video\/7412/)),
+      "a recipe in Recipes, with the TikTok link kept",
+    )],
+  },
   // Places are any spot, kept in the Places space (D45): no cuisine or price for a library.
   {
     id: "place-save-library",

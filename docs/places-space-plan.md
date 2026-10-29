@@ -191,6 +191,34 @@ Cocktails nothing else. So the one-time change touches 3 notes.
     pick); the kinds and eatery-only fields; each built-in space's ＋ opens its kind's form; Q2 B: "Your
     spaces" tiles on Home; tappable links in a note's text; app tests; a preview build on the owner's OK.
 
+## As built: step 2b (2026-10-29)
+
+Branch `claude/places-step3` (with the mockups), not merged; migration not applied.
+
+- **One kind per built-in space, on the server** (`lib/builtin_kinds.ts`, `save_item`, `update_item`): a
+  plain note (note, design, how-to, ...) saved in Tasks, Places, Recipes, Cocktails or Memories, or a
+  sub-space of one, is kept as that kind (task: open; place: kind Other; recipe; drink; memory), its
+  title and text unchanged, and the reply says so. Moved there, likewise. A note of another kind is
+  refused ("\"Recipes\" holds only recipes"); a routine stays allowed in Tasks; a note there can be made
+  plain only when it is moved out at the same time. The checks of each kind still apply: a memory must
+  be one short fact (200 characters at most); a drink with no strength counts as one with alcohol for
+  an account under 21 (D44). Shared spaces follow their owner's own rules (not built-in for the user).
+- **Migration `20261029120000_one_kind_per_builtin_space.sql`** (Q3): `_one_kind_per_built_in(user)`
+  turns every live plain note already in a built-in space into its kind once, for every account. Only
+  the type and the fields change (an empty task, place, recipe, drink or memory, as the server makes
+  one); the title and text stay word for word (owner: "the big description must remain the same").
+  The old version goes to the history with a change note (rule 7). Left alone: notes of another kind
+  (the old Home note in Memories, D36), the bin, a memory title too long to be one fact, and an
+  under-21 account's notes in Cocktails while the age check is on. Users can't run it. On the live
+  project this is 3 notes (2 in Recipes, 1 in Memories).
+- **Tests:** SQL test 29 (10 checks); every SQL test passes (712 checks, local Postgres 16); dry run
+  10/10 on a copy without the migration, nothing kept. Deno: 5 new checks in
+  `tests/deno/places_space_test.ts`; **694 Deno tests pass**. Evaluation: a new case (a TikTok link
+  saved to Recipes is a recipe, the link kept); not run yet.
+
+**Owner:** OK to run the evaluation with a cap; the dry run; OK to apply; merge; OK to deploy `mcp`
+and `chat`.
+
 ## As built: step 1 (2026-10-28)
 
 Branch `claude/places-step1`. **Migration `20261028120000_places_builtin_space.sql` applied 2026-10-28**

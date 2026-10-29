@@ -4,9 +4,11 @@ import { loadSharedSpaces, loadSpaces, resolveSpace, type Space } from "../lib/s
 import { addressedAs } from "../lib/assistant.ts";
 import { rejectCredentials } from "../lib/credentials.ts";
 import {
-  assertOnlyHome, droppedWords, eateryFieldsOnly, HOME_KIND, inPlaces, isPlace, KEPT_AS_PLACE, normalizePlace, ONLY_PLACES,
-  PLACE_KINDS, PLACE_TYPE, PLACES_SPACE, placesSpace, placeTarget, PLAIN_NOTE_KIND, redirectWords, visiblePlaces, withPlace,
+  assertOnlyHome, droppedWords, eateryFieldsOnly, HOME_KIND, isPlace, normalizePlace, PLACE_KINDS, PLACES_SPACE,
+  placesSpace, placeTarget, PLAIN_NOTE_KIND, redirectWords, visiblePlaces, withPlace,
 } from "../lib/places.ts";
+import { builtInOf, fitsBuiltIn, KIND_TYPE, keptAs, onlyKind } from "../lib/builtin_kinds.ts";
+import { cleanFact } from "../lib/memory.ts";
 import { isTask, normalizeTask, type TaskMetadata, TASKS_SPACE, tasksSpace, withTask } from "../lib/tasks.ts";
 import { withLinkLocation } from "../lib/maps_link.ts";
 import { isRoutine, normalizeRoutine, type RoutineMetadata, routineWords, withRoutine } from "../lib/routines.ts";
@@ -38,7 +40,9 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
         'For a recipe or a drink use item_type "recipe" or "cocktail" (default spaces Recipes and Cocktails), ' +
         "with the recipe as written in body, and optional metadata: ingredients [one per line], steps [in order], " +
         `minutes (total time), serves, source_url (the link it came from), source_site ("TikTok"), strength (cocktails: ${STRENGTHS.join(", ")}; none = no alcohol), ` +
-        "made [{on, rating 1-5}]. The server checks these fields." +
+        "made [{on, rating 1-5}]. The server checks these fields. " +
+        "A built-in space holds one kind: Tasks tasks, Places places, Recipes recipes, Cocktails drinks, Memories memories; " +
+        "a plain note saved there becomes that kind, its title and text unchanged." +
         addressedAs(assistantName, "save this recipe"),
       inputSchema: {
         space: z.string().optional()
@@ -66,8 +70,8 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
         const today = userToday(undefined, timeZone);
         const routine: RoutineMetadata | null = isRoutine(item_type) ? normalizeRoutine(metadata, today) : null;
         // A recipe's or cocktail's fields (D43) are checked too, and added to the searchable text.
-        const rtype = recipeType(item_type);
-        const recipe = rtype ? normalizeRecipe(metadata, rtype, today) : null;
+        let rtype = recipeType(item_type);
+        let recipe = rtype ? normalizeRecipe(metadata, rtype, today) : null;
         // A drink with alcohol only from 21 (D44): checked here, whatever the app or the model sent.
         if (rtype === "cocktail" && drinkHasAlcohol(title, recipe) && !(await isAdult21(db))) throw new Error(UNDER_21);
         if (task?.routine_id) {
@@ -90,22 +94,39 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
         } else if (!task && !routine && !(place && place.kind !== HOME_KIND && placesSpace(spaces))) {
           throw new Error("Say which space to save it in (space).");
         }
-        // Places (D45): a place goes to Places (or a sub-space of it); a plain note in Places is
-        // kept as a place, so it is never invisible to the place lists (Q3).
+        if (routine && target && !isTasksSpace(target, spaces)) {
+          throw new Error(`A routine is kept in the ${TASKS_SPACE} space; save it without a space.`);
+        }
+        // Places (D45): a place goes to Places (or a sub-space of it). One kind per built-in space
+        // (owner, 2026-10-29): a plain note saved in Tasks, Places, Recipes, Cocktails or Memories is
+        // kept as that kind, its title and text unchanged; a note of another kind is refused there.
         let itemType = item_type;
         const asked = target;
         let redirected = false;
-        let keptAsPlace = false;
+        let keptNote: string | null = null;
+        let plainMetadata: Record<string, unknown> | undefined = metadata;
         if (place && place.kind !== HOME_KIND) ({ space: target, redirected } = placeTarget(spaces, target));
-        else if (!place && target && inPlaces(target, spaces)) {
-          if (task || routine || rtype) throw new Error(ONLY_PLACES);
-          place = normalizePlace({ ...(metadata ?? {}), kind: metadata?.kind ?? PLAIN_NOTE_KIND });
-          itemType = PLACE_TYPE;
-          keptAsPlace = true;
-          if (place.kind === HOME_KIND) await assertOnlyHome(db);
-        }
-        if (routine && target && !isTasksSpace(target, spaces)) {
-          throw new Error(`A routine is kept in the ${TASKS_SPACE} space; save it without a space.`);
+        else if (target) {
+          const b = builtInOf(target, spaces);
+          const fit = b ? fitsBuiltIn(b, item_type) : "fits";
+          if (b && fit === "wrong") throw new Error(onlyKind(b, target));
+          if (b && fit === "plain") {
+            if (b === "places") {
+              place = normalizePlace({ ...(metadata ?? {}), kind: metadata?.kind ?? PLAIN_NOTE_KIND });
+              if (place.kind === HOME_KIND) await assertOnlyHome(db);
+            } else if (b === "tasks") task = normalizeTask(metadata, new Date(), timeZone);
+            else if (b === "recipes" || b === "cocktails") {
+              rtype = b === "recipes" ? "recipe" : "cocktail";
+              recipe = normalizeRecipe(metadata, rtype, today);
+              if (rtype === "cocktail" && drinkHasAlcohol(title, recipe) && !(await isAdult21(db))) throw new Error(UNDER_21);
+            } else {
+              // A memory is one short fact, its title (memory.ts); the text stays as it is.
+              cleanFact(title);
+              plainMetadata = {};
+            }
+            itemType = KIND_TYPE[b];
+            keptNote = keptAs(b, target);
+          }
         }
         if (!target) ({ space: target, created: createdTasksSpace } = await tasksSpace(db, spaces));
         if (target.shared?.permission === "view") {
@@ -128,7 +149,7 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
           p_title: title,
           p_body: body,
           p_summary: summary ?? null,
-          p_metadata: place ?? task ?? routine ?? recipe ?? metadata ?? {},
+          p_metadata: place ?? task ?? routine ?? recipe ?? plainMetadata ?? {},
           p_tags: tags ?? [],
           p_chunks: chunks,
         });
@@ -143,7 +164,7 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
           search_index: pending ? "keyword search now; meaning search within a few seconds" : "ready",
           ...(locationFromLink ? { location: "read from the Google Maps link" } : {}),
           ...(redirected && asked ? { places: redirectWords(asked, target) } : {}),
-          ...(keptAsPlace ? { saved_as: KEPT_AS_PLACE } : {}),
+          ...(keptNote ? { saved_as: keptNote } : {}),
           ...(dropped.length ? { place_fields: droppedWords(dropped, place?.kind) } : {}),
           ...(task ? { task: { ...task, ...(placeTitle ? { place: placeTitle } : {}) } } : {}),
           ...(routine ? { routine: { ...routine, schedule: routineWords(routine) } } : {}),
