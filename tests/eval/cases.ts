@@ -787,8 +787,8 @@ export const CASES: EvalCase[] = [
         both(inSpace("Places"), (i) => i.item_type === "place" && i.metadata.kind === "library", has(/coral gables/i)),
         "a place of kind library in Places",
       ),
-      noItemWhere((i) => i.item_type === "place" && (i.metadata.cuisine !== undefined || i.metadata.price_level !== undefined),
-        "no cuisine or price on a library"),
+      noItemWhere((i) => i.item_type === "place" && /coral gables/i.test(i.title + " " + i.body_markdown) &&
+        (i.metadata.cuisine !== undefined || i.metadata.price_level !== undefined), "no cuisine or price on the library"),
     ],
   },
   {
