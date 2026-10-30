@@ -6,17 +6,64 @@
 
 export const PLACE_TYPE = 'place';
 
-export const PLACE_KINDS = ['restaurant', 'cafe', 'bar', 'shop', 'to-visit', 'hotel', 'other'] as const;
+// Any spot, not only somewhere to eat (D45, Q5): park, library, sports (pool, gym), school, health.
+export const PLACE_KINDS = [
+  'restaurant',
+  'cafe',
+  'bar',
+  'shop',
+  'park',
+  'library',
+  'sports',
+  'school',
+  'health',
+  'hotel',
+  'to-visit',
+  'other',
+] as const;
 export type PlaceKind = (typeof PLACE_KINDS)[number];
 export const KIND_LABELS: Record<PlaceKind, string> = {
   restaurant: 'Restaurant',
   cafe: 'Café',
   bar: 'Bar',
   shop: 'Shop',
-  'to-visit': 'To visit',
+  park: 'Park',
+  library: 'Library',
+  sports: 'Sports',
+  school: 'School',
+  health: 'Health',
   hotel: 'Hotel',
+  'to-visit': 'To visit',
   other: 'Other',
 };
+export const KIND_ICONS: Record<PlaceKind | 'home', string> = {
+  restaurant: '🍽',
+  cafe: '☕',
+  bar: '🍸',
+  shop: '🛍',
+  park: '🌳',
+  library: '📚',
+  sports: '🏊',
+  school: '🏫',
+  health: '🩺',
+  hotel: '🏨',
+  'to-visit': '🗺',
+  other: '📍',
+  home: '🏠',
+};
+
+/** Somewhere to eat or drink: only these keep cuisine, dishes and price (as the server, D45). */
+export const EATERY_KINDS: readonly PlaceKind[] = ['restaurant', 'cafe', 'bar'];
+
+/** True for a restaurant, café or bar, and for a place with no kind yet (it may well be one). */
+export function isEatery(kind: string | null | undefined): boolean {
+  return !kind || (EATERY_KINDS as readonly string[]).includes(kind);
+}
+
+/** The icon for a place's kind (📍 for none or an unknown one). */
+export function kindIcon(kind: string | null | undefined): string {
+  return (kind && KIND_ICONS[kind as PlaceKind]) || '📍';
+}
 
 /** The Home place the day planner drives from (at most one; set in My day, never in the kind picker). */
 export const HOME_KIND = 'home';
@@ -221,16 +268,19 @@ export function placeMetadata(form: PlaceForm, base: PlaceMetadata | null = null
   // The kind picker does not offer Home: editing the Home place keeps it Home.
   else if (base?.kind === HOME_KIND) out.kind = HOME_KIND;
 
-  const cuisine = words(form.cuisine, 'Cuisine', MAX_CUISINE, 40);
-  if ('error' in cuisine) return cuisine;
-  if (cuisine.length) out.cuisine = cuisine;
-  if (form.price) {
-    if (!Number.isInteger(form.price) || form.price < 1 || form.price > 4) return { error: 'Price is $ to $$$$.' };
-    out.price_level = form.price;
+  // Cuisine, price and dishes only for somewhere to eat or drink (the form hides them otherwise).
+  if (isEatery(form.kind)) {
+    const cuisine = words(form.cuisine, 'Cuisine', MAX_CUISINE, 40);
+    if ('error' in cuisine) return cuisine;
+    if (cuisine.length) out.cuisine = cuisine;
+    if (form.price) {
+      if (!Number.isInteger(form.price) || form.price < 1 || form.price > 4) return { error: 'Price is $ to $$$$.' };
+      out.price_level = form.price;
+    }
+    const dishes = words(form.dishes, 'Dishes', MAX_DISHES, 80);
+    if ('error' in dishes) return dishes;
+    if (dishes.length) out.dishes_liked = dishes;
   }
-  const dishes = words(form.dishes, 'Dishes', MAX_DISHES, 80);
-  if ('error' in dishes) return dishes;
-  if (dishes.length) out.dishes_liked = dishes;
   const occasions = OCCASIONS.filter((o) => form.occasions.includes(o));
   if (occasions.length) out.occasions = occasions;
 

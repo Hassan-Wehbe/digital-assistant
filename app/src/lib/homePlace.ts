@@ -262,3 +262,52 @@ export function savedSpots(results: SearchResult[]): (PickedSpot & { id: string 
 
 /** The address to keep for a picked spot: the street and town found, else a saved place's name; none for "where I am". */
 export const spotAddress = (spot: PickedSpot): string | null => (spot.here ? null : spot.address?.trim() || spot.label.trim() || null);
+
+// ---- The place picker's list (docs/places-space-plan.md step 3, D45) ---------------------------
+
+/** One row of the picker: a spot to use now, a place to look up first, or one that needs an address. */
+export type PickRow =
+  | { row: 'spot'; spot: PickedSpot; kind?: string; home?: true }
+  /** An address but no spot: the phone's map lookup finds it when picked (Is this it?). */
+  | { row: 'lookup'; id: string; label: string; address: string; kind?: string }
+  /** Neither: the place opens so an address can be added. */
+  | { row: 'no_address'; id: string; label: string; kind?: string };
+
+/**
+ * Every place the picker offers (Denisse's case: a place without a spot is no longer invisible):
+ * homes first (`homes`), then places, those in Places (or under it) before those elsewhere, each
+ * group in the order given (newest first from search). Old Home notes (D36) are left out.
+ */
+export function pickRows(homes: HomeRow[], results: SearchResult[], placesPath = 'Places'): PickRow[] {
+  const rows: PickRow[] = homes.map((h) => ({
+    row: 'spot',
+    home: true,
+    kind: HOME_KIND,
+    spot: { lat: h.lat, lng: h.lng, label: h.label, ...(h.address ? { address: h.address } : {}) },
+  }));
+  const inPlaces = (r: SearchResult) => r.space === placesPath || !!r.space?.startsWith(`${placesPath}/`);
+  const places = results.filter((r) => r.item_type === 'place' && r.place?.kind !== HOME_KIND);
+  for (const r of [...places.filter(inPlaces), ...places.filter((r) => !inPlaces(r))]) {
+    const p = r.place ?? {};
+    const kind = typeof p.kind === 'string' ? p.kind : undefined;
+    const address = p.address?.trim();
+    if (onMap(p.lat, p.lng)) {
+      rows.push({ row: 'spot', kind, spot: { id: r.id, lat: p.lat as number, lng: p.lng as number, label: r.title, ...(address ? { address } : {}) } });
+    } else if (address) rows.push({ row: 'lookup', id: r.id, label: r.title, address, kind });
+    else rows.push({ row: 'no_address', id: r.id, label: r.title, kind });
+  }
+  return rows;
+}
+
+/** The rows whose name, address or kind has the typed words (all of them; case and accents aside). */
+export function filterRows(rows: PickRow[], words: string): PickRow[] {
+  const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const want = fold(words).split(/\s+/).filter(Boolean);
+  if (!want.length) return rows;
+  return rows.filter((r) => {
+    const label = r.row === 'spot' ? r.spot.label : r.label;
+    const address = r.row === 'spot' ? r.spot.address : r.row === 'lookup' ? r.address : '';
+    const hay = fold([label, address ?? '', r.kind ?? ''].join(' '));
+    return want.every((w) => hay.includes(w));
+  });
+}

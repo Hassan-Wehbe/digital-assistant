@@ -131,6 +131,7 @@ export default function Homes() {
     editor = editing.picking ? (
       <PlacePicker
         title={`Where is “${open.label}”?`}
+        showHomes={false}
         startText={open.address ?? ''}
         allowHere
         onPick={(spot) => void moveTo(open, spot)}
@@ -168,6 +169,7 @@ export default function Homes() {
         {editing.picking ? (
           <PlacePicker
             title={`Where is “${editing.name.trim()}”?`}
+            showHomes={false}
             allowHere
             onPick={(spot) => void add(editing.name, spot)}
             onCancel={() => setEditing({ ...editing, picking: false })}

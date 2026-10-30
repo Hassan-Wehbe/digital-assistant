@@ -2,7 +2,10 @@ import { describe, expect, it } from '@jest/globals';
 
 import {
   EMPTY_PLACE,
+  isEatery,
   isMapsLink,
+  kindIcon,
+  PLACE_KINDS,
   localDate,
   mapsLink,
   placeForm,
@@ -195,5 +198,25 @@ describe('visitArgs (We went again)', () => {
     expect(visitArgs({ on: '3 Oct', with: '', note: '', rating: null }, now)).toHaveProperty('error');
     expect(visitArgs({ on: '2026-02-30', with: '', note: '', rating: null }, now)).toHaveProperty('error');
     expect(visitArgs({ on: '2026-10-07', with: '', note: '', rating: null }, now)).toEqual({ error: 'The visit date is in the future.' });
+  });
+});
+
+describe('kinds and eatery-only fields (D45, as the server)', () => {
+  it('offers the new kinds, each with an icon', () => {
+    for (const k of ['park', 'library', 'sports', 'school', 'health']) expect(PLACE_KINDS).toContain(k);
+    expect(kindIcon('library')).toBe('📚');
+    expect(kindIcon('home')).toBe('🏠');
+    expect(kindIcon(undefined)).toBe('📍');
+    expect(kindIcon('spaceship')).toBe('📍');
+  });
+
+  it('keeps cuisine, price and dishes only for a restaurant, café or bar, or no kind yet', () => {
+    expect([isEatery('restaurant'), isEatery('cafe'), isEatery('bar'), isEatery(null)]).toEqual([true, true, true, true]);
+    expect([isEatery('library'), isEatery('park'), isEatery('home')]).toEqual([false, false, false]);
+    const form = { ...EMPTY_PLACE, cuisine: 'italian', price: 2, dishes: 'carbonara' };
+    expect(placeMetadata({ ...form, kind: 'restaurant' })).toEqual({
+      metadata: { kind: 'restaurant', cuisine: ['italian'], price_level: 2, dishes_liked: ['carbonara'], status: 'want' },
+    });
+    expect(placeMetadata({ ...form, kind: 'library' })).toEqual({ metadata: { kind: 'library', status: 'want' } });
   });
 });

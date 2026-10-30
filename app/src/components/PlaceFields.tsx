@@ -1,11 +1,14 @@
 // The place part of New note and Edit note (places.ts): address, Google Maps link, kind,
 // cuisine, price, occasions, dishes, want to go / been there with a rating, would go back, and
-// the spot from "Save where I am" (location.ts: one reading, only when tapped).
+// the spot from "Save where I am" (location.ts: one reading, only when tapped). Cuisine, dishes and
+// price show only for a restaurant, café or bar, or before a kind is chosen (D45).
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { coordsText, deviceLocation, whereAmI } from '@/lib/location';
 import {
+  isEatery,
+  KIND_ICONS,
   KIND_LABELS,
   MAX_ADDRESS,
   MAX_LINK,
@@ -60,7 +63,7 @@ export function Chips<T extends string | number | boolean>({
   );
 }
 
-const KINDS = PLACE_KINDS.map((k) => ({ value: k, label: KIND_LABELS[k] }));
+const KINDS = PLACE_KINDS.map((k) => ({ value: k, label: `${KIND_ICONS[k]} ${KIND_LABELS[k]}` }));
 const PRICES = [1, 2, 3, 4].map((n) => ({ value: n, label: '$'.repeat(n) }));
 const STARS = [1, 2, 3, 4, 5].map((n) => ({ value: n, label: '★'.repeat(n) }));
 const OCCASION_CHIPS = OCCASIONS.map((o) => ({ value: o, label: OCCASION_LABELS[o] }));
@@ -125,24 +128,28 @@ export function PlaceFields({
       <Text style={label}>Kind</Text>
       <Chips options={KINDS} selected={(k) => f.kind === k} onPress={(k) => set({ kind: toggle(f.kind, k) })} disabled={disabled} />
 
-      <TextInput
-        style={input}
-        placeholder="Cuisine (optional), e.g. italian, pizza"
-        placeholderTextColor={c.muted}
-        value={f.cuisine}
-        onChangeText={(cuisine) => set({ cuisine })}
-        editable={!disabled}
-      />
-      <TextInput
-        style={input}
-        placeholder="Dishes (optional), e.g. fattoush, kibbeh"
-        placeholderTextColor={c.muted}
-        value={f.dishes}
-        onChangeText={(dishes) => set({ dishes })}
-        editable={!disabled}
-      />
-      <Text style={label}>Price</Text>
-      <Chips options={PRICES} selected={(p) => f.price === p} onPress={(p) => set({ price: toggle(f.price, p) })} disabled={disabled} />
+      {isEatery(f.kind) ? (
+        <>
+          <TextInput
+            style={input}
+            placeholder="Cuisine (optional), e.g. italian, pizza"
+            placeholderTextColor={c.muted}
+            value={f.cuisine}
+            onChangeText={(cuisine) => set({ cuisine })}
+            editable={!disabled}
+          />
+          <TextInput
+            style={input}
+            placeholder="Dishes (optional), e.g. fattoush, kibbeh"
+            placeholderTextColor={c.muted}
+            value={f.dishes}
+            onChangeText={(dishes) => set({ dishes })}
+            editable={!disabled}
+          />
+          <Text style={label}>Price</Text>
+          <Chips options={PRICES} selected={(p) => f.price === p} onPress={(p) => set({ price: toggle(f.price, p) })} disabled={disabled} />
+        </>
+      ) : null}
 
       <Text style={label}>Good for</Text>
       <Chips

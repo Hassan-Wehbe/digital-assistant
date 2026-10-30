@@ -7,7 +7,9 @@
 // (homeSpaces.ts; the Tasks space is reached by the ✅ Tasks tile). With the morning briefing on,
 // Home makes 🌅 Your morning at the briefing time (useMorning.ts, day planner step 4); since recipes
 // step 6 it is a button on Plan with Wilma, NEW until opened. Under that row, Cook with Wilma. An
-// account not asked its age yet sees the one-time question (AgeCard, D44).
+// account not asked its age yet sees the one-time question (AgeCard, D44). Under Cook with Wilma,
+// "Your spaces": Wilma's own spaces as small tiles (Tasks, Places, Recipes, Cocktails, and Memories
+// when memory is on; D45 Q6, layout B).
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, RefreshControl, Text, TextInput, View } from 'react-native';
@@ -42,7 +44,9 @@ import { WelcomeCard } from '@/components/WelcomeCard';
 import { BoxCounter, WilmaBox } from '@/components/WilmaBox';
 import { deviceRecentSpaces } from '@/lib/deviceStorage';
 import { loadFavourites } from '@/lib/favourites';
+import { yourSpaces } from '@/lib/builtInSpaces';
 import { homeSpaces } from '@/lib/homeSpaces';
+import { builtInIcon, loadMemoryOn, type MemoryDb } from '@/lib/memory';
 import { useOpenSpace } from '@/lib/openSpace';
 import { useAuth } from '@/lib/auth';
 import { useChat } from '@/lib/chat';
@@ -104,6 +108,11 @@ export default function Home() {
     session ? loadFavourites((fn, args) => supabase.rpc(fn, args)) : null,
   );
   useReloadOnReturn(favourites.reload);
+  // Memory on or off: Memories is in "Your spaces" only when it is on.
+  const memoryOn = useLoad(`memory:${session?.user.id ?? ''}`, () =>
+    session ? loadMemoryOn(supabase as unknown as MemoryDb, session.user.id) : Promise.resolve(null),
+  );
+  useReloadOnReturn(memoryOn.reload);
 
   // This month's allowance (D28), read again whenever the home screen comes back into view.
   const usage = useLoad(`usage:${session?.user.id ?? ''}`, async () => {
@@ -157,6 +166,11 @@ export default function Home() {
       onPress={() => router.push('/settings')}
     />
   ) : null;
+  const spaces = data?.flatMap((r) => (r.kind === 'space' ? [r.space] : [])) ?? [];
+  // Wilma's own spaces (D45, layout B), and Places for the ＋ menu's New place.
+  const own = yourSpaces(spaces, memoryOn.data === true);
+  const placesId = spaces.find((s) => s.built_in === 'places' && !s.restricted)?.id;
+
   const go = (params?: Record<string, string>) => {
     setMenu(false);
     router.push({ pathname: '/new-item', params });
@@ -196,6 +210,7 @@ export default function Home() {
           <GroupRow first title="📷 Take a photo" onPress={() => go({ pick: 'camera' })} />
           <GroupRow title="🖼 Choose pictures" onPress={() => go({ pick: 'pictures' })} />
           <GroupRow title="📝 New note" onPress={() => go()} />
+          {placesId ? <GroupRow title="📍 New place" onPress={() => go({ space: placesId })} /> : null}
           {/* Reads the location only after this tap, on the New note screen (places Q10). */}
           <GroupRow title="📍 Save where I am" onPress={() => go({ here: '1' })} />
         </GroupList>
@@ -225,7 +240,6 @@ export default function Home() {
     </Panel>
   );
 
-  const spaces = data?.flatMap((r) => (r.kind === 'space' ? [r.space] : [])) ?? [];
   const home = homeSpaces(spaces, recent.data ?? [], favourites.data);
   const items = data?.flatMap((r) => (r.kind === 'item' ? [r.item] : [])) ?? [];
 
@@ -238,6 +252,22 @@ export default function Home() {
         <PlanRow onMyDay={openMyDay} myDayBadge={needsPro(pro) ? 'PRO' : undefined} morningBadge={morning.unseen ? 'NEW' : undefined} />
       )}
       {query ? null : <CookRow />}
+      {!query && own.length ? (
+        <View style={{ gap: space.s }}>
+          <Text style={[styles.title, { color: c.text }]}>Your spaces</Text>
+          <View style={{ flexDirection: 'row', gap: space.s }}>
+            {own.map((s) => (
+              <Tile
+                key={s.id}
+                icon={builtInIcon(s) ?? '📁'}
+                title={s.path}
+                accessibilityLabel={`Open ${s.path}`}
+                onPress={() => openSpace({ id: s.id, path: s.path, restricted: s.restricted, built_in: s.built_in })}
+              />
+            ))}
+          </View>
+        </View>
+      ) : null}
       {query ? (
         <Text style={[styles.title, { color: c.text }]}>{`Results for “${query}”`}</Text>
       ) : (

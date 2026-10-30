@@ -191,6 +191,49 @@ Cocktails nothing else. So the one-time change touches 3 notes.
     pick); the kinds and eatery-only fields; each built-in space's ＋ opens its kind's form; Q2 B: "Your
     spaces" tiles on Home; tappable links in a note's text; app tests; a preview build on the owner's OK.
 
+## As built: step 3, the app (2026-10-30)
+
+Branch `claude/places-step3-app`, not merged, not built. Owner's picks: Q1 A (search first), Q2 B
+(small tiles), one kind per built-in space, tappable links.
+
+- **Find it on the map** (`components/FindOnMap.tsx`, `lib/placeSearch.ts`): a new place starts with
+  one box. A name ("coral gables lib") shows Google's suggestions after 3 letters and a short pause
+  (the `place-search` function; only the typed words are sent, never where the phone is), with
+  "powered by Google" under them; a full street address ("12 Elm St, Miami") goes straight to the
+  phone's own free map lookup. Picking one asks **Is this it?** with the spot the phone's lookup
+  found for its address and Open in Maps; Yes fills the name, address, kind and spot (and keeps
+  Google's place id). Not found: "Save it without a spot". No Google key yet, or the day's limit
+  reached: the box says so and still finds a full street address. Also on the screen: 📍 Use where I
+  am now, and Fill it in by hand; the form has "🔎 Find it on the map instead".
+- **Saving with only a typed street address** looks it up on the phone at Save (no permission asked
+  there; only the address is sent); not found, it is saved as typed.
+- **Kinds**: park, library, sports, school, health added, each with an icon (🌳 📚 🏊 🏫 🩺);
+  cuisine, dishes and price show only for a restaurant, café or bar (or before a kind is chosen) and
+  are not saved for other kinds, as the server.
+- **The picker** (`components/PlacePicker.tsx`, `pickRows` / `filterRows` in `lib/homePlace.ts`) opens
+  straight to one list: homes first (not when picking where a home is), then every place, those in
+  Places first, with or without a spot. Typing filters by name, address and kind. A place with an
+  address but no spot is looked up when picked (Is this it?, with "Keep this spot on the place", on
+  by default; kept with update_item); one with neither says "Add an address" and opens the place.
+  Under the list: Type an address, Use where I am now (homes), Not now.
+- **One kind per built-in space** (`lib/builtInSpaces.ts`): a built-in space's button (and its
+  sub-spaces') says ＋ New task / New place / New recipe / New cocktail (New mocktail) / Remember
+  something; New note hides the Note / Place / Recipe chips in a built-in space and uses its kind;
+  Tasks opens the task form; Memories is one short line (200 characters, no files). Places is now
+  marked BUILT-IN too.
+- **Home**: "Your spaces" small tiles under Cook with Wilma (Tasks, Places, Recipes, Cocktails, and
+  Memories when memory is on); the ＋ menu has 📍 New place.
+- **Tappable links** (`components/LinkedText.tsx`, `lib/textLinks.ts`): https and http links in a
+  note's text open in the browser; the text is shown exactly as saved; a link with a user name or
+  password in it, or any other kind of link, stays plain text.
+- **Tests**: new `placeSearch.test.ts` (8), `builtInSpaces.test.ts` (5), `textLinks.test.ts` (2), and
+  more in `places.test.ts` and `homePlace.test.ts`. **`npm run check` passes: lint, type-check, 84 test
+  files, 1,040 tests.**
+
+**Owner:** merge; OK to build a preview (app-build, profile preview); then the phone checklist
+(step 4). The Google key is still optional: without it, finding by name says it is not switched on
+and a full street address still works.
+
 ## As built: step 2b (2026-10-29)
 
 Merged (#290), **deployed 2026-10-29: `mcp` v41, `chat` v51**. **Migration applied 2026-10-29** with the

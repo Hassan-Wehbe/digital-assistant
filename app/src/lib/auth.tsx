@@ -11,6 +11,7 @@ import { deviceChatStore, deviceDayMemory, deviceRecentSpaces } from './deviceSt
 import { forgetOtherAccounts } from './notifications';
 import { outingClient, type OutingClient } from './outing';
 import { changePassword as changePasswordFlow } from './password';
+import { placeSearchClient, type PlaceSearchClient } from './placeSearch';
 import { recipeTextClient, type RecipeTextClient } from './recipeImport';
 import { suggestClient, type SuggestClient } from './recipeSuggest';
 import { sessionToken } from './sessionToken';
@@ -34,6 +35,8 @@ interface AuthState {
   recipeText: RecipeTextClient;
   /** What's for dinner? and Make a cocktail (the chat function's suggestion route; one model call each, D43). */
   suggest: SuggestClient;
+  /** Find a place by name: Google's suggestions through the place-search function (D45; no model call). */
+  placeSearch: PlaceSearchClient;
   signIn(email: string, password: string): Promise<string | null>;
   signOut(): Promise<void>;
   /** New sign-in password; the current one is checked first. */
@@ -67,6 +70,7 @@ const day = dayClient({ url: CHAT_URL, token, refresh });
 const outing = outingClient({ url: CHAT_URL, token, refresh });
 const recipeText = recipeTextClient({ url: CHAT_URL, token, refresh });
 const suggest = suggestClient({ url: CHAT_URL, token, refresh });
+const placeSearch = placeSearchClient({ token, refresh });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -121,6 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       outing,
       recipeText,
       suggest,
+      placeSearch,
       async signIn(email, password) {
         const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (!error) return null;

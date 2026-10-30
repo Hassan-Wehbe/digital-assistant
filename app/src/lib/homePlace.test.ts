@@ -3,8 +3,8 @@
 import { describe, expect, it } from '@jest/globals';
 
 import {
-  addHome, changeHome, checkHome, CREDENTIAL_TEXT, deleteHome, homeCardButtons, homeError, homeLine, listHomes, makeDefault, saveHomeAt,
-  savedSpots, spotAddress, toHomeCard, type HomeRow, type HomesDb,
+  addHome, changeHome, checkHome, CREDENTIAL_TEXT, deleteHome, filterRows, homeCardButtons, homeError, homeLine, listHomes, makeDefault,
+  pickRows, saveHomeAt, savedSpots, spotAddress, toHomeCard, type HomeRow, type HomesDb,
 } from './homePlace';
 import { EMPTY_PLACE, placeForm, placeLine, placeMetadata } from './places';
 import type { SearchResult } from './wilma';
@@ -192,5 +192,37 @@ describe('picking a place', () => {
     expect(placeMetadata(form, base)).toEqual({ metadata: expect.objectContaining({ kind: 'home', lat: 1, lng: 2 }) });
     expect(placeMetadata(EMPTY_PLACE, null)).toEqual({ metadata: expect.not.objectContaining({ kind: 'home' }) });
     expect(placeLine(base)).toMatch(/^Home/);
+  });
+});
+
+describe('pickRows / filterRows (the picker lists every place, D45)', () => {
+  const home = { id: 'h1', label: 'Home', address: '12 Oak St, Oviedo', lat: 28.6, lng: -81.2, is_default: true };
+  const r = (id: string, title: string, space: string, place: Record<string, unknown>) =>
+    ({ id, title, item_type: 'place', space, tags: null, snippet: null, updated_at: 't', place }) as never;
+  const results = [
+    r('t', 'Tawlet', 'Restaurants old', { kind: 'restaurant', lat: 33.9, lng: 35.5, address: 'Mar Mikhael' }),
+    r('l', 'Library', 'Places', { kind: 'library', lat: 25.7, lng: -80.2, address: '3443 Segovia St' }),
+    r('p', 'Venetian Pool', 'Places/Kids', { kind: 'sports', address: '2701 De Soto Blvd' }),
+    r('d', 'Dr. Lopez', 'Places', { kind: 'health' }),
+    r('x', 'Home', 'Places', { kind: 'home', lat: 1, lng: 1 }),
+    { id: 'n', title: 'A note', item_type: 'note', space: 'Places', tags: null, snippet: null, updated_at: 't' } as never,
+  ];
+
+  it('homes first, then Places (with or without a spot), then places elsewhere; no old Home notes', () => {
+    const rows = pickRows([home], results);
+    expect(rows.map((x) => (x.row === 'spot' ? x.spot.label : x.label))).toEqual(['Home', 'Library', 'Venetian Pool', 'Dr. Lopez', 'Tawlet']);
+    expect(rows.map((x) => x.row)).toEqual(['spot', 'spot', 'lookup', 'no_address', 'spot']);
+    expect(rows[2]).toEqual({ row: 'lookup', id: 'p', label: 'Venetian Pool', address: '2701 De Soto Blvd', kind: 'sports' });
+    expect(rows[1]).toEqual({ row: 'spot', kind: 'library', spot: { id: 'l', lat: 25.7, lng: -80.2, label: 'Library', address: '3443 Segovia St' } });
+  });
+
+  it('filters by name, address or kind, every word, ignoring case and accents', () => {
+    const rows = pickRows([home], results);
+    const names = (w: string) => filterRows(rows, w).map((x) => (x.row === 'spot' ? x.spot.label : x.label));
+    expect(names('de soto')).toEqual(['Venetian Pool']);
+    expect(names('LIBRARY')).toEqual(['Library']);
+    expect(names('health')).toEqual(['Dr. Lopez']);
+    expect(names('oak oviedo')).toEqual(['Home']);
+    expect(names('')).toHaveLength(5);
   });
 });
