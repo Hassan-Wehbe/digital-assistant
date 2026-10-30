@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { addTitle, builtInOf, yourSpaces } from './builtInSpaces';
+import { addTitle, builtInOf, spacesWithin, yourSpaces } from './builtInSpaces';
 
 const SPACES = [
   { id: '1', path: 'Tasks', built_in: 'tasks', restricted: false, description: null },
@@ -45,5 +45,17 @@ describe('yourSpaces', () => {
   it('leaves out one that is missing or locked', () => {
     expect(yourSpaces(SPACES.filter((s) => s.id !== '4'), false).map((s) => s.path)).toEqual(['Tasks', 'Recipes', 'Mocktails']);
     expect(yourSpaces(SPACES.map((s) => (s.id === '1' ? { ...s, restricted: true } : s)), false)[0].path).toBe('Places');
+  });
+});
+
+describe('spacesWithin (New note opened inside a built-in space)', () => {
+  it('offers only that space and its sub-spaces', () => {
+    expect(spacesWithin('2', SPACES)?.map((s) => s.path)).toEqual(['Recipes', 'Recipes/Desserts']);
+    expect(spacesWithin('3', SPACES)?.map((s) => s.path)).toEqual(['Recipes', 'Recipes/Desserts']);
+    expect(spacesWithin('4', SPACES)?.map((s) => s.path)).toEqual(['Places']);
+  });
+  it('is null outside a built-in space, or with no space given: every space is offered', () => {
+    expect(spacesWithin('8', SPACES)).toBeNull();
+    expect(spacesWithin(undefined, SPACES)).toBeNull();
   });
 });

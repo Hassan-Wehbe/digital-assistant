@@ -32,3 +32,14 @@ export function yourSpaces<T extends Pick<Space, 'built_in' | 'restricted' | 'pa
     .map(top)
     .filter((s): s is T => !!s);
 }
+
+/**
+ * The spaces New note offers when opened from inside a built-in space (owner, 2026-10-30: "if I am
+ * creating a note inside Places, why am I shown other spaces?"): that space and its own sub-spaces
+ * only. Null when it was not opened from one (every space is offered, as before).
+ */
+export function spacesWithin<T extends Pick<Space, 'id' | 'path' | 'built_in'>>(fromId: string | undefined, spaces: readonly T[]): T[] | null {
+  const from = spaces.find((s) => s.id === fromId);
+  const b = builtInOf(from, spaces);
+  return b ? spaces.filter((s) => builtInOf(s, spaces) === b) : null;
+}

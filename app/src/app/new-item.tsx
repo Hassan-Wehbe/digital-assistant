@@ -15,9 +15,10 @@ import { RecipeFields } from '@/components/RecipeFields';
 import { SpaceChips } from '@/components/SpaceChips';
 import { Button, Card, KeyboardScreen, Muted, styles, TextLink, useColors, useLoad } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
-import { builtInOf } from '@/lib/builtInSpaces';
+import { builtInOf, spacesWithin } from '@/lib/builtInSpaces';
 import { deviceUploadDeps } from '@/lib/deviceFiles';
 import { deviceGeocoder } from '@/lib/location';
+import { spaceTitle } from '@/lib/memory';
 import { lookUpPlace } from '@/lib/placeLookup';
 import { EMPTY_PLACE, placeMetadata, type PlaceForm } from '@/lib/places';
 import { looksLikeStreetAddress } from '@/lib/placeSearch';
@@ -146,18 +147,27 @@ export default function NewItem() {
     );
   }
   const searching = isPlace && finding && !createdId;
+  // Opened from inside a built-in space (its ＋): that space and its own sub-spaces only, never the
+  // others (owner, 2026-10-30); just its name when it has none.
+  const within = spaces.data ? spacesWithin(params.space, spaces.data) : null;
   return (
     <KeyboardScreen>
       <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
-        <Text style={[styles.title, { color: c.text }]}>Space</Text>
-        <SpaceChips
-          spaces={spaces.data}
-          error={spaces.error}
-          onRetry={spaces.reload}
-          value={space}
-          onChange={setSpace}
-          disabled={busy || !!createdId}
-        />
+        {within && within.length === 1 ? (
+          <Text style={[styles.title, { color: c.text }]}>In {spaceTitle(within[0])}</Text>
+        ) : (
+          <>
+            <Text style={[styles.title, { color: c.text }]}>Space</Text>
+            <SpaceChips
+              spaces={within ?? spaces.data}
+              error={spaces.error}
+              onRetry={spaces.reload}
+              value={space}
+              onChange={setSpace}
+              disabled={busy || !!createdId}
+            />
+          </>
+        )}
 
         {/* A built-in space holds one kind: no choice to make there (D45). */}
         {builtIn ? null : (
