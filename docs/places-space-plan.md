@@ -193,7 +193,10 @@ Cocktails nothing else. So the one-time change touches 3 notes.
 
 ## As built: step 3, the app (2026-10-30)
 
-Branch `claude/places-step3-app`, not merged, not built. Owner's picks: Q1 A (search first), Q2 B
+Merged (#292, with Expo SDK 57 patch updates for expo-doctor). **versionCode 28 built 2026-10-30**
+(EAS build 83f75d9b, production) and submitted to Google Play's internal track (submission
+722e05a5). A preview build (EAS 0bf61cf7) was started first by mistake; it is not on Play and can be
+ignored. Owner's picks: Q1 A (search first), Q2 B
 (small tiles), one kind per built-in space, tappable links.
 
 - **Find it on the map** (`components/FindOnMap.tsx`, `lib/placeSearch.ts`): a new place starts with
@@ -230,8 +233,7 @@ Branch `claude/places-step3-app`, not merged, not built. Owner's picks: Q1 A (se
   more in `places.test.ts` and `homePlace.test.ts`. **`npm run check` passes: lint, type-check, 84 test
   files, 1,040 tests.**
 
-**Owner:** merge; OK to build a preview (app-build, profile preview); then the phone checklist
-(step 4). The Google key is still optional: without it, finding by name says it is not switched on
+**Owner:** the phone checklist on versionCode 28 (step 4). The Google key is still optional: without it, finding by name says it is not switched on
 and a full street address still works.
 
 ## As built: step 2b (2026-10-29)

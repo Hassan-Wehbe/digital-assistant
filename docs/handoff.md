@@ -34,11 +34,11 @@ tokens or keys in chat.
   text never changed. **Step 2b (server + migration `20261029120000_one_kind_per_builtin_space.sql`)
   built on `claude/places-step3`, applied 2026-10-29 (20261029165902; 3 notes changed), merged (#290), deployed 2026-10-29 (`mcp` v41,
   `chat` v51)** (694 Deno tests, SQL 712 checks, dry run
-  10/10). **Step 3 (the app) built 2026-10-30 on `claude/places-step3-app`, not merged or built:** Find it on
+  10/10). **Step 3 (the app) merged 2026-10-30 (#292); versionCode 28 built and submitted to Play's internal track (EAS 83f75d9b):** Find it on
   the map (Google suggestions, Is this it? with the phone's lookup), every place in the picker, new
   kinds, one kind per built-in space (＋ New place / recipe / task ...), Your spaces tiles on Home,
-  tappable links; `npm run check` passes (1,040 tests). **Owner:** merge, OK to build a preview,
-  then the phone checklist (step 4). Then step 3 (app), a preview
+  tappable links; `npm run check` passes (1,040 tests). **Owner:** the phone checklist on versionCode 28 (step 4),
+  Denisse's case first. Then step 3 (app), a preview
   build. Before sharing step 3.
 - **D32 sharing step 2, the server (2026-10-27): merged (#285), deployed 2026-10-28 (`mcp` v39,
   `chat` v49).** Shared spaces named "Family (shared by Sam)", own spaces first; search / get_item mark
