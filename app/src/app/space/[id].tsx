@@ -1,6 +1,8 @@
 // One space: its most recently updated items (and those of its sub-spaces), then its vault
 // entries as 🔒 rows (name and website only; a tap opens the entry in the Vault). The ☆ / ★ in the
-// top bar keeps it on Home (D38); never shown for Tasks, a restricted space or one under one.
+// top bar keeps it on Home (D38); never shown for Tasks, a restricted space or one under one. A
+// built-in space (and its sub-spaces) holds one kind, so its button adds that kind: ＋ New place,
+// ＋ New recipe, ＋ New task, ... (builtInSpaces.ts, D45).
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
@@ -21,6 +23,7 @@ import {
   useReloadOnReturn,
 } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { addTitle, builtInOf } from '@/lib/builtInSpaces';
 import { canBeFavourite, loadFavourites, saveFavourites, toggleFavourite } from '@/lib/favourites';
 import { BUILT_IN_LINE, isBuiltIn } from '@/lib/memory';
 import { secretRoute, spaceSecretRow } from '@/lib/secretRows';
@@ -43,6 +46,9 @@ export default function SpaceScreen() {
     reload();
     secrets.reload();
   };
+  // Which built-in space this is or is under (a sub-space's own params do not say).
+  const spaces = useLoad('spaces', () => wilma.listSpaces());
+  const kindSpace = builtInOf(spaces.data?.find((s) => s.id === id) ?? (path ? { path, built_in: builtIn } : undefined), spaces.data ?? []);
   const nothing = !loading && !secrets.loading && !error && !secrets.error && !data?.length && !secrets.data?.length;
   const [deleting, setDeleting] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -137,7 +143,10 @@ export default function SpaceScreen() {
                 </View>
               </View>
             ) : null}
-            <Button title="New note here" onPress={() => router.push({ pathname: '/new-item', params: { space: id } })} />
+            <Button
+              title={kindSpace ? addTitle(kindSpace, path ?? '') : 'New note here'}
+              onPress={() => (kindSpace === 'tasks' ? router.push('/task') : router.push({ pathname: '/new-item', params: { space: id } }))}
+            />
             {problem ? <Text style={{ color: c.danger, fontSize: 15 }}>{problem}</Text> : null}
             {error ? <ErrorBox message={error} onRetry={reload} /> : null}
           </>

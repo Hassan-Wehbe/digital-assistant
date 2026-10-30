@@ -43,7 +43,7 @@ export interface Space {
   path: string;
   description: string | null;
   restricted: boolean;
-  /** "tasks", "memories", "recipes" or "cocktails" on the account's built-in spaces (never deleted or renamed). */
+  /** "tasks", "memories", "recipes", "cocktails" or "places" on the account's built-in spaces (never deleted or renamed). */
   built_in?: string;
 }
 

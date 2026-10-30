@@ -5,6 +5,7 @@ import { Link, router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 
+import { LinkedText } from '@/components/LinkedText';
 import { PlaceCard } from '@/components/PlaceCard';
 import { RecipeCard } from '@/components/RecipeCard';
 import { Button, Card, confirm, ErrorBox, Loading, Muted, styles, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
@@ -55,11 +56,8 @@ export default function ItemScreen() {
               {item.summary}
             </Text>
           ) : null}
-          {item.body_markdown ? (
-            <Text style={[styles.body, { color: c.text }]} selectable>
-              {item.body_markdown}
-            </Text>
-          ) : null}
+          {/* Web links in the text are tappable (owner, 2026-10-29); the text is shown as saved. */}
+          {item.body_markdown ? <LinkedText text={item.body_markdown} style={[styles.body, { color: c.text }]} /> : null}
           <Muted>
             Updated {new Date(item.updated_at).toLocaleString()}
             {item.revision_count > 0 ? ` · ${item.revision_count} earlier version(s)` : ''}
