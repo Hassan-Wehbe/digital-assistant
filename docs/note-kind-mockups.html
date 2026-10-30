@@ -1,0 +1,225 @@
+<title>Wilma Note Kind Mockups</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a reading column of numbered screens; each is a phone frame in the app's own colours (app/src/constants/theme.ts) beside notes. Same tokens as docs/ui-review-mockups.html. */
+:root {
+  --page: #eef0f3; --ink: #1c1f24; --soft: #5d6570; --rule: #d3d8de;
+  --bg: #f6f7f9; --card: #ffffff; --line: #dde1e6; --accent: #2754c5; --danger: #b3261e; --warn: #9a6400;
+  --tint: #e8eefb; --good: #1d6b3a; --good-bg: #e3f2e8; --bad-bg: #fbe7e5; --warn-bg: #fbf1de; --rain: #2f6f8f; --rain-bg: #e2f0f6;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --page: #0c0e11; --ink: #e8eaed; --soft: #9aa2ad; --rule: #2a2f36;
+  --bg: #121417; --card: #1b1e23; --line: #2e333a; --accent: #7aa2ff; --danger: #ff8a80; --warn: #f0b44c;
+  --tint: #1d2638; --good: #8fd6a6; --good-bg: #16261c; --bad-bg: #2c1a19; --warn-bg: #2a2214; --rain: #8cc8e6; --rain-bg: #15252e; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --page: #0c0e11; --ink: #e8eaed; --soft: #9aa2ad; --rule: #2a2f36;
+  --bg: #121417; --card: #1b1e23; --line: #2e333a; --accent: #7aa2ff; --danger: #ff8a80; --warn: #f0b44c;
+  --tint: #1d2638; --good: #8fd6a6; --good-bg: #16261c; --bad-bg: #2c1a19; --warn-bg: #2a2214; --rain: #8cc8e6; --rain-bg: #15252e; color-scheme: dark }
+body { background: var(--page); color: var(--ink); font: 15px/1.55 var(--sans); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 64px; display: grid; gap: 40px; }
+h1 { font-size: 28px; line-height: 1.2; margin: 0; text-wrap: balance; }
+h2 { font-size: 21px; margin: 0; text-wrap: balance; }
+p { margin: 0; max-width: 68ch; }
+.lede { color: var(--soft); }
+.eyebrow { font: 600 12px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--soft); }
+nav { display: flex; flex-wrap: wrap; gap: 8px; }
+nav a { color: var(--accent); text-decoration: none; border: 1px solid var(--rule); border-radius: 999px; padding: 4px 12px; font-size: 14px; }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+section { display: grid; gap: 20px; border-top: 1px solid var(--rule); padding-top: 24px; }
+section > header { display: grid; gap: 6px; }
+.tag { font: 600 11px/1 var(--mono); letter-spacing: .05em; text-transform: uppercase; padding: 5px 8px; border-radius: 4px; background: var(--tint); color: var(--accent); justify-self: start; }
+.row { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+.col { display: grid; gap: 8px; flex: 0 0 310px; max-width: 100%; }
+.notes { flex: 1 1 300px; min-width: 0; display: grid; gap: 10px; align-content: start; }
+.notes ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.notes h3 { font-size: 15px; margin: 0; }
+.q { border-left: 3px solid var(--warn); padding-left: 10px; }
+
+/* Phone */
+.phone { position: relative; border: 1px solid var(--line); border-radius: 22px; background: var(--bg); overflow: hidden; font-size: 13px; line-height: 1.4; display: flex; flex-direction: column; height: 640px; }
+.phone.short { height: auto; min-height: 420px; }
+.bar { display: flex; align-items: center; gap: 8px; padding: 12px 14px; background: var(--card); border-bottom: 1px solid var(--line); font-weight: 600; font-size: 15px; }
+.bar .sp { flex: 1; }
+.lnk { color: var(--accent); font-weight: 500; font-size: 13px; }
+.scroll { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.muted { color: var(--soft); font-size: 12px; }
+.btn { font: inherit; border-radius: 8px; padding: 7px 10px; font-weight: 600; text-align: center; border: 1px solid var(--line); color: var(--accent); background: transparent; cursor: pointer; white-space: nowrap; }
+.btn.pri { background: var(--accent); color: var(--card); border-color: var(--accent); }
+.btn:disabled { opacity: .5; cursor: default; }
+.acts { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+
+/* Chat */
+.me { align-self: flex-end; max-width: 80%; background: var(--accent); color: var(--card); border-radius: 14px; padding: 8px 10px; }
+.her { align-self: flex-start; max-width: 92%; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px; display: grid; gap: 8px; }
+.pbp { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; margin: 0; }
+.pbp dt { font: 600 12px/1.45 var(--mono); color: var(--soft); font-variant-numeric: tabular-nums; }
+.pbp dd { margin: 0; }
+.comp { border-top: 1px solid var(--line); padding: 10px; background: var(--bg); }
+.in { border: 1px solid var(--line); background: var(--card); border-radius: 20px; padding: 9px 12px; color: var(--soft); }
+.status { align-self: flex-start; color: var(--soft); font-size: 12px; font-style: italic; }
+
+/* Day strip */
+.strip { display: grid; gap: 6px; padding: 10px 12px; background: var(--card); border-bottom: 1px solid var(--line); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 3px 9px; font-size: 12px; background: var(--tint); color: var(--accent); }
+.chip.rain { background: var(--rain-bg); color: var(--rain); }
+.chip.warn { background: var(--warn-bg); color: var(--warn); }
+.chip.good { background: var(--good-bg); color: var(--good); }
+
+/* Timeline */
+.tl { display: grid; grid-template-columns: 46px 1fr; gap: 0 8px; }
+.tl .t { font: 600 12px/1.3 var(--mono); color: var(--soft); text-align: right; padding-top: 9px; font-variant-numeric: tabular-nums; }
+.tl .b { padding-block: 4px; min-width: 0; }
+.ev { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; display: grid; gap: 2px; }
+.ev b { font-weight: 600; }
+.ev.task { border-style: dashed; }
+.drive, .gap, .wx { border-radius: 8px; padding: 6px 10px; font-size: 12px; display: grid; gap: 2px; }
+.drive { background: var(--tint); color: var(--ink); }
+.drive b { color: var(--accent); }
+.gap { color: var(--soft); border: 1px dashed var(--line); }
+.wx { background: var(--rain-bg); color: var(--rain); }
+.clash { border: 1px solid var(--warn); background: var(--card); border-radius: 10px; padding: 9px 10px; display: grid; gap: 6px; }
+.clash .hd { color: var(--warn); font-weight: 600; }
+.was { color: var(--soft); text-decoration: line-through; font-weight: 400; }
+.new { outline: 2px solid var(--good); outline-offset: 1px; }
+.fab { position: absolute; right: 14px; bottom: 14px; border-radius: 999px; padding: 10px 16px; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+
+/* Sheet */
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; top: 30%; background: var(--bg); border-top: 1px solid var(--line); border-radius: 18px 18px 0 0; display: flex; flex-direction: column; box-shadow: 0 -6px 18px rgba(0,0,0,.18); }
+.grab { width: 36px; height: 4px; border-radius: 2px; background: var(--line); margin: 6px auto 0; }
+.field { display: grid; gap: 4px; }
+.field label { font: 600 10px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--soft); }
+.field input { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+.opt { text-align: left; font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; display: grid; gap: 3px; cursor: pointer; }
+.opt:hover { border-color: var(--accent); }
+.opt b { color: var(--accent); }
+.detail { display: grid; gap: 10px; }
+.hours { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; text-align: center; }
+.hours div { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 2px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.hours .hi { border-color: var(--rain); color: var(--rain); font-weight: 600; }
+.group { border: 1px solid var(--line); background: var(--card); border-radius: 10px; overflow: hidden; }
+.group > div { padding: 9px 10px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 8px; }
+.group > div:first-child { border-top: 0; }
+.lbl { font: 600 10px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--soft); }
+.reset { justify-self: start; }
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.tile { position: relative; border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 8px 4px; text-align: center; display: grid; gap: 2px; font-size: 11px; color: var(--ink); }
+.tile span { font-size: 18px; }
+.tile.hot { border-color: var(--accent); background: var(--tint); color: var(--accent); font-weight: 600; }
+.pro { position: absolute; top: -6px; right: -4px; font: 700 9px/1 var(--mono); letter-spacing: .04em; padding: 3px 5px; border-radius: 4px; background: var(--warn); color: var(--card); }
+.big { border: 1px solid var(--line); background: var(--bg); border-radius: 16px; padding: 10px; color: var(--soft); min-height: 64px; }
+.zone { background: var(--card); border-bottom: 1px solid var(--line); padding: 12px; display: grid; gap: 10px; }
+@media (prefers-reduced-motion: no-preference) { .new { transition: outline-color .4s; } }
+</style>
+<style>
+.seg { display: grid; grid-template-columns: repeat(5, 1fr); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--card); }
+.seg span { text-align: center; padding: 7px 2px; font-size: 11px; display: grid; gap: 2px; border-left: 1px solid var(--line); color: var(--ink); }
+.seg span:first-child { border-left: 0; }
+.seg span b { font-size: 16px; font-weight: 400; }
+.seg span.on { background: var(--accent); color: var(--card); font-weight: 600; }
+.spacerow { display: flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; }
+.spacerow .sp { flex: 1; }
+.big4 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.big4 div { border: 1px solid var(--line); background: var(--card); border-radius: 12px; padding: 10px 4px; text-align: center; display: grid; gap: 2px; font-size: 12px; }
+.big4 div b { font-size: 20px; font-weight: 400; }
+.big4 div.on { border: 2px solid var(--accent); background: var(--tint); color: var(--accent); font-weight: 600; }
+.chip.on { background: var(--accent); color: var(--card); font-weight: 600; }
+</style>
+<div class="wrap">
+  <header style="display:grid;gap:10px">
+    <span class="eyebrow">New note and New task · mockups for review</span>
+    <h1>What it is, and where it goes</h1>
+    <p class="lede">Owner, 2026-10-30: “when creating a note or a task there should be a differentiation between note/task and space; everything is in a pill button format.” Pick <b>A or B</b>. Names are made-up examples.</p>
+  </header>
+
+  <section>
+    <header><span class="tag">New note from Home</span><h2>Two different-looking controls</h2></header>
+    <div class="row">
+      <div class="col">
+        <span class="tag">A · A bar for what, a row for where (recommended)</span>
+        <div class="phone short">
+          <div class="bar"><span class="lnk">‹</span>New note<span class="sp"></span><span class="lnk">Save</span></div>
+          <div class="scroll">
+            <span class="lbl">What is it?</span>
+            <div class="seg"><span class="on"><b>📝</b>Note</span><span><b>📍</b>Place</span><span><b>🍽️</b>Recipe</span><span><b>🍸</b>Drink</span><span><b>✅</b>Task</span></div>
+            <span class="lbl" style="margin-top:6px">Where does it go?</span>
+            <div class="spacerow"><span>📁</span><span class="sp">Work</span><span class="lnk">Change ›</span></div>
+            <div class="field" style="margin-top:6px"><label>Title</label><input aria-label="Title"></div>
+            <div class="field"><label>Note</label><input aria-label="Note"></div>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <span class="tag">A · tapping “Change ›”</span>
+        <div class="phone short">
+          <div class="bar"><span class="lnk">‹</span>Where does it go?<span class="sp"></span></div>
+          <div class="scroll">
+            <div class="field"><label>Find a space</label><input aria-label="Find a space"></div>
+            <div class="group"><div><span>📁 Work</span><span class="lnk">✓</span></div><div><span>📁 Work/Gartner</span><span></span></div><div><span>📁 Home</span><span></span></div><div><span>🔒 Private</span><span></span></div></div>
+            <span class="muted">Picking Places, Recipes, Cocktails or Memories sets “What is it?” too.</span>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <span class="tag">B · Big tiles for what, labelled chips for where</span>
+        <div class="phone short">
+          <div class="bar"><span class="lnk">‹</span>New note<span class="sp"></span><span class="lnk">Save</span></div>
+          <div class="scroll">
+            <span class="lbl">What is it?</span>
+            <div class="big4"><div class="on"><b>📝</b>Note</div><div><b>📍</b>Place</div><div><b>🍽️</b>Recipe</div><div><b>🍸</b>Drink</div><div><b>✅</b>Task</div></div>
+            <span class="lbl" style="margin-top:6px">Space</span>
+            <div class="chips"><span class="chip on">Work</span><span class="chip">Work/Gartner</span><span class="chip">Home</span><span class="chip">🔒 Private</span></div>
+            <div class="field" style="margin-top:6px"><label>Title</label><input aria-label="Title"></div>
+          </div>
+        </div>
+      </div>
+      <div class="notes">
+        <h3>The difference</h3>
+        <ul>
+          <li><b>A</b>: “What is it?” is one connected bar with icons, like tabs. “Where does it go?” is one line showing the chosen space, and <b>Change ›</b> opens a list with a search box. That's easier with many spaces, and pills are never side by side.</li>
+          <li><b>B</b>: what it is shown as big tiles, and the space stays as pills under a clear <b>SPACE</b> heading. Fewer taps for the space, but more pills on screen.</li>
+          <li>Both: opened from inside a built-in space (＋ New place), neither shows. It just says “In 📍 Places” (already fixed on branch <code>claude/builtin-space-note</code>).</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <header><span class="tag">New task</span><h2>Every group of choices gets a heading</h2></header>
+    <div class="row">
+      <div class="col">
+        <span class="tag">Task form (both A and B)</span>
+        <div class="phone short">
+          <div class="bar"><span class="lnk">‹</span>New task<span class="sp"></span><span class="lnk">Save</span></div>
+          <div class="scroll">
+            <div class="field"><label>What to do</label><input value="Pick up the dry cleaning" aria-label="Task"></div>
+            <span class="lbl">Where</span>
+            <div class="spacerow"><span>📍</span><span class="sp">Bright Cleaners</span><span class="lnk">Change ›</span></div>
+            <span class="lbl">By when</span>
+            <div class="chips"><span class="chip">No date</span><span class="chip on">Today</span><span class="chip">Tomorrow</span><span class="chip">Fri</span></div>
+            <span class="lbl">Repeats</span>
+            <div class="chips"><span class="chip on">Once</span><span class="chip">Daily</span><span class="chip">Weekly</span><span class="chip">…</span></div>
+            <span class="lbl">Priority</span>
+            <div class="chips"><span class="chip on">Normal</span><span class="chip">❗ Important</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="notes">
+        <h3>The task form</h3>
+        <ul>
+          <li>The Normal / Important pills get a <b>PRIORITY</b> heading; today they have none.</li>
+          <li>The pills that remain are always values of one question (by when, repeats, priority), each under its heading. The space never appears on a task: tasks always go in Tasks.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="questions">
+    <header><span class="tag">Question</span><h2>One pick</h2></header>
+    <div class="notes">
+      <p class="q"><b>Q1. New note:</b> <b>A, a bar for what and a row for where</b> (recommended), or B, big tiles and labelled pills.</p>
+    </div>
+  </section>
+</div>

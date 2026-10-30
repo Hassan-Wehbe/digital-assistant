@@ -140,7 +140,7 @@ describe('the screens', () => {
 
   it('Home has a Tasks tile; New note offers ✅ Task; Edit on a task opens the task form', () => {
     expect(read('app/index.tsx')).toContain(`<Tile icon="✅" title="Tasks" onPress={() => router.push('/tasks')} />`);
-    expect(read('app/new-item.tsx')).toContain("{ value: 'task', label: '✅ Task' }");
+    expect(read('app/new-item.tsx')).toContain("{ value: 'task', icon: '✅', label: 'Task' }");
     expect(read('app/item/[id].tsx')).toContain("router.push({ pathname: '/task', params: { id: item.id } })");
   });
 

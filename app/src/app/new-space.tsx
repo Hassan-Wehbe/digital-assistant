@@ -68,8 +68,8 @@ export default function NewSpace() {
           value={parent}
           onChange={(id) => setParent((p) => (p === id ? undefined : id))}
           disabled={busy}
+          none="None: at the top level"
         />
-        <Muted>{parent ? 'Tap the chosen space again to put it at the top level instead.' : 'None chosen: it goes at the top level.'}</Muted>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <Switch value={restricted} onValueChange={setRestricted} disabled={busy} />

@@ -186,8 +186,9 @@ function TaskEditor({ item, placeTitle }: { item: Item | null; placeTitle?: stri
         <Chips options={REPEATS} selected={(v) => v === (form.repeat ?? 'none')} onPress={(v) => set({ repeat: v === 'none' ? null : v })} disabled={busy} />
         {form.repeat ? <Muted>Ticking it done moves it to its next date, and each day’s plan picks it up.</Muted> : null}
 
+        {label('PRIORITY')}
         <Chips
-          options={[{ value: false, label: 'Normal' }, { value: true, label: 'Important' }]}
+          options={[{ value: false, label: 'Normal' }, { value: true, label: '❗ Important' }]}
           selected={(v) => v === form.important}
           onPress={(important) => set({ important })}
           disabled={busy}

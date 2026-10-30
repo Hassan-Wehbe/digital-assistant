@@ -10,14 +10,16 @@ import { ScrollView, Text, TextInput } from 'react-native';
 
 import { AttachmentPicker } from '@/components/AttachmentPicker';
 import { FindOnMap, type FoundPlace } from '@/components/FindOnMap';
-import { Chips, PlaceFields } from '@/components/PlaceFields';
+import { KindBar } from '@/components/KindBar';
+import { PlaceFields } from '@/components/PlaceFields';
 import { RecipeFields } from '@/components/RecipeFields';
 import { SpaceChips } from '@/components/SpaceChips';
 import { Button, Card, KeyboardScreen, Muted, styles, TextLink, useColors, useLoad } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
-import { builtInOf } from '@/lib/builtInSpaces';
+import { builtInOf, spacesWithin } from '@/lib/builtInSpaces';
 import { deviceUploadDeps } from '@/lib/deviceFiles';
 import { deviceGeocoder } from '@/lib/location';
+import { spaceTitle } from '@/lib/memory';
 import { lookUpPlace } from '@/lib/placeLookup';
 import { EMPTY_PLACE, placeMetadata, type PlaceForm } from '@/lib/places';
 import { looksLikeStreetAddress } from '@/lib/placeSearch';
@@ -28,14 +30,18 @@ import type { PickedFile } from '@/lib/upload';
 type NoteKind = 'note' | 'place' | RecipeType | 'memory';
 /** The kind a built-in space holds (Tasks opens the task form instead). */
 const SPACE_KIND = { places: 'place', recipes: 'recipe', cocktails: 'cocktail', memories: 'memory' } as const;
-// ✅ Task opens the task form (task.tsx): a task has its own fields and lives in the Tasks space.
-const KINDS_OF_NOTE: { value: NoteKind | 'task'; label: string }[] = [
-  { value: 'note', label: 'Note' },
-  { value: 'place', label: '📍 Place' },
-  { value: 'recipe', label: '🍽️ Recipe' },
-  { value: 'cocktail', label: '🍸 Cocktail' },
-  { value: 'task', label: '✅ Task' },
-];
+// "What is it?" (docs/note-kind-mockups.html, layout A). ✅ Task opens the task form (task.tsx): a task
+// has its own fields and lives in the Tasks space.
+const KINDS_OF_NOTE = [
+  { value: 'note', icon: '📝', label: 'Note' },
+  { value: 'place', icon: '📍', label: 'Place' },
+  { value: 'recipe', icon: '🍽️', label: 'Recipe' },
+  { value: 'cocktail', icon: '🍸', label: 'Drink' },
+  { value: 'task', icon: '✅', label: 'Task' },
+] as const;
+type BarKind = (typeof KINDS_OF_NOTE)[number]['value'];
+/** The built-in space each kind lives in: choosing the kind there moves the note to it. */
+const KIND_SPACE = { place: 'places', recipe: 'recipes', cocktail: 'cocktails' } as const;
 
 export default function NewItem() {
   const c = useColors();
@@ -146,28 +152,48 @@ export default function NewItem() {
     );
   }
   const searching = isPlace && finding && !createdId;
+  // Opened from inside a built-in space (its ＋): that space and its own sub-spaces only, never the
+  // others (owner, 2026-10-30); just its name when it has none.
+  const within = spaces.data ? spacesWithin(params.space, spaces.data) : null;
+  // What it is and where it goes stay in step: a place, recipe or drink goes to its built-in space;
+  // a plain note leaves a built-in space for the user to choose another.
+  const pickKind = (v: BarKind) => {
+    if (v === 'task') return router.replace('/task');
+    setChosen(v);
+    if (v === 'note') {
+      if (builtIn) setSpace(undefined);
+      return;
+    }
+    const home = spaces.data?.find((x) => x.built_in === KIND_SPACE[v] && !x.restricted && !x.path.includes('/'));
+    if (home && builtInOf(spaces.data?.find((x) => x.id === space), spaces.data ?? []) !== KIND_SPACE[v]) setSpace(home.id);
+  };
+  const label = (t: string) => <Text style={{ color: c.muted, fontSize: 12, fontWeight: '600', letterSpacing: 0.6 }}>{t}</Text>;
   return (
     <KeyboardScreen>
       <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
-        <Text style={[styles.title, { color: c.text }]}>Space</Text>
-        <SpaceChips
-          spaces={spaces.data}
-          error={spaces.error}
-          onRetry={spaces.reload}
-          value={space}
-          onChange={setSpace}
-          disabled={busy || !!createdId}
-        />
-
-        {/* A built-in space holds one kind: no choice to make there (D45). */}
-        {builtIn ? null : (
-          <Chips
-            options={KINDS_OF_NOTE}
-            selected={(v) => v === kind}
-            onPress={(v) => (v === 'task' ? router.replace('/task') : setChosen(v))}
-            disabled={busy || !!createdId}
-          />
+        {/* Inside a built-in space (its ＋) there is nothing to choose: it holds one kind (D45). */}
+        {within ? null : (
+          <>
+            {label('WHAT IS IT?')}
+            <KindBar options={KINDS_OF_NOTE} selected={kind as BarKind} onPress={pickKind} disabled={busy || !!createdId} />
+          </>
         )}
+        {within && within.length === 1 ? (
+          <Text style={[styles.title, { color: c.text }]}>In {spaceTitle(within[0])}</Text>
+        ) : (
+          <>
+            {label('WHERE DOES IT GO?')}
+            <SpaceChips
+              spaces={within ?? spaces.data}
+              error={spaces.error}
+              onRetry={spaces.reload}
+              value={space}
+              onChange={setSpace}
+              disabled={busy || !!createdId}
+            />
+          </>
+        )}
+
         {searching ? (
           <>
             <FindOnMap start={title} onFound={found} onHand={() => setFinding(false)} disabled={busy} />
