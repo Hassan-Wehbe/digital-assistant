@@ -6,17 +6,25 @@
 // A shared link (Facebook, YouTube, ...) can get the page's own title with "Get title", read on
 // the phone only on that tap (linkInfo.ts); the favourite spaces come first in the space list (D38).
 // Into the built-in Recipes or Cocktails space, it is saved as a recipe or cocktail with the link as
-// its source (recipes.ts); ingredients and steps can be added later with Edit note.
+// its source (recipes.ts); ingredients and steps can be added later with Edit note. As New note
+// (owner's pick A, 2026-10-30): "What is it?" (Note, Place, Recipe, Drink) and "Where does it go?",
+// kept in step: a place goes to Places, a recipe or drink to Recipes or Cocktails (owner,
+// 2026-10-31: "I picked place and it asked me to pick a space; that should default to Places"). A
+// place shared from anywhere but Google Maps (a Facebook page) can be found with "Find it on the
+// map" (FindOnMap.tsx), as on New place.
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { AttachmentPicker } from '@/components/AttachmentPicker';
-import { Chips, PlaceFields } from '@/components/PlaceFields';
+import { FindOnMap, type FoundPlace } from '@/components/FindOnMap';
+import { KindBar } from '@/components/KindBar';
+import { PlaceFields } from '@/components/PlaceFields';
 import { PlaceLookup } from '@/components/PlaceLookup';
 import { SpaceChips } from '@/components/SpaceChips';
 import { Button, Card, ErrorBox, KeyboardScreen, Loading, Muted, styles, TextLink, useColors, useLoad } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
+import { builtInOf } from '@/lib/builtInSpaces';
 import { findCredential } from '@/lib/credentials';
 import { deviceUploadDeps, prepareShared, removeCopies } from '@/lib/deviceFiles';
 import { loadFavourites } from '@/lib/favourites';
@@ -25,7 +33,7 @@ import { fetchLinkTitle, firstUrl } from '@/lib/linkInfo';
 import { saveNote, type SaveTarget } from '@/lib/saveNote';
 import { supabase } from '@/lib/supabase';
 import { EMPTY_PLACE, placeMetadata, type PlaceForm } from '@/lib/places';
-import { kindForSpace, sharedRecipe } from '@/lib/recipes';
+import { sharedRecipe } from '@/lib/recipes';
 import { draftFromShared, placeFromShared, TITLE_MAX, type Shared } from '@/lib/shared';
 import { useShare } from '@/lib/shareIntake';
 import type { PickedFile } from '@/lib/upload';
@@ -53,9 +61,14 @@ export default function ShareScreen() {
 type Mode = 'new' | 'existing';
 
 const KINDS_OF_NOTE = [
-  { value: false, label: 'Note' },
-  { value: true, label: '📍 Place' },
-];
+  { value: 'note', icon: '📝', label: 'Note' },
+  { value: 'place', icon: '📍', label: 'Place' },
+  { value: 'recipe', icon: '🍽️', label: 'Recipe' },
+  { value: 'cocktail', icon: '🍸', label: 'Drink' },
+] as const;
+type ShareKind = (typeof KINDS_OF_NOTE)[number]['value'];
+/** The built-in space each kind lives in. */
+const KIND_SPACE = { place: 'places', recipe: 'recipes', cocktail: 'cocktails' } as const;
 
 function ShareForm({ shared, onDone, onCancel }: { shared: Shared; onDone: () => void; onCancel: () => void }) {
   const c = useColors();
@@ -82,12 +95,42 @@ function ShareForm({ shared, onDone, onCancel }: { shared: Shared; onDone: () =>
     } else setTitleLookup('none');
   };
   const [mode, setMode] = useState<Mode>('new');
-  const [space, setSpace] = useState<string | undefined>();
   const [title, setTitle] = useState(fromMaps ? fromMaps.name : draft.title);
   // A Maps share keeps its link in the place's map link, not in the note.
   const [body, setBody] = useState(fromMaps ? '' : draft.body);
-  const [isPlace, setIsPlace] = useState(!!fromMaps);
-  const shareType = isPlace ? null : kindForSpace(spaces.data?.find((s) => s.id === space));
+  // What it is: a built-in space decides (Places, Recipes, Cocktails); otherwise the one picked.
+  const [chosen, setChosen] = useState<ShareKind>(fromMaps ? 'place' : 'note');
+  const builtInSpace = (id: ShareKind) =>
+    id === 'note' ? undefined : spaces.data?.find((x) => x.built_in === KIND_SPACE[id] && !x.restricted && !x.path.includes('/'))?.id;
+  // Where it goes: the one picked, else a Maps share's Places.
+  const [picked, setPicked] = useState<string | undefined>();
+  const space = picked ?? (fromMaps ? builtInSpace('place') : undefined);
+  const spaceKind = builtInOf(spaces.data?.find((x) => x.id === space), spaces.data ?? []);
+  const kind: ShareKind =
+    spaceKind === 'places' ? 'place' : spaceKind === 'recipes' ? 'recipe' : spaceKind === 'cocktails' ? 'cocktail' : chosen;
+  const isPlace = kind === 'place';
+  const shareType = kind === 'recipe' || kind === 'cocktail' ? kind : null;
+  const setSpace = setPicked;
+  // "Find it on the map" for a place shared from anywhere but Google Maps.
+  const [finding, setFinding] = useState(false);
+  const [googlePlaceId, setGooglePlaceId] = useState<string | undefined>(undefined);
+  const pickKind = (v: ShareKind) => {
+    setChosen(v);
+    if (v === 'note') {
+      // Back to a plain note: out of a built-in space, and the shared text (the Maps link) into the note.
+      if (spaceKind) setPicked(undefined);
+      if (!body.trim()) setBody(draft.body);
+      return;
+    }
+    if (spaceKind !== KIND_SPACE[v]) setPicked(builtInSpace(v));
+  };
+  const found = (p: FoundPlace) => {
+    // The name found replaces a shared title (often a link's words); the note keeps the shared text.
+    if (p.name) setTitle(p.name.slice(0, TITLE_MAX));
+    setPlace((f) => ({ ...f, address: p.address || f.address, kind: p.kind ?? f.kind, coords: p.coords ?? f.coords }));
+    setGooglePlaceId(p.googlePlaceId);
+    setFinding(false);
+  };
   const [place, setPlace] = useState<PlaceForm>(
     fromMaps ? { ...EMPTY_PLACE, mapsUrl: fromMaps.mapsUrl, address: fromMaps.address } : EMPTY_PLACE,
   );
@@ -142,7 +185,7 @@ function ShareForm({ shared, onDone, onCancel }: { shared: Shared; onDone: () =>
       if (!space) return setError('Choose a space.');
       if (!title.trim()) return setError(isPlace ? 'Give the place a name.' : 'Give the note a title.');
       if (isPlace) {
-        const fields = placeMetadata(place);
+        const fields = placeMetadata(place, googlePlaceId ? { google_place_id: googlePlaceId } : null);
         if ('error' in fields) return setError(fields.error);
         target = { space, title: title.trim(), body, place: fields.metadata };
       } else if (shareType) target = { space, title: title.trim(), body, recipe: { type: shareType, metadata: sharedRecipe(link) } };
@@ -176,6 +219,7 @@ function ShareForm({ shared, onDone, onCancel }: { shared: Shared; onDone: () =>
   };
 
   const locked = busy || !!createdId;
+  const label = (t: string) => <Text style={{ color: c.muted, fontSize: 12, fontWeight: '600', letterSpacing: 0.6 }}>{t}</Text>;
   const input = [styles.input, { color: c.text, borderColor: c.line, backgroundColor: c.card }];
   return (
     <KeyboardScreen>
@@ -187,7 +231,13 @@ function ShareForm({ shared, onDone, onCancel }: { shared: Shared; onDone: () =>
           </View>
         ) : null}
 
-        <Text style={[styles.title, { color: c.text }]}>Space</Text>
+        {mode === 'new' && !shared.files.length ? (
+          <>
+            {label('WHAT IS IT?')}
+            <KindBar options={KINDS_OF_NOTE} selected={kind} onPress={pickKind} disabled={locked} />
+          </>
+        ) : null}
+        {label(mode === 'new' ? 'WHERE DOES IT GO?' : 'SPACE')}
         <SpaceChips
           spaces={orderedSpaces}
           error={spaces.error}
@@ -202,18 +252,6 @@ function ShareForm({ shared, onDone, onCancel }: { shared: Shared; onDone: () =>
 
         {mode === 'new' ? (
           <>
-            {!shared.files.length ? (
-              <Chips
-                options={KINDS_OF_NOTE}
-                selected={(v) => v === isPlace}
-                onPress={(v) => {
-                  setIsPlace(v);
-                  // Back to a plain note: the shared text (the Maps link) goes into the note.
-                  if (!v && !body.trim()) setBody(draft.body);
-                }}
-                disabled={locked}
-              />
-            ) : null}
             <TextInput
               style={input}
               placeholder={isPlace ? 'Name of the place' : 'Title'}
@@ -241,7 +279,14 @@ function ShareForm({ shared, onDone, onCancel }: { shared: Shared; onDone: () =>
                 onYes={(coords) => setPlace((current) => ({ ...current, coords }))}
               />
             ) : null}
-            {isPlace ? <PlaceFields value={place} onChange={setPlace} disabled={locked} /> : null}
+            {isPlace && !fromMaps && !locked ? (
+              finding ? (
+                <FindOnMap start={/^https?:\/\//i.test(title.trim()) ? '' : title} onFound={found} onHand={() => setFinding(false)} disabled={busy} />
+              ) : (
+                <Button title={place.coords ? '🔎 Find it on the map again' : '🔎 Find it on the map'} kind="plain" onPress={() => setFinding(true)} />
+              )
+            ) : null}
+            {isPlace && !finding ? <PlaceFields value={place} onChange={setPlace} disabled={locked} /> : null}
             {shareType ? (
               <Muted>
                 {`Saved as a ${shareType === 'cocktail' ? '🍸 cocktail' : '🍽️ recipe'}${link ? ' with its link' : ''}. Add the ingredients and steps later with Edit note, or tap Fill in the recipe there.`}
