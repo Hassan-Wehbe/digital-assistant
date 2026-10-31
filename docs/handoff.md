@@ -37,8 +37,10 @@ tokens or keys in chat.
   10/10). **Step 3 (the app) merged 2026-10-30 (#292); versionCode 28 built and submitted to Play's internal track (EAS 83f75d9b):** Find it on
   the map (Google suggestions, Is this it? with the phone's lookup), every place in the picker, new
   kinds, one kind per built-in space (＋ New place / recipe / task ...), Your spaces tiles on Home,
-  tappable links; `npm run check` passes (1,040 tests). **Owner:** the phone checklist on versionCode 28 (step 4),
-  Denisse's case first. Then step 3 (app), a preview
+  tappable links; `npm run check` passes (1,040 tests). Owner's feedback on 28 fixed in #294 (New
+  note inside a built-in space shows only it; "What is it?" bar and "Where does it go?" line, pick A).
+  **versionCode 29 built 2026-10-31 (EAS 70cabb13), submitted.** **Owner:** the phone checklist on
+  versionCode 29 (step 4), Denisse's case first. Then step 3 (app), a preview
   build. Before sharing step 3.
 - **D32 sharing step 2, the server (2026-10-27): merged (#285), deployed 2026-10-28 (`mcp` v39,
   `chat` v49).** Shared spaces named "Family (shared by Sam)", own spaces first; search / get_item mark

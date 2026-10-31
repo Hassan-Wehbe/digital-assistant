@@ -233,7 +233,14 @@ ignored. Owner's picks: Q1 A (search first), Q2 B
   more in `places.test.ts` and `homePlace.test.ts`. **`npm run check` passes: lint, type-check, 84 test
   files, 1,040 tests.**
 
-**Owner:** the phone checklist on versionCode 28 (step 4). The Google key is still optional: without it, finding by name says it is not switched on
+**Owner's feedback on versionCode 28 (2026-10-30), fixed in #294:** New note opened inside a
+built-in space showed every space (now "In 📍 Places", or that space and its own sub-spaces); the kind
+and the space looked alike, all pills (owner's pick A, `docs/note-kind-mockups.html`: a "What is it?"
+icon bar, a "Where does it go?" line with Change › used wherever the space pills were, and a PRIORITY
+heading on the task form). **versionCode 29 built 2026-10-31** (EAS 70cabb13) and submitted to Play's
+internal track (submission fd45632c).
+
+**Owner:** the phone checklist on versionCode 29 (step 4). The Google key is still optional: without it, finding by name says it is not switched on
 and a full street address still works.
 
 ## As built: step 2b (2026-10-29)
