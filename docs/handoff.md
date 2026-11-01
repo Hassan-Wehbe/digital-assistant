@@ -1,5 +1,44 @@
 # Handoff: state of the project and how to keep building
 
+## Start here (2026-11-01)
+
+**Live now.** Supabase functions: `mcp` v41, `chat` v51, `place-search` v1 (Google key not set yet:
+it answers `not_set_up`), `delete-account` v1. Migrations through `20261029165902
+one_kind_per_builtin_space`. App: **versionCode 30** built 2026-11-01 (EAS 5060330b) and submitted
+to Google Play's internal track; the owner installs from the Play Store (production builds only:
+preview builds do not reach Play and can't install over the Play app).
+
+**Just finished: D45 Places (`docs/places-space-plan.md`), steps 1-3 plus the owner's feedback.**
+Built-in Places space; one kind per built-in space (server, migration, app); new place kinds with
+eatery-only fields; "Find it on the map" (Google suggestions via `place-search`, then "Is this
+it?" with the phone's own lookup); the picker lists homes and every place; "Your spaces" tiles on
+Home; tappable links; New note's "What is it?" bar and "Where does it go?" line (owner's pick A,
+`docs/note-kind-mockups.html`), also on Share and wherever spaces were picked; New note inside a
+built-in space shows only that space; a shared place (Facebook) goes to Places with Find it on the
+map. PRs #287-#297.
+
+**Waiting on the owner.**
+1. The phone checklist on versionCode 30 (step 4 of the plan): Denisse's case first (a place with
+   only an address, picked for a task), then adding places from the couch, kinds, New note's bar
+   and space line, Your spaces tiles, the PRIORITY heading on tasks, links, and sharing the
+   Facebook link again. Fix what they report, then a new production build on their OK.
+2. Optional: the Google Places key (steps in `docs/places-space-plan.md`, "Owner: switching on
+   Google's place search"); until then, finding a place by name says it is not switched on and a
+   full street address still works.
+3. Older, still open: the admin page checklist and the Play Console Data safety line (usage
+   tracking, D34).
+
+**Next work after D45.** D32 sharing step 3 (the app) and step 4 (release): `docs/sharing-plan.md`
+(steps 1-2, database and server, are live).
+
+**Working this way (owner, 2026-11-01).** To save the owner's weekly Claude usage: a fresh session
+for each piece of work (this file and the plan docs carry the state); a smaller model (Sonnet) for
+merges, deploys, builds and docs, the strongest only for new design touching secrets, sharing,
+restricted spaces, auth, RLS or the chat loop; batch steps ("open the PR, merge it when checks
+pass, then build") and keep PR watching and check-ins to what is needed, since every wake-up is a
+full turn. Production builds go through GitHub → Actions → "app build" (profile production);
+deploys through "deploy chat" (one function at a time: queuing several skips the middle one).
+
 Last updated 2026-10-10 (newest: alarms step 3, the calendar card, on branch `claude/alarms-calendar-card`; before that: invite-only sign-up merged (#186) and live, versionCode 17 built and submitted, testers getting "Item not found" on the Play link; live `mcp` v30, `chat` v26 (places cuisine fix #188), `delete-account` deployed; see the first entry under "Where things stand"). Earlier: 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
 Last updated 2026-10-11 (newest: all open PRs merged and `chat` v34 deployed; alarms step 4 wording on `claude/alarms-wording`, then versionCode 20; before that: homes steps 3-5 merged (#216, #217, #218): the app's Settings → Homes, the 🏠 chat card, noticing which home you are at, and the privacy page; they ship with versionCode 20, not built yet; before that: invite-only sign-up merged (#186) and live, versionCode 17 built and submitted, testers getting "Item not found" on the Play link; live `mcp` v30, `chat` v26 (places cuisine fix #188), `delete-account` deployed; see the first entry under "Where things stand"). Earlier: 2026-10-06 (places steps 3, 4, 5a and 5c **merged, not built** (#97, #100, #101,
 #102), with Expo patch updates (#98). Step 2, server, is live. Places step 5b ("places near me",
