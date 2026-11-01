@@ -240,7 +240,14 @@ icon bar, a "Where does it go?" line with Change › used wherever the space pil
 heading on the task form). **versionCode 29 built 2026-10-31** (EAS 70cabb13) and submitted to Play's
 internal track (submission fd45632c).
 
-**Owner:** the phone checklist on versionCode 29 (step 4). The Google key is still optional: without it, finding by name says it is not switched on
+**Owner's feedback on versionCode 29 (2026-10-31), fixed in #296:** a Facebook link shared to Wilma
+and made a Place asked for a space (now Place puts it in Places, as on New note) and had no way to
+find it on the map (now "🔎 Find it on the map" on the Share screen for any shared place not from
+Google Maps; the name found replaces the shared title, the link stays in the note). The Share
+screen also gets the "What is it?" bar and "Where does it go?" line. **versionCode 30 built
+2026-11-01** (EAS 5060330b) and submitted to Play's internal track (submission 9e7da5e7).
+
+**Owner:** the phone checklist on versionCode 30 (step 4). The Google key is still optional: without it, finding by name says it is not switched on
 and a full street address still works.
 
 ## As built: step 2b (2026-10-29)
