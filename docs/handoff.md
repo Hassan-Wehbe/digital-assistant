@@ -39,8 +39,10 @@ tokens or keys in chat.
   kinds, one kind per built-in space (＋ New place / recipe / task ...), Your spaces tiles on Home,
   tappable links; `npm run check` passes (1,040 tests). Owner's feedback on 28 fixed in #294 (New
   note inside a built-in space shows only it; "What is it?" bar and "Where does it go?" line, pick A).
-  **versionCode 29 built 2026-10-31 (EAS 70cabb13), submitted.** **Owner:** the phone checklist on
-  versionCode 29 (step 4), Denisse's case first. Then step 3 (app), a preview
+  **versionCode 29 built 2026-10-31 (EAS 70cabb13), submitted.** Owner's feedback on 29 (a shared
+  Facebook place: Place now goes to Places, Find it on the map on the Share screen) fixed in #296;
+  **versionCode 30 built 2026-11-01 (EAS 5060330b), submitted.** **Owner:** the phone checklist on
+  versionCode 30 (step 4), Denisse's case first. Then step 3 (app), a preview
   build. Before sharing step 3.
 - **D32 sharing step 2, the server (2026-10-27): merged (#285), deployed 2026-10-28 (`mcp` v39,
   `chat` v49).** Shared spaces named "Family (shared by Sam)", own spaces first; search / get_item mark
