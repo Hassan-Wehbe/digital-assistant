@@ -51,7 +51,8 @@ jobs:
             exit 1
           fi
           # verify_jwt stays off, as in supabase/config.toml: each function checks the sign-in itself.
-          supabase functions deploy "$FUNCTION" --project-ref "$PROJECT_REF" --no-verify-jwt
+          # --yes: the newest CLI asks "Deploy 1 Function?" and a CI run cannot answer (2026-11-04).
+          supabase functions deploy "$FUNCTION" --project-ref "$PROJECT_REF" --no-verify-jwt --yes
       - name: Check it refuses requests without sign-in
         run: |
           for auth in "" "Authorization: Bearer fake"; do
