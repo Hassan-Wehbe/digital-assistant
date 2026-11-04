@@ -6,7 +6,7 @@ import { Linking, Text } from 'react-native';
 
 import { useAuth } from '@/lib/auth';
 import { editError } from '@/lib/noteEdit';
-import { linkButton, madeArgs, madeLine, recipeSummary, type RecipeMetadata, type RecipeType } from '@/lib/recipes';
+import { linkButton, madeArgs, madeLine, nutritionLine, recipeSummary, type RecipeMetadata, type RecipeType } from '@/lib/recipes';
 
 import { Chips } from './PlaceFields';
 import { Button, Card, Muted, styles, useColors } from './ui';
@@ -29,6 +29,7 @@ export function RecipeCard({
   const [making, setMaking] = useState(false);
   const summary = recipeSummary(r);
   const made = madeLine(r);
+  const macros = nutritionLine(r);
   const body = { color: c.text, fontSize: 15, lineHeight: 22 };
 
   const openLink = async () => {
@@ -41,7 +42,7 @@ export function RecipeCard({
     }
   };
 
-  const empty = !summary && !r.ingredients && !r.steps;
+  const empty = !summary && !macros && !r.ingredients && !r.steps;
   return (
     <Card>
       <Text style={[styles.title, { color: c.text }]}>
@@ -49,6 +50,7 @@ export function RecipeCard({
         {summary ? ` · ${summary}` : ''}
       </Text>
       {empty ? <Muted>No ingredients or steps yet. Edit note to add them, so Wilma can suggest it.</Muted> : null}
+      {macros ? <Text style={body} selectable>{`Per serving: ${macros}`}</Text> : null}
       {r.ingredients ? (
         <>
           <Text style={[styles.title, { color: c.text, fontSize: 15 }]}>Ingredients</Text>

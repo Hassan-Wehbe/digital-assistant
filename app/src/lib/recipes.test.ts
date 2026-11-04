@@ -5,7 +5,7 @@ import { describe, expect, it } from '@jest/globals';
 
 import {
   EMPTY_RECIPE, isWebLink, kindForSpace, linkButton, madeArgs, madeLine, recipeForm, recipeMetadata, recipeOf, recipeSummary,
-  recipeType, sameRecipe, sharedRecipe,
+  nutritionLine, recipeType, sameRecipe, sharedRecipe,
 } from './recipes';
 
 describe('recipe types', () => {
@@ -147,5 +147,42 @@ describe('sharedRecipe (Share → Wilma into Recipes or Cocktails)', () => {
     expect(sharedRecipe(null)).toEqual({});
     expect(sharedRecipe('https://me:pw@example.com/r')).toEqual({});
     expect(sharedRecipe(`https://example.com/${'x'.repeat(1000)}`)).toEqual({});
+  });
+});
+
+describe('nutrition per serving (owner, 2026-11-04)', () => {
+  const form = { ...EMPTY_RECIPE, calories: '450', protein: '32,46', carbs: '40', fat: '12', fiber: '6' };
+
+  it('the form turns into numbers (a comma is a decimal point, one decimal kept) and back', () => {
+    const out = recipeMetadata(form, 'recipe');
+    expect(out).toEqual({ metadata: { nutrition: { calories: 450, protein: 32.5, carbs: 40, fat: 12, fiber: 6 } } });
+    const m = (out as { metadata: Parameters<typeof recipeForm>[0] }).metadata;
+    expect(recipeForm(m)).toMatchObject({ calories: '450', protein: '32.5', carbs: '40', fat: '12', fiber: '6' });
+  });
+
+  it('only what is typed is kept; empty boxes leave the field out', () => {
+    expect(recipeMetadata({ ...EMPTY_RECIPE, protein: '20' }, 'recipe')).toEqual({ metadata: { nutrition: { protein: 20 } } });
+    expect(recipeMetadata(EMPTY_RECIPE, 'recipe')).toEqual({ metadata: {} });
+  });
+
+  it('says plainly what is wrong', () => {
+    expect(recipeMetadata({ ...EMPTY_RECIPE, calories: 'lots' }, 'recipe')).toEqual({ error: 'Calories must be a number from 0 to 5000.' });
+    expect(recipeMetadata({ ...EMPTY_RECIPE, fat: '-3' }, 'recipe')).toEqual({ error: 'Fat must be a number from 0 to 500.' });
+    expect(recipeMetadata({ ...EMPTY_RECIPE, fiber: '900' }, 'recipe')).toEqual({ error: 'Fiber must be a number from 0 to 200.' });
+  });
+
+  it('is read back defensively and shown as one line', () => {
+    const r = recipeOf({ item_type: 'recipe', metadata: { nutrition: { calories: 450, protein: 'x', carbs: -1, fat: 12.5, sugar: 3 } } });
+    expect(r?.nutrition).toEqual({ calories: 450, fat: 12.5 });
+    expect(nutritionLine({ nutrition: { calories: 450, protein: 32, carbs: 40, fat: 12, fiber: 6 } })).toBe(
+      '450 kcal · 32 g protein · 40 g carbs · 12 g fat · 6 g fiber',
+    );
+    expect(nutritionLine({ nutrition: { protein: 20 } })).toBe('20 g protein');
+    expect(nutritionLine({})).toBeNull();
+  });
+
+  it('counts as a change when a number changes', () => {
+    expect(sameRecipe({ nutrition: { protein: 20 } }, { nutrition: { protein: 20 } })).toBe(true);
+    expect(sameRecipe({ nutrition: { protein: 20 } }, { nutrition: { protein: 25 } })).toBe(false);
   });
 });

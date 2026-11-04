@@ -21,18 +21,25 @@ export interface RecipeMade {
   rating?: number;
 }
 
+/** What the label says for one serving: kcal for calories, grams for the rest (owner, 2026-11-04). */
+export const NUTRIENTS = ["calories", "protein", "carbs", "fat", "fiber"] as const;
+export type Nutrition = Partial<Record<(typeof NUTRIENTS)[number], number>>;
+const NUTRIENT_MAX = { calories: 5000, protein: 500, carbs: 500, fat: 500, fiber: 200 } as const;
+
 export interface RecipeMetadata {
   ingredients?: string[];
   steps?: string[];
   minutes?: number;
   serves?: number;
+  /** Per serving. */
+  nutrition?: Nutrition;
   source_url?: string;
   source_site?: string;
   strength?: (typeof STRENGTHS)[number];
   made?: RecipeMade[];
 }
 
-const FIELDS = ["ingredients", "steps", "minutes", "serves", "source_url", "source_site", "strength", "made"];
+const FIELDS = ["ingredients", "steps", "minutes", "serves", "nutrition", "source_url", "source_site", "strength", "made"];
 
 export class RecipeError extends Error {}
 
@@ -108,6 +115,26 @@ export function isWebLink(url: string): boolean {
   return (u.protocol === "https:" || u.protocol === "http:") && !u.username && !u.password && !!u.hostname;
 }
 
+/** Per-serving macros: an object of calories (kcal) and protein, carbs, fat, fiber (g), each 0 or more, one decimal at most. */
+function nutrition(type: RecipeType, v: unknown): Nutrition | undefined {
+  if (v === undefined || v === null) return undefined;
+  if (typeof v !== "object" || Array.isArray(v)) return fail(type, `nutrition must be an object (${NUTRIENTS.join(", ")}), per serving`);
+  const r = v as Record<string, unknown>;
+  const extra = Object.keys(r).find((k) => !(NUTRIENTS as readonly string[]).includes(k));
+  if (extra) return fail(type, `nutrition has an unknown field "${extra}" (use ${NUTRIENTS.join(", ")})`);
+  const out: Nutrition = {};
+  for (const k of NUTRIENTS) {
+    const x = r[k];
+    if (x === undefined || x === null || x === "") continue;
+    const n = typeof x === "string" && x.trim() !== "" ? Number(x) : x;
+    if (typeof n !== "number" || !Number.isFinite(n) || n < 0 || n > NUTRIENT_MAX[k]) {
+      return fail(type, `nutrition ${k} must be a number from 0 to ${NUTRIENT_MAX[k]}`);
+    }
+    out[k] = Math.round(n * 10) / 10;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
 function strength(type: RecipeType, v: unknown): RecipeMetadata["strength"] {
   if (v === undefined || v === null || v === "") return undefined;
   if (type !== "cocktail") return fail(type, "strength is only for cocktails");
@@ -161,6 +188,8 @@ export function normalizeRecipe(
   if (minutes !== undefined) out.minutes = minutes;
   const serves = int(type, m.serves, "serves", 1, 100);
   if (serves !== undefined) out.serves = serves;
+  const macros = nutrition(type, m.nutrition);
+  if (macros) out.nutrition = macros;
   const url = text(type, m.source_url, "source_url", 1000);
   if (url) {
     if (!isWebLink(url)) fail(type, "source_url must be a web link (https://...)");
@@ -189,6 +218,17 @@ export function addMade(
   return normalizeRecipe(m, type, today);
 }
 
+/** "450 kcal, 32 g protein, 40 g carbs, 12 g fat, 6 g fiber" (only what is known). */
+export function nutritionWords(n: Nutrition): string {
+  return [
+    n.calories !== undefined && `${n.calories} kcal`,
+    n.protein !== undefined && `${n.protein} g protein`,
+    n.carbs !== undefined && `${n.carbs} g carbs`,
+    n.fat !== undefined && `${n.fat} g fat`,
+    n.fiber !== undefined && `${n.fiber} g fiber`,
+  ].filter(Boolean).join(", ");
+}
+
 const STRENGTH_WORDS: Record<string, string> = { regular: "Regular strength", light: "Light", none: "No alcohol" };
 
 /** The fields as plain lines, added to the text that meaning search reads (item_chunk). */
@@ -200,6 +240,7 @@ export function recipeText(m: RecipeMetadata): string {
     m.steps && `Steps:\n${m.steps.map((x, n) => `${n + 1}. ${x}`).join("\n")}`,
     m.minutes && `Time: ${m.minutes} min`,
     m.serves && `Serves ${m.serves}`,
+    m.nutrition && `Per serving: ${nutritionWords(m.nutrition)}`,
     m.strength && STRENGTH_WORDS[m.strength],
     m.source_site && `From ${m.source_site}`,
     last && `Made ${m.made!.length === 1 ? "once" : `${m.made!.length} times`}, last on ${last.on}${rated ? `, rated ${rated}/5` : ""}`,

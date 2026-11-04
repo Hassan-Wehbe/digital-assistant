@@ -22,11 +22,21 @@ export interface RecipeMade {
   rating?: number;
 }
 
+/** What the label says for one serving: calories in kcal, the rest in grams (owner, 2026-11-04). */
+export const NUTRIENTS = ['calories', 'protein', 'carbs', 'fat', 'fiber'] as const;
+export type Nutrient = (typeof NUTRIENTS)[number];
+export type Nutrition = Partial<Record<Nutrient, number>>;
+export const NUTRIENT_LABELS: Record<Nutrient, string> = { calories: 'Calories', protein: 'Protein', carbs: 'Carbs', fat: 'Fat', fiber: 'Fiber' };
+export const NUTRIENT_UNITS: Record<Nutrient, string> = { calories: 'kcal', protein: 'g', carbs: 'g', fat: 'g', fiber: 'g' };
+export const NUTRIENT_MAX: Record<Nutrient, number> = { calories: 5000, protein: 500, carbs: 500, fat: 500, fiber: 200 };
+
 export interface RecipeMetadata {
   ingredients?: string[];
   steps?: string[];
   minutes?: number;
   serves?: number;
+  /** Per serving. */
+  nutrition?: Nutrition;
   source_url?: string;
   source_site?: string;
   strength?: Strength;
@@ -64,6 +74,18 @@ const strings = (v: unknown): string[] | undefined => {
 const whole = (v: unknown, min: number, max: number): number | undefined =>
   typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max ? v : undefined;
 
+/** Per-serving numbers, read defensively: only well-formed ones (0 up to each limit). */
+export function nutritionOf(v: unknown): Nutrition | undefined {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined;
+  const r = v as Record<string, unknown>;
+  const out: Nutrition = {};
+  for (const k of NUTRIENTS) {
+    const x = r[k];
+    if (typeof x === 'number' && Number.isFinite(x) && x >= 0 && x <= NUTRIENT_MAX[k]) out[k] = x;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
 /**
  * A recipe note's fields, read defensively (a recipe saved before these fields, or by hand, may
  * hold anything): only well-formed values are shown. Null for any other note type.
@@ -81,6 +103,8 @@ export function recipeOf(item: { item_type: string; metadata?: Record<string, un
   if (minutes) out.minutes = minutes;
   const serves = whole(m.serves, 1, 100);
   if (serves) out.serves = serves;
+  const nutrition = nutritionOf(m.nutrition);
+  if (nutrition) out.nutrition = nutrition;
   if (typeof m.source_url === 'string' && isWebLink(m.source_url)) out.source_url = m.source_url;
   if (typeof m.source_site === 'string' && m.source_site.trim()) out.source_site = m.source_site.trim();
   if (type === 'cocktail' && (STRENGTHS as readonly unknown[]).includes(m.strength)) out.strength = m.strength as Strength;
@@ -107,9 +131,18 @@ export interface RecipeForm {
   serves: string;
   link: string;
   strength: Strength | null;
+  /** Per serving, as typed (calories, protein, carbs, fat, fiber). */
+  calories: string;
+  protein: string;
+  carbs: string;
+  fat: string;
+  fiber: string;
 }
 
-export const EMPTY_RECIPE: RecipeForm = { ingredients: '', steps: '', minutes: '', serves: '', link: '', strength: null };
+export const EMPTY_RECIPE: RecipeForm = {
+  ingredients: '', steps: '', minutes: '', serves: '', link: '', strength: null,
+  calories: '', protein: '', carbs: '', fat: '', fiber: '',
+};
 
 export function recipeForm(m: RecipeMetadata | null): RecipeForm {
   if (!m) return EMPTY_RECIPE;
@@ -120,6 +153,11 @@ export function recipeForm(m: RecipeMetadata | null): RecipeForm {
     serves: m.serves ? String(m.serves) : '',
     link: m.source_url ?? '',
     strength: m.strength ?? null,
+    calories: m.nutrition?.calories !== undefined ? String(m.nutrition.calories) : '',
+    protein: m.nutrition?.protein !== undefined ? String(m.nutrition.protein) : '',
+    carbs: m.nutrition?.carbs !== undefined ? String(m.nutrition.carbs) : '',
+    fat: m.nutrition?.fat !== undefined ? String(m.nutrition.fat) : '',
+    fiber: m.nutrition?.fiber !== undefined ? String(m.nutrition.fiber) : '',
   };
 }
 
@@ -170,6 +208,18 @@ export function recipeMetadata(
   if ('error' in serves) return serves;
   if (serves.n) out.serves = serves.n;
 
+  const nutrition: Nutrition = {};
+  for (const k of NUTRIENTS) {
+    const t = form[k].trim().replace(',', '.');
+    if (!t) continue;
+    const n = Number(t);
+    if (!/^\d+(\.\d+)?$/.test(t) || n > NUTRIENT_MAX[k]) {
+      return { error: `${NUTRIENT_LABELS[k]} must be a number from 0 to ${NUTRIENT_MAX[k]}.` };
+    }
+    nutrition[k] = Math.round(n * 10) / 10;
+  }
+  if (Object.keys(nutrition).length) out.nutrition = nutrition;
+
   const link = form.link.trim();
   if (link) {
     if (link.length > MAX_LINK || !isWebLink(link)) return { error: 'The link must be a web address (https://…), or leave it empty.' };
@@ -185,7 +235,7 @@ export function recipeMetadata(
   return { metadata: out };
 }
 
-const KEYS: (keyof RecipeMetadata)[] = ['ingredients', 'steps', 'minutes', 'serves', 'source_url', 'source_site', 'strength', 'made'];
+const KEYS: (keyof RecipeMetadata)[] = ['ingredients', 'steps', 'minutes', 'serves', 'nutrition', 'source_url', 'source_site', 'strength', 'made'];
 
 /** The same fields (key order does not matter; list order does). */
 export function sameRecipe(a: RecipeMetadata | null, b: RecipeMetadata | null): boolean {
@@ -194,6 +244,16 @@ export function sameRecipe(a: RecipeMetadata | null, b: RecipeMetadata | null): 
 }
 
 // ---- On the note -------------------------------------------------------------------------------
+
+/** "450 kcal · 32 g protein · 40 g carbs · 12 g fat · 6 g fiber" (per serving; only what is known), or null. */
+export function nutritionLine(m: RecipeMetadata): string | null {
+  const n = m.nutrition;
+  if (!n) return null;
+  const parts = NUTRIENTS.filter((k) => n[k] !== undefined).map((k) =>
+    k === 'calories' ? `${n[k]} kcal` : `${n[k]} g ${NUTRIENT_LABELS[k].toLowerCase()}`,
+  );
+  return parts.length ? parts.join(' · ') : null;
+}
 
 /** "25 min · serves 4 · No alcohol"; empty when none of those is known. */
 export function recipeSummary(m: RecipeMetadata): string {
