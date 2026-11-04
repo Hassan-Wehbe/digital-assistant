@@ -1,5 +1,5 @@
 // The recipe part of New note and Edit note (recipes.ts): ingredients and steps one per line, the
-// time, how many it serves, the link it came from, and a cocktail's strength. All optional.
+// time, how many it serves, the nutrition per serving, the link it came from, and a cocktail's strength. All optional.
 // Fill in from the link, or Read a screenshot (recipeImport.ts), fills the empty boxes, only when tapped.
 // Under 21, or until the age is given (D44): a drink is No alcohol only (the server refuses others);
 // a drink with no strength yet starts as No alcohol.
@@ -11,7 +11,7 @@ import { mocktailsOnly } from '@/lib/age';
 import { useAuth } from '@/lib/auth';
 import { pickRecipePicture } from '@/lib/deviceFiles';
 import { canFill, fillFromLink, fillFromScreenshot, type FillOutcome } from '@/lib/recipeImport';
-import { MAX_LINK, STRENGTH_LABELS, STRENGTHS, type RecipeForm, type RecipeType, type Strength } from '@/lib/recipes';
+import { MAX_LINK, NUTRIENT_LABELS, NUTRIENT_UNITS, NUTRIENTS, STRENGTH_LABELS, STRENGTHS, type RecipeForm, type RecipeType, type Strength } from '@/lib/recipes';
 import { WilmaError } from '@/lib/wilma';
 
 import { Chips } from './PlaceFields';
@@ -113,6 +113,23 @@ export function RecipeFields({
           onChangeText={(serves) => set({ serves })}
           editable={!locked}
         />
+      </View>
+      <Text style={label}>Nutrition, per serving</Text>
+      <View style={{ flexDirection: 'row', gap: 6 }}>
+        {NUTRIENTS.map((k) => (
+          <TextInput
+            key={k}
+            style={[...input, { flex: 1, paddingHorizontal: 8 }]}
+            placeholder={`${NUTRIENT_LABELS[k]} (${NUTRIENT_UNITS[k]})`}
+            placeholderTextColor={c.muted}
+            keyboardType="decimal-pad"
+            maxLength={6}
+            accessibilityLabel={`${NUTRIENT_LABELS[k]} per serving, ${NUTRIENT_UNITS[k] === 'kcal' ? 'kilocalories' : 'grams'}`}
+            value={f[k]}
+            onChangeText={(v) => set({ [k]: v })}
+            editable={!locked}
+          />
+        ))}
       </View>
       <TextInput
         style={input}

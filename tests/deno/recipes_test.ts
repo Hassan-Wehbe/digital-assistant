@@ -311,3 +311,22 @@ Deno.test("the save and update tools tell the model about recipe fields and made
   assert(tools.save_item.description!.includes("with the recipe as written in body"));
   assert(tools.update_item.description!.includes("made_it"));
 });
+
+// ---- nutrition (per serving, owner 2026-11-04) --------------------------------------------------
+
+Deno.test("nutrition: calories, protein, carbs, fat and fiber per serving are kept, tidied and searchable", () => {
+  const r = normalizeRecipe({ serves: 2, nutrition: { calories: "450", protein: 32.46, carbs: 40, fat: 12, fiber: 6 } }, "recipe", TODAY);
+  assertEquals(r.nutrition, { calories: 450, protein: 32.5, carbs: 40, fat: 12, fiber: 6 });
+  assert(recipeText(r).includes("Per serving: 450 kcal, 32.5 g protein, 40 g carbs, 12 g fat, 6 g fiber"));
+  // Only what is known; empty values and an empty object leave the field out.
+  assertEquals(normalizeRecipe({ nutrition: { protein: 20, fat: "" } }, "recipe", TODAY).nutrition, { protein: 20 });
+  assertEquals(normalizeRecipe({ nutrition: {} }, "recipe", TODAY).nutrition, undefined);
+});
+
+Deno.test("nutrition: unknown nutrients, negatives, out-of-range and non-numbers are refused", () => {
+  assertThrows(() => normalizeRecipe({ nutrition: { sugar: 3 } }, "recipe", TODAY), RecipeError, 'unknown field "sugar"');
+  assertThrows(() => normalizeRecipe({ nutrition: { protein: -1 } }, "recipe", TODAY), RecipeError, "protein must be a number");
+  assertThrows(() => normalizeRecipe({ nutrition: { calories: 99999 } }, "recipe", TODAY), RecipeError, "calories must be a number");
+  assertThrows(() => normalizeRecipe({ nutrition: { fat: "lots" } }, "recipe", TODAY), RecipeError, "fat must be a number");
+  assertThrows(() => normalizeRecipe({ nutrition: [1, 2] }, "recipe", TODAY), RecipeError, "nutrition must be an object");
+});

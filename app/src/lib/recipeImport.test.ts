@@ -308,3 +308,29 @@ describe('Read a screenshot (step 4)', () => {
     expect(FILL_WORDS.signInSite('Facebook')).toContain('Read a screenshot');
   });
 });
+
+describe('nutrition on a recipe page', () => {
+  const withNutrition = (nutrition: unknown) =>
+    recipeFromHtml(page({ '@type': 'Recipe', recipeIngredient: ['2 eggs'], nutrition }));
+
+  it('reads what the page states (calories text, grams text), per serving', () => {
+    expect(
+      withNutrition({
+        '@type': 'NutritionInformation', calories: '450 calories', proteinContent: '32 g', carbohydrateContent: '40g',
+        fatContent: '12.5 grams', fiberContent: '6 g', sugarContent: '9 g',
+      })?.nutrition,
+    ).toEqual({ calories: 450, protein: 32, carbs: 40, fat: 12.5, fiber: 6 });
+  });
+
+  it('leaves out what is missing or not a number, and the whole field when nothing is stated', () => {
+    expect(withNutrition({ calories: '450 kcal', proteinContent: 'n/a' })?.nutrition).toEqual({ calories: 450 });
+    expect(withNutrition({ '@type': 'NutritionInformation', servingSize: '1 cup' })).not.toHaveProperty('nutrition');
+  });
+
+  it('fills only empty boxes and says so', () => {
+    const out = fillForm({ ...EMPTY_RECIPE, protein: '99' }, { nutrition: { calories: 450, protein: 32, fiber: 6 } }, 'recipe');
+    expect(out.form).toMatchObject({ calories: '450', protein: '99', fiber: '6', carbs: '', fat: '' });
+    expect(out.filled).toEqual(['nutrition']);
+    expect(fillForm({ ...EMPTY_RECIPE, calories: '1' }, { nutrition: { calories: 450 } }, 'recipe').filled).toEqual([]);
+  });
+});

@@ -39,7 +39,7 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
         'planned_at (only when the user says a time to do it: the local time, "2026-10-09T12:30"). ' +
         'For a recipe or a drink use item_type "recipe" or "cocktail" (default spaces Recipes and Cocktails), ' +
         "with the recipe as written in body, and optional metadata: ingredients [one per line], steps [in order], " +
-        `minutes (total time), serves, source_url (the link it came from), source_site ("TikTok"), strength (cocktails: ${STRENGTHS.join(", ")}; none = no alcohol), ` +
+        `minutes (total time), serves, nutrition (per serving: {calories kcal, protein, carbs, fat, fiber in grams}; only numbers the user gave or the recipe states, never estimated), source_url (the link it came from), source_site ("TikTok"), strength (cocktails: ${STRENGTHS.join(", ")}; none = no alcohol), ` +
         "made [{on, rating 1-5}]. The server checks these fields. " +
         "A built-in space holds one kind: Tasks tasks, Places places, Recipes recipes, Cocktails drinks, Memories memories; " +
         "a plain note saved there becomes that kind, its title and text unchanged." +

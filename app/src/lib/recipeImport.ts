@@ -14,11 +14,11 @@
 // password is never sent or filled in (rule 9).
 import { findCredential } from './credentials';
 import { decodeEntities, linkSource } from './linkInfo';
-import { EMPTY_RECIPE, isWebLink, MAX_INGREDIENT, MAX_INGREDIENTS, MAX_STEP, MAX_STEPS, recipeOf, type RecipeForm, type RecipeMetadata, type RecipeType } from './recipes';
+import { EMPTY_RECIPE, isWebLink, MAX_INGREDIENT, MAX_INGREDIENTS, MAX_STEP, MAX_STEPS, NUTRIENT_MAX, NUTRIENTS, nutritionOf, recipeOf, type Nutrition, type RecipeForm, type RecipeMetadata, type RecipeType } from './recipes';
 import { WilmaError } from './wilma';
 
 /** The fields Fill in can give (never the link or the made-it times: those are the user's). */
-export type FilledFields = Pick<RecipeMetadata, 'ingredients' | 'steps' | 'minutes' | 'serves' | 'strength'>;
+export type FilledFields = Pick<RecipeMetadata, 'ingredients' | 'steps' | 'minutes' | 'serves' | 'strength' | 'nutrition'>;
 
 // ---- A recipe website's Recipe block -----------------------------------------------------------
 
@@ -92,6 +92,25 @@ function servings(v: unknown): number | undefined {
   return Number.isInteger(n) && n >= 1 && n <= 100 ? n : undefined;
 }
 
+/**
+ * Per-serving numbers from a page's NutritionInformation block ("450 calories", "32 g", "6.5g"): only
+ * what the page states, never worked out. Null when it states none.
+ */
+function pageNutrition(v: unknown): Nutrition | null {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+  const o = v as Record<string, unknown>;
+  const keys: Record<(typeof NUTRIENTS)[number], string> = {
+    calories: 'calories', protein: 'proteinContent', carbs: 'carbohydrateContent', fat: 'fatContent', fiber: 'fiberContent',
+  };
+  const out: Record<string, number> = {};
+  for (const k of NUTRIENTS) {
+    const raw = o[keys[k]];
+    const n = typeof raw === 'number' ? raw : typeof raw === 'string' ? Number(/^\s*(\d+(?:[.,]\d+)?)/.exec(raw)?.[1]?.replace(',', '.')) : NaN;
+    if (Number.isFinite(n) && n >= 0 && n <= NUTRIENT_MAX[k]) out[k] = Math.round(n * 10) / 10;
+  }
+  return nutritionOf(out) ?? null;
+}
+
 /** Lines cut to the limits, with any line that looks like a password left out (rule 9). */
 const tidy = (lines: string[], max: number, maxLen: number) =>
   lines.map((l) => l.slice(0, maxLen)).filter((l) => l && !findCredential(l)).slice(0, max);
@@ -124,6 +143,8 @@ export function recipeFromHtml(html: string): FilledFields | null {
     if (total && total >= 1 && total <= 1440) out.minutes = total;
     const serves = servings(r.recipeYield);
     if (serves) out.serves = serves;
+    const nutrition = pageNutrition(r.nutrition);
+    if (nutrition) out.nutrition = nutrition;
     return out;
   }
   return null;
@@ -227,8 +248,8 @@ export type RecipeTextClient = ReturnType<typeof recipeTextClient>;
 
 // ---- Filling the form --------------------------------------------------------------------------
 
-export type FilledPart = 'ingredients' | 'steps' | 'time' | 'serves' | 'strength';
-const PART_WORDS: Record<FilledPart, string> = { ingredients: 'ingredients', steps: 'steps', time: 'time', serves: 'servings', strength: 'strength' };
+export type FilledPart = 'ingredients' | 'steps' | 'time' | 'serves' | 'strength' | 'nutrition';
+const PART_WORDS: Record<FilledPart, string> = { ingredients: 'ingredients', steps: 'steps', time: 'time', serves: 'servings', strength: 'strength', nutrition: 'nutrition' };
 
 /** The form with the empty boxes filled from `fields`; what was filled, in order. */
 export function fillForm(form: RecipeForm, fields: FilledFields, type: RecipeType): { form: RecipeForm; filled: FilledPart[] } {
@@ -250,6 +271,16 @@ export function fillForm(form: RecipeForm, fields: FilledFields, type: RecipeTyp
     out.serves = String(fields.serves);
     filled.push('serves');
   }
+  // Nutrition per box, so a number the user typed is kept.
+  let nutritionFilled = false;
+  for (const k of NUTRIENTS) {
+    const x = fields.nutrition?.[k];
+    if (!form[k].trim() && x !== undefined) {
+      out[k] = String(x);
+      nutritionFilled = true;
+    }
+  }
+  if (nutritionFilled) filled.push('nutrition');
   if (type === 'cocktail' && !form.strength && fields.strength) {
     out.strength = fields.strength;
     filled.push('strength');
