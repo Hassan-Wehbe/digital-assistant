@@ -6,7 +6,9 @@
 // A shared link (Facebook, YouTube, ...) can get the page's own title with "Get title", read on
 // the phone only on that tap (linkInfo.ts); the favourite spaces come first in the space list (D38).
 // Into the built-in Recipes or Cocktails space, it is saved as a recipe or cocktail with the link as
-// its source (recipes.ts); ingredients and steps can be added later with Edit note. As New note
+// its source (recipes.ts). The recipe boxes (ingredients, steps, time, serves, "Fill in the recipe
+// from the link", Read a screenshot) are on this screen too, as on New note (owner, 2026-11-04: no
+// save-then-edit round trip). As New note
 // (owner's pick A, 2026-10-30): "What is it?" (Note, Place, Recipe, Drink) and "Where does it go?",
 // kept in step: a place goes to Places, a recipe or drink to Recipes or Cocktails (owner,
 // 2026-10-31: "I picked place and it asked me to pick a space; that should default to Places"). A
@@ -21,6 +23,7 @@ import { FindOnMap, type FoundPlace } from '@/components/FindOnMap';
 import { KindBar } from '@/components/KindBar';
 import { PlaceFields } from '@/components/PlaceFields';
 import { PlaceLookup } from '@/components/PlaceLookup';
+import { RecipeFields } from '@/components/RecipeFields';
 import { SpaceChips } from '@/components/SpaceChips';
 import { Button, Card, ErrorBox, KeyboardScreen, Loading, Muted, styles, TextLink, useColors, useLoad } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
@@ -33,7 +36,7 @@ import { fetchLinkTitle, firstUrl } from '@/lib/linkInfo';
 import { saveNote, type SaveTarget } from '@/lib/saveNote';
 import { supabase } from '@/lib/supabase';
 import { EMPTY_PLACE, placeMetadata, type PlaceForm } from '@/lib/places';
-import { sharedRecipe } from '@/lib/recipes';
+import { EMPTY_RECIPE, isWebLink, MAX_LINK, recipeMetadata, type RecipeForm } from '@/lib/recipes';
 import { draftFromShared, placeFromShared, TITLE_MAX, type Shared } from '@/lib/shared';
 import { useShare } from '@/lib/shareIntake';
 import type { PickedFile } from '@/lib/upload';
@@ -111,6 +114,11 @@ function ShareForm({ shared, onDone, onCancel }: { shared: Shared; onDone: () =>
   const isPlace = kind === 'place';
   const shareType = kind === 'recipe' || kind === 'cocktail' ? kind : null;
   const setSpace = setPicked;
+  // The recipe boxes start with the shared link as the source (when it is a web link the app can keep).
+  const [recipe, setRecipe] = useState<RecipeForm>({
+    ...EMPTY_RECIPE,
+    link: link && link.length <= MAX_LINK && isWebLink(link) ? link : '',
+  });
   // "Find it on the map" for a place shared from anywhere but Google Maps.
   const [finding, setFinding] = useState(false);
   const [googlePlaceId, setGooglePlaceId] = useState<string | undefined>(undefined);
@@ -188,8 +196,11 @@ function ShareForm({ shared, onDone, onCancel }: { shared: Shared; onDone: () =>
         const fields = placeMetadata(place, googlePlaceId ? { google_place_id: googlePlaceId } : null);
         if ('error' in fields) return setError(fields.error);
         target = { space, title: title.trim(), body, place: fields.metadata };
-      } else if (shareType) target = { space, title: title.trim(), body, recipe: { type: shareType, metadata: sharedRecipe(link) } };
-      else target = { space, title: title.trim(), body };
+      } else if (shareType) {
+        const fields = recipeMetadata(recipe, shareType);
+        if ('error' in fields) return setError(fields.error);
+        target = { space, title: title.trim(), body, recipe: { type: shareType, metadata: fields.metadata } };
+      } else target = { space, title: title.trim(), body };
     }
     setBusy(true);
     let savedId = createdId;
@@ -287,11 +298,7 @@ function ShareForm({ shared, onDone, onCancel }: { shared: Shared; onDone: () =>
               )
             ) : null}
             {isPlace && !finding ? <PlaceFields value={place} onChange={setPlace} disabled={locked} /> : null}
-            {shareType ? (
-              <Muted>
-                {`Saved as a ${shareType === 'cocktail' ? '🍸 cocktail' : '🍽️ recipe'}${link ? ' with its link' : ''}. Add the ingredients and steps later with Edit note, or tap Fill in the recipe there.`}
-              </Muted>
-            ) : null}
+            {shareType ? <RecipeFields type={shareType} value={recipe} onChange={setRecipe} disabled={locked} /> : null}
             <TextInput
               style={[input, { minHeight: 120, textAlignVertical: 'top' }]}
               placeholder={isPlace ? 'Note (optional), e.g. try the fattoush' : 'Note (optional)'}
