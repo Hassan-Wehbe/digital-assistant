@@ -59,9 +59,9 @@ export function RoutinesTab({ today }: { today: string }) {
       <Pressable
         accessibilityRole="checkbox"
         accessibilityState={{ checked: done, busy: busy === t.id }}
-        accessibilityLabel={done ? `“${t.title}” is done this time` : `Mark “${t.title}” done`}
-        disabled={busy !== null || done}
-        onPress={() => void tick(t, true)}
+        accessibilityLabel={done ? `“${t.title}” is done this time: tap to untick` : `Mark “${t.title}” done`}
+        disabled={busy !== null}
+        onPress={() => void tick(t, !done)}
         hitSlop={10}
         style={({ pressed }) => ({ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.5 : 1 })}>
         {/* A drawn box, big enough to hit with a thumb (the old ☐ character was about 14 px wide). */}
