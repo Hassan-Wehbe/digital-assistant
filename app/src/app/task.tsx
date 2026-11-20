@@ -118,7 +118,7 @@ function TaskEditor({ item, placeTitle }: { item: Item | null; placeTitle?: stri
         <TextInput style={input} placeholder="Pick up dry cleaning" placeholderTextColor={c.muted} maxLength={300} value={form.title} onChangeText={(title) => set({ title })} editable={!busy} />
 
         {label('HOW LONG (MINUTES)')}
-        <TextInput style={input} placeholder="20" placeholderTextColor={c.muted} keyboardType="number-pad" maxLength={3} value={form.duration} onChangeText={(duration) => set({ duration: duration.replace(/\D/g, '') })} editable={!busy} />
+        <TextInput style={input} placeholder="20" placeholderTextColor={c.muted} keyboardType="decimal-pad" maxLength={5} value={form.duration} onChangeText={(duration) => set({ duration: duration.replace(/[^\d.,]/g, '') })} editable={!busy} />
 
         {label('WHERE (OPTIONAL)')}
         {picking ? (

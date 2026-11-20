@@ -175,6 +175,11 @@ export function routineCard(item: { id: string; title: string; routine: RoutineM
   return { id: item.id, title: item.title, routine: r, words: routineWords(r), tasks: mine, progress, missed };
 }
 
+/** A routine's tasks not done this time, in the routine's order: what "Mark all done" ticks. */
+export function notDoneYet(r: RoutineCard): RoutineCard['tasks'] {
+  return r.tasks.filter((t) => !t.doneThisTime);
+}
+
 /** Repeating tasks that belong to no routine ("Repeating on their own", at the bottom). */
 export function repeatingAlone(tasks: TaskRow[]): TaskRow[] {
   return tasks.filter((t) => t.repeat && !t.routine && t.status === 'open').sort((a, b) => a.title.localeCompare(b.title));

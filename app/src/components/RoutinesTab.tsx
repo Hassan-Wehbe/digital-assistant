@@ -6,9 +6,10 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { Button, ErrorBox, GroupList, Loading, Muted, space, styles, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
+import { Button, confirm, ErrorBox, GroupList, Loading, Muted, space, styles, useColors, useLoad, useReloadOnReturn } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
-import { loadRoutines } from '@/lib/routines';
+import { minutesText } from '@/lib/dayView';
+import { loadRoutines, notDoneYet, type RoutineCard } from '@/lib/routines';
 import { taskLine, type TaskRow } from '@/lib/tasks';
 
 export function RoutinesTab({ today }: { today: string }) {
@@ -32,20 +33,49 @@ export function RoutinesTab({ today }: { today: string }) {
     }
   };
 
+  /** "Mark all done" (testers, Nov 20): every task not done this time, one after another. */
+  const tickAll = async (r: RoutineCard) => {
+    const open = notDoneYet(r);
+    if (!open.length) return;
+    if (!(await confirm(`Mark all of “${r.title}” done?`, `${open.length} task${open.length === 1 ? '' : 's'} will be ticked for this time.`, 'Mark all done'))) return;
+    setBusy(r.id);
+    setProblem(null);
+    let ticked = 0;
+    try {
+      for (const t of open) {
+        await wilma.taskDone(t.id, true, today);
+        ticked++;
+      }
+    } catch (e) {
+      setProblem(`${ticked} of ${open.length} ticked. ${e instanceof Error ? e.message : 'Could not change the task.'}`);
+    } finally {
+      setBusy(null);
+      reload();
+    }
+  };
+
   const box = (t: TaskRow, done: boolean, i: number) => (
-    <View key={t.id} style={[{ flexDirection: 'row', alignItems: 'center', gap: space.s, paddingVertical: space.xs }, i > 0 && { borderTopWidth: 1, borderTopColor: c.line }]}>
+    <View key={t.id} style={[{ flexDirection: 'row', alignItems: 'center', gap: space.xs, paddingVertical: 2 }, i > 0 && { borderTopWidth: 1, borderTopColor: c.line }]}>
       <Pressable
         accessibilityRole="checkbox"
         accessibilityState={{ checked: done, busy: busy === t.id }}
         accessibilityLabel={done ? `“${t.title}” is done this time` : `Mark “${t.title}” done`}
         disabled={busy !== null || done}
         onPress={() => void tick(t, true)}
-        hitSlop={8}>
-        <Text style={{ fontSize: 20, color: c.accent }}>{done ? '☑' : '☐'}</Text>
+        hitSlop={10}
+        style={({ pressed }) => ({ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.5 : 1 })}>
+        {/* A drawn box, big enough to hit with a thumb (the old ☐ character was about 14 px wide). */}
+        <View
+          style={{
+            width: 26, height: 26, borderRadius: 6, borderWidth: 2, borderColor: c.accent,
+            backgroundColor: done ? c.accent : 'transparent', alignItems: 'center', justifyContent: 'center',
+          }}>
+          {done ? <Text style={{ color: c.card, fontSize: 17, fontWeight: '700', lineHeight: 20 }}>✓</Text> : null}
+        </View>
       </Pressable>
       <Pressable style={{ flex: 1, gap: 2 }} accessibilityRole="button" onPress={() => router.push({ pathname: '/item/[id]', params: { id: t.id } })}>
         <Text style={{ color: done ? c.muted : c.text, fontSize: 15, textDecorationLine: done ? 'line-through' : 'none' }}>
-          {`${t.title}${t.duration_min ? ` · ${t.duration_min} min` : ''}`}
+          {`${t.title}${t.duration_min ? ` · ${minutesText(t.duration_min)}` : ''}`}
         </Text>
       </Pressable>
     </View>
@@ -73,6 +103,9 @@ export function RoutinesTab({ today }: { today: string }) {
             <Text style={{ color: c.accent, fontSize: 14, fontWeight: '600' }}>Edit</Text>
           </Pressable>
           <Muted>{`${r.words}${r.routine.suggest ? '' : ' · not suggested in My day'} · ${r.progress}`}</Muted>
+          {notDoneYet(r).length > 1 ? (
+            <Button title={busy === r.id ? 'Marking…' : '✓ Mark all done'} kind="plain" disabled={busy !== null} onPress={() => void tickAll(r)} />
+          ) : null}
           {r.tasks.length ? (
             <GroupList>
               <View style={{ paddingHorizontal: space.m, paddingVertical: space.xs }}>{r.tasks.map((t, i) => box(t, t.doneThisTime, i))}</View>

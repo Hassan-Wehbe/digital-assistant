@@ -24,6 +24,8 @@ export function range(start: string, end: string): string {
 
 /** 25 → "25 min", 145 → "2 h 25 min", 120 → "2 h". */
 export function minutesText(n: number): string {
+  // Half minutes (a task "under a minute" is 0.5): "½ min", "1½ min".
+  if (n > 0 && n < 60 && !Number.isInteger(n) && Number.isInteger(n * 2)) return `${Math.floor(n) || ''}½ min`;
   const m = Math.max(0, Math.round(n));
   if (m < 60) return `${m} min`;
   return m % 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${Math.floor(m / 60)} h`;

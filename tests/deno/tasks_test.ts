@@ -35,9 +35,9 @@ Deno.test("normalizeTask: done stamps done_at; unknown or wrong fields are refus
     { due_on: "Saturday" },
     { due_on: "2026-02-30" },
     { due_on: "2200-01-01" },
-    { duration_min: 2 },
+    { duration_min: 0.25 },
     { duration_min: 600 },
-    { duration_min: 12.5 },
+    { duration_min: 12.2 },
     { duration_estimated: true },
     { place_id: "Tawlet" },
     { place_id: IDS.tawlet, address: "Mar Mikhael" },
@@ -304,4 +304,14 @@ Deno.test("update_item task_done uses the phone's date for a repeating task (Q12
   assertEquals(m.last_done_on, "2026-10-09");
   const bad = await call(w, "update_item", { item_id: saved.json.id, task_done: true, today: "tomorrow" });
   assertEquals(bad.isError, true);
+});
+
+Deno.test("a task can take half a minute, in half-minute steps (testers: tasks under a minute)", () => {
+  assertEquals(normalizeTask({ duration_min: 0.5 }, NOW).duration_min, 0.5);
+  assertEquals(normalizeTask({ duration_min: 1.5 }, NOW).duration_min, 1.5);
+  assertEquals(normalizeTask({ duration_min: 2 }, NOW).duration_min, 2);
+  assertEquals(normalizeTask({ duration_min: "0.5" }, NOW).duration_min, 0.5);
+  for (const bad of [0, 0.25, 1.2, 480.5, -1]) {
+    assertThrows(() => normalizeTask({ duration_min: bad }, NOW), TaskError, "half minutes", String(bad));
+  }
 });

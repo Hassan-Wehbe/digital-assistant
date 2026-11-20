@@ -51,6 +51,12 @@ export function mealHours(title: string): { from: number; to: number } | null {
 }
 /** Routine tasks offered at once in "From your routines" (routines Q4); the rest wait their turn. */
 export const MAX_SUGGESTIONS = 3;
+/**
+ * Minutes on the clock for a task's minutes: a task can take half a minute (0.5), but the plan
+ * places whole minutes, so 0.5 takes 1 and a group's halves are added up first (1.5 + 0.5 = 2).
+ */
+const onClock = (minutes: number) => Math.ceil(minutes);
+
 /** A routine task with no duration is fitted as this long (routines Q7). */
 export const ROUTINE_DEFAULT_MIN = 30;
 /** A rain row from this chance of rain (Q2). */
@@ -442,7 +448,7 @@ export async function planDay(input: PlanInput): Promise<DayPlan> {
   for (const t of input.tasks) {
     const p = t.planned_at ? toMin(date, t.planned_at) : null;
     if (p !== null && p >= 0 && p < 1440) {
-      const end = p + (t.duration_min ?? 15);
+      const end = p + onClock(t.duration_min ?? 15);
       rows.push({ kind: "task", id: t.id, title: t.title, start: at(p), end: at(end), ...(t.place ? { place: t.place.label } : {}) });
       taskBusy.push([p, end]);
     } else {
@@ -644,11 +650,11 @@ export function routineSuggestions(
         items.push(base);
         continue;
       }
-      const start = take(base.duration_min);
-      if (start !== null) items.push({ ...base, start: at(start), end: at(start + base.duration_min) });
+      const start = take(onClock(base.duration_min));
+      if (start !== null) items.push({ ...base, start: at(start), end: at(start + onClock(base.duration_min)) });
       continue;
     }
-    const duration = u.group.reduce((n, t) => n + (t.duration_min ?? ROUTINE_DEFAULT_MIN), 0);
+    const duration = onClock(u.group.reduce((n, t) => n + (t.duration_min ?? ROUTINE_DEFAULT_MIN), 0));
     const start = take(duration, u.routineAt);
     if (start === null) continue;
     if (u.group.length === 1) {
@@ -661,7 +667,8 @@ export function routineSuggestions(
       const d = t.duration_min ?? ROUTINE_DEFAULT_MIN;
       const g: GroupTask = {
         task_id: t.id, title: t.title, duration_min: d, ...(t.duration_min ? {} : { duration_assumed: true as const }),
-        start: at(cursor), end: at(cursor + d),
+        // Half minutes add up exactly; each row shows whole minutes (two ½-min tasks: 9:00–9:01 each).
+        start: at(Math.floor(cursor)), end: at(Math.min(start + duration, Math.ceil(cursor + d))),
       };
       cursor += d;
       return g;
@@ -719,7 +726,7 @@ interface OptionContext {
 async function taskOptions(task: PlanTask, ctx: OptionContext): Promise<{ options: TaskOption[]; note?: string }> {
   const { date, driveRows, ends, gaps, leg, now } = ctx;
   const at = (m: number) => fromMin(date, m);
-  const duration = task.duration_min ?? 15;
+  const duration = onClock(task.duration_min ?? 15);
   const onTheWay: TaskOption[] = [];
   /** Free time: each gap's best fit (its middle when roomy, else its first minute), and the first minutes of roomy gaps. */
   const best: { option: TaskOption; room: number }[] = [];

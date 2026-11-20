@@ -5,8 +5,23 @@
 // refuses anything that looks like a password in any field (rule 9). Pure logic, tested.
 
 export const TASK_TYPE = 'task';
-export const MIN_DURATION = 5;
+/** Shortest task: half a minute. Minutes go in half-minute steps (0.5, 1, 1.5 …), like the server. */
+export const MIN_DURATION = 0.5;
 export const MAX_DURATION = 480;
+
+/** The rule for "how long", in words, for the task and routine forms. */
+export const MINUTES_RULE = `minutes from ${MIN_DURATION} to ${MAX_DURATION}, in whole or half minutes (like 0.5 or 1.5)`;
+
+/**
+ * Typed minutes ("0.5", ".5", "0,5", "1.5", "20") as a number, or null when they break the rule:
+ * at least half a minute, at most 8 hours, in half-minute steps.
+ */
+export function parseMinutes(typed: string): number | null {
+  const t = typed.trim().replace(',', '.');
+  if (!/^(\d+(\.\d*)?|\.\d+)$/.test(t)) return null;
+  const n = Number(t);
+  return Number.isInteger(n * 2) && n >= MIN_DURATION && n <= MAX_DURATION ? n : null;
+}
 export const TASK_REPEATS = ['daily', 'weekdays', 'weekly', 'biweekly', 'monthly'] as const;
 export type TaskRepeat = (typeof TASK_REPEATS)[number];
 export const REPEAT_LABELS: Record<TaskRepeat, string> = {
@@ -176,10 +191,8 @@ export function taskMetadata(form: TaskForm, base: Partial<TaskMetadata> | null 
   const out: TaskMetadata = { status: base?.status === 'done' && !form.repeat ? 'done' : 'open', priority: form.important ? 'important' : 'normal' };
   const typed = form.duration.trim();
   if (typed) {
-    const n = Number(typed);
-    if (!Number.isInteger(n) || n < MIN_DURATION || n > MAX_DURATION) {
-      return { error: `How long: a whole number of minutes from ${MIN_DURATION} to ${MAX_DURATION}.` };
-    }
+    const n = parseMinutes(typed);
+    if (n === null) return { error: `How long: ${MINUTES_RULE}.` };
     out.duration_min = n;
     if (base?.duration_estimated && base.duration_min === n) out.duration_estimated = true;
   }

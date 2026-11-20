@@ -19,6 +19,8 @@ describe('times', () => {
     expect(range('2026-10-09T16:30', '2026-10-09T18:30')).toBe('4:30–6:30 pm');
     expect(range('2026-10-09T11:30', '2026-10-09T13:30')).toBe('11:30 am–1:30 pm');
     expect(minutesText(25)).toBe('25 min');
+    expect(minutesText(0.5)).toBe('½ min');
+    expect(minutesText(1.5)).toBe('1½ min');
     expect(minutesText(145)).toBe('2 h 25 min');
     expect(minutesText(120)).toBe('2 h');
     expect(dayTitle('2026-10-09')).toBe('Friday, Oct 9');

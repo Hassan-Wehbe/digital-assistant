@@ -7,7 +7,7 @@
 import { findCredential } from './credentials';
 import { LOOKS_LIKE_SECRET } from './noteEdit';
 import { atWords, isDaily, type RoutineMetadata, type RoutineRepeat, type RoutineWhen } from './routines';
-import type { TaskMetadata } from './tasks';
+import { MINUTES_RULE, parseMinutes, type TaskMetadata } from './tasks';
 
 export const MAX_ROUTINE_TASKS = 20;
 
@@ -130,8 +130,9 @@ export function checkRoutine(f: RoutineForm): CheckedRoutine | { error: string }
     const d = t.duration.trim();
     let duration_min: number | undefined;
     if (d) {
-      const n = Number(d);
-      if (!/^\d+$/.test(d) || n < 1 || n > 1440) return { error: `How long “${name}” takes: minutes, from 1 to 1440.` };
+      // Same rule as the server (it refused 1–4 and over 480 after the form let them through).
+      const n = parseMinutes(d);
+      if (n === null) return { error: `How long “${name}” takes: ${MINUTES_RULE}.` };
       duration_min = n;
     }
     tasks.push({ ...(t.id ? { id: t.id } : {}), title: name, ...(duration_min ? { duration_min } : {}) });

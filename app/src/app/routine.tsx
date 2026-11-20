@@ -208,10 +208,10 @@ function RoutineEditor({ saved }: { saved: Loaded | null }) {
               style={[input, { width: 76 }]}
               placeholder="min"
               placeholderTextColor={c.muted}
-              keyboardType="number-pad"
-              maxLength={4}
+              keyboardType="decimal-pad"
+              maxLength={5}
               value={t.duration}
-              onChangeText={(duration) => setTask(i, { duration: duration.replace(/\D/g, '') })}
+              onChangeText={(duration) => setTask(i, { duration: duration.replace(/[^\d.,]/g, '') })}
               editable={!busy}
               accessibilityLabel={`Minutes for task ${i + 1}`}
             />
@@ -225,7 +225,7 @@ function RoutineEditor({ saved }: { saved: Loaded | null }) {
         {form.tasks.length < MAX_ROUTINE_TASKS ? (
           <TextLink title="＋ Add a task" onPress={() => setForm((f) => ({ ...f, tasks: [...f.tasks, { title: '', duration: '' }] }))} />
         ) : null}
-        <Muted>Minutes are optional: without them My day fits about 30 min. A task taken out goes to the Recycle bin.</Muted>
+        <Muted>Minutes are optional: without them My day fits about 30 min. Under a minute? Type 0.5. A task taken out goes to the Recycle bin.</Muted>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.m }}>
           <View style={{ flex: 1 }}>
