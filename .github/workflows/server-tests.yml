@@ -1,0 +1,21 @@
+# Run the server's unit tests (tests/deno) on every pull request that touches the server or its
+# tests, and by hand (Actions -> "server tests" -> Run workflow). No secrets: these tests use the
+# in-memory stand-ins in tests/eval (no Supabase, no model calls). Added 2026-11-20 because a
+# Claude Code cloud session cannot download Deno's packages, so it could not run them itself.
+name: server tests
+on:
+  pull_request:
+    paths: ["supabase/**", "tests/**", ".github/workflows/server-tests.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno test -A --config supabase/functions/mcp/deno.json tests/deno
