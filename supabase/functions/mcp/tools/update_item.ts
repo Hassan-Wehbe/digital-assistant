@@ -10,7 +10,7 @@ import { type BuiltIn, builtInOf, fitsBuiltIn, KIND_TYPE, keptAs, onlyKind, stay
 import { cleanFact } from "../lib/memory.ts";
 import { withLinkLocation } from "../lib/maps_link.ts";
 import { isTask, normalizeTask, setTaskDone, type TaskMetadata, taskDate, withTask } from "../lib/tasks.ts";
-import { isRoutine, normalizeRoutine, type RoutineMetadata, routineTaskDone, routineWords, withRoutine } from "../lib/routines.ts";
+import { isRoutine, normalizeRoutine, type RoutineMetadata, routineTaskDone, routineTaskUndone, routineWords, withRoutine } from "../lib/routines.ts";
 import { bringTasksInStep, findRoutine, loadRoutine, userToday } from "../lib/routine_tasks.ts";
 import { addMade, drinkHasAlcohol, isAdult21, normalizeRecipe, type RecipeMetadata, recipeType, UNDER_21, withRecipe } from "../lib/recipes.ts";
 import { sharerName } from "../lib/spaces.ts";
@@ -184,7 +184,7 @@ export const registerUpdateItem: RegisterTool = (server, { db, accessToken, assi
                 task = task_done === true
                   ? routineTaskDone(normalizeTask(base), loaded.routine, day)
                   : task_done === false
-                  ? task
+                  ? routineTaskUndone(task, loaded.routine, day) // ticked by mistake: back to this time
                   : withRoutine(task, loaded.id, loaded.routine, day);
               }
             }

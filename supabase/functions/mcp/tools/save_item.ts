@@ -33,7 +33,7 @@ export const registerSaveItem: RegisterTool = (server, { db, accessToken, assist
         "would_return, occasions (date_night, kids, business, quick_lunch, group, special), " +
         'visits [{on, with, note}]. Kind "home" is the user\'s one Home, where day plans start. The server checks these fields. ' +
         `For something the user has to do use item_type "task" (space optional, default ${TASKS_SPACE}) with ` +
-        'metadata: due_on (YYYY-MM-DD), duration_min (5-480), duration_estimated (true when you guessed it), ' +
+        'metadata: due_on (YYYY-MM-DD), duration_min (0.5-480, half minutes allowed), duration_estimated (true when you guessed it), ' +
         'priority ("normal" or "important"), place_id (a saved place\'s id) or address, status ("open" or "done"), ' +
         'repeat ("daily", "weekdays", "weekly", "biweekly", "monthly"; leave out for one time), ' +
         'planned_at (only when the user says a time to do it: the local time, "2026-10-09T12:30"). ' +

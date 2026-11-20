@@ -35,8 +35,18 @@ describe('checking the form', () => {
     expect(checkRoutine(form({ title: '  ' }))).toEqual({ error: 'Give the routine a name, like “Weekend house reset”.' });
     expect(checkRoutine(form({ tasks: [{ title: '', duration: '' }] }))).toEqual({ error: 'Add at least one task, like “Vacuum”.' });
     expect(checkRoutine(form({ tasks: [{ title: '', duration: '20' }] }))).toEqual({ error: 'A task with a time needs a name too.' });
-    expect(checkRoutine(form({ tasks: [{ title: 'Vacuum', duration: '0' }] }))).toEqual({ error: 'How long “Vacuum” takes: minutes, from 1 to 1440.' });
-    expect(checkRoutine(form({ tasks: [{ title: 'Vacuum', duration: '2000' }] }))).toHaveProperty('error');
+    expect(checkRoutine(form({ tasks: [{ title: 'Vacuum', duration: '0' }] }))).toEqual({
+      error: 'How long “Vacuum” takes: minutes from 0.5 to 480, in whole or half minutes (like 0.5 or 1.5).',
+    });
+    // The server allows at most 480: the form used to let 481–1440 through and the save failed.
+    expect(checkRoutine(form({ tasks: [{ title: 'Vacuum', duration: '481' }] }))).toHaveProperty('error');
+    expect(checkRoutine(form({ tasks: [{ title: 'Vacuum', duration: '1.2' }] }))).toHaveProperty('error');
+  });
+
+  it('takes tasks under a minute and the minutes the server took before (testers, Nov 20)', () => {
+    for (const [typed, n] of [['0.5', 0.5], ['.5', 0.5], ['0,5', 0.5], ['1.5', 1.5], ['2', 2], ['3', 3], ['480', 480]] as const) {
+      expect(checkRoutine(form({ tasks: [{ title: 'Feed the fish', duration: typed }] }))).toMatchObject({ tasks: [{ title: 'Feed the fish', duration_min: n }] });
+    }
     expect(checkRoutine(form({ repeat: 'monthly', when: 'by_day', monthDay: '32' }))).toEqual({ error: 'By which day of the month? A number from 1 to 31.' });
     expect(checkRoutine(form({ repeat: 'monthly', when: 'by_day', monthDay: '' }))).toHaveProperty('error');
     expect(checkRoutine(form({ repeat: 'monthly', when: 'same_day' }))).toEqual({ error: 'Pick the day of the week.' });

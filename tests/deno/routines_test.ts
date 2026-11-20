@@ -12,6 +12,7 @@ import {
   periodOn,
   type RoutineMetadata,
   routineTaskDone,
+  routineTaskUndone,
   routineWords,
   settleRoutineTask,
   withRoutine,
@@ -131,6 +132,19 @@ Deno.test("routineTaskDone: the next period, done early or late; the time and mi
   const sat = R({ repeat: "weekly", when: "same_day", day: 6 });
   const s = withRoutine(normalizeTask({}), RID, sat, "2026-10-21");
   assertEquals(routineTaskDone(s, sat, "2026-10-24").due_on, "2026-10-31");
+});
+
+Deno.test("routineTaskUndone: ticked by mistake, it goes back to this time, open (testers, Nov 20)", () => {
+  const t = withRoutine(base, RID, MONTHLY, "2026-10-18");
+  const done = routineTaskDone(t, MONTHLY, "2026-10-18");
+  const undone = routineTaskUndone(done, MONTHLY, "2026-10-18");
+  assertEquals([undone.status, undone.window_from, undone.due_on, undone.last_done_on], ["open", "2026-10-01", "2026-10-31", undefined]);
+  // Not done this time: nothing changes.
+  assertEquals(routineTaskUndone(t, MONTHLY, "2026-10-18"), t);
+  // A Saturday one ticked on Saturday, unticked the same day: back to this Saturday.
+  const sat = R({ repeat: "weekly", when: "same_day", day: 6 });
+  const s = withRoutine(normalizeTask({}), RID, sat, "2026-10-21");
+  assertEquals(routineTaskUndone(routineTaskDone(s, sat, "2026-10-24"), sat, "2026-10-24").due_on, "2026-10-24");
 });
 
 Deno.test("settleRoutineTask: missed, it moves to the period today is in and keeps missed_on (Q6)", () => {

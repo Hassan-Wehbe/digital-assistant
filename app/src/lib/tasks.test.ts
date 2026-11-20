@@ -25,8 +25,11 @@ describe('the task form', () => {
 
   it('says in plain words what is wrong (the server’s limits)', () => {
     expect(taskMetadata(EMPTY_TASK)).toEqual({ error: 'Say what the task is.' });
-    expect(taskMetadata({ ...EMPTY_TASK, title: 'x', duration: '3' })).toMatchObject({ error: expect.stringMatching(/5 to 480/) });
-    expect(taskMetadata({ ...EMPTY_TASK, title: 'x', duration: '500' })).toMatchObject({ error: expect.stringMatching(/5 to 480/) });
+    expect(taskMetadata({ ...EMPTY_TASK, title: 'x', duration: '0.2' })).toMatchObject({ error: expect.stringMatching(/0\.5 to 480/) });
+    expect(taskMetadata({ ...EMPTY_TASK, title: 'x', duration: '500' })).toMatchObject({ error: expect.stringMatching(/0\.5 to 480/) });
+    // Tasks under a minute (testers, Nov 20), and 1–4 minutes, which the old rule refused.
+    expect(taskMetadata({ ...EMPTY_TASK, title: 'x', duration: '0.5' })).toMatchObject({ metadata: { duration_min: 0.5 } });
+    expect(taskMetadata({ ...EMPTY_TASK, title: 'x', duration: '3' })).toMatchObject({ metadata: { duration_min: 3 } });
     expect(taskMetadata({ ...EMPTY_TASK, title: 'x', dueOn: '2026-02-30' })).toMatchObject({ error: expect.stringMatching(/date/) });
     expect(taskMetadata({ ...EMPTY_TASK, title: 'x', place: { id: 'p', title: 'P' }, address: 'Elm St' })).toMatchObject({ error: expect.stringMatching(/not both/) });
     expect(taskMetadata({ ...EMPTY_TASK, title: 'x', repeat: 'daily' })).toMatchObject({ error: expect.stringMatching(/first date/) });

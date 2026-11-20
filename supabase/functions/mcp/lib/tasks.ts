@@ -18,7 +18,8 @@ export type TaskRepeat = (typeof TASK_REPEATS)[number];
 /** What happens to a task with a time when its day ends and it is still open (D35): none means ask. */
 export const TASK_DAY_ENDS = ["done", "next_day"] as const;
 export type TaskDayEnd = (typeof TASK_DAY_ENDS)[number];
-export const MIN_DURATION = 5;
+/** Shortest task: half a minute (testers' "less than a minute" tasks). Minutes go in half-minute steps. */
+export const MIN_DURATION = 0.5;
 export const MAX_DURATION = 480;
 
 export interface TaskMetadata {
@@ -135,8 +136,8 @@ export function normalizeTask(input: Record<string, unknown> | null | undefined,
 
   if (m.duration_min !== undefined && m.duration_min !== null && m.duration_min !== "") {
     const n = typeof m.duration_min === "string" ? Number(m.duration_min) : m.duration_min;
-    if (typeof n !== "number" || !Number.isInteger(n) || n < MIN_DURATION || n > MAX_DURATION) {
-      fail(`duration_min must be a whole number of minutes from ${MIN_DURATION} to ${MAX_DURATION}`);
+    if (typeof n !== "number" || !Number.isInteger(n * 2) || n < MIN_DURATION || n > MAX_DURATION) {
+      fail(`duration_min must be minutes from ${MIN_DURATION} to ${MAX_DURATION}, in whole or half minutes (0.5, 1, 1.5 …)`);
     }
     out.duration_min = n as number;
     if (m.duration_estimated !== undefined && m.duration_estimated !== null) {

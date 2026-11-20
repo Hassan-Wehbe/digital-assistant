@@ -207,6 +207,21 @@ export function routineTaskDone(task: TaskMetadata, r: RoutineMetadata, today: s
 }
 
 /**
+ * Ticked by mistake (testers, Nov 20): a task done this time (moved on past the period `today` is
+ * in) goes back to that period, open, as if never ticked. The day it was ticked is forgotten (the
+ * one before is not kept). A task not done this time is left as it is.
+ */
+export function routineTaskUndone(task: TaskMetadata, r: RoutineMetadata, today: string): TaskMetadata {
+  const p = periodOn(r, today);
+  if (!task.window_from || task.window_from <= p.due_on) return task;
+  const out: TaskMetadata = { ...task, status: "open", window_from: p.window_from, due_on: p.due_on };
+  if (out.last_done_on && out.last_done_on >= p.window_from) delete out.last_done_on;
+  delete out.done_at;
+  delete out.planned_at;
+  return recheck(out);
+}
+
+/**
  * Missed (Q6): open past its last day, it moves on to the period `today` is in, keeping the day it
  * was missed (missed_on). Nothing changes otherwise. Worked out when read, like a task's day end
  * (D35); the caller decides whether to save it.
